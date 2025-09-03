@@ -1,9 +1,11 @@
 package com.kevinmazali.portfolio.service;
 
-import demo.ml.rag.model.Answer;
-import demo.ml.rag.model.Question;
+
 import java.util.List;
 import java.util.Map;
+
+import com.kevinmazali.portfolio.model.Answer;
+import com.kevinmazali.portfolio.model.Question;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;

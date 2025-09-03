@@ -1,7 +1,8 @@
 package com.kevinmazali.portfolio.service;
 
-import demo.ml.rag.model.Answer;
-import demo.ml.rag.model.Question;
+
+import com.kevinmazali.portfolio.model.Answer;
+import com.kevinmazali.portfolio.model.Question;
 
 /**
  * Created by jt, Spring Framework Guru.

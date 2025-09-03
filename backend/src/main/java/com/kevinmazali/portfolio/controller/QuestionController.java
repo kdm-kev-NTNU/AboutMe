@@ -1,9 +1,11 @@
 package com.kevinmazali.portfolio.controller;
 
 
-import demo.ml.rag.model.Answer;
-import demo.ml.rag.model.Question;
-import demo.ml.rag.services.OpenAIService;
+
+
+import com.kevinmazali.portfolio.model.Answer;
+import com.kevinmazali.portfolio.model.Question;
+import com.kevinmazali.portfolio.service.OpenAIService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
