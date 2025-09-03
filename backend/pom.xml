@@ -47,8 +47,12 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-tika-document-reader</artifactId>
 		</dependency>
-
-		<dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-vector-store</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+        <dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-docker-compose</artifactId>
 			<scope>runtime</scope>
