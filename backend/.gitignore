@@ -32,3 +32,8 @@ build/
 ### VS Code ###
 .vscode/
 .env
+
+
+# --- Runtime / cache ---
+/tmp/*
+!/tmp/.gitkeep

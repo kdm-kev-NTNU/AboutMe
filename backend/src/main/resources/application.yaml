@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: portfolio
+  #Pass API key as environment variable, e.g. -DOPENAI_API_KEY=your-api-key
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+sfg:
+  aiapp:
+    vectorStorePath: tmp/vectorstore.json
+    documentsToLoad:
+      - classpath:/docs/*.csv
+      - classpath:/docs/*.pdf
+      - classpath:/docs/*.docx
