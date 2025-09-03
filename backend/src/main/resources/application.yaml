@@ -8,6 +8,8 @@ spring:
 sfg:
   aiapp:
     vectorStorePath: tmp/vectorstore.json
+    encryptContent: true
+    encryptionKeyBase64: ${VECTORSTORE_ENC_KEY}
     documentsToLoad:
       - classpath:/docs/*.csv
       - classpath:/docs/*.pdf

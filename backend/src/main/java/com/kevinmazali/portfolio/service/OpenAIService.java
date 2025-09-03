@@ -10,4 +10,5 @@ import com.kevinmazali.portfolio.model.Question;
 public interface OpenAIService {
 
     Answer getAnswer(Question question);
+
 }
