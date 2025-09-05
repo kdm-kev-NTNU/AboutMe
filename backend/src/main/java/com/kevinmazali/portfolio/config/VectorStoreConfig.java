@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio.config;
 
+import com.kevinmazali.portfolio.crypto.CryptoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -18,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 
 @Slf4j
@@ -65,8 +67,41 @@ public class VectorStoreConfig {
         log.debug("Leser dokument: {}", safeName(res));
         TikaDocumentReader reader = new TikaDocumentReader(res);
         List<Document> docs = reader.get();
+        
+        if (docs == null || docs.isEmpty()) {
+          log.warn("Ingen dokumenter funnet i '{}' - hopper over", safeName(res));
+          continue;
+        }
+        
+        // Sjekk om dokumentene har innhold
+        boolean hasContent = docs.stream().anyMatch(doc -> 
+          doc.getText() != null && !doc.getText().trim().isEmpty());
+        
+        if (!hasContent) {
+          log.warn("Dokumenter i '{}' har ingen tekstinnhold - hopper over", safeName(res));
+          continue;
+        }
+        
         List<Document> splitDocs = textSplitter.apply(docs);
+        
+        if (splitDocs == null || splitDocs.isEmpty()) {
+          log.warn("Ingen split-dokumenter generert fra '{}' - hopper over", safeName(res));
+          continue;
+        }
+        
+        // Krypter dokumenter hvis kryptering er aktivert
+        if (vectorStoreProperties.isEncryptContent()) {
+          CryptoService crypto = createCryptoService(vectorStoreProperties);
+          if (crypto != null) {
+            splitDocs = encryptDocuments(splitDocs, crypto);
+            log.debug("Kryptert {} dokumenter fra '{}'", splitDocs.size(), safeName(res));
+          } else {
+            log.warn("Kryptering er aktivert men ingen nøkkel funnet - lagrer ukryptert");
+          }
+        }
+        
         store.add(splitDocs);
+        log.debug("Lagt til {} dokumenter fra '{}'", splitDocs.size(), safeName(res));
       } catch (Exception e) {
         log.error("Feil ved lesing/indeksering av '{}': {}", safeName(res), e.getMessage(), e);
       }
@@ -155,5 +190,57 @@ public class VectorStoreConfig {
 
   private static String extsToString() {
     return "[pdf, docx, doc, txt, md, png, jpg, jpeg]";
+  }
+
+  /**
+   * Oppretter CryptoService fra konfigurasjon.
+   */
+  private CryptoService createCryptoService(VectorStoreProperties props) {
+    try {
+      String keyBase64 = props.getEncryptionKeyBase64();
+      if (keyBase64 == null || keyBase64.isBlank()) {
+        // Prøv miljøvariabel som fallback
+        keyBase64 = System.getenv("VECTORSTORE_ENC_KEY");
+      }
+      
+      if (keyBase64 == null || keyBase64.isBlank()) {
+        log.warn("Ingen krypteringsnøkkel funnet i konfigurasjon eller miljøvariabel VECTORSTORE_ENC_KEY");
+        return null;
+      }
+      
+      byte[] keyBytes = Base64.getDecoder().decode(keyBase64);
+      return new CryptoService(keyBytes);
+    } catch (Exception e) {
+      log.error("Feil ved oppretting av CryptoService: {}", e.getMessage(), e);
+      return null;
+    }
+  }
+
+  /**
+   * Krypterer dokumenter og legger til metadata.
+   */
+  private List<Document> encryptDocuments(List<Document> documents, CryptoService crypto) {
+    return documents.stream()
+        .map(doc -> {
+          try {
+            String originalText = doc.getText();
+            if (originalText == null || originalText.trim().isEmpty()) {
+              return doc; // Ikke krypter tom tekst
+            }
+            
+            CryptoService.EncResult encrypted = crypto.encrypt(originalText);
+            
+            // Opprett nytt dokument med kryptert tekst og metadata
+            Document encryptedDoc = new Document(encrypted.cipherBase64(), doc.getMetadata());
+            encryptedDoc.getMetadata().put("enc", "aesgcm");
+            encryptedDoc.getMetadata().put("enc_iv", encrypted.ivBase64());
+            
+            return encryptedDoc;
+          } catch (Exception e) {
+            log.error("Feil ved kryptering av dokument: {}", e.getMessage(), e);
+            return doc; // Returner originalt dokument ved feil
+          }
+        })
+        .toList();
   }
 }
