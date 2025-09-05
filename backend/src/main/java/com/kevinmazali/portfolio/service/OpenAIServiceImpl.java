@@ -58,7 +58,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         .toList();
 
     // 3) Les prompt-template fra classpath (fungerer også når pakket som JAR)
-    String ragPromptTemplate = loadPromptTemplateFromClasspath("rag-prompt-template.st");
+    String ragPromptTemplate = loadPromptTemplateFromClasspath("templates/rag-prompt-template.st");
 
     PromptTemplate promptTemplate = new PromptTemplate(ragPromptTemplate);
     Prompt prompt = promptTemplate.create(Map.of(
