@@ -1,6 +1,5 @@
 package com.kevinmazali.portfolio.config;
 
-import com.kevinmazali.portfolio.crypto.CryptoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -8,171 +7,153 @@ import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.io.File;
-import java.io.InputStream;
-import java.net.URLConnection;
+import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
-/**
- * Bygger/loader SimpleVectorStore.
- * - Ved første gangs bygging: laster kilder, splitter, (valgfritt) krypterer innhold, og lagrer.
- * - Ved eksisterende fil: loader direkte (dekryptering skjer ved retrieval i service-laget).
- */
 @Slf4j
 @Configuration
 public class VectorStoreConfig {
 
-  private final VectorStoreProperties props;
-
-  public VectorStoreConfig(VectorStoreProperties props) {
-    this.props = props;
-  }
+  // Fallback dersom VectorStoreProperties ikke har egen documentsToLoadDir
+  @Value("${sfg.aiapp.documentsToLoad:}")
+  private String documentsToLoadFromYaml; // f.eks. "classpath:/tmp/docs/"
 
   @Bean
-  public SimpleVectorStore vectorStore(EmbeddingModel embeddingModel) {
-    Objects.requireNonNull(props.getVectorStorePath(), "sfg.aiapp.vectorStorePath må settes");
-    File vectorStoreFile = new File(props.getVectorStorePath());
-    ensureParentDirectoryExists(vectorStoreFile);
+  public SimpleVectorStore simpleVectorStore(
+      EmbeddingModel embeddingModel,
+      VectorStoreProperties vectorStoreProperties
+  ) throws IOException {
 
+    // Bygg store med påkrevd EmbeddingModel (din versjon krever dette)
     SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
 
+    // Filen vi lagrer/laster vector store fra
+    File vectorStoreFile = new File(vectorStoreProperties.getVectorStorePath());
+    ensureParentDir(vectorStoreFile);
+
     if (vectorStoreFile.exists()) {
-      log.info("Laster eksisterende vector store fra: {}", vectorStoreFile.getAbsolutePath());
+      log.info("Laster eksisterende vector store fra: {}", vectorStoreFile.getPath());
       store.load(vectorStoreFile);
       return store;
     }
 
-    List<Resource> sources = props.getDocumentsToLoad();
-    if (sources == null || sources.isEmpty()) {
-      log.warn("Ingen dokumentkilder i sfg.aiapp.documentsToLoad – lagrer tom store på {}", vectorStoreFile.getAbsolutePath());
-      store.save(vectorStoreFile);
-      return store;
-    }
+    log.info("Ingen eksisterende vector store. Leser og indekserer dokumenter ...");
 
-    // Opprett CryptoService hvis kryptering er på
-    CryptoService crypto = null;
-    if (props.isEncryptContent()) {
-      byte[] key = resolveKeyBytes(props.getEncryptionKeyBase64(), System.getenv("VECTORSTORE_ENC_KEY"));
-      crypto = new CryptoService(key);
-      log.info("Vector-store kryptering aktivert (AES-GCM).");
+    // --- Hent dokumenter ---
+    List<Resource> resources = resolveResources(vectorStoreProperties);
+
+    if (resources.isEmpty()) {
+      log.warn("Fant ingen dokumenter å laste. Sjekk 'documentsToLoad' / basekatalog og filendelser.");
     } else {
-      log.info("Vector-store kryptering er AV.");
+      log.info("Fant {} dokument(er) til indeksering.", resources.size());
     }
 
-    log.info("Initialiserer vector store – henter {} kilder ...", sources.size());
-    for (Resource res : sources) {
+    TextSplitter textSplitter = new TokenTextSplitter();
+
+    for (Resource res : resources) {
       try {
-        for (Resource materialized : materialize(res)) {
-          log.debug("Laster dokument: {}", describe(materialized));
-          TikaDocumentReader documentReader = new TikaDocumentReader(materialized);
-          List<Document> docs = documentReader.get();
-
-          TextSplitter splitter = new TokenTextSplitter();
-          List<Document> splitDocs = splitter.apply(docs);
-
-          List<Document> toAdd = new ArrayList<>(splitDocs.size());
-          for (Document d : splitDocs) {
-            if (crypto != null) {
-              CryptoService.EncResult enc = crypto.encrypt(d.getText());
-              Map<String, Object> md = new LinkedHashMap<>(d.getMetadata());
-              md.put("enc", "aesgcm");
-              md.put("enc_iv", enc.ivBase64());
-              // (valgfritt) marker versjon
-              md.put("enc_v", "1");
-              Document encDoc = new Document(enc.cipherBase64(), md);
-              toAdd.add(encDoc);
-            } else {
-              toAdd.add(d);
-            }
-          }
-
-          store.add(toAdd);
-        }
+        log.debug("Leser dokument: {}", safeName(res));
+        TikaDocumentReader reader = new TikaDocumentReader(res);
+        List<Document> docs = reader.get();
+        List<Document> splitDocs = textSplitter.apply(docs);
+        store.add(splitDocs);
       } catch (Exception e) {
-        log.error("Feil ved materialisering/lesing av '{}': {}", describe(res), e.toString());
+        log.error("Feil ved lesing/indeksering av '{}': {}", safeName(res), e.getMessage(), e);
       }
     }
 
+    // Lagre ny vector store
     store.save(vectorStoreFile);
-    log.info("Vector store lagret til {}", vectorStoreFile.getAbsolutePath());
+    log.info("Vector store lagret til: {}", vectorStoreFile.getPath());
+
     return store;
   }
 
-  private void ensureParentDirectoryExists(File file) {
+  // --- Helpers ---
+
+  private static void ensureParentDir(File file) throws IOException {
     File parent = file.getParentFile();
-    if (parent != null && !parent.exists() && !parent.mkdirs() && !parent.exists()) {
-      throw new IllegalStateException("Kunne ikke opprette mappe: " + parent.getAbsolutePath());
+    if (parent != null && !parent.exists()) {
+      Files.createDirectories(parent.toPath());
     }
   }
 
   /**
-   * Hvis http(s): stream til tempfil for robust håndtering (Tika liker filer/streams).
-   * Hvis file:/classpath: returner som er.
+   * Løfter enten en eksplisitt liste av Resource (hvis konfigurert),
+   * ellers bruker basekatalog (classpath:/ eller file:) og matcher på endelser.
    */
-  private List<Resource> materialize(Resource resource) throws Exception {
-    if (resource instanceof UrlResource urlRes) {
-      String protocol = urlRes.getURL().getProtocol();
-      if ("http".equalsIgnoreCase(protocol) || "https".equalsIgnoreCase(protocol)) {
-        // last ned til tmp
-        String path = urlRes.getURL().getPath();
-        String suffix = guessSuffix(path);
-        Path tmp = Files.createTempFile("seed-", suffix);
-        tmp.toFile().deleteOnExit();
-        try (InputStream in = urlRes.getInputStream()) {
-          Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
+  private List<Resource> resolveResources(VectorStoreProperties props) throws IOException {
+    List<Resource> result = new ArrayList<>();
+
+    // 1) Hvis du allerede har en liste av Resource i props (gammelt oppsett), bruk den direkte.
+    if (props.getDocumentsToLoad() != null && !props.getDocumentsToLoad().isEmpty()) {
+      result.addAll(props.getDocumentsToLoad());
+      return result;
+    }
+
+    // 2) Ellers: les base-dir fra props, evt. fallback til @Value fra YAML
+    String baseDir = props.getDocumentsToLoadDir();
+
+    if ((baseDir == null || baseDir.isBlank()) && documentsToLoadFromYaml != null && !documentsToLoadFromYaml.isBlank()) {
+      baseDir = documentsToLoadFromYaml;
+    }
+
+    if (baseDir == null || baseDir.isBlank()) {
+      log.warn("Ingen documentsToLoad(base-dir) angitt. Sett f.eks. 'documentsToLoad: classpath:/tmp/docs/' i YAML.");
+      return result;
+    }
+
+    // Normaliser – sørg for at det slutter med '/'
+    if (!baseDir.endsWith("/")) {
+      baseDir = baseDir + "/";
+    }
+
+    // Bruk PathMatchingResourcePatternResolver for wildcard
+    PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+
+    // Søker rekursivt i undermapper: **/*.ext
+    List<String> exts = Arrays.asList("pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg");
+    for (String ext : exts) {
+      String pattern = baseDir + "**/*." + ext; // f.eks. classpath:/tmp/docs/**/*.(pdf/docx/…)
+      try {
+        Resource[] found = resolver.getResources(pattern);
+        result.addAll(Arrays.asList(found));
+        if (found.length > 0) {
+          log.debug("Fant {} filer med endelse .{}", found.length, ext);
         }
-        return List.of(new org.springframework.core.io.FileSystemResource(tmp));
+      } catch (Exception e) {
+        log.warn("Kunne ikke søke etter filer med endelse .{}: {}", ext, e.getMessage());
       }
     }
-    return List.of(resource);
+
+    if (result.isEmpty()) {
+      log.warn("Fant ingen filer i '{}' med endelser {}", baseDir, extsToString());
+    } else {
+      if (log.isInfoEnabled()) {
+        log.info("Filer som lastes fra '{}':", baseDir);
+        result.forEach(r -> log.info(" - {}", safeName(r)));
+      }
+    }
+
+    return result;
   }
 
-  private String guessSuffix(String path) {
-    int idx = path.lastIndexOf('.');
-    if (idx >= 0 && idx < path.length() - 1) {
-      return path.substring(idx);
-    }
-    String ct = URLConnection.guessContentTypeFromName(path);
-    if (ct != null) {
-      if (ct.contains("pdf")) return ".pdf";
-      if (ct.contains("word")) return ".docx";
-      if (ct.contains("jpeg")) return ".jpg";
-      if (ct.contains("png")) return ".png";
-      if (ct.contains("html")) return ".html";
-    }
-    return ".bin";
+  private static String safeName(Resource r) {
+    try { return r.getURL().toString(); }
+    catch (Exception e) { return r.getFilename(); }
   }
 
-  private String describe(Resource r) {
-    try {
-      if (r instanceof UrlResource ur) return ur.getURL().toExternalForm();
-      return r.getDescription();
-    } catch (Exception e) {
-      return r.toString();
-    }
-  }
-
-  private byte[] resolveKeyBytes(String propKeyBase64, String envKeyBase64) {
-    String b64 = (propKeyBase64 != null && !propKeyBase64.isBlank())
-        ? propKeyBase64
-        : (envKeyBase64 != null && !envKeyBase64.isBlank() ? envKeyBase64 : null);
-
-    if (b64 == null) {
-      throw new IllegalStateException(
-          "Kryptering er aktivert, men ingen nøkkel satt. Sett sfg.aiapp.encryptionKeyBase64 eller VECTORSTORE_ENC_KEY (base64 for 32 bytes).");
-    }
-    byte[] key = Base64.getDecoder().decode(b64);
-    if (key.length != 32) {
-      throw new IllegalStateException("VECTORSTORE_ENC_KEY / sfg.aiapp.encryptionKeyBase64 må være base64 for 32 bytes (AES-256).");
-    }
-    return key;
+  private static String extsToString() {
+    return "[pdf, docx, doc, txt, md, png, jpg, jpeg]";
   }
 }

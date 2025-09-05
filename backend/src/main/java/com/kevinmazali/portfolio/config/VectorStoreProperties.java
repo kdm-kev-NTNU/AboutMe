@@ -38,6 +38,13 @@ public class VectorStoreProperties {
    */
   private String encryptionKeyBase64;
 
+  /**
+   * Base-katalog for dokumenter som skal lastes.
+   * Støtter classpath:, file:, etc.
+   * Eksempel: classpath:/tmp/docs/
+   */
+  private String documentsToLoadDir;
+
   public String getVectorStorePath() {
     return vectorStorePath;
   }
@@ -68,5 +75,13 @@ public class VectorStoreProperties {
 
   public void setEncryptionKeyBase64(String encryptionKeyBase64) {
     this.encryptionKeyBase64 = encryptionKeyBase64;
+  }
+
+  public String getDocumentsToLoadDir() {
+    return documentsToLoadDir;
+  }
+
+  public void setDocumentsToLoadDir(String documentsToLoadDir) {
+    this.documentsToLoadDir = documentsToLoadDir;
   }
 }

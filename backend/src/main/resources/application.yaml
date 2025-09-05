@@ -7,10 +7,12 @@ spring:
       api-key: ${OPENAI_API_KEY}
 sfg:
   aiapp:
-    vectorStorePath: tmp/vectorstore.json
+    # runtime-fil på rotnivå i prosjektet
+    vectorStorePath: ./vectordatabase/vectorstore.json
     encryptContent: true
     encryptionKeyBase64: ${VECTORSTORE_ENC_KEY}
-    documentsToLoad:
-      - classpath:/docs/*.csv
-      - classpath:/docs/*.pdf
-      - classpath:/docs/*.docx
+    documentsToLoadDir: classpath:/tmp/docs/
+
+
+
+

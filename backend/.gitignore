@@ -35,5 +35,5 @@ build/
 
 
 # --- Runtime / cache ---
-/tmp/*
-!/tmp/.gitkeep
+/src/main/resources/tmp/*
+!/src/main/resources/tmp/.gitkeep
