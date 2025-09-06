@@ -29,13 +29,21 @@ public class OpenAIServiceImpl implements OpenAIService {
 
   @Override
   public Answer getAnswer(Question question) {
-    // 1) Hent top-N dokumenter (bruk konstruktør-varianten for SearchRequest)
-    List<Document> documents = vectorStore.similaritySearch(
-        SearchRequest.builder()
-            .query(question.question())
-            .topK(4)
-            .build()
-    );
+    // 1) Utvid spørringen: original + oversatt til EN og NO
+    List<String> queries = expandQueryToLanguages(question.question());
+
+    // 2) Hent top dokumenter for hver variant og slå sammen
+    List<Document> documents = queries.stream()
+        .flatMap(q -> vectorStore.similaritySearch(
+            SearchRequest.builder()
+                .query(q)
+                .topK(3)
+                .build()
+        ).stream())
+        // Dedup på tekstinnhold for å unngå duplikater fra flere spørringer
+        .distinct()
+        .limit(8)
+        .toList();
 
     // 2) Dekrypter innhold ved behov
     CryptoService crypto = cryptoFromEnv();
@@ -69,6 +77,55 @@ public class OpenAIServiceImpl implements OpenAIService {
     // 4) Kall modellen
     ChatResponse response = chatModel.call(prompt);
     return new Answer(response.getResult().getOutput().getText());
+  }
+
+  /**
+   * Lager spørringsvarianter på originalspråk + engelsk + norsk.
+   * Faller tilbake til kun original ved feil.
+   */
+  private List<String> expandQueryToLanguages(String original) {
+    try {
+      // Enkel prompt for rask oversettelse uten forklaringer
+      String sys = """
+      Translate the user query into both English and Norwegian.
+      Return ONLY this exact JSON object with double quotes and no extra text:
+      {"en": "<english>", "no": "<norwegian>"}
+      """.strip();
+
+      Prompt p = new PromptTemplate("{sys}\nUser: {q}")
+          .create(Map.of("sys", sys, "q", original));
+
+      ChatResponse r = chatModel.call(p);
+      String json = r.getResult().getOutput().getText();
+
+      // Svært enkel parsing for å unngå ekstra avhengigheter
+      String en = extractJsonValue(json, "en");
+      String no = extractJsonValue(json, "no");
+
+      return List.of(original,
+          en == null || en.isBlank() ? original : en,
+          no == null || no.isBlank() ? original : no);
+    } catch (Exception e) {
+      return List.of(original);
+    }
+  }
+
+  /**
+   * Ekstraherer en enkel strengverdi fra et flatt JSON-objekt uten å dra inn en parser.
+   */
+  private String extractJsonValue(String json, String key) {
+    try {
+      String marker = "\"" + key + "\"" + ":";
+      int i = json.indexOf(marker);
+      if (i < 0) return null;
+      int start = json.indexOf('"', i + marker.length());
+      if (start < 0) return null;
+      int end = json.indexOf('"', start + 1);
+      if (end < 0) return null;
+      return json.substring(start + 1, end);
+    } catch (Exception ex) {
+      return null;
+    }
   }
 
   private CryptoService cryptoFromEnv() {
