@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.env.Environment;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,11 +34,51 @@ public class VectorStoreConfig {
   @Bean
   public SimpleVectorStore simpleVectorStore(
       EmbeddingModel embeddingModel,
-      VectorStoreProperties vectorStoreProperties
+      VectorStoreProperties vectorStoreProperties,
+      Environment env
   ) throws IOException {
 
-    // Bygg store med påkrevd EmbeddingModel (din versjon krever dette)
+    // Bygg store med embedding model
     SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
+
+    // Oppstarts-logg: hvilken embedding-modell og dimensjoner som brukes
+    try {
+      String modelClass = embeddingModel.getClass().getName();
+      String modelName = "(ukjent)";
+      String modelDimensions = "(ukjent)";
+      try {
+        java.lang.reflect.Method getDefaultOptions = embeddingModel.getClass().getMethod("getDefaultOptions");
+        Object options = getDefaultOptions.invoke(embeddingModel);
+        if (options != null) {
+          try {
+            java.lang.reflect.Method getModel = options.getClass().getMethod("getModel");
+            Object mn = getModel.invoke(options);
+            if (mn != null) modelName = String.valueOf(mn);
+          } catch (NoSuchMethodException ignored) { }
+          try {
+            java.lang.reflect.Method getDimensions = options.getClass().getMethod("getDimensions");
+            Object dim = getDimensions.invoke(options);
+            if (dim != null) modelDimensions = String.valueOf(dim);
+          } catch (NoSuchMethodException ignored) { }
+        }
+      } catch (NoSuchMethodException ignored) { }
+      // Fallback: hent fra Spring-properties dersom reflection ikke gir svar
+      if ("(ukjent)".equals(modelName)) {
+        String propModel = env.getProperty("spring.ai.openai.embedding.options.model");
+        if (propModel != null && !propModel.isBlank()) {
+          modelName = propModel;
+        }
+      }
+      if ("(ukjent)".equals(modelDimensions)) {
+        String propDims = env.getProperty("spring.ai.openai.embedding.options.dimensions");
+        if (propDims != null && !propDims.isBlank()) {
+          modelDimensions = propDims;
+        }
+      }
+      log.info("Embedding model in use: class='{}', model='{}', dimensions={}", modelClass, modelName, modelDimensions);
+    } catch (Exception e) {
+      log.warn("Kunne ikke logge embedding-modell detaljer: {}", e.getMessage());
+    }
 
     // Filen vi lagrer/laster vector store fra
     File vectorStoreFile = new File(vectorStoreProperties.getVectorStorePath());
@@ -73,16 +114,15 @@ public class VectorStoreConfig {
           continue;
         }
         
-        // Sjekk om dokumentene har innhold
-        boolean hasContent = docs.stream().anyMatch(doc -> 
-          doc.getText() != null && !doc.getText().trim().isEmpty());
+        // Behandle dokumenter og legg til metadata for innholdstype
+        List<Document> processedDocs = processMultimodalDocuments(docs, res);
         
-        if (!hasContent) {
-          log.warn("Dokumenter i '{}' har ingen tekstinnhold - hopper over", safeName(res));
+        if (processedDocs.isEmpty()) {
+          log.warn("Ingen prosesserte dokumenter fra '{}' - hopper over", safeName(res));
           continue;
         }
         
-        List<Document> splitDocs = textSplitter.apply(docs);
+        List<Document> splitDocs = textSplitter.apply(processedDocs);
         
         if (splitDocs == null || splitDocs.isEmpty()) {
           log.warn("Ingen split-dokumenter generert fra '{}' - hopper over", safeName(res));
@@ -157,7 +197,7 @@ public class VectorStoreConfig {
     PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
     // Søker rekursivt i undermapper: **/*.ext
-    List<String> exts = Arrays.asList("pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg");
+    List<String> exts = Arrays.asList("pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
     for (String ext : exts) {
       String pattern = baseDir + "**/*." + ext; // f.eks. classpath:/tmp/docs/**/*.(pdf/docx/…)
       try {
@@ -189,7 +229,55 @@ public class VectorStoreConfig {
   }
 
   private static String extsToString() {
-    return "[pdf, docx, doc, txt, md, png, jpg, jpeg]";
+    return "[pdf, docx, doc, txt, md, png, jpg, jpeg, gif, bmp, tiff, webp, svg]";
+  }
+
+  /**
+   * Prosesserer dokumenter og legger til metadata for innholdstype.
+   * Håndterer både tekst og bildeinnhold med riktig metadata.
+   */
+  private List<Document> processMultimodalDocuments(List<Document> documents, Resource resource) {
+    List<Document> processedDocs = new ArrayList<>();
+    
+    for (Document doc : documents) {
+      try {
+        String filename = resource.getFilename();
+        if (filename == null) {
+          processedDocs.add(doc);
+          continue;
+        }
+        
+        String lowerFilename = filename.toLowerCase();
+        
+        // Sjekk om det er et bilde
+        if (lowerFilename.endsWith(".png") || lowerFilename.endsWith(".jpg") || 
+            lowerFilename.endsWith(".jpeg") || lowerFilename.endsWith(".gif") || 
+            lowerFilename.endsWith(".bmp") || lowerFilename.endsWith(".tiff") || 
+            lowerFilename.endsWith(".webp") || lowerFilename.endsWith(".svg")) {
+          
+          // For bilder: legg til metadata som indikerer at det er et bilde
+          Document imageDoc = new Document(doc.getText(), doc.getMetadata());
+          imageDoc.getMetadata().put("content_type", "image");
+          imageDoc.getMetadata().put("filename", filename);
+          imageDoc.getMetadata().put("source", safeName(resource));
+          processedDocs.add(imageDoc);
+          
+        } else {
+          // For tekstdokumenter: legg til metadata som indikerer at det er tekst
+          Document textDoc = new Document(doc.getText(), doc.getMetadata());
+          textDoc.getMetadata().put("content_type", "text");
+          textDoc.getMetadata().put("filename", filename);
+          textDoc.getMetadata().put("source", safeName(resource));
+          processedDocs.add(textDoc);
+        }
+        
+      } catch (Exception e) {
+        log.warn("Feil ved prosessering av dokument fra '{}': {}", safeName(resource), e.getMessage());
+        processedDocs.add(doc); // Fallback til originalt dokument
+      }
+    }
+    
+    return processedDocs;
   }
 
   /**
