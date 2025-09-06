@@ -39,8 +39,6 @@ function submitQuick() {
       </div>
     </section>
 
-    <footer class="copyright">© Kevin's AI</footer>
-
     <form class="home-composer" @submit.prevent="submitQuick">
       <input
         v-model="quickQuestion"
