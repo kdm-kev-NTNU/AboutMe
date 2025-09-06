@@ -24,7 +24,7 @@ public class RequestLog {
     private String method;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String payload;
 
     @Column(nullable = false)

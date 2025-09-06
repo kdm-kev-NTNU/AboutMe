@@ -25,7 +25,10 @@ public class QuestionController {
     @PostMapping("/ask")
     public Answer askQuestion(@RequestBody Question question) {
         requestLogService.save("/ask", "POST", question.question());
-        return openAIService.getAnswer(question);
+        Answer answer = openAIService.getAnswer(question);
+        // Logg også svaret for historikk
+        requestLogService.save("/ask:response", "POST", answer.answer());
+        return answer;
     }
 
 }
