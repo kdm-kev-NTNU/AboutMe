@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 type Message = { role: 'user' | 'assistant'; text: string }
 
 const route = useRoute()
+const router = useRouter()
 const input = ref('')
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 
@@ -37,6 +38,9 @@ onMounted(() => {
 </script>
 
 <template>
+  <div class="topbar">
+    <button class="back" @click="router.push({ name: 'home' })">← Back</button>
+  </div>
   <div class="chat">
     <div class="messages">
       <div v-for="(m, idx) in state.messages" :key="idx" class="message" :class="m.role">
@@ -51,10 +55,30 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.topbar {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+  border-bottom: 1px solid #eee;
+  padding: 10px 0;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+}
+.back:hover { background: #f7f7f7; }
 .chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 180px);
+  height: calc(100vh - 140px);
   max-width: 900px;
   margin: 0 auto;
 }
