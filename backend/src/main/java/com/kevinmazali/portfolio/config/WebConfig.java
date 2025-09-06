@@ -16,7 +16,9 @@ public class WebConfig {
                 registry.addMapping("/**")
                     .allowedOrigins(
                         "http://localhost:5173",
-                        "http://localhost:4173"
+                        "http://localhost:4173",
+                        "https://kevindmazali.me",
+                        "https://www.kevindmazali.me"
                     )
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders("*")
