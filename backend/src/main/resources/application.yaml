@@ -1,10 +1,13 @@
 spring:
   application:
     name: portfolio
-  #Pass API key as environment variable, e.g. -DOPENAI_API_KEY=your-api-key
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}
+      embedding:
+        options:
+          model: text-embedding-3-large
+          dimensions: 3072
 sfg:
   aiapp:
     # runtime-fil på rotnivå i prosjektet
