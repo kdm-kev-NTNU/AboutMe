@@ -1,0 +1,290 @@
+---
+description: Ultracite Cursor Rules — Vue 3 + Spring Boot 3 (Java 21) — **Maven** edition, inspired by your web‑dev overview notes
+alwaysApply: false
+---
+# Project Context
+Målet er moderne, sikker og testbar kode med en tydelig FE/BE‑kontrakt. **Frontend:** Vue 3 + Vite + TypeScript + `<script setup>` + Pinia + Vue Router + Vitest + Cypress. **Backend:** Spring Boot 3.x (Java 21), **Maven**, JPA, Spring Security (JWT), MapStruct, Springdoc OpenAPI, Flyway, Testcontainers.
+
+> Merk: Denne versjonen erstatter tidligere Gradle‑antagelser med **Maven** og legger inn sjekklistene dine for **security**, **application.properties**, **DTO/DAO/Repository**, **exception handling**, **logging** og **Docker** som eksplisitte krav.
+
+---
+
+# Teknologi‑baseline (bindende)
+- **Node** ≥ 20; pakkebehandler: pnpm eller bun (npm ok hvis prosjektet bruker det fra før).
+- **Vue** 3.4+ med `<script setup>` og TypeScript (Volar).
+- **State:** Pinia. **Router:** Vue Router 4 (lazy‑loading).
+- **Testing (FE):** Vitest + @vue/test-utils; **E2E:** Cypress.
+- **Lint/format (FE):** ESLint + eslint-plugin-vue + Prettier *eller* Biome (ikke begge samtidig).
+- **Build (BE):** **Maven** med maven‑wrapper; **Java 21**; **Spring Boot** 3.3+/3.4+.
+- **DB‑testing:** Testcontainers (ikke H2 for prod‑like integrasjonstester).
+- **API:** JSON + Problem‑details (RFC7807) *eller* fast, eksplisitt error‑modell; dokumentert i OpenAPI.
+- **Konfig:** `application.properties` som standard (dev/test/prod profiler); `application.yml` aksepteres hvis prosjektet allerede bruker YAML.
+- **Sikkerhet:** Spring Security 6, stateless JWT (Access + Refresh), CSRF av for rene APIs.
+
+---
+
+# Mappestruktur (høy‑nivå)
+**Frontend** `src/`:
+- `components/`, `composables/`, `stores/`, `router/`, `views/`, `assets/`, `types/`, `api/`.
+
+**Backend** pakke etter *feature* (vertikal slice):
+```
+com.example.app
+  └─ feature/<name>/
+       ├─ api        (controllers, request/response DTO, mappere)
+       ├─ application (services/use‑cases)
+       ├─ domain     (aggregater, value objects, ports)
+       └─ persistence (JPA repos/adapters)
+└─ common/ (error model, security, config, mapper‑infra)
+```
+
+- **DTO ≠ Entity**. Map med **MapStruct** eller eksplisitt mapping.
+- Bruk **Repository (JPA)** som standard; DAO kun for kompleks/manuell SQL.
+
+---
+
+# Vue 3 Regler
+- Skriv komponenter med **`<script setup lang="ts">`**. Unngå Options API i ny kode.
+- **Props/emits**: `defineProps<T>()` / `defineEmits<...>()`. Ingen `any`.
+- **Gjenbruk**: Forretningslogikk i `composables/` (f.eks. `useAuth.ts`, `useForm.ts`).
+- **State**: Pinia stores i `stores/`. Ingen global event‑bus.
+- **Routing**: Modulære routes, **lazy imports** (`() => import('...')`).
+- **API‑klient**: `api/http.ts` (Axios/Fetch) med interceptors for auth og feil (Problem‑JSON → bruker‑vennlig melding).
+- **Validering**: Skjemavalidering med **Vee‑Validate + Yup**. Alle kritiske felter valideres også i backend.
+- **Tilgjengelighet**: Semantikk; ingen klikk på ikke‑interaktive elementer; ARIA ved behov.
+- **Ytelse**: Async components, `Suspense`, memoization via `computed`. Unngå unødvendig re‑render.
+- **Stil**: Tailwind eller BEM; unngå dype scoped selektorer og `!important`.
+- **Testing**: Test atferd, ikke implementasjon. Snapshots sparsommelig.
+
+### Anti‑patterns (FE)
+- Ingen miksins/global singletons; ingen direkte DOM‑manipulasjon uten refs.
+- Unngå monolittiske komponenter (> ~300 linjer); trekk ut til composables.
+
+---
+
+# Spring Boot 3 Regler (Maven)
+- **Java 21** (bruk records, pattern matching, sealed types når det passer).
+- **Maven**: bruk **maven‑wrapper** (commit `mvnw*`). Enhetlig dependency‑versjonering via Spring Boot parent + properties.
+- **Pakking etter feature** (ikke klassisk horisontal lagdeling alene).
+- **Validering**: `jakarta.validation` på DTOs; `@Validated` i controller‑lag.
+- **Feilrespons**: Global `@ControllerAdvice` med **Problem‑details** (RFC7807) *eller* stabil, egen error‑modell med `ResponseEntity` og felter som `type/title/status/detail/instance/errors[]`.
+- **OpenAPI**: `springdoc-openapi-starter-webmvc-ui`. Beskriv alle responses, inkl. feil og sikkerhet (Bearer).
+- **Sikkerhet (JWT)**:
+  - Stateless filterkjede. Eget `JwtAuthenticationFilter` før `UsernamePasswordAuthenticationFilter`.
+  - `AuthenticationEntryPoint` (401) og `AccessDeniedHandler` (403) som returnerer standardisert error.
+  - `PasswordEncoder` = `BCryptPasswordEncoder`.
+  - Rolle‑sjekk med `@PreAuthorize` for domene‑regler.
+- **Persistens**: JPA/Hibernate; migrasjoner med **Flyway**. Aldri `ddl-auto=update` i prod.
+- **Observability**: Micrometer + Actuator; sikre actuator‑endepunkt pr. miljø.
+- **Testing**: JUnit 5; slice‑tester (`@WebMvcTest`, `@DataJpaTest`), integrasjon med Testcontainers.
+
+### Anti‑patterns (BE)
+- Ikke eksponer entiteter i API. Ikke `@Transactional` i controller.
+- Ingen felt‑injection; bruk konstruktør‑injection.
+- Ikke del interne exceptions til klient; map alltid til definert feilmodell.
+
+---
+
+# Bygg / CI (Maven)
+- Bruk profiler: `dev`, `test`, `prod`.
+- Standardkommandoer:
+  - `./mvnw verify` kjører kompilering, tester og kvalitetssjekker.
+  - `./mvnw -Pprod clean package` for prod‑bygg.
+- **Quality gates**: Spotless/Formatter, Checkstyle (Java) eller Detekt (Kotlin‑moduler), Jacoco (coverage) – feil i CI ved brudd.
+
+---
+
+# Konfigurasjon (properties & profiler)
+- **`src/main/resources/application.properties`** er basis. Overstyr i `application-<profile>.properties` (dev/test/prod).
+- Minimumsnøkler for dev:
+```
+server.port=8080
+spring.application.name=app
+
+# Security / JWT
+jwt.secret=${JWT_SECRET}
+jwt.expiration=3600000
+
+# Datasource (eksempel H2 dev)
+spring.datasource.url=jdbc:h2:mem:devdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+spring.datasource.driverClassName=org.h2.Driver
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# Actuator
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=always
+
+# Logging
+logging.level.root=INFO
+logging.level.com.example=DEBUG
+```
+- **CORS**: Definer whitelist per miljø. Ikke bruk `*` i prod.
+
+---
+
+# FE/BE kontrakt
+- Del kontrakter via OpenAPI → generer FE‑klient (openapi‑typescript) eller hold en synkronisert `types/` + server‑DTO.
+- Paginering: map Spring Data `Page` til `{ items, page, size, total }`.
+- Alle feil svar følger valgt **Problem‑details**/error‑modell.
+
+---
+
+# Sikkerhet – sjekkliste (må‑krav)
+1) **Konfig**: `SecurityFilterChain` med autorisasjonsregler per path.
+2) **Filtre**: `JwtAuthenticationFilter` + custom `AuthenticationEntryPoint`/`AccessDeniedHandler`.
+3) **Brukerhåndtering**: `UserDetailsService`, `User`/`Role` entiteter; `GrantedAuthority` mapping.
+4) **Auth**: `AuthenticationManager`/Provider ved login; `JwtService` for signering/validering (sub, iat, exp, roles, email).
+5) **Passord**: `BCryptPasswordEncoder`.
+6) **Tokens**: Access + Refresh; lagring i HttpOnly cookie (prod) eller Bearer header (dev).
+7) **Debug**: `spring.security.debug=true` kun i dev.
+
+---
+
+# Logging & Exception Handling
+- Strukturert logging (korrelerings‑ID ved behov). Ingen stacktraces til klient i prod.
+- `@ControllerAdvice` håndterer validering (`MethodArgumentNotValidException`) og returnerer standardisert feil med feltliste.
+
+---
+
+# Docker (valgfritt, anbefalt)
+- `Dockerfile` for BE (multi‑stage, temurin‑jre‑21) og for FE (vite build → nginx). 
+- `docker-compose.yml` for databaser (Postgres/MySQL) og lokale avhengigheter. Secrets via `.env`/Docker secrets.
+
+---
+
+# Eksempler (maler)
+
+## Maven `pom.xml` (utdrag)
+```xml
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.4</version>
+    <relativePath/>
+  </parent>
+  <groupId>com.example</groupId>
+  <artifactId>app</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <properties>
+    <java.version>21</java.version>
+    <mapstruct.version>1.5.5.Final</mapstruct.version>
+    <jjwt.version>0.11.5</jjwt.version>
+  </properties>
+  <dependencies>
+    <!-- Core -->...</dependencies>
+</project>
+```
+
+## Vue API‑klient (plassering: `src/api/http.ts`)
+```ts
+import axios from "axios";
+
+export const http = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: 10000,
+});
+
+http.interceptors.request.use((cfg) => {
+  const token = localStorage.getItem("access_token"); // i prod: vurder HttpOnly cookie
+  if (token) cfg.headers.Authorization = `Bearer ${token}`;
+  return cfg;
+});
+
+http.interceptors.response.use(
+  (r) => r,
+  (e) => {
+    const problem = e.response?.data; // forventet Problem‑details / feilmodell
+    return Promise.reject(problem ?? e);
+  }
+);
+```
+
+## Global feilbehandler (plassering: `common/api/ProblemAdvice.java`)
+```java
+package common.api;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import java.net.URI;
+import java.time.OffsetDateTime;
+import java.util.Map;
+
+@ControllerAdvice
+public class ProblemAdvice {
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ResponseEntity<Map<String, Object>> onValidation(MethodArgumentNotValidException ex) {
+    var body = Map.<String, Object>of(
+      "type", URI.create("https://example.com/problems/validation"),
+      "title", "Validation failed",
+      "status", BAD_REQUEST.value(),
+      "detail", "One or more fields are invalid.",
+      "timestamp", OffsetDateTime.now(),
+      "errors", ex.getBindingResult().getFieldErrors().stream()
+        .map(f -> Map.of("field", f.getField(), "message", f.getDefaultMessage()))
+        .toList()
+    );
+    return ResponseEntity.status(BAD_REQUEST).body(body);
+  }
+}
+```
+
+## Security skjelett (utdrag)
+```java
+@Bean
+SecurityFilterChain security(HttpSecurity http, JwtAuthenticationFilter jwt) throws Exception {
+  return http
+    .csrf(csrf -> csrf.disable())
+    .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+    .authorizeHttpRequests(reg -> reg
+      .requestMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**", "/auth/**").permitAll()
+      .anyRequest().authenticated()
+    )
+    .exceptionHandling(h -> h
+      .authenticationEntryPoint(customEntryPoint)
+      .accessDeniedHandler(customDeniedHandler)
+    )
+    .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class)
+    .build();
+}
+```
+
+---
+
+# Kode‑stil og leveranser (AI må følge)
+- Skriv **hele filer** med imports og plassering.
+- Navnekonvensjoner:
+  - FE: `PascalCase.vue`, `useX.ts`, `x.store.ts`, `XService.ts`.
+  - BE: `SomethingController`, `SomethingService`, `SomethingRepository`, `SomethingEntity`, `SomethingDto`.
+- Kommentarer forklarer *hvorfor*.
+- All ny kode skal ha relevante tester.
+
+---
+
+# Innsjekk / CI‑policy
+- `./mvnw verify` må passere lokalt før PR.
+- Lint/format må kjøre i CI for både FE og BE.
+- Bygg artefakter skal være reproducerbare.
+
+---
+
+# Checklists (hurtig)
+- [ ] Vue 3 + TS + `<script setup>`
+- [ ] Pinia + Router (lazy)
+- [ ] Axios + interceptors + validering (Vee‑Validate/Yup)
+- [ ] Vitest + Cypress
+- [ ] Maven + Java 21 + Boot 3
+- [ ] Security chain + JWT filter + EntryPoint/DeniedHandler
+- [ ] DTO/Mapper (MapStruct), ikke eksponer entiteter
+- [ ] ControllerAdvice med standardisert feilmodell
+- [ ] OpenAPI (springdoc)
+- [ ] Flyway + Testcontainers
+- [ ] Actuator + strukturert logging
+- [ ] Dockerfile + docker‑compose (valgfritt)
