@@ -219,10 +219,43 @@ public class VectorStoreConfig {
   private List<Resource> resolveResources(VectorStoreProperties props) throws IOException {
     List<Resource> result = new ArrayList<>();
 
-    // 1) Hvis du allerede har en liste av Resource i props (gammelt oppsett), bruk den direkte.
+    // 0) Hvis du allerede har en liste av Resource i props (gammelt oppsett), bruk den direkte.
     if (props.getDocumentsToLoad() != null && !props.getDocumentsToLoad().isEmpty()) {
       result.addAll(props.getDocumentsToLoad());
       return result;
+    }
+
+    // 1) Prøv å finne seed-filer i samme katalog som vector store (forankret under 'backend')
+    try {
+      File vectorStoreFile = resolveVectorStoreFilePath(props.getVectorStorePath());
+      File vectorStoreDir = vectorStoreFile.getParentFile();
+      if (vectorStoreDir != null && vectorStoreDir.exists() && vectorStoreDir.isDirectory()) {
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+        List<String> exts = Arrays.asList("pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
+
+        String baseUri = vectorStoreDir.toURI().toString(); // f.eks. file:/app/vectordatabase/
+        for (String ext : exts) {
+          String pattern = baseUri + "**/*." + ext;
+          try {
+            Resource[] found = resolver.getResources(pattern);
+            if (found.length > 0) {
+              result.addAll(Arrays.asList(found));
+            }
+          } catch (Exception e) {
+            log.debug("Skipping scan for .{} in vectorStoreDir due to: {}", ext, e.getMessage());
+          }
+        }
+
+        if (!result.isEmpty()) {
+          log.info("Laster seed-filer fra vector store katalog: {}", vectorStoreDir.getAbsolutePath());
+          if (log.isInfoEnabled()) {
+            result.forEach(r -> log.info(" - {}", safeName(r)));
+          }
+          return result; // Prioriterer vectordatabase først
+        }
+      }
+    } catch (Exception e) {
+      log.debug("Klarte ikke å skanne vector store katalog for seed-filer: {}", e.getMessage());
     }
 
     // 2) Ellers: les base-dir fra props, evt. fallback til @Value fra YAML
@@ -242,8 +275,18 @@ public class VectorStoreConfig {
       baseDir = baseDir + "/";
     }
 
-    // Bruk PathMatchingResourcePatternResolver for wildcard
     PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+
+    // Hvis baseDir er classpath:* og ikke finnes, unngå støy ved å hoppe over skanningen
+    try {
+      if (baseDir.startsWith("classpath:")) {
+        Resource base = resolver.getResource(baseDir);
+        if (!base.exists()) {
+          log.warn("Fant ingen filer i '{}' med endelser {} (base-dir finnes ikke)", baseDir, extsToString());
+          return result;
+        }
+      }
+    } catch (Exception ignored) { }
 
     // Søker rekursivt i undermapper: **/*.ext
     List<String> exts = Arrays.asList("pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
@@ -256,7 +299,7 @@ public class VectorStoreConfig {
           log.debug("Fant {} filer med endelse .{}", found.length, ext);
         }
       } catch (Exception e) {
-        log.warn("Kunne ikke søke etter filer med endelse .{}: {}", ext, e.getMessage());
+        log.debug("Hoppet over søk etter .{} i '{}': {}", ext, baseDir, e.getMessage());
       }
     }
 
