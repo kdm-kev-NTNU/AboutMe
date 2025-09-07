@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.env.Environment;
+import org.springframework.boot.system.ApplicationHome;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,8 +81,8 @@ public class VectorStoreConfig {
       log.warn("Kunne ikke logge embedding-modell detaljer: {}", e.getMessage());
     }
 
-    // Filen vi lagrer/laster vector store fra
-    File vectorStoreFile = new File(vectorStoreProperties.getVectorStorePath());
+    // Filen vi lagrer/laster vector store fra (alltid forankret under 'backend')
+    File vectorStoreFile = resolveVectorStoreFilePath(vectorStoreProperties.getVectorStorePath());
     ensureParentDir(vectorStoreFile);
 
     if (vectorStoreFile.exists()) {
@@ -161,6 +162,54 @@ public class VectorStoreConfig {
     if (parent != null && !parent.exists()) {
       Files.createDirectories(parent.toPath());
     }
+  }
+
+  /**
+   * Løser konfigurasjonens sti til en ABSOLUTT sti forankret under katalogen 'backend'.
+   * Hvis 'backend' ikke finnes i mappestrukturen ved runtime (f.eks. i Docker),
+   * forankres stien under applikasjonens hjemmekatalog (samme katalog som jar/klasser).
+   */
+  private File resolveVectorStoreFilePath(String configuredPath) {
+    if (configuredPath == null || configuredPath.isBlank()) {
+      configuredPath = "vectordatabase/vectorstore.json";
+    }
+
+    File configuredFile = new File(configuredPath);
+    if (configuredFile.isAbsolute()) {
+      return configuredFile;
+    }
+
+    String relative = stripLeadingDotSlash(configuredPath);
+
+    // Finn applikasjonens hjem (jar/klasser katalog)
+    File appHome = new ApplicationHome(VectorStoreConfig.class).getDir();
+
+    // Forsøk å gå oppover for å finne en katalog som heter 'backend'
+    File current = appHome;
+    while (current != null) {
+      if ("backend".equalsIgnoreCase(current.getName())) {
+        return new File(current, relative);
+      }
+      current = current.getParentFile();
+    }
+
+    // Alternativt: se om 'backend' finnes relativt til user.dir
+    File userDir = new File(System.getProperty("user.dir", "."));
+    File backendDir = "backend".equalsIgnoreCase(userDir.getName()) ? userDir : new File(userDir, "backend");
+    if (backendDir.exists() && backendDir.isDirectory()) {
+      return new File(backendDir, relative);
+    }
+
+    // Fallback: forankre under applikasjonens hjemmekatalog
+    return new File(appHome, relative);
+  }
+
+  private static String stripLeadingDotSlash(String path) {
+    String p = path.trim();
+    if (p.startsWith("./")) {
+      return p.substring(2);
+    }
+    return p;
   }
 
   /**

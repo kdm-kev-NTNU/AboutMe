@@ -21,8 +21,9 @@ spring:
         format_sql: true
 sfg:
   aiapp:
-    # runtime-fil på rotnivå i prosjektet
-    vectorStorePath: ./vectordatabase/vectorstore.json
+    # Vector store plasseres alltid under 'backend/vectordatabase' uavhengig av working dir
+    # Denne veien tolkes som relativ til backend av appen (ikke prosessens cwd)
+    vectorStorePath: vectordatabase/vectorstore.json
     encryptContent: true
     encryptionKeyBase64: ${VECTORSTORE_ENC_KEY}
     documentsToLoadDir: classpath:/tmp/docs/
