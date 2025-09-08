@@ -1,15 +1,27 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const router = useRouter()
 
-const questions = [
-  "What's your Norwegian level?",
-  'How have you volunteered?',
-  'What drives you in software development?',
-  'How do you learn new technologies?',
-]
+const language = ref<'en' | 'no'>('en')
+
+const questionsByLang: Record<'en' | 'no', string[]> = {
+  en: [
+    'Why did Kevin create this website?',
+    'Which courses has Kevin taken?',
+    'Which projects has Kevin worked on?',
+    'Who is Kevin?',
+  ],
+  no: [
+    'Hvorfor lagde Kevin denne nettsiden?',
+    'Hvilke emner har Kevin hatt?',
+    'Hvilke prosjekter har Kevin jobbet med?',
+    'Hvem er Kevin?',
+  ],
+}
+
+const visibleQuestions = computed(() => questionsByLang[language.value])
 
 const quickQuestion = ref('')
 
@@ -31,9 +43,16 @@ function submitQuick() {
       <h1 class="logo">Kevin's <span>AI</span>.</h1>
     </section>
 
+    <section class="lang">
+      <div class="lang-toggle">
+        <button class="lang-btn" :class="{ active: language === 'en' }" @click="language = 'en'">EN</button>
+        <button class="lang-btn" :class="{ active: language === 'no' }" @click="language = 'no'">NO</button>
+      </div>
+    </section>
+
     <section class="quick">
       <div class="grid">
-        <button v-for="q in questions" :key="q" class="btn-pill" @click="ask(q)">
+        <button v-for="q in visibleQuestions" :key="q" class="btn-pill" @click="ask(q)">
           {{ q }}
         </button>
       </div>
@@ -59,6 +78,12 @@ function submitQuick() {
 .sparkles { color: #5b6bff; opacity: .9; font-size: 22px; margin-bottom: 8px; }
 .logo { font-size: 64px; line-height: 1; margin: 0; letter-spacing: .5px; color: #2d2e35; text-shadow: 0 2px 0 rgba(0,0,0,.05); }
 .logo span { color: #3b5bff; text-shadow: 0 2px 0 rgba(0,0,0,.06); }
+
+/* Language toggle */
+.lang { display: flex; justify-content: center; margin: 10px 0 0; }
+.lang-toggle { display: inline-flex; gap: 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 999px; padding: 4px; }
+.lang-btn { border: none; background: transparent; padding: 8px 12px; border-radius: 999px; font-weight: 700; color: #1f2937; cursor: pointer; }
+.lang-btn.active { background: #304ffe; color: #fff; }
 
 /* Quick buttons */
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 22px; max-width: 1000px; margin: 30px auto; }

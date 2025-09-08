@@ -37,12 +37,12 @@ public class OpenAIServiceImpl implements OpenAIService {
         .flatMap(q -> vectorStore.similaritySearch(
             SearchRequest.builder()
                 .query(q)
-                .topK(3)
+                .topK(40)
                 .build()
         ).stream())
         // Dedup på tekstinnhold for å unngå duplikater fra flere spørringer
         .distinct()
-        .limit(8)
+        .limit(40)
         .toList();
 
     // 2) Dekrypter innhold ved behov
