@@ -7,13 +7,15 @@ type Message = { role: 'user' | 'assistant'; text: string }
 const route = useRoute()
 const router = useRouter()
 const input = ref('')
+const isLoading = ref(false)
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 
 async function send(text: string) {
-  if (!text.trim()) return
+  if (!text.trim() || isLoading.value) return
   state.messages.push({ role: 'user', text })
   input.value = ''
   try {
+    isLoading.value = true
     const res = await fetch('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -24,6 +26,8 @@ async function send(text: string) {
     state.messages.push({ role: 'assistant', text: data.answer })
   } catch (e: any) {
     state.messages.push({ role: 'assistant', text: 'Noe gikk galt. Prøv igjen.' })
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -46,10 +50,17 @@ onMounted(() => {
       <div v-for="(m, idx) in state.messages" :key="idx" class="message" :class="m.role">
         <div class="bubble">{{ m.text }}</div>
       </div>
+      <div v-if="isLoading" class="message assistant">
+        <div class="bubble typing">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+      </div>
     </div>
     <form class="composer" @submit.prevent="send(input)">
-      <input v-model="input" type="text" placeholder="Skriv et spørsmål..." />
-      <button type="submit">Send</button>
+      <input v-model="input" :disabled="isLoading" type="text" placeholder="Skriv et spørsmål..." />
+      <button type="submit" :disabled="isLoading">{{ isLoading ? 'Venter…' : 'Send' }}</button>
     </form>
   </div>
 </template>
@@ -129,5 +140,24 @@ onMounted(() => {
 }
 .composer button:hover {
   background: #2563eb;
+}
+.typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #9ca3af;
+  border-radius: 50%;
+  animation: blink 1.2s infinite ease-in-out;
+}
+.dot:nth-child(2) { animation-delay: .2s; }
+.dot:nth-child(3) { animation-delay: .4s; }
+
+@keyframes blink {
+  0%, 80%, 100% { transform: scale(0.8); opacity: .4; }
+  40% { transform: scale(1); opacity: 1; }
 }
 </style>
