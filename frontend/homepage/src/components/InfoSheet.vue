@@ -34,13 +34,11 @@ function toggle() {
         ? 'Please be aware that all conversations may be saved and visible to anyone. (Don\'t ask crazy questions, we see you)'
         : 'Vær oppmerksom på at alle samtaler kan lagres og være synlige for andre. (Ikke still ville spørsmål, vi ser deg)'
       }}</p>
-
       <h3 class="section">{{ language === 'en' ? "How Kevin's AI Knows About Me" : 'Hvordan Kevin sin AI vet om meg' }}</h3>
       <p class="text">{{ language === 'en'
         ? "I provide an AI model context about my background and education and how it should answer your questions. This can still hallucinate, so don't trust everything blindly."
         : 'Jeg gir en AI-modell kontekst om min bakgrunn og utdanning og hvordan den skal svare på spørsmål. Den kan fortsatt hallusinere, så ikke stol blindt på alt.'
       }}</p>
-
       <!-- <button class="warn" disabled>⚠️ {{ language === 'en' ? 'Do not click on this' : 'Ikke klikk på denne' }}</button> -->
     </div>
   </div>
@@ -84,9 +82,6 @@ function toggle() {
 .links a { color: #111827; text-decoration: none; }
 .links a:hover { text-decoration: underline; }
 .text { color: #374151; }
-.mode { display: flex; gap: 10px; }
-.mode-btn { padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; }
-.mode-btn.active { border-color: #111827; }
 .warn { margin-top: 14px; width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb; color: #111827; }
 </style>
 
