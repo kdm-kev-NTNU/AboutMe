@@ -28,12 +28,6 @@ function toggle() {
         <li><a href="https://github.com/kdm-kev-NTNU/AboutMe" target="_blank" rel="noopener">{{ language === 'en' ? 'Project Repo' : 'Prosjekt-repo' }}</a></li>
         <li><a href="https://github.com/kdm-kev-NTNU" target="_blank" rel="noopener">{{ language === 'en' ? 'GitHub Profile' : 'GitHub-profil' }}</a></li>
       </ul>
-
-      <h3 class="section">{{ language === 'en' ? 'Privacy Concerns' : 'Personvern' }}</h3>
-      <p class="text">{{ language === 'en'
-        ? 'Please be aware that all conversations may be saved and visible to anyone. (Don\'t ask crazy questions, we see you)'
-        : 'Vær oppmerksom på at alle samtaler kan lagres og være synlige for andre. (Ikke still ville spørsmål, vi ser deg)'
-      }}</p>
       <h3 class="section">{{ language === 'en' ? "How Kevin's AI Knows About Me" : 'Hvordan Kevin sin AI vet om meg' }}</h3>
       <p class="text">{{ language === 'en'
         ? "I provide an AI model context about my background and education and how it should answer your questions. This can still hallucinate, so don't trust everything blindly."
