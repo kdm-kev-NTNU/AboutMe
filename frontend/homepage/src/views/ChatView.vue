@@ -8,10 +8,18 @@ const route = useRoute()
 const router = useRouter()
 const input = ref('')
 const isLoading = ref(false)
+const errorText = ref('')
 const state = reactive<{ messages: Message[] }>({ messages: [] })
+const MAX_PROMPT_CHARS = 3000
 
 async function send(text: string) {
   if (!text.trim() || isLoading.value) return
+  // client-side validation to mirror backend
+  if (text.length > MAX_PROMPT_CHARS) {
+    errorText.value = `Prompten er for lang (${text.length}/${MAX_PROMPT_CHARS}).`;
+    return
+  }
+  errorText.value = ''
   state.messages.push({ role: 'user', text })
   input.value = ''
   try {
@@ -21,11 +29,29 @@ async function send(text: string) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: text }),
     })
-    if (!res.ok) throw new Error('Request failed')
+    if (!res.ok) {
+      // Try parse JSON error from backend
+      let msg = 'Noe gikk galt. Prøv igjen.'
+      try {
+        const data = await res.json() as any
+        if (data && typeof data.error === 'string') {
+          msg = data.error
+        }
+      } catch (_) {
+        // ignore parse errors
+      }
+      if (res.status === 429) {
+        msg = 'For mange forespørsler. Vent litt før du prøver igjen.'
+      } else if (res.status === 400 && !msg) {
+        msg = 'Ugyldig forespørsel.'
+      }
+      errorText.value = msg
+      return
+    }
     const data: { answer: string } = await res.json()
     state.messages.push({ role: 'assistant', text: data.answer })
   } catch (e: any) {
-    state.messages.push({ role: 'assistant', text: 'Noe gikk galt. Prøv igjen.' })
+    errorText.value = 'Nettverksfeil. Prøv igjen.'
   } finally {
     isLoading.value = false
   }
@@ -47,6 +73,7 @@ onMounted(() => {
   </div>
   <div class="chat">
     <div class="messages">
+      <div v-if="errorText" class="error-banner">{{ errorText }}</div>
       <div v-for="(m, idx) in state.messages" :key="idx" class="message" :class="m.role">
         <div class="bubble">{{ m.text }}</div>
       </div>
@@ -97,6 +124,14 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+}
+.error-banner {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: 8px;
 }
 .message {
   display: flex;
