@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useLangStore } from '../stores/lang'
 
 const open = ref(false)
+const langStore = useLangStore()
+const language = computed(() => langStore.language)
 
 function toggle() {
   open.value = !open.value
@@ -9,9 +12,7 @@ function toggle() {
 </script>
 
 <template>
-  <button class="fab" @click="toggle" aria-label="Open info">
-    ℹ️
-  </button>
+  <button class="fab" @click="toggle" :aria-label="language === 'en' ? 'Open info' : 'Åpne info'">ℹ️</button>
 
   <div v-if="open" class="overlay" @click.self="toggle">
     <div class="sheet">
@@ -20,29 +21,29 @@ function toggle() {
         <button class="close" @click="toggle" aria-label="Close">✕</button>
       </div>
 
-      <p class="sub">Welcome to my AI portfolio!</p>
+      <p class="sub">{{ language === 'en' ? 'Welcome to my AI portfolio!' : 'Velkommen til mitt AI-portfolio!' }}</p>
 
-      <h3 class="section">Links</h3>
+      <h3 class="section">{{ language === 'en' ? 'Links' : 'Lenker' }}</h3>
       <ul class="links">
-        <li><a href="#" target="_blank" rel="noopener">Project Repo</a></li>
+        <li><a href="#" target="_blank" rel="noopener">{{ language === 'en' ? 'Project Repo' : 'Prosjekt-repo' }}</a></li>
         <li><a href="#" target="_blank" rel="noopener">Portfolio</a></li>
-        <li><a href="#" target="_blank" rel="noopener">GitHub Profile</a></li>
+        <li><a href="#" target="_blank" rel="noopener">GitHub</a></li>
         <li><a href="#" target="_blank" rel="noopener">Twitter</a></li>
       </ul>
 
-      <h3 class="section">Privacy Concerns</h3>
-      <p class="text">Please be aware that all conversations may be saved and visible to anyone. (Don't ask crazy questions, we see you)</p>
+      <h3 class="section">{{ language === 'en' ? 'Privacy Concerns' : 'Personvern' }}</h3>
+      <p class="text">{{ language === 'en' ? 'Conversations may be saved and visible to anyone.' : 'Samtaler kan bli lagret og være synlige for andre.' }}</p>
 
-      <h3 class="section">How Kevin's AI Knows About Me</h3>
-      <p class="text">I provide an AI model context about my career and how it should answer your questions. This can still hallucinate, so don't trust everything blindly.</p>
+      <h3 class="section">{{ language === 'en' ? "How Kevin's AI Knows About Me" : 'Hvordan Kevin sin AI vet om meg' }}</h3>
+      <p class="text">{{ language === 'en' ? "The AI gets context about my career to answer questions." : 'AI-en får kontekst om min bakgrunn for å svare på spørsmål.' }}</p>
 
-      <h3 class="section">Mode</h3>
+      <h3 class="section">{{ language === 'en' ? 'Mode' : 'Modus' }}</h3>
       <div class="mode">
-        <button class="mode-btn active">☀️ Light</button>
-        <button class="mode-btn">🌙 Dark</button>
+        <button class="mode-btn active">☀️ {{ language === 'en' ? 'Light' : 'Lys' }}</button>
+        <button class="mode-btn">🌙 {{ language === 'en' ? 'Dark' : 'Mørk' }}</button>
       </div>
 
-      <button class="warn" disabled>⚠️ Do not click on this</button>
+      <button class="warn" disabled>⚠️ {{ language === 'en' ? 'Do not click on this' : 'Ikke klikk på denne' }}</button>
     </div>
   </div>
 </template>

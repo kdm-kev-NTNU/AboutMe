@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { ref, computed } from 'vue'
+import { useLangStore } from '../stores/lang'
 
 const router = useRouter()
 
-const language = ref<'en' | 'no'>('en')
+const langStore = useLangStore()
+const language = computed({
+  get: () => langStore.language,
+  set: (v: 'en' | 'no') => langStore.setLanguage(v),
+})
 
 const questionsByLang: Record<'en' | 'no', string[]> = {
   en: [
@@ -63,7 +68,7 @@ function submitQuick() {
         v-model="quickQuestion"
         type="text"
         class="home-input"
-        placeholder="Curious? Kevin's AI is here to answer!"
+        :placeholder="language === 'en' ? `Curious? Kevin's AI is here to answer!` : `Nysgjerrig? Kevin sin AI svarer gjerne!`"
       />
       <button type="submit" class="home-send">Send →</button>
     </form>
