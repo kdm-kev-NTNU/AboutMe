@@ -32,7 +32,7 @@ function toggle() {
       <p class="text">Please be aware that all conversations may be saved and visible to anyone. (Don't ask crazy questions, we see you)</p>
 
       <h3 class="section">How Kevin's AI Knows About Me</h3>
-      <p class="text">I provide an AI model context about my career and how it should answer your questions. This can still hallucinate, so don't trust everything blindly.</p>
+      <p class="text">I provide an AI model context about my background  and education and how it should answer your questions. This can still hallucinate, so don't trust everything blindly.</p>
 
       <!-- Mode controls removed per request -->
 
