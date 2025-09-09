@@ -1,8 +1,6 @@
 spring:
   application:
     name: portfolio
-server:
-  port: ${PORT:8080}
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}
@@ -10,6 +8,8 @@ server:
         options:
           model: text-embedding-3-large
           dimensions: 3072
+server:
+  port: ${PORT:8080}
   datasource:
     url: jdbc:mysql://localhost:3307/aboutme?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
     username: root
