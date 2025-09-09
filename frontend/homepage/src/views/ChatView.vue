@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useLangStore } from '../stores/lang'
 
 type Message = { role: 'user' | 'assistant'; text: string }
 
@@ -11,6 +12,8 @@ const isLoading = ref(false)
 const errorText = ref('')
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
+const langStore = useLangStore()
+const language = computed(() => langStore.language)
 
 async function send(text: string) {
   if (!text.trim() || isLoading.value) return
@@ -86,7 +89,7 @@ onMounted(() => {
       </div>
     </div>
     <form class="composer" @submit.prevent="send(input)">
-      <input v-model="input" :disabled="isLoading" type="text" placeholder="Skriv et spørsmål..." />
+      <input v-model="input" :disabled="isLoading" type="text" :placeholder="language === 'en' ? 'Type a question…' : 'Skriv et spørsmål…'" />
       <button type="submit" :disabled="isLoading">{{ isLoading ? 'Venter…' : 'Send' }}</button>
     </form>
   </div>
