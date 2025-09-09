@@ -24,10 +24,8 @@ function toggle() {
 
       <h3 class="section">Links</h3>
       <ul class="links">
-        <li><a href="#" target="_blank" rel="noopener">Project Repo</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Portfolio</a></li>
-        <li><a href="#" target="_blank" rel="noopener">GitHub Profile</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Twitter</a></li>
+        <li><a href="https://github.com/kdm-kev-NTNU/AboutMe" target="_blank" rel="noopener">Project Repo</a></li>
+        <li><a href="https://github.com/kdm-kev-NTNU" target="_blank" rel="noopener">GitHub Profile</a></li>
       </ul>
 
       <h3 class="section">Privacy Concerns</h3>
@@ -36,11 +34,7 @@ function toggle() {
       <h3 class="section">How Kevin's AI Knows About Me</h3>
       <p class="text">I provide an AI model context about my career and how it should answer your questions. This can still hallucinate, so don't trust everything blindly.</p>
 
-      <h3 class="section">Mode</h3>
-      <div class="mode">
-        <button class="mode-btn active">☀️ Light</button>
-        <button class="mode-btn">🌙 Dark</button>
-      </div>
+      <!-- Mode controls removed per request -->
 
       <button class="warn" disabled>⚠️ Do not click on this</button>
     </div>
@@ -85,9 +79,6 @@ function toggle() {
 .links a { color: #111827; text-decoration: none; }
 .links a:hover { text-decoration: underline; }
 .text { color: #374151; }
-.mode { display: flex; gap: 10px; }
-.mode-btn { padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; }
-.mode-btn.active { border-color: #111827; }
 .warn { margin-top: 14px; width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb; color: #111827; }
 </style>
 
