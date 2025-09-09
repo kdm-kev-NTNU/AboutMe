@@ -8,6 +8,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
@@ -74,7 +75,11 @@ public class OpenAIServiceImpl implements OpenAIService {
         "documents", String.join("\n", contentList)
     ));
 
-    // 4) Kall modellen
+    // 4) Kall modellen med begrensede tokens
+    OpenAiChatOptions options = OpenAiChatOptions.builder()
+        .withMaxTokens(400)
+        .build();
+    prompt = new Prompt(prompt.getInstructions(), options);
     ChatResponse response = chatModel.call(prompt);
     return new Answer(response.getResult().getOutput().getText());
   }
