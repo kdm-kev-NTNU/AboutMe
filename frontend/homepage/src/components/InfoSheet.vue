@@ -25,23 +25,21 @@ function toggle() {
 
       <h3 class="section">{{ language === 'en' ? 'Links' : 'Lenker' }}</h3>
       <ul class="links">
-        <li><a href="#" target="_blank" rel="noopener">{{ language === 'en' ? 'Project Repo' : 'Prosjekt-repo' }}</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Portfolio</a></li>
-        <li><a href="#" target="_blank" rel="noopener">GitHub</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Twitter</a></li>
+        <li><a href="https://github.com/kdm-kev-NTNU/AboutMe" target="_blank" rel="noopener">{{ language === 'en' ? 'Project Repo' : 'Prosjekt-repo' }}</a></li>
+        <li><a href="https://github.com/kdm-kev-NTNU" target="_blank" rel="noopener">{{ language === 'en' ? 'GitHub Profile' : 'GitHub-profil' }}</a></li>
       </ul>
 
       <h3 class="section">{{ language === 'en' ? 'Privacy Concerns' : 'Personvern' }}</h3>
-      <p class="text">{{ language === 'en' ? 'Conversations may be saved and visible to anyone.' : 'Samtaler kan bli lagret og være synlige for andre.' }}</p>
+      <p class="text">{{ language === 'en'
+        ? 'Please be aware that all conversations may be saved and visible to anyone. (Don\'t ask crazy questions, we see you)'
+        : 'Vær oppmerksom på at alle samtaler kan lagres og være synlige for andre. (Ikke still ville spørsmål, vi ser deg)'
+      }}</p>
 
       <h3 class="section">{{ language === 'en' ? "How Kevin's AI Knows About Me" : 'Hvordan Kevin sin AI vet om meg' }}</h3>
-      <p class="text">{{ language === 'en' ? "The AI gets context about my career to answer questions." : 'AI-en får kontekst om min bakgrunn for å svare på spørsmål.' }}</p>
-
-      <h3 class="section">{{ language === 'en' ? 'Mode' : 'Modus' }}</h3>
-      <div class="mode">
-        <button class="mode-btn active">☀️ {{ language === 'en' ? 'Light' : 'Lys' }}</button>
-        <button class="mode-btn">🌙 {{ language === 'en' ? 'Dark' : 'Mørk' }}</button>
-      </div>
+      <p class="text">{{ language === 'en'
+        ? "I provide an AI model context about my background and education and how it should answer your questions. This can still hallucinate, so don't trust everything blindly."
+        : 'Jeg gir en AI-modell kontekst om min bakgrunn og utdanning og hvordan den skal svare på spørsmål. Den kan fortsatt hallusinere, så ikke stol blindt på alt.'
+      }}</p>
 
       <button class="warn" disabled>⚠️ {{ language === 'en' ? 'Do not click on this' : 'Ikke klikk på denne' }}</button>
     </div>
