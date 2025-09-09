@@ -74,7 +74,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         "documents", String.join("\n", contentList)
     ));
 
-    // 4) Kall modellen
+    // 4) Kall modellen. Maks token-grense settes via application.yaml
     ChatResponse response = chatModel.call(prompt);
     return new Answer(response.getResult().getOutput().getText());
   }
