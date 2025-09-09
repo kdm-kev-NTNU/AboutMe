@@ -1,16 +1,21 @@
 <script setup lang="ts">
-defineProps<{
-  msg: string
-}>()
+import { computed } from 'vue'
+import { useLangStore } from '../stores/lang'
+
+defineProps<{ msg: string }>()
+
+const langStore = useLangStore()
+const language = computed(() => langStore.language)
 </script>
 
 <template>
   <div class="greetings">
     <h1 class="green">{{ msg }}</h1>
     <h3>
-      You’ve successfully created a project with
+      {{ language === 'en' ? "You’ve successfully created a project with" : 'Du har laget et prosjekt med' }}
       <a href="https://vite.dev/" target="_blank" rel="noopener">Vite</a> +
-      <a href="https://vuejs.org/" target="_blank" rel="noopener">Vue 3</a>. What's next?
+      <a href="https://vuejs.org/" target="_blank" rel="noopener">Vue 3</a>.
+      {{ language === 'en' ? "What's next?" : 'Hva nå?' }}
     </h3>
   </div>
 </template>
