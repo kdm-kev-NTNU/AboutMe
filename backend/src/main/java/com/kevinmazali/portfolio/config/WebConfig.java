@@ -1,6 +1,5 @@
 package com.kevinmazali.portfolio.config;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
@@ -45,8 +44,11 @@ public class WebConfig {
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
     private Bucket newBucket() {
-        Bandwidth limit = Bandwidth.classic(5, Refill.greedy(5, Duration.ofSeconds(10)))
-            .withInitialTokens(5);
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(5)
+            .refillGreedy(5, Duration.ofSeconds(10))
+            .initialTokens(5)
+            .build();
         return Bucket.builder().addLimit(limit).build();
     }
 
