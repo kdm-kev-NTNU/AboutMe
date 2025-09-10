@@ -18,6 +18,10 @@ WORKDIR /app
 
 RUN touch .env
 
+# Ensure vectordatabase exists and copy seed files from repo
+RUN mkdir -p /app/vectordatabase
+COPY vectordatabase/ /app/vectordatabase/
+
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

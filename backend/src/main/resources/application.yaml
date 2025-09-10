@@ -4,6 +4,10 @@ spring:
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          # Limit completion tokens per response
+          max-tokens: 400
       embedding:
         options:
           model: text-embedding-3-large
@@ -12,6 +16,7 @@ spring:
     url: jdbc:mysql://localhost:3307/aboutme?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
     username: root
     password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update
@@ -19,10 +24,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+server:
+  port: ${PORT:8080}
 sfg:
   aiapp:
-    # runtime-fil på rotnivå i prosjektet
-    vectorStorePath: ./vectordatabase/vectorstore.json
+    # Vector store plasseres alltid under 'backend/vectordatabase' uavhengig av working dir
+    # Denne veien tolkes som relativ til backend av appen (ikke prosessens cwd)
+    vectorStorePath: vectordatabase/vectorstore.json
     encryptContent: true
     encryptionKeyBase64: ${VECTORSTORE_ENC_KEY}
     documentsToLoadDir: classpath:/tmp/docs/
