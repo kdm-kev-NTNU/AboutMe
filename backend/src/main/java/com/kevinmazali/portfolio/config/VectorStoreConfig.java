@@ -24,14 +24,28 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 
+/**
+ * Configuration responsible for initializing and maintaining the vector store.
+ *
+ * <p>On startup it will try to load an existing store from disk; if none exists,
+ * it will discover, parse, optionally encrypt, chunk, embed and persist
+ * documents as a new {@link SimpleVectorStore}.</p>
+ */
 @Slf4j
 @Configuration
 public class VectorStoreConfig {
 
-  // Fallback dersom VectorStoreProperties ikke har egen documentsToLoadDir
   @Value("${sfg.aiapp.documentsToLoad:}")
-  private String documentsToLoadFromYaml; // f.eks. "classpath:/tmp/docs/"
+  private String documentsToLoadFromYaml;
 
+  /**
+   * Creates and initializes the {@link SimpleVectorStore} bean.
+   *
+   * @param embeddingModel the embedding model used to embed chunks
+   * @param vectorStoreProperties configuration properties for the vector store
+   * @param env Spring environment for optional fallbacks
+   * @return a loaded or freshly built {@link SimpleVectorStore}
+   */
   @Bean
   public SimpleVectorStore simpleVectorStore(
       EmbeddingModel embeddingModel,
@@ -157,6 +171,7 @@ public class VectorStoreConfig {
 
   // --- Helpers ---
 
+  /** Ensures the parent directory of the given file exists. */
   private static void ensureParentDir(File file) throws IOException {
     File parent = file.getParentFile();
     if (parent != null && !parent.exists()) {
@@ -168,6 +183,10 @@ public class VectorStoreConfig {
    * Løser konfigurasjonens sti til en ABSOLUTT sti forankret under katalogen 'backend'.
    * Hvis 'backend' ikke finnes i mappestrukturen ved runtime (f.eks. i Docker),
    * forankres stien under applikasjonens hjemmekatalog (samme katalog som jar/klasser).
+   */
+  /**
+   * Resolves the configured store path to an absolute path anchored under the
+   * 'backend' directory when possible, or the application's home directory as fallback.
    */
   private File resolveVectorStoreFilePath(String configuredPath) {
     if (configuredPath == null || configuredPath.isBlank()) {
@@ -204,6 +223,7 @@ public class VectorStoreConfig {
     return new File(appHome, relative);
   }
 
+  /** Removes a leading "./" prefix for normalization. */
   private static String stripLeadingDotSlash(String path) {
     String p = path.trim();
     if (p.startsWith("./")) {
@@ -215,6 +235,10 @@ public class VectorStoreConfig {
   /**
    * Løfter enten en eksplisitt liste av Resource (hvis konfigurert),
    * ellers bruker basekatalog (classpath:/ eller file:) og matcher på endelser.
+   */
+  /**
+   * Resolves input resources either from a pre-configured list, from the vector
+   * store folder (seeding), or by scanning a base directory for supported extensions.
    */
   private List<Resource> resolveResources(VectorStoreProperties props) throws IOException {
     List<Resource> result = new ArrayList<>();
@@ -315,11 +339,13 @@ public class VectorStoreConfig {
     return result;
   }
 
+  /** Returns a human-friendly name for logging. */
   private static String safeName(Resource r) {
     try { return r.getURL().toString(); }
     catch (Exception e) { return r.getFilename(); }
   }
 
+  /** Returns the supported file extensions as a log-friendly string. */
   private static String extsToString() {
     return "[pdf, docx, doc, txt, md, png, jpg, jpeg, gif, bmp, tiff, webp, svg]";
   }
@@ -327,6 +353,9 @@ public class VectorStoreConfig {
   /**
    * Prosesserer dokumenter og legger til metadata for innholdstype.
    * Håndterer både tekst og bildeinnhold med riktig metadata.
+   */
+  /**
+   * Adds content-type, filename and source metadata to documents; handles images and text.
    */
   private List<Document> processMultimodalDocuments(List<Document> documents, Resource resource) {
     List<Document> processedDocs = new ArrayList<>();
@@ -375,6 +404,7 @@ public class VectorStoreConfig {
   /**
    * Oppretter CryptoService fra konfigurasjon.
    */
+  /** Builds a {@link CryptoService} from properties or environment variables. */
   private CryptoService createCryptoService(VectorStoreProperties props) {
     try {
       String keyBase64 = props.getEncryptionKeyBase64();
@@ -399,6 +429,7 @@ public class VectorStoreConfig {
   /**
    * Krypterer dokumenter og legger til metadata.
    */
+  /** Encrypts document text and adds encryption metadata when possible. */
   private List<Document> encryptDocuments(List<Document> documents, CryptoService crypto) {
     return documents.stream()
         .map(doc -> {
