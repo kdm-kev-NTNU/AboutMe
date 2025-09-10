@@ -19,9 +19,15 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Web configuration including CORS and a lightweight rate limiter for the /ask endpoint.
+ */
 @Configuration
 public class WebConfig {
 
+    /**
+     * Configures permissive CORS for the known front-end origins.
+     */
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
@@ -58,6 +64,9 @@ public class WebConfig {
         return "ask:" + (user != null ? "u:" + user : "ip:" + ip);
     }
 
+    /**
+     * Simple per-user/IP rate limiter using Bucket4j for the /ask endpoint.
+     */
     @Bean
     public Filter rateLimitFilter() {
         return new OncePerRequestFilter() {

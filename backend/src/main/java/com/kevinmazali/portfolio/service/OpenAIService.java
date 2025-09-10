@@ -5,10 +5,16 @@ import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
 
 /**
- * Created by jt, Spring Framework Guru.
+ * Service abstraction for generating answers to user questions.
  */
 public interface OpenAIService {
 
+    /**
+     * Generates an answer for the provided question.
+     *
+     * @param question the user question
+     * @return the generated answer
+     */
     Answer getAnswer(Question question);
 
 }
