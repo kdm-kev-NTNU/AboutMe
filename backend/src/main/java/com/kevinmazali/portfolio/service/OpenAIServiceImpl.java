@@ -46,10 +46,10 @@ public class OpenAIServiceImpl implements OpenAIService {
    */
   @Override
   public Answer getAnswer(Question question) {
-    // 1) Utvid spørringen: original + oversatt til EN og NO
+    // 1) Expand the query: original + translated to EN and NO
     List<String> queries = expandQueryToLanguages(question.question());
 
-    // 2) Hent top dokumenter for hver variant og slå sammen
+    // 2) Fetch top documents for each variant and merge
     List<Document> documents = queries.stream()
         .flatMap(q -> vectorStore.similaritySearch(
             SearchRequest.builder()
@@ -57,12 +57,12 @@ public class OpenAIServiceImpl implements OpenAIService {
                 .topK(40)
                 .build()
         ).stream())
-        // Dedup på tekstinnhold for å unngå duplikater fra flere spørringer
+        // Deduplicate on text content to avoid duplicates across query variants
         .distinct()
         .limit(40)
         .toList();
 
-    // 2) Dekrypter innhold ved behov
+    // 2) Decrypt content when needed
     CryptoService crypto = cryptoFromEnv();
     List<String> contentList = documents.stream()
         .map(d -> {
@@ -73,8 +73,8 @@ public class OpenAIServiceImpl implements OpenAIService {
             try {
               return crypto.decrypt(iv, ct);
             } catch (RuntimeException ex) {
-              Object src = d.getMetadata().getOrDefault("source", "(ukjent kilde)");
-              return "[Kunne ikke dekryptere chunk – kilde: " + src + "]";
+              Object src = d.getMetadata().getOrDefault("source", "(unknown source)");
+              return "[Could not decrypt chunk – source: " + src + "]";
             }
           } else {
             return d.getText();
@@ -82,7 +82,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         })
         .toList();
 
-    // 3) Les prompt-template fra classpath (fungerer også når pakket som JAR)
+    // 3) Read prompt template from classpath (also works when packaged as a JAR)
     String ragPromptTemplate = loadPromptTemplateFromClasspath("templates/rag-prompt-template.st");
 
     PromptTemplate promptTemplate = new PromptTemplate(ragPromptTemplate);
@@ -91,7 +91,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         "documents", String.join("\n", contentList)
     ));
 
-    // 4) Kall modellen. Maks token-grense settes via application.yaml
+    // 4) Call the model. Max token limit is set via application.yaml
     ChatResponse response = chatModel.call(prompt);
     return new Answer(response.getResult().getOutput().getText());
   }
@@ -102,7 +102,7 @@ public class OpenAIServiceImpl implements OpenAIService {
    */
   private List<String> expandQueryToLanguages(String original) {
     try {
-      // Enkel prompt for rask oversettelse uten forklaringer
+      // Simple prompt for quick translation without explanations
       String sys = """
       Translate the user query into both English and Norwegian.
       Return ONLY this exact JSON object with double quotes and no extra text:
@@ -115,7 +115,7 @@ public class OpenAIServiceImpl implements OpenAIService {
       ChatResponse r = chatModel.call(p);
       String json = r.getResult().getOutput().getText();
 
-      // Svært enkel parsing for å unngå ekstra avhengigheter
+      // Very simple parsing to avoid extra dependencies
       String en = extractJsonValue(json, "en");
       String no = extractJsonValue(json, "no");
 
@@ -156,7 +156,7 @@ public class OpenAIServiceImpl implements OpenAIService {
     try {
       return new CryptoService(key);
     } catch (IllegalArgumentException e) {
-      return null; // feil lengde -> deaktiver dekryptering
+      return null; // wrong length -> disable decryption
     }
   }
 
@@ -173,7 +173,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         return new String(in.readAllBytes(), StandardCharsets.UTF_8);
       }
     } catch (Exception e) {
-      throw new RuntimeException("Kunne ikke lese " + resourceName + " fra classpath", e);
+      throw new RuntimeException("Could not read " + resourceName + " from classpath", e);
     }
   }
 }

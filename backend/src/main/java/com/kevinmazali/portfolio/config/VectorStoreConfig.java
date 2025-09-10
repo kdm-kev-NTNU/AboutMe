@@ -53,10 +53,10 @@ public class VectorStoreConfig {
       Environment env
   ) throws IOException {
 
-    // Bygg store med embedding model
+    // Build store with the embedding model
     SimpleVectorStore store = SimpleVectorStore.builder(embeddingModel).build();
 
-    // Oppstarts-logg: hvilken embedding-modell og dimensjoner som brukes
+    // Startup log: which embedding model and dimensions are in use
     try {
       String modelClass = embeddingModel.getClass().getName();
       String modelName = "(ukjent)";
@@ -77,7 +77,7 @@ public class VectorStoreConfig {
           } catch (NoSuchMethodException ignored) { }
         }
       } catch (NoSuchMethodException ignored) { }
-      // Fallback: hent fra Spring-properties dersom reflection ikke gir svar
+      // Fallback: obtain from Spring properties if reflection does not provide it
       if ("(ukjent)".equals(modelName)) {
         String propModel = env.getProperty("spring.ai.openai.embedding.options.model");
         if (propModel != null && !propModel.isBlank()) {
@@ -95,7 +95,7 @@ public class VectorStoreConfig {
       log.warn("Kunne ikke logge embedding-modell detaljer: {}", e.getMessage());
     }
 
-    // Filen vi lagrer/laster vector store fra (alltid forankret under 'backend')
+    // File used to save/load the vector store (always anchored under 'backend')
     File vectorStoreFile = resolveVectorStoreFilePath(vectorStoreProperties.getVectorStorePath());
     ensureParentDir(vectorStoreFile);
 
@@ -107,7 +107,7 @@ public class VectorStoreConfig {
 
     log.info("Ingen eksisterende vector store. Leser og indekserer dokumenter ...");
 
-    // --- Hent dokumenter ---
+    // --- Load documents ---
     List<Resource> resources = resolveResources(vectorStoreProperties);
 
     if (resources.isEmpty()) {
@@ -129,7 +129,7 @@ public class VectorStoreConfig {
           continue;
         }
         
-        // Behandle dokumenter og legg til metadata for innholdstype
+        // Process documents and add metadata for content type
         List<Document> processedDocs = processMultimodalDocuments(docs, res);
         
         if (processedDocs.isEmpty()) {
@@ -144,7 +144,7 @@ public class VectorStoreConfig {
           continue;
         }
         
-        // Krypter dokumenter hvis kryptering er aktivert
+        // Encrypt documents when encryption is enabled
         if (vectorStoreProperties.isEncryptContent()) {
           CryptoService crypto = createCryptoService(vectorStoreProperties);
           if (crypto != null) {
@@ -162,7 +162,7 @@ public class VectorStoreConfig {
       }
     }
 
-    // Lagre ny vector store
+    // Persist the newly built vector store
     store.save(vectorStoreFile);
     log.info("Vector store lagret til: {}", vectorStoreFile.getPath());
 
@@ -200,10 +200,10 @@ public class VectorStoreConfig {
 
     String relative = stripLeadingDotSlash(configuredPath);
 
-    // Finn applikasjonens hjem (jar/klasser katalog)
+    // Find the application home directory (jar/classes folder)
     File appHome = new ApplicationHome(VectorStoreConfig.class).getDir();
 
-    // Forsøk å gå oppover for å finne en katalog som heter 'backend'
+    // Walk upwards to find a directory named 'backend'
     File current = appHome;
     while (current != null) {
       if ("backend".equalsIgnoreCase(current.getName())) {
@@ -212,14 +212,14 @@ public class VectorStoreConfig {
       current = current.getParentFile();
     }
 
-    // Alternativt: se om 'backend' finnes relativt til user.dir
+    // Alternatively, check if 'backend' exists relative to user.dir
     File userDir = new File(System.getProperty("user.dir", "."));
     File backendDir = "backend".equalsIgnoreCase(userDir.getName()) ? userDir : new File(userDir, "backend");
     if (backendDir.exists() && backendDir.isDirectory()) {
       return new File(backendDir, relative);
     }
 
-    // Fallback: forankre under applikasjonens hjemmekatalog
+    // Fallback: anchor under the application's home directory
     return new File(appHome, relative);
   }
 
@@ -243,13 +243,13 @@ public class VectorStoreConfig {
   private List<Resource> resolveResources(VectorStoreProperties props) throws IOException {
     List<Resource> result = new ArrayList<>();
 
-    // 0) Hvis du allerede har en liste av Resource i props (gammelt oppsett), bruk den direkte.
+    // 0) If a list of Resource is already provided in props, use it directly.
     if (props.getDocumentsToLoad() != null && !props.getDocumentsToLoad().isEmpty()) {
       result.addAll(props.getDocumentsToLoad());
       return result;
     }
 
-    // 1) Prøv å finne seed-filer i samme katalog som vector store (forankret under 'backend')
+    // 1) Try to find seed files in the same folder as the vector store (anchored under 'backend')
     try {
       File vectorStoreFile = resolveVectorStoreFilePath(props.getVectorStorePath());
       File vectorStoreDir = vectorStoreFile.getParentFile();
@@ -257,7 +257,7 @@ public class VectorStoreConfig {
         PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
         List<String> exts = Arrays.asList("pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
 
-        String baseUri = vectorStoreDir.toURI().toString(); // f.eks. file:/app/vectordatabase/
+        String baseUri = vectorStoreDir.toURI().toString(); // e.g. file:/app/vectordatabase/
         for (String ext : exts) {
           String pattern = baseUri + "**/*." + ext;
           try {
@@ -271,18 +271,18 @@ public class VectorStoreConfig {
         }
 
         if (!result.isEmpty()) {
-          log.info("Laster seed-filer fra vector store katalog: {}", vectorStoreDir.getAbsolutePath());
+          log.info("Loading seed files from vector store directory: {}", vectorStoreDir.getAbsolutePath());
           if (log.isInfoEnabled()) {
             result.forEach(r -> log.info(" - {}", safeName(r)));
           }
-          return result; // Prioriterer vectordatabase først
+          return result; // Prioritize vector database directory first
         }
       }
     } catch (Exception e) {
       log.debug("Klarte ikke å skanne vector store katalog for seed-filer: {}", e.getMessage());
     }
 
-    // 2) Ellers: les base-dir fra props, evt. fallback til @Value fra YAML
+    // 2) Else: read base dir from props, with @Value fallback from YAML
     String baseDir = props.getDocumentsToLoadDir();
 
     if ((baseDir == null || baseDir.isBlank()) && documentsToLoadFromYaml != null && !documentsToLoadFromYaml.isBlank()) {
@@ -294,44 +294,44 @@ public class VectorStoreConfig {
       return result;
     }
 
-    // Normaliser – sørg for at det slutter med '/'
+    // Normalize – ensure it ends with '/'
     if (!baseDir.endsWith("/")) {
       baseDir = baseDir + "/";
     }
 
     PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
-    // Hvis baseDir er classpath:* og ikke finnes, unngå støy ved å hoppe over skanningen
+    // If baseDir is classpath:* and does not exist, avoid noise by skipping the scan
     try {
       if (baseDir.startsWith("classpath:")) {
         Resource base = resolver.getResource(baseDir);
         if (!base.exists()) {
-          log.warn("Fant ingen filer i '{}' med endelser {} (base-dir finnes ikke)", baseDir, extsToString());
+          log.warn("No files found in '{}' with extensions {} (base dir does not exist)", baseDir, extsToString());
           return result;
         }
       }
     } catch (Exception ignored) { }
 
-    // Søker rekursivt i undermapper: **/*.ext
+    // Search recursively in subfolders: **/*.ext
     List<String> exts = Arrays.asList("pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
     for (String ext : exts) {
-      String pattern = baseDir + "**/*." + ext; // f.eks. classpath:/tmp/docs/**/*.(pdf/docx/…)
+      String pattern = baseDir + "**/*." + ext; // e.g. classpath:/tmp/docs/**/*.(pdf/docx/...)
       try {
         Resource[] found = resolver.getResources(pattern);
         result.addAll(Arrays.asList(found));
         if (found.length > 0) {
-          log.debug("Fant {} filer med endelse .{}", found.length, ext);
+          log.debug("Found {} files with extension .{}", found.length, ext);
         }
       } catch (Exception e) {
-        log.debug("Hoppet over søk etter .{} i '{}': {}", ext, baseDir, e.getMessage());
+        log.debug("Skipped search for .{} in '{}': {}", ext, baseDir, e.getMessage());
       }
     }
 
     if (result.isEmpty()) {
-      log.warn("Fant ingen filer i '{}' med endelser {}", baseDir, extsToString());
+      log.warn("No files found in '{}' with extensions {}", baseDir, extsToString());
     } else {
       if (log.isInfoEnabled()) {
-        log.info("Filer som lastes fra '{}':", baseDir);
+        log.info("Files to be loaded from '{}':", baseDir);
         result.forEach(r -> log.info(" - {}", safeName(r)));
       }
     }
@@ -351,8 +351,8 @@ public class VectorStoreConfig {
   }
 
   /**
-   * Prosesserer dokumenter og legger til metadata for innholdstype.
-   * Håndterer både tekst og bildeinnhold med riktig metadata.
+   * Processes documents and enriches with content-type metadata.
+   * Handles both text and image content with appropriate metadata.
    */
   /**
    * Adds content-type, filename and source metadata to documents; handles images and text.
@@ -370,13 +370,13 @@ public class VectorStoreConfig {
         
         String lowerFilename = filename.toLowerCase();
         
-        // Sjekk om det er et bilde
+        // Check whether the file is an image
         if (lowerFilename.endsWith(".png") || lowerFilename.endsWith(".jpg") || 
             lowerFilename.endsWith(".jpeg") || lowerFilename.endsWith(".gif") || 
             lowerFilename.endsWith(".bmp") || lowerFilename.endsWith(".tiff") || 
             lowerFilename.endsWith(".webp") || lowerFilename.endsWith(".svg")) {
           
-          // For bilder: legg til metadata som indikerer at det er et bilde
+          // For images: add metadata indicating image content
           Document imageDoc = new Document(doc.getText(), doc.getMetadata());
           imageDoc.getMetadata().put("content_type", "image");
           imageDoc.getMetadata().put("filename", filename);
@@ -384,7 +384,7 @@ public class VectorStoreConfig {
           processedDocs.add(imageDoc);
           
         } else {
-          // For tekstdokumenter: legg til metadata som indikerer at det er tekst
+          // For text documents: add metadata indicating text content
           Document textDoc = new Document(doc.getText(), doc.getMetadata());
           textDoc.getMetadata().put("content_type", "text");
           textDoc.getMetadata().put("filename", filename);
@@ -393,8 +393,8 @@ public class VectorStoreConfig {
         }
         
       } catch (Exception e) {
-        log.warn("Feil ved prosessering av dokument fra '{}': {}", safeName(resource), e.getMessage());
-        processedDocs.add(doc); // Fallback til originalt dokument
+        log.warn("Error while processing document from '{}': {}", safeName(resource), e.getMessage());
+        processedDocs.add(doc); // Fallback to original document
       }
     }
     
@@ -402,32 +402,32 @@ public class VectorStoreConfig {
   }
 
   /**
-   * Oppretter CryptoService fra konfigurasjon.
+   * Creates CryptoService from configuration.
    */
   /** Builds a {@link CryptoService} from properties or environment variables. */
   private CryptoService createCryptoService(VectorStoreProperties props) {
     try {
       String keyBase64 = props.getEncryptionKeyBase64();
       if (keyBase64 == null || keyBase64.isBlank()) {
-        // Prøv miljøvariabel som fallback
+        // Try environment variable as fallback
         keyBase64 = System.getenv("VECTORSTORE_ENC_KEY");
       }
       
       if (keyBase64 == null || keyBase64.isBlank()) {
-        log.warn("Ingen krypteringsnøkkel funnet i konfigurasjon eller miljøvariabel VECTORSTORE_ENC_KEY");
+        log.warn("No encryption key found in configuration or VECTORSTORE_ENC_KEY environment variable");
         return null;
       }
       
       byte[] keyBytes = Base64.getDecoder().decode(keyBase64);
       return new CryptoService(keyBytes);
     } catch (Exception e) {
-      log.error("Feil ved oppretting av CryptoService: {}", e.getMessage(), e);
+      log.error("Error creating CryptoService: {}", e.getMessage(), e);
       return null;
     }
   }
 
   /**
-   * Krypterer dokumenter og legger til metadata.
+   * Encrypts documents and adds metadata.
    */
   /** Encrypts document text and adds encryption metadata when possible. */
   private List<Document> encryptDocuments(List<Document> documents, CryptoService crypto) {
@@ -436,20 +436,20 @@ public class VectorStoreConfig {
           try {
             String originalText = doc.getText();
             if (originalText == null || originalText.trim().isEmpty()) {
-              return doc; // Ikke krypter tom tekst
+              return doc; // Do not encrypt empty text
             }
             
             CryptoService.EncResult encrypted = crypto.encrypt(originalText);
             
-            // Opprett nytt dokument med kryptert tekst og metadata
+            // Create new document with encrypted text and metadata
             Document encryptedDoc = new Document(encrypted.cipherBase64(), doc.getMetadata());
             encryptedDoc.getMetadata().put("enc", "aesgcm");
             encryptedDoc.getMetadata().put("enc_iv", encrypted.ivBase64());
             
             return encryptedDoc;
           } catch (Exception e) {
-            log.error("Feil ved kryptering av dokument: {}", e.getMessage(), e);
-            return doc; // Returner originalt dokument ved feil
+            log.error("Error encrypting document: {}", e.getMessage(), e);
+            return doc; // Return original document on error
           }
         })
         .toList();
