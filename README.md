@@ -6,7 +6,7 @@ AboutMe is a personal portfolio with an AI chat that answers questions about Kev
 
 NB: Known issues
 
-This project was built quickly as a personal initiative. Some edge cases and minor issues may exist. Feedback and improvement suggestions are very welcome.
+This project was built quickly as a personal initiative. Some edge cases and minor issues may exist. Feedback and improvement suggestions are very welcome. email: kevindmazali@gmail.com
 
 - Privacy: Conversations may be stored in the database to improve answers and stability. Do not share sensitive information.
 - Vector store privacy: The vector store is encrypted at rest (AES‑GCM) so personal documents are not accessible without the decryption key.
