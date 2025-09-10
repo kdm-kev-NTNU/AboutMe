@@ -20,6 +20,13 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Default implementation of {@link OpenAIService} that performs RAG:
+ * - expands the query to multiple languages,
+ * - retrieves similar documents from the vector store,
+ * - optionally decrypts content,
+ * - builds a prompt and invokes the chat model.
+ */
 @Service
 @RequiredArgsConstructor
 public class OpenAIServiceImpl implements OpenAIService {
@@ -27,6 +34,16 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final ChatModel chatModel;
   private final SimpleVectorStore vectorStore;
 
+  /**
+   * Executes a Retrieval-Augmented Generation flow:
+   * 1) expand the query to English and Norwegian,
+   * 2) retrieve and de-duplicate the most similar documents,
+   * 3) decrypt chunks when encryption metadata is present,
+   * 4) compose the prompt and call the chat model.
+   *
+   * @param question the user question
+   * @return the generated {@link Answer}
+   */
   @Override
   public Answer getAnswer(Question question) {
     // 1) Utvid spørringen: original + oversatt til EN og NO
@@ -80,8 +97,8 @@ public class OpenAIServiceImpl implements OpenAIService {
   }
 
   /**
-   * Lager spørringsvarianter på originalspråk + engelsk + norsk.
-   * Faller tilbake til kun original ved feil.
+   * Creates query variants in the original language, English, and Norwegian.
+   * Falls back to the original only upon errors.
    */
   private List<String> expandQueryToLanguages(String original) {
     try {
@@ -111,7 +128,7 @@ public class OpenAIServiceImpl implements OpenAIService {
   }
 
   /**
-   * Ekstraherer en enkel strengverdi fra et flatt JSON-objekt uten å dra inn en parser.
+   * Extracts a simple string value from a flat JSON object without using a parser.
    */
   private String extractJsonValue(String json, String key) {
     try {
@@ -128,6 +145,10 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
   }
 
+  /**
+   * Creates a {@link CryptoService} from the VECTORSTORE_ENC_KEY environment variable,
+   * or returns {@code null} when the key is not present or invalid.
+   */
   private CryptoService cryptoFromEnv() {
     String b64 = System.getenv("VECTORSTORE_ENC_KEY");
     if (b64 == null || b64.isBlank()) return null;
@@ -139,6 +160,12 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
   }
 
+  /**
+   * Loads a prompt template from the classpath; works when packaged as a JAR as well.
+   *
+   * @param resourceName the classpath resource name (e.g. "templates/rag-prompt-template.st")
+   * @return the template text
+   */
   private String loadPromptTemplateFromClasspath(String resourceName) {
     try {
       ClassPathResource res = new ClassPathResource(resourceName);

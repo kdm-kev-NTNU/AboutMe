@@ -8,9 +8,9 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * Enkel AES-GCM tjeneste for å kryptere/dekryptere tekst-chunks.
- * Lagringsformat:
- *  - content  = base64(ciphertext) (inkl tag i slutten, som vanlig for GCM)
+ * Minimal AES-GCM helper for encrypting/decrypting text chunks.
+ * Storage format:
+ *  - content  = base64(ciphertext) (includes tag at the end, as in GCM)
  *  - metadata = enc="aesgcm", enc_iv=base64(IV)
  */
 public class CryptoService {
@@ -23,6 +23,11 @@ public class CryptoService {
   private final SecretKey key;
   private final SecureRandom random = new SecureRandom();
 
+  /**
+   * Creates a new service instance with a 32-byte AES-256 key.
+   *
+   * @param keyBytes AES-256 key material (32 bytes)
+   */
   public CryptoService(byte[] keyBytes) {
     if (keyBytes == null || keyBytes.length != 32) {
       throw new IllegalArgumentException("AES-256 key must be 32 bytes");
@@ -30,6 +35,12 @@ public class CryptoService {
     this.key = new SecretKeySpec(keyBytes, AES);
   }
 
+  /**
+   * Encrypts the provided UTF-8 text with AES/GCM/NoPadding and a random IV.
+   *
+   * @param plaintext input text
+   * @return IV and ciphertext as Base64 strings
+   */
   public EncResult encrypt(String plaintext) {
     try {
       byte[] iv = new byte[GCM_IV_BYTES];
@@ -47,6 +58,13 @@ public class CryptoService {
     }
   }
 
+  /**
+   * Decrypts the given Base64-encoded IV and ciphertext.
+   *
+   * @param ivBase64 Base64 IV (12 bytes)
+   * @param cipherBase64 Base64 ciphertext with GCM tag
+   * @return decrypted UTF-8 text
+   */
   public String decrypt(String ivBase64, String cipherBase64) {
     try {
       byte[] iv = Base64.getDecoder().decode(ivBase64);
@@ -61,5 +79,6 @@ public class CryptoService {
     }
   }
 
+  /** Holds the Base64-encoded IV and ciphertext. */
   public record EncResult(String ivBase64, String cipherBase64) {}
 }

@@ -9,6 +9,9 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 
+/**
+ * JPA entity capturing a minimal audit log for API requests and responses.
+ */
 @Entity
 @Table(name = "request_log")
 public class RequestLog {
