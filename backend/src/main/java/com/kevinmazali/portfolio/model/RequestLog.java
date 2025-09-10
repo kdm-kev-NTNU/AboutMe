@@ -7,11 +7,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import lombok.Getter;
+
 import java.time.OffsetDateTime;
 
 /**
  * JPA entity capturing a minimal audit log for API requests and responses.
  */
+@Getter
 @Entity
 @Table(name = "request_log")
 public class RequestLog {
@@ -33,39 +36,19 @@ public class RequestLog {
     @Column(nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
+  public void setPath(String path) {
         this.path = path;
     }
 
-    public String getMethod() {
-        return method;
-    }
-
-    public void setMethod(String method) {
+  public void setMethod(String method) {
         this.method = method;
     }
 
-    public String getPayload() {
-        return payload;
-    }
-
-    public void setPayload(String payload) {
+  public void setPayload(String payload) {
         this.payload = payload;
     }
 
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(OffsetDateTime createdAt) {
+  public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
     }
 }
