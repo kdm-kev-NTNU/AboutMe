@@ -20,6 +20,13 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Default implementation of {@link OpenAIService} that performs RAG:
+ * - expands the query to multiple languages,
+ * - retrieves similar documents from the vector store,
+ * - optionally decrypts content,
+ * - builds a prompt and invokes the chat model.
+ */
 @Service
 @RequiredArgsConstructor
 public class OpenAIServiceImpl implements OpenAIService {
@@ -27,25 +34,35 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final ChatModel chatModel;
   private final SimpleVectorStore vectorStore;
 
+  /**
+   * Executes a Retrieval-Augmented Generation flow:
+   * 1) expand the query to English and Norwegian,
+   * 2) retrieve and de-duplicate the most similar documents,
+   * 3) decrypt chunks when encryption metadata is present,
+   * 4) compose the prompt and call the chat model.
+   *
+   * @param question the user question
+   * @return the generated {@link Answer}
+   */
   @Override
   public Answer getAnswer(Question question) {
-    // 1) Utvid spørringen: original + oversatt til EN og NO
+    // 1) Expand the query: original + translated to EN and NO
     List<String> queries = expandQueryToLanguages(question.question());
 
-    // 2) Hent top dokumenter for hver variant og slå sammen
+    // 2) Fetch top documents for each variant and merge
     List<Document> documents = queries.stream()
         .flatMap(q -> vectorStore.similaritySearch(
             SearchRequest.builder()
                 .query(q)
-                .topK(3)
+                .topK(40)
                 .build()
         ).stream())
-        // Dedup på tekstinnhold for å unngå duplikater fra flere spørringer
+        // Deduplicate on text content to avoid duplicates across query variants
         .distinct()
-        .limit(8)
+        .limit(40)
         .toList();
 
-    // 2) Dekrypter innhold ved behov
+    // 2) Decrypt content when needed
     CryptoService crypto = cryptoFromEnv();
     List<String> contentList = documents.stream()
         .map(d -> {
@@ -56,8 +73,8 @@ public class OpenAIServiceImpl implements OpenAIService {
             try {
               return crypto.decrypt(iv, ct);
             } catch (RuntimeException ex) {
-              Object src = d.getMetadata().getOrDefault("source", "(ukjent kilde)");
-              return "[Kunne ikke dekryptere chunk – kilde: " + src + "]";
+              Object src = d.getMetadata().getOrDefault("source", "(unknown source)");
+              return "[Could not decrypt chunk – source: " + src + "]";
             }
           } else {
             return d.getText();
@@ -65,7 +82,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         })
         .toList();
 
-    // 3) Les prompt-template fra classpath (fungerer også når pakket som JAR)
+    // 3) Read prompt template from classpath (also works when packaged as a JAR)
     String ragPromptTemplate = loadPromptTemplateFromClasspath("templates/rag-prompt-template.st");
 
     PromptTemplate promptTemplate = new PromptTemplate(ragPromptTemplate);
@@ -74,18 +91,18 @@ public class OpenAIServiceImpl implements OpenAIService {
         "documents", String.join("\n", contentList)
     ));
 
-    // 4) Kall modellen
+    // 4) Call the model. Max token limit is set via application.yaml
     ChatResponse response = chatModel.call(prompt);
     return new Answer(response.getResult().getOutput().getText());
   }
 
   /**
-   * Lager spørringsvarianter på originalspråk + engelsk + norsk.
-   * Faller tilbake til kun original ved feil.
+   * Creates query variants in the original language, English, and Norwegian.
+   * Falls back to the original only upon errors.
    */
   private List<String> expandQueryToLanguages(String original) {
     try {
-      // Enkel prompt for rask oversettelse uten forklaringer
+      // Simple prompt for quick translation without explanations
       String sys = """
       Translate the user query into both English and Norwegian.
       Return ONLY this exact JSON object with double quotes and no extra text:
@@ -98,7 +115,7 @@ public class OpenAIServiceImpl implements OpenAIService {
       ChatResponse r = chatModel.call(p);
       String json = r.getResult().getOutput().getText();
 
-      // Svært enkel parsing for å unngå ekstra avhengigheter
+      // Very simple parsing to avoid extra dependencies
       String en = extractJsonValue(json, "en");
       String no = extractJsonValue(json, "no");
 
@@ -111,7 +128,7 @@ public class OpenAIServiceImpl implements OpenAIService {
   }
 
   /**
-   * Ekstraherer en enkel strengverdi fra et flatt JSON-objekt uten å dra inn en parser.
+   * Extracts a simple string value from a flat JSON object without using a parser.
    */
   private String extractJsonValue(String json, String key) {
     try {
@@ -128,6 +145,10 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
   }
 
+  /**
+   * Creates a {@link CryptoService} from the VECTORSTORE_ENC_KEY environment variable,
+   * or returns {@code null} when the key is not present or invalid.
+   */
   private CryptoService cryptoFromEnv() {
     String b64 = System.getenv("VECTORSTORE_ENC_KEY");
     if (b64 == null || b64.isBlank()) return null;
@@ -135,10 +156,16 @@ public class OpenAIServiceImpl implements OpenAIService {
     try {
       return new CryptoService(key);
     } catch (IllegalArgumentException e) {
-      return null; // feil lengde -> deaktiver dekryptering
+      return null; // wrong length -> disable decryption
     }
   }
 
+  /**
+   * Loads a prompt template from the classpath; works when packaged as a JAR as well.
+   *
+   * @param resourceName the classpath resource name (e.g. "templates/rag-prompt-template.st")
+   * @return the template text
+   */
   private String loadPromptTemplateFromClasspath(String resourceName) {
     try {
       ClassPathResource res = new ClassPathResource(resourceName);
@@ -146,7 +173,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         return new String(in.readAllBytes(), StandardCharsets.UTF_8);
       }
     } catch (Exception e) {
-      throw new RuntimeException("Kunne ikke lese " + resourceName + " fra classpath", e);
+      throw new RuntimeException("Could not read " + resourceName + " from classpath", e);
     }
   }
 }
