@@ -42,7 +42,7 @@ public class QuestionController {
         }
         requestLogService.save("/ask", "POST", question.question());
         Answer answer = openAIService.getAnswer(question);
-        // Logg også svaret for historikk
+        // Also log the answer for history
         requestLogService.save("/ask:response", "POST", answer.answer());
         return answer;
     }

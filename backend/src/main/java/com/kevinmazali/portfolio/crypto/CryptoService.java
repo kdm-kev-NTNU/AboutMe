@@ -18,7 +18,7 @@ public class CryptoService {
   private static final String AES = "AES";
   private static final String AES_GCM_NO_PADDING = "AES/GCM/NoPadding";
   private static final int GCM_TAG_BITS = 128;  // 16 byte tag
-  private static final int GCM_IV_BYTES = 12;   // 96-bit IV er best practice
+  private static final int GCM_IV_BYTES = 12;   // 96-bit IV is best practice
 
   private final SecretKey key;
   private final SecureRandom random = new SecureRandom();
