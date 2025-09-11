@@ -76,18 +76,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="flex flex-col min-h-screen">
-    <!-- Header with Title and Back Button -->
-    <div class="flex items-center justify-between py-8 px-8">
-      <Button variant="outline" @click="router.push({ name: 'home' })" class="flex items-center gap-2">
-        ← Back
-      </Button>
-      <h1 class="text-4xl font-bold text-center">Chat with Kevin's <span>AI</span></h1>
-      <div class="w-20"></div> <!-- Spacer for centering -->
-    </div>
-
+  <main class="flex flex-col min-h-screen pt-20">
     <!-- Chat Container -->
-    <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full px-8">
+    <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full px-8 py-8">
       <!-- Error Alert -->
       <Alert v-if="errorText" variant="destructive" class="mb-6">
         <AlertDescription>{{ errorText }}</AlertDescription>
