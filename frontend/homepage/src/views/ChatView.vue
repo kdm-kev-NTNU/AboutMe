@@ -76,32 +76,32 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="flex flex-col min-h-screen pt-20">
+  <main class="flex flex-col h-screen pt-20">
     <!-- Chat Container -->
-    <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full px-8 py-8">
+    <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full px-8 py-8 overflow-hidden">
       <!-- Error Alert -->
-      <Alert v-if="errorText" variant="destructive" class="mb-6">
+      <Alert v-if="errorText" variant="destructive" class="mb-6 flex-shrink-0">
         <AlertDescription>{{ errorText }}</AlertDescription>
       </Alert>
 
       <!-- Messages Area -->
-      <div class="flex-1 overflow-y-auto space-y-4 mb-8">
+      <div class="flex-1 overflow-y-auto space-y-4 mb-8 pr-2">
         <div v-for="(m, idx) in state.messages" :key="idx" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
           <div class="max-w-[80%]">
             <div class="flex items-start gap-3" :class="m.role === 'user' ? 'flex-row-reverse' : 'flex-row'">
               <!-- Avatar -->
-              <div class="w-8 h-8 rounded-full flex items-center justify-center" 
+              <div class="w-8 h-8 rounded-full flex items-center justify-center"
                    :class="m.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'">
                 <UserRound v-if="m.role === 'user'" class="w-4 h-4" />
                 <Brain v-else class="w-4 h-4" />
               </div>
-              
+
               <!-- Message Bubble -->
               <div class="flex-1">
                 <div class="text-xs text-gray-500 mb-1" :class="m.role === 'user' ? 'text-right' : 'text-left'">
                   {{ m.role === 'user' ? 'You' : 'Kevin\'s AI' }}
                 </div>
-                <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm hover:shadow-lg transition-all duration-300" 
+                <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm hover:shadow-lg transition-all duration-300"
                      :class="m.role === 'user' ? 'bg-blue-500 border-blue-500' : ''">
                   <p class="text-sm leading-relaxed whitespace-pre-wrap" :class="m.role === 'user' ? 'text-black' : ''">{{ m.text }}</p>
                 </div>
@@ -133,7 +133,7 @@ onMounted(() => {
       </div>
 
       <!-- Form at Bottom -->
-      <div class="pb-8">
+      <div class="pb-8 flex-shrink-0">
         <form class="flex gap-3" @submit.prevent="send(input)">
           <Input
             v-model="input"

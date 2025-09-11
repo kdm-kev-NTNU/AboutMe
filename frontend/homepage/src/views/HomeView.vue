@@ -55,7 +55,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="home flex flex-col min-h-screen pt-20">
+  <main class="home flex flex-col h-screen pt-20">
     <!-- Welcome Dialog -->
     <Dialog v-model:open="showWelcomeDialog">
       <DialogContent>
@@ -69,7 +69,7 @@ onMounted(() => {
     </Dialog>
 
     <!-- Main Content - Centered -->
-    <div class="flex-1 flex flex-col items-center justify-center py-8">
+    <div class="flex-1 flex flex-col items-center justify-center py-8 overflow-y-auto">
       <div class="flex flex-col items-center space-y-8">
         <section class="brand">
           <h1 class="text-4xl font-bold text-center mb-4">Kevin's <span>AI</span>.</h1>
@@ -115,7 +115,7 @@ onMounted(() => {
     </div>
 
     <!-- Form at Bottom -->
-    <div class="pb-8">
+    <div class="pb-8 flex-shrink-0">
       <form class="home-composer flex gap-3 max-w-md mx-auto" @submit.prevent="submitQuick">
         <Input
           v-model="quickQuestion"
