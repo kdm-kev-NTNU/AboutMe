@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { MapPin } from 'lucide-vue-next'
 import type { WorkExperience, WorkExperienceData } from '../types/workExperience'
@@ -17,20 +16,26 @@ const pageTitle = computed(() => langStore.language === 'no' ? 'Arbeidserfaring'
 
 // Get the appropriate data based on language
 const workExperienceData = computed(() => {
-  const data: WorkExperienceData = langStore.language === 'no' ? workExperienceNo : workExperienceEn
+  const rawData = langStore.language === 'no' ? workExperienceNo : workExperienceEn
+  const data: WorkExperienceData = {
+    experiences: rawData.experiences.map(experience => ({
+      ...experience,
+      type: experience.type as 'full-time' | 'part-time' | 'contract' | 'internship' | 'summer-job' | undefined
+    }))
+  }
   return data.experiences
 })
 
 // Format date for display
 const formatDate = (dateString: string | null, language: 'en' | 'no'): string => {
   if (!dateString) return language === 'no' ? 'd.d.' : 'Present'
-  
+
   const date = new Date(dateString)
   const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'short'
   }
-  
+
   return new Intl.DateTimeFormat(language === 'no' ? 'nb-NO' : 'en-US', options).format(date)
 }
 
@@ -68,16 +73,16 @@ const experiences = computed(() => {
     </div>
     <div class="max-w-6xl mx-auto px-8 py-8 relative z-10">
       <h1 class="text-3xl font-bold mb-12 text-center bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x">{{ pageTitle }}</h1>
-      
+
       <!-- Timeline Container -->
       <div class="relative timeline-mobile">
         <!-- Vertical Line with Gradient -->
         <div class="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600 rounded-full hidden md:block shadow-lg shadow-blue-500/30"></div>
-        
+
         <!-- Timeline Items -->
         <div class="space-y-16">
-          <div 
-            v-for="(experience, index) in experiences" 
+          <div
+            v-for="(experience, index) in experiences"
             :key="index"
             class="relative flex items-center opacity-0 translate-y-8 animate-fade-in-up group"
             :class="[
@@ -89,16 +94,16 @@ const experiences = computed(() => {
             <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full border-4 border-white shadow-xl z-10 hidden md:block transition-all duration-300 group-hover:scale-125 group-hover:shadow-2xl group-hover:shadow-blue-500/40">
               <div class="absolute inset-1 bg-white rounded-full opacity-20"></div>
             </div>
-            
+
             <!-- Content Card with Enhanced Styling -->
-            <div 
+            <div
               class="w-full md:w-5/12 timeline-content"
               :class="index % 2 === 0 ? 'pr-0 md:pr-8' : 'pl-0 md:pl-8'"
             >
               <Card class="hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 bg-white border-0 shadow-lg overflow-hidden backdrop-blur-sm border border-white/20">
                 <!-- Gradient Header -->
                 <div class="h-1 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600"></div>
-                
+
                 <CardHeader class="pb-4">
                   <div class="flex items-center justify-between mb-3">
                     <div class="text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
@@ -168,26 +173,26 @@ const experiences = computed(() => {
     display: block;
     padding-left: 2rem;
   }
-  
+
   .timeline-mobile .animate-fade-in-up {
     opacity: 1;
     transform: none;
     animation: none;
   }
-  
+
   .timeline-mobile .timeline-content {
     width: 100%;
     margin-left: 0;
     margin-right: 0;
     padding-left: 0;
   }
-  
+
   .timeline-mobile .absolute.left-1\/2 {
     left: 1rem;
     transform: none;
     width: 2px;
   }
-  
+
   .timeline-mobile .w-6.h-6 {
     left: 0.5rem;
     transform: none;
@@ -201,11 +206,11 @@ const experiences = computed(() => {
   .timeline-mobile {
     padding-left: 1.5rem;
   }
-  
+
   .timeline-mobile .absolute.left-1\/2 {
     left: 0.75rem;
   }
-  
+
   .timeline-mobile .w-6.h-6 {
     left: 0.25rem;
   }

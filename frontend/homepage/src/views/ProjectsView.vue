@@ -16,7 +16,13 @@ const pageTitle = computed(() => langStore.language === 'no' ? 'Prosjekter' : 'P
 
 // Get the appropriate data based on language
 const projectsData = computed(() => {
-  const data: ProjectsData = langStore.language === 'no' ? projectsNo : projectsEn
+  const rawData = langStore.language === 'no' ? projectsNo : projectsEn
+  const data: ProjectsData = {
+    projects: rawData.projects.map(project => ({
+      ...project,
+      status: project.status as 'completed' | 'ongoing' | 'planned'
+    }))
+  }
   return data.projects
 })
 
