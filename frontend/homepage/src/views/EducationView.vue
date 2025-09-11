@@ -79,16 +79,6 @@ const getCourseStatusVariant = (status: string) => {
   }
 }
 
-// Get course status badge class for custom blue shades
-const getCourseStatusClass = (status: string) => {
-  switch (status) {
-    case 'ongoing': return 'blue-ongoing-badge'
-    case 'completed': return 'blue-completed-badge'
-    case 'planned': return 'blue-planned-badge'
-    default: return 'blue-completed-badge'
-  }
-}
-
 // Convert \n characters to HTML line breaks
 const formatDescription = (text: string) => {
   return text.replace(/\n/g, '<br>')
@@ -153,22 +143,26 @@ const education = computed(() => {
 </script>
 
 <template>
-  <main class="education pt-20">
+  <main class="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-slate-100 relative">
+    <!-- Background overlay -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute top-0 left-0 w-full h-full bg-gradient-radial from-blue-500/8 via-transparent to-transparent" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);"></div>
+    </div>
     <div class="max-w-4xl mx-auto px-8 py-8 relative z-10">
-      <h1 class="text-3xl font-bold text-gray-800 mb-12 text-center">{{ pageTitle }}</h1>
+      <h1 class="text-3xl font-bold mb-12 text-center bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x">{{ pageTitle }}</h1>
 
       <!-- Education Cards -->
       <div class="space-y-8">
         <Card
           v-for="edu in education"
           :key="edu.id"
-          class="education-card hover:shadow-lg transition-all duration-300"
+          class="relative border-2 border-transparent transition-all duration-300 bg-white/90 backdrop-blur-sm hover:border-blue-300/30 hover:bg-white/95 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/15 group"
         >
           <CardHeader>
             <div class="flex flex-col space-y-3">
               <div class="flex items-center justify-between">
                 <div class="text-sm font-medium text-blue-600">{{ edu.period }}</div>
-                <Badge v-if="edu.status" :variant="getStatusVariant(edu.status)" class="text-xs blue-status-badge">
+                <Badge v-if="edu.status" :variant="getStatusVariant(edu.status)" class="text-xs border border-blue-300/30 text-blue-600 bg-blue-50/50 hover:border-blue-300/50 hover:bg-blue-50 hover:text-blue-700 hover:-translate-y-0.5 transition-all duration-300">
                   {{ getStatusText(edu.status, langStore.language) }}
                 </Badge>
               </div>
@@ -182,7 +176,7 @@ const education = computed(() => {
               <div v-if="edu.grade || edu.credits" class="flex flex-wrap gap-4 text-sm text-gray-600">
                 <span v-if="edu.grade" class="flex items-center gap-1">
                   <span class="font-medium">{{ langStore.language === 'no' ? 'Karakter' : 'Grade' }}:</span>
-                  <span class="px-2 py-1 bg-gray-100 rounded text-gray-700 font-medium">{{ edu.grade }}</span>
+                  <span class="px-2 py-1 bg-blue-50 border border-blue-200 rounded text-blue-600 font-medium">{{ edu.grade }}</span>
                 </span>
                 <span v-if="edu.credits" class="flex items-center gap-1">
                   <span class="font-medium">{{ edu.credits }} {{ langStore.language === 'no' ? 'studiepoeng' : 'credits' }}</span>
@@ -198,7 +192,7 @@ const education = computed(() => {
 
       <!-- Courses Section -->
       <div class="mt-16">
-        <h2 class="text-2xl font-bold text-gray-800 mb-8 text-center">{{ coursesTitle }}</h2>
+        <h2 class="text-2xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x">{{ coursesTitle }}</h2>
 
         <div class="space-y-12">
           <div v-for="semesterGroup in coursesBySemester" :key="semesterGroup.semester" class="space-y-4">
@@ -210,7 +204,7 @@ const education = computed(() => {
               <Card
                 v-for="course in semesterGroup.courses"
                 :key="course.id"
-                class="course-card hover:shadow-md transition-all duration-200"
+                class="relative border border-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm hover:border-blue-300/30 hover:bg-white/90 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/10"
               >
                 <CardHeader class="pb-3">
                   <div class="flex items-start justify-between">
@@ -224,7 +218,12 @@ const education = computed(() => {
                     </div>
                     <Badge
                       :variant="getCourseStatusVariant(course.status)"
-                      :class="['text-xs ml-2 flex-shrink-0', getCourseStatusClass(course.status)]"
+                      :class="[
+                        'text-xs ml-2 flex-shrink-0 transition-all duration-200',
+                        course.status === 'ongoing' ? 'border border-blue-400/40 text-blue-800 bg-blue-100/50 hover:border-blue-400/60 hover:bg-blue-100 hover:text-blue-900' :
+                        course.status === 'completed' ? 'border border-green-300/30 text-green-700 bg-green-50/50 hover:border-green-300/50 hover:bg-green-50 hover:text-green-800' :
+                        'border border-gray-300/30 text-gray-600 bg-gray-50/50 hover:border-gray-300/50 hover:bg-gray-50 hover:text-gray-700'
+                      ]"
                     >
                       {{ getCourseStatusText(course.status, langStore.language) }}
                     </Badge>
@@ -248,169 +247,24 @@ const education = computed(() => {
 </template>
 
 <style scoped>
-.education {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  position: relative;
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
-.education::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-/* Education Card Styling */
-.education-card {
-  position: relative;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-}
-
-.education-card::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb, #1d4ed8);
-  border-radius: 12px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: -1;
-}
-
-.education-card:hover {
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(255, 255, 255, 0.95);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.15) !important;
-}
-
-.education-card:hover::before {
-  opacity: 0.1;
-}
-
-/* Course Card Styling */
-.course-card {
-  position: relative;
-  border: 1px solid rgba(59, 130, 246, 0.1);
-  transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(5px);
-}
-
-.course-card:hover {
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(255, 255, 255, 0.9);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.1) !important;
-}
-
-/* Blue Status Badge Styling */
-.blue-status-badge {
-  border: 1px solid rgba(59, 130, 246, 0.3) !important;
-  color: #3b82f6 !important;
-  background: rgba(59, 130, 246, 0.05) !important;
-  transition: all 0.3s ease !important;
-}
-
-.blue-status-badge:hover {
-  border-color: rgba(59, 130, 246, 0.5) !important;
-  background: rgba(59, 130, 246, 0.1) !important;
-  color: #2563eb !important;
-  transform: translateY(-1px) !important;
-}
-
-/* Blue Course Badge Styling - Different shades for each status */
-.blue-ongoing-badge {
-  border: 1px solid rgba(59, 130, 246, 0.4) !important;
-  color: #1d4ed8 !important;
-  background: rgba(59, 130, 246, 0.15) !important;
-  transition: all 0.2s ease !important;
-}
-
-.blue-ongoing-badge:hover {
-  border-color: rgba(59, 130, 246, 0.6) !important;
-  background: rgba(59, 130, 246, 0.2) !important;
-  color: #1e40af !important;
-}
-
-.blue-completed-badge {
-  border: 1px solid rgba(34, 197, 94, 0.3) !important;
-  color: #16a34a !important;
-  background: rgba(34, 197, 94, 0.1) !important;
-  transition: all 0.2s ease !important;
-}
-
-.blue-completed-badge:hover {
-  border-color: rgba(34, 197, 94, 0.5) !important;
-  background: rgba(34, 197, 94, 0.15) !important;
-  color: #15803d !important;
-}
-
-.blue-planned-badge {
-  border: 1px solid rgba(107, 114, 128, 0.3) !important;
-  color: #6b7280 !important;
-  background: rgba(107, 114, 128, 0.05) !important;
-  transition: all 0.2s ease !important;
-}
-
-.blue-planned-badge:hover {
-  border-color: rgba(107, 114, 128, 0.5) !important;
-  background: rgba(107, 114, 128, 0.1) !important;
-  color: #4b5563 !important;
-}
-
-/* Page Title Styling */
-h1 {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.animate-gradient-x {
   background-size: 200% 200%;
-  animation: gradientShift 3s ease-in-out infinite;
-}
-
-h2 {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-size: 200% 200%;
-  animation: gradientShift 3s ease-in-out infinite;
-}
-
-@keyframes gradientShift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-/* Grade styling */
-span[class*="bg-gray-100"] {
-  background: rgba(59, 130, 246, 0.1) !important;
-  color: #3b82f6 !important;
-  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  animation: gradient-x 3s ease-in-out infinite;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .education-card:hover {
+  .hover\:-translate-y-0\.5:hover {
     transform: translateY(-1px);
-  }
-
-  .course-card:hover {
-    transform: none;
   }
 }
 </style>
