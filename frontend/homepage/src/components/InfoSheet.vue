@@ -99,7 +99,7 @@ function toggle() {
 .close { border: none; background: transparent; cursor: pointer; font-size: 18px; }
 .sub { color: #6b7280; margin: 6px 0 16px; }
 .section { margin: 18px 0 10px; font-size: 16px; }
-.social-links { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.social-links { display: flex; flex-direction: row; gap: 12px; margin-bottom: 20px; }
 .social-link { 
   display: flex; 
   align-items: center; 
@@ -111,6 +111,7 @@ function toggle() {
   border: 1px solid #e5e7eb; 
   background: #f9fafb; 
   transition: all 0.2s ease;
+  flex: 1;
 }
 .social-link:hover { 
   background: #f3f4f6; 
@@ -135,7 +136,8 @@ function toggle() {
 .social-icon { 
   width: 18px; 
   height: 18px; 
-  color: #6b7280;
+  color: #3b82f6;
+  stroke-width: 1.5;
 }
 .button-section { margin-top: 20px; }
 .dont-click-button { 
