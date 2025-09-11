@@ -19,12 +19,24 @@ const coursesTitle = computed(() => langStore.language === 'no' ? 'Emner' : 'Cou
 
 // Get the appropriate data based on language
 const educationData = computed(() => {
-  const data: EducationData = langStore.language === 'no' ? educationNo : educationEn
+  const rawData = langStore.language === 'no' ? educationNo : educationEn
+  const data: EducationData = {
+    education: rawData.education.map(edu => ({
+      ...edu,
+      status: edu.status as 'completed' | 'ongoing' | 'graduated' | undefined
+    }))
+  }
   return data.education
 })
 
 const coursesData = computed(() => {
-  const data: CourseData = langStore.language === 'no' ? coursesNo : coursesEn
+  const rawData = langStore.language === 'no' ? coursesNo : coursesEn
+  const data: CourseData = {
+    courses: rawData.courses.map(course => ({
+      ...course,
+      status: course.status as 'completed' | 'ongoing' | 'planned'
+    }))
+  }
   return data.courses
 })
 

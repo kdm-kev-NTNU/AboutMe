@@ -16,7 +16,13 @@ const pageTitle = computed(() => langStore.language === 'no' ? 'Arbeidserfaring'
 
 // Get the appropriate data based on language
 const workExperienceData = computed(() => {
-  const data: WorkExperienceData = langStore.language === 'no' ? workExperienceNo : workExperienceEn
+  const rawData = langStore.language === 'no' ? workExperienceNo : workExperienceEn
+  const data: WorkExperienceData = {
+    experiences: rawData.experiences.map(experience => ({
+      ...experience,
+      type: experience.type as 'full-time' | 'part-time' | 'contract' | 'internship' | 'summer-job' | undefined
+    }))
+  }
   return data.experiences
 })
 
