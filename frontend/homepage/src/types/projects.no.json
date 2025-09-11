@@ -1,0 +1,49 @@
+{
+  "projects": [
+    {
+      "id": "portfolio-project-2025",
+      "projectName": "Porteføljeprosjekt (RAG & AI)",
+      "projectDescription": "Et personlig prosjekt som kombinerer presentasjon av meg selv med utforskning av Retrieval-Augmented Generation (RAG) og Spring AI. Nett­siden fungerer både som en digital CV og som en demonstrasjon av AI-teknologi: brukere kan stille spørsmål til en chatbot som er trent på dokumenter om meg (utdanning, prosjekter, interesser). Prosjektet viser hvordan RAG kan brukes i praksis for å hente frem personalisert og kontekstsensitiv informasjon.",
+      "startDate": "2025-09-01",
+      "endDate": null,
+      "technologies": ["Vue.js", "TypeScript", "Spring AI", "RAG", "OpenAI API"],
+      "status": "ongoing",
+      "githubUrl": "https://github.com/kevinmazali/portfolio",
+      "liveUrl": "https://kevinmazali.dev"
+    },
+    {
+      "id": "krisefikser-2025",
+      "projectName": "Krisefikser",
+      "projectDescription": "En nettside som tilbyr en plattform for å forbedre kriseberedskapen i Norge. Dette prosjektet ble utviklet som en del av et smidig utviklingskurs, med fokus på reell anvendelse av programvareutviklingsprinsipper.",
+      "courseName": "IDATT2106 Systemutvikling 2 med smidig prosjekt",
+      "startDate": "2025-04-01",
+      "endDate": "2025-05-31",
+      "technologies": ["Webutvikling", "Smidig", "Deployment", "Krisehåndtering"],
+      "status": "completed",
+      "githubUrl": "https://github.com/kevinmazali/krisefikser",
+      "liveUrl": "https://krisefikser.app"
+    },
+    {
+      "id": "lego-analysis-2024",
+      "projectName": "LEGO analyse",
+      "projectDescription": "Som en del av emnet Statistisk Læring og Data Science ved NTNU gjennomførte jeg et LEGO-basert dataanalyseprosjekt der jeg brukte regresjon, klassifikasjon og klyngeanalyse for å hente innsikt fra et reelt datasett. Dette prosjektet demonstrerer praktisk anvendelse av maskinlæringsteknikker på reelle data.",
+      "courseName": "ISTx1003 Statistisk læring og Data Science",
+      "startDate": "2024-10-01",
+      "endDate": "2024-11-30",
+      "technologies": ["Python", "Maskinlæring", "Dataanalyse", "Statistikk", "Regresjon", "Klassifikasjon", "Klyngeanalyse"],
+      "status": "completed",
+      "githubUrl": "https://github.com/kevinmazali/lego-analysis"
+    },
+    {
+      "id": "roadmap-2024",
+      "projectName": "Roadmap",
+      "projectDescription": "Dette prosjektet implementerer en løsning på korteste-vei problemet ved bruk av kartdata fra de nordiske landene. Programmet benytter både Dijkstras algoritme og ALT-søk-algoritmen for å sammenligne ytelse og nøyaktighet. I tillegg tilbyr programmet funksjonalitet for å finne nærmeste interessepunkter (POI).",
+      "courseName": "IDATT2101 Algoritmer og Datastrukturer",
+      "startDate": "2024-10-01",
+      "endDate": "2024-11-30",
+      "technologies": ["Java", "Algoritmer", "Dijkstra", "ALT Søk", "Grafteori", "Datastrukturer"],
+      "status": "completed",
+      "githubUrl": "https://gitlab.com/kevinmazali/roadmap"
+    }
+  ]
+}

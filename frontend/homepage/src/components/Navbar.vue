@@ -13,7 +13,7 @@ const isActive = (routeName: string) => {
 const getButtonText = (key: string) => {
   const texts = {
     home: { en: 'Home', no: 'Hjem' },
-    about: { en: 'About', no: 'Om' },
+    projects: { en: 'Projects', no: 'Prosjekter' },
     work: { en: 'Work', no: 'Arbeid' },
     education: { en: 'Education', no: 'Utdanning' }
   }
@@ -24,7 +24,7 @@ const getButtonWidth = () => {
   // Calculate the width needed for the longest button text
   const buttonTexts = [
     getButtonText('home'),
-    getButtonText('about'),
+    getButtonText('projects'),
     getButtonText('work'),
     getButtonText('education')
   ]
@@ -38,7 +38,7 @@ const getIndicatorPosition = () => {
   const buttonWidth = getButtonWidth()
   
   if (isActive('home')) return { transform: 'translateX(0px)', opacity: '1' }
-  if (isActive('about')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
+  if (isActive('projects')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
   if (isActive('work-experience')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
   if (isActive('education')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
   return { transform: 'translateX(0px)', opacity: '0' }
@@ -65,12 +65,12 @@ const getIndicatorPosition = () => {
           {{ getButtonText('home') }}
         </RouterLink>
         <RouterLink
-          to="/about"
+          to="/projects"
           class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer flex items-center justify-center"
-          :class="isActive('about') ? 'text-gray-700' : 'text-gray-500'"
+          :class="isActive('projects') ? 'text-gray-700' : 'text-gray-500'"
           :style="{ width: getButtonWidth() + 'px' }"
         >
-          {{ getButtonText('about') }}
+          {{ getButtonText('projects') }}
         </RouterLink>
         <RouterLink
           to="/work-experience"
