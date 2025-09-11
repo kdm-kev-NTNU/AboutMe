@@ -146,7 +146,7 @@ onMounted(() => {
             <div class="flex items-start gap-3" :class="m.role === 'user' ? 'flex-row-reverse' : 'flex-row'">
               <!-- Avatar -->
               <div class="w-8 h-8 rounded-full flex items-center justify-center"
-                   :class="m.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'">
+                   :class="m.role === 'user' ? 'bg-black text-white' : 'bg-gray-200 text-gray-600'">
                 <UserRound v-if="m.role === 'user'" class="w-4 h-4" />
                 <Brain v-else class="w-4 h-4" />
               </div>

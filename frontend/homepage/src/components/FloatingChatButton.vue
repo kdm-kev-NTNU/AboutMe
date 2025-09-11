@@ -69,7 +69,7 @@ onMounted(() => {
     <button
       v-if="isVisible"
       @click="goToChat"
-      class="fixed bottom-6 right-6 z-50 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300"
+      class="fixed bottom-6 right-6 z-50 bg-black hover:bg-gray-800 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-300"
       :title="'Continue your chat with Kevin\'s AI'"
     >
       <MessageCircle class="w-6 h-6" />
