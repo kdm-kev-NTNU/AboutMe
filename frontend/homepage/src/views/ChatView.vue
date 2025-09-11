@@ -138,7 +138,7 @@ onMounted(() => {
       </div>
 
       <!-- Messages Area -->
-      <div class="flex-1 overflow-y-auto space-y-4 mb-8 pr-2">
+      <div class="flex-1 overflow-y-auto space-y-4 mb-8 pr-2 border border-gray-200 rounded-lg p-4 bg-white">
         <!-- Chat Messages -->
         <div v-for="(m, idx) in state.messages" :key="idx" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
           <div class="max-w-[80%]">
@@ -193,7 +193,7 @@ onMounted(() => {
             v-model="input"
             :disabled="isLoading"
             type="text"
-            class="flex-1"
+            class="flex-1 bg-white"
             :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'"
           />
           <Button type="submit" :disabled="isLoading || !input.trim()">
