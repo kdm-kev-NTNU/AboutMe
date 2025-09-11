@@ -48,11 +48,14 @@ const loadMessagesFromStorage = () => {
 // Watch for changes in messages and save to storage
 watch(() => state.messages, saveMessagesToStorage, { deep: true })
 
-// Clear chat function
+// Clear chat function - redirects to home page
 const clearChat = () => {
-  state.messages = []
+  // Clear session storage first
   sessionStorage.removeItem('chatMessages')
   window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
+  
+  // Redirect to home page
+  router.push({ name: 'home' })
 }
 
 async function send(text: string) {
@@ -137,6 +140,7 @@ onMounted(() => {
 
       <!-- Messages Area -->
       <div class="flex-1 overflow-y-auto space-y-4 mb-8 pr-2">
+        <!-- Chat Messages -->
         <div v-for="(m, idx) in state.messages" :key="idx" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
           <div class="max-w-[80%]">
             <div class="flex items-start gap-3" :class="m.role === 'user' ? 'flex-row-reverse' : 'flex-row'">
