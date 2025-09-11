@@ -2,6 +2,10 @@
 import { onMounted, reactive, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent } from '@/components/ui/card'
 
 type Message = { role: 'user' | 'assistant'; text: string }
 
@@ -71,131 +75,91 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="topbar">
-    <button class="back" @click="router.push({ name: 'home' })">← Back</button>
-  </div>
-  <div class="chat">
-    <div class="messages">
-      <div v-if="errorText" class="error-banner">{{ errorText }}</div>
-      <div v-for="(m, idx) in state.messages" :key="idx" class="message" :class="m.role">
-        <div class="bubble">{{ m.text }}</div>
-      </div>
-      <div v-if="isLoading" class="message assistant">
-        <div class="bubble typing">
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-        </div>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-100 px-6 py-4">
+      <div class="max-w-4xl mx-auto flex items-center justify-between">
+        <Button variant="ghost" @click="router.push({ name: 'home' })" class="text-gray-600 hover:text-gray-900">
+          ← Back to Home
+        </Button>
+        <h1 class="text-lg font-semibold text-gray-900">Chat with Kevin's AI</h1>
+        <div class="w-20"></div> <!-- Spacer for centering -->
       </div>
     </div>
-    <form class="composer" @submit.prevent="send(input)">
-      <input v-model="input" :disabled="isLoading" type="text" :placeholder="language === 'en' ? 'Type a question…' : 'Skriv et spørsmål…'" />
-      <button type="submit" :disabled="isLoading">{{ isLoading ? 'Venter…' : 'Send' }}</button>
-    </form>
+
+    <!-- Chat Container -->
+    <div class="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col">
+      <!-- Messages Area -->
+      <div class="flex-1 overflow-y-auto px-6 py-8 space-y-6">
+        <!-- Error Alert -->
+        <Alert v-if="errorText" variant="destructive" class="max-w-2xl mx-auto">
+          <AlertDescription>{{ errorText }}</AlertDescription>
+        </Alert>
+
+        <!-- Messages -->
+        <div v-for="(m, idx) in state.messages" :key="idx" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
+          <div class="max-w-2xl">
+            <div class="flex items-start gap-3" :class="m.role === 'user' ? 'flex-row-reverse' : 'flex-row'">
+              <!-- Avatar -->
+              <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium" 
+                   :class="m.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'">
+                {{ m.role === 'user' ? 'U' : 'AI' }}
+              </div>
+              
+              <!-- Message Bubble -->
+              <div class="flex-1">
+                <div class="text-xs text-gray-500 mb-1" :class="m.role === 'user' ? 'text-right' : 'text-left'">
+                  {{ m.role === 'user' ? 'You' : 'Kevin\'s AI' }}
+                </div>
+                <div class="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100" 
+                     :class="m.role === 'user' ? 'bg-blue-500 border-blue-500' : ''">
+                  <p class="text-sm leading-relaxed whitespace-pre-wrap" :class="m.role === 'user' ? 'text-black' : ''">{{ m.text }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div v-if="isLoading" class="flex justify-start">
+          <div class="max-w-2xl">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-medium">
+                AI
+              </div>
+              <div class="flex-1">
+                <div class="text-xs text-gray-500 mb-1">Kevin's AI</div>
+                <div class="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100">
+                  <div class="flex items-center gap-1">
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="border-t border-gray-100 bg-white px-6 py-4">
+        <form class="max-w-2xl mx-auto" @submit.prevent="send(input)">
+          <div class="flex gap-3">
+            <Input 
+              v-model="input" 
+              :disabled="isLoading" 
+              type="text" 
+              class="flex-1 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+              :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'" 
+            />
+            <Button type="submit" :disabled="isLoading || !input.trim()" class="px-6">
+              {{ isLoading ? 'Sending...' : 'Send' }}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
-<style scoped>
-.topbar {
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 10;
-  border-bottom: 1px solid #eee;
-  padding: 10px 0;
-}
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 auto;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  cursor: pointer;
-}
-.back:hover { background: #f7f7f7; }
-.chat {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 140px);
-  max-width: 900px;
-  margin: 0 auto;
-}
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-.error-banner {
-  margin: 8px 0 12px;
-  padding: 10px 12px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  border-radius: 8px;
-}
-.message {
-  display: flex;
-  margin: 8px 0;
-}
-.message.user {
-  justify-content: flex-end;
-}
-.message.assistant {
-  justify-content: flex-start;
-}
-.bubble {
-  max-width: 70%;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: #f0f0f0;
-}
-.message.user .bubble {
-  background: #3b82f6;
-  color: white;
-}
-.composer {
-  display: flex;
-  gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #ddd;
-}
-.composer input {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-}
-.composer button {
-  padding: 10px 16px;
-  border: none;
-  background: #3b82f6;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.composer button:hover {
-  background: #2563eb;
-}
-.typing {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.dot {
-  width: 6px;
-  height: 6px;
-  background: #9ca3af;
-  border-radius: 50%;
-  animation: blink 1.2s infinite ease-in-out;
-}
-.dot:nth-child(2) { animation-delay: .2s; }
-.dot:nth-child(3) { animation-delay: .4s; }
-
-@keyframes blink {
-  0%, 80%, 100% { transform: scale(0.8); opacity: .4; }
-  40% { transform: scale(1); opacity: 1; }
-}
-</style>
