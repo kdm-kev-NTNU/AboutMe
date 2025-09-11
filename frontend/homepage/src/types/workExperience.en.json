@@ -21,6 +21,16 @@
       "type": "part-time"
     },
     {
+      "id": "oslo-teaching-2025",
+      "startDate": "2025-06-01",
+      "endDate": "2025-08-31",
+      "company": "Oslo Municipality",
+      "position": "Teaching Assistant",
+      "description": "Summer job: Contributing to social activities and operation of summer school courses",
+      "location": "Oslo, Norway",
+      "type": "summer-job"
+    },
+    {
       "id": "oslo-teaching-2024",
       "startDate": "2024-06-01",
       "endDate": "2024-08-31",
