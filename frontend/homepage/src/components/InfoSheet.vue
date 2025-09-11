@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useLangStore } from '../stores/lang'
+import { Info, Github, Linkedin } from 'lucide-vue-next'
 
 const open = ref(false)
 const langStore = useLangStore()
@@ -12,7 +13,9 @@ function toggle() {
 </script>
 
 <template>
-  <button class="fab" @click="toggle" :aria-label="language === 'en' ? 'Open info' : 'Åpne info'">ℹ️</button>
+  <button class="fab" @click="toggle" :aria-label="language === 'en' ? 'Open info' : 'Åpne info'">
+    <Info class="w-5 h-5" />
+  </button>
 
   <div v-if="open" class="overlay" @click.self="toggle">
     <div class="sheet">
@@ -26,11 +29,11 @@ function toggle() {
       <h3 class="section">{{ language === 'en' ? 'Social Links' : 'Sosiale lenker' }}</h3>
       <div class="social-links">
         <a href="https://github.com/kaamyashinde" target="_blank" rel="noopener" class="social-link github-link">
-          <span class="social-icon">🐙</span>
+          <Github class="social-icon" />
           <span>{{ language === 'en' ? 'GitHub' : 'GitHub' }}</span>
         </a>
         <a href="https://linkedin.com/in/kaamyashinde" target="_blank" rel="noopener" class="social-link linkedin-link">
-          <span class="social-icon">💼</span>
+          <Linkedin class="social-icon" />
           <span>{{ language === 'en' ? 'LinkedIn' : 'LinkedIn' }}</span>
         </a>
       </div>
@@ -60,14 +63,15 @@ function toggle() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   transition: all 0.2s ease;
+  color: #374151;
 }
 
 .fab:hover {
   background: #f9fafb;
   border-color: #9ca3af;
   transform: scale(1.05);
+  color: #1f2937;
 }
 
 .fab:active {
@@ -114,9 +118,25 @@ function toggle() {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
-.github-link:hover { border-color: #333; background: #f6f8fa; }
-.linkedin-link:hover { border-color: #0077b5; background: #f0f8ff; }
-.social-icon { font-size: 18px; }
+.github-link:hover { 
+  border-color: #333; 
+  background: #f6f8fa; 
+}
+.github-link:hover .social-icon { 
+  color: #333; 
+}
+.linkedin-link:hover { 
+  border-color: #0077b5; 
+  background: #f0f8ff; 
+}
+.linkedin-link:hover .social-icon { 
+  color: #0077b5; 
+}
+.social-icon { 
+  width: 18px; 
+  height: 18px; 
+  color: #6b7280;
+}
 .button-section { margin-top: 20px; }
 .dont-click-button { 
   width: 100%; 
