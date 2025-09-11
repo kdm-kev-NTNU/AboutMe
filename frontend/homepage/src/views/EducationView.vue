@@ -5,19 +5,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import type { Education, EducationData } from '../types/education'
+import type { Course, CourseData } from '../types/courses'
 
 // Import JSON data
 import educationEn from '../types/education.en.json'
 import educationNo from '../types/education.no.json'
+import coursesEn from '../types/courses.en.json'
+import coursesNo from '../types/courses.no.json'
 
 const langStore = useLangStore()
 
 const pageTitle = computed(() => langStore.language === 'no' ? 'Utdanning' : 'Education')
+const coursesTitle = computed(() => langStore.language === 'no' ? 'Emner' : 'Courses')
 
 // Get the appropriate data based on language
 const educationData = computed(() => {
   const data: EducationData = langStore.language === 'no' ? educationNo : educationEn
   return data.education
+})
+
+const coursesData = computed(() => {
+  const data: CourseData = langStore.language === 'no' ? coursesNo : coursesEn
+  return data.courses
 })
 
 // Format date for display
@@ -59,6 +68,52 @@ const getStatusText = (status: string, language: 'en' | 'no') => {
   }
   return statusTexts[status as keyof typeof statusTexts]?.[language] || status
 }
+
+// Get course status badge variant
+const getCourseStatusVariant = (status: string) => {
+  switch (status) {
+    case 'ongoing': return 'default'
+    case 'completed': return 'secondary'
+    case 'planned': return 'outline'
+    default: return 'secondary'
+  }
+}
+
+// Get course status text
+const getCourseStatusText = (status: string, language: 'en' | 'no') => {
+  const statusTexts = {
+    ongoing: { en: 'Ongoing', no: 'Pågående' },
+    completed: { en: 'Completed', no: 'Fullført' },
+    planned: { en: 'Planned', no: 'Planlagt' }
+  }
+  return statusTexts[status as keyof typeof statusTexts]?.[language] || status
+}
+
+// Group courses by semester
+const coursesBySemester = computed(() => {
+  const grouped: { [key: string]: Course[] } = {}
+  
+  coursesData.value.forEach(course => {
+    if (!grouped[course.semester]) {
+      grouped[course.semester] = []
+    }
+    grouped[course.semester].push(course)
+  })
+  
+  // Sort semesters chronologically
+  const sortedSemesters = Object.keys(grouped).sort((a, b) => {
+    const [yearA, seasonA] = a.split('-')
+    const [yearB, seasonB] = b.split('-')
+    
+    if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB)
+    return seasonA === 'Spring' || seasonA === 'Vår' ? 1 : -1
+  })
+  
+  return sortedSemesters.map(semester => ({
+    semester,
+    courses: grouped[semester]
+  }))
+})
 
 // Sort education by start date (most recent first) and format for display
 const education = computed(() => {
@@ -124,6 +179,54 @@ const education = computed(() => {
             <p class="text-gray-600 leading-relaxed">{{ edu.description }}</p>
           </CardContent>
         </Card>
+      </div>
+
+      <!-- Courses Section -->
+      <div class="mt-16">
+        <h2 class="text-2xl font-bold text-gray-800 mb-8 text-center">{{ coursesTitle }}</h2>
+        
+        <div class="space-y-12">
+          <div v-for="semesterGroup in coursesBySemester" :key="semesterGroup.semester" class="space-y-4">
+            <h3 class="text-lg font-semibold text-gray-700 border-b border-gray-200 pb-2">
+              {{ semesterGroup.semester }}
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card 
+                v-for="course in semesterGroup.courses" 
+                :key="course.id"
+                class="hover:shadow-md transition-shadow duration-200"
+              >
+                <CardHeader class="pb-3">
+                  <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                      <CardTitle class="text-sm font-medium text-gray-600 mb-1">
+                        {{ course.courseCode }}
+                      </CardTitle>
+                      <h4 class="text-base font-semibold text-gray-800 leading-tight">
+                        {{ course.courseName }}
+                      </h4>
+                    </div>
+                    <Badge 
+                      :variant="getCourseStatusVariant(course.status)" 
+                      class="text-xs ml-2 flex-shrink-0"
+                    >
+                      {{ getCourseStatusText(course.status, langStore.language) }}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent class="pt-0">
+                  <div class="flex items-center justify-between text-sm text-gray-600">
+                    <span>{{ course.credits }} {{ langStore.language === 'no' ? 'studiepoeng' : 'credits' }}</span>
+                    <span v-if="course.grade" class="font-medium text-gray-700">
+                      {{ langStore.language === 'no' ? 'Karakter' : 'Grade' }}: {{ course.grade }}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </main>

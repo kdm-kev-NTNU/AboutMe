@@ -1,0 +1,144 @@
+{
+  "courses": [
+    {
+      "id": "tdt4100-2023-autumn",
+      "courseCode": "TDT4100",
+      "courseName": "Objektorientert programmering",
+      "credits": 7.5,
+      "semester": "2023-Høst",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4110-2023-autumn",
+      "courseCode": "TDT4110",
+      "courseName": "Informasjonssystemer",
+      "credits": 7.5,
+      "semester": "2023-Høst",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4120-2023-autumn",
+      "courseCode": "TDT4120",
+      "courseName": "Algoritmer og datastrukturer",
+      "credits": 7.5,
+      "semester": "2023-Høst",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4135-2023-autumn",
+      "courseCode": "TDT4135",
+      "courseName": "Innføring i kunstig intelligens",
+      "credits": 7.5,
+      "semester": "2023-Høst",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4140-2024-spring",
+      "courseCode": "TDT4140",
+      "courseName": "Programvareutvikling",
+      "credits": 7.5,
+      "semester": "2024-Vår",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4145-2024-spring",
+      "courseCode": "TDT4145",
+      "courseName": "Datamodellering, databaser og databaseadministrasjon",
+      "credits": 7.5,
+      "semester": "2024-Vår",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4160-2024-spring",
+      "courseCode": "TDT4160",
+      "courseName": "Datamaskinarkitektur",
+      "credits": 7.5,
+      "semester": "2024-Vår",
+      "grade": "C",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4175-2024-spring",
+      "courseCode": "TDT4175",
+      "courseName": "Utvikling av informasjonssystemer",
+      "credits": 7.5,
+      "semester": "2024-Vår",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4180-2024-autumn",
+      "courseCode": "TDT4180",
+      "courseName": "Operativsystemer",
+      "credits": 7.5,
+      "semester": "2024-Høst",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4186-2024-autumn",
+      "courseCode": "TDT4186",
+      "courseName": "Programmeringsspråk",
+      "credits": 7.5,
+      "semester": "2024-Høst",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4200-2024-autumn",
+      "courseCode": "TDT4200",
+      "courseName": "Datakommunikasjon",
+      "credits": 7.5,
+      "semester": "2024-Høst",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4215-2024-autumn",
+      "courseCode": "TDT4215",
+      "courseName": "Webteknologi",
+      "credits": 7.5,
+      "semester": "2024-Høst",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4250-2025-spring",
+      "courseCode": "TDT4250",
+      "courseName": "Programvarearkitektur for store systemer",
+      "credits": 7.5,
+      "semester": "2025-Vår",
+      "status": "ongoing"
+    },
+    {
+      "id": "tdt4252-2025-spring",
+      "courseCode": "TDT4252",
+      "courseName": "Avansert programvareutvikling",
+      "credits": 7.5,
+      "semester": "2025-Vår",
+      "status": "ongoing"
+    },
+    {
+      "id": "tdt4260-2025-spring",
+      "courseCode": "TDT4260",
+      "courseName": "Datasikkerhet",
+      "credits": 7.5,
+      "semester": "2025-Vår",
+      "status": "ongoing"
+    },
+    {
+      "id": "tdt4290-2025-spring",
+      "courseCode": "TDT4290",
+      "courseName": "Bacheloroppgave",
+      "credits": 15,
+      "semester": "2025-Vår",
+      "status": "ongoing"
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "courses": [
+    {
+      "id": "tdt4100-2023-autumn",
+      "courseCode": "TDT4100",
+      "courseName": "Object-Oriented Programming",
+      "credits": 7.5,
+      "semester": "2023-Autumn",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4110-2023-autumn",
+      "courseCode": "TDT4110",
+      "courseName": "Information Systems",
+      "credits": 7.5,
+      "semester": "2023-Autumn",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4120-2023-autumn",
+      "courseCode": "TDT4120",
+      "courseName": "Algorithms and Data Structures",
+      "credits": 7.5,
+      "semester": "2023-Autumn",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4135-2023-autumn",
+      "courseCode": "TDT4135",
+      "courseName": "Introduction to Artificial Intelligence",
+      "credits": 7.5,
+      "semester": "2023-Autumn",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4140-2024-spring",
+      "courseCode": "TDT4140",
+      "courseName": "Software Engineering",
+      "credits": 7.5,
+      "semester": "2024-Spring",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4145-2024-spring",
+      "courseCode": "TDT4145",
+      "courseName": "Data Modelling, Databases and Database Management Systems",
+      "credits": 7.5,
+      "semester": "2024-Spring",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4160-2024-spring",
+      "courseCode": "TDT4160",
+      "courseName": "Computer Architecture",
+      "credits": 7.5,
+      "semester": "2024-Spring",
+      "grade": "C",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4175-2024-spring",
+      "courseCode": "TDT4175",
+      "courseName": "Information Systems Development",
+      "credits": 7.5,
+      "semester": "2024-Spring",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4180-2024-autumn",
+      "courseCode": "TDT4180",
+      "courseName": "Operating Systems",
+      "credits": 7.5,
+      "semester": "2024-Autumn",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4186-2024-autumn",
+      "courseCode": "TDT4186",
+      "courseName": "Programming Languages",
+      "credits": 7.5,
+      "semester": "2024-Autumn",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4200-2024-autumn",
+      "courseCode": "TDT4200",
+      "courseName": "Computer Networks",
+      "credits": 7.5,
+      "semester": "2024-Autumn",
+      "grade": "B",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4215-2024-autumn",
+      "courseCode": "TDT4215",
+      "courseName": "Web Technologies",
+      "credits": 7.5,
+      "semester": "2024-Autumn",
+      "grade": "A",
+      "status": "completed"
+    },
+    {
+      "id": "tdt4250-2025-spring",
+      "courseCode": "TDT4250",
+      "courseName": "Enterprise Software Architecture",
+      "credits": 7.5,
+      "semester": "2025-Spring",
+      "status": "ongoing"
+    },
+    {
+      "id": "tdt4252-2025-spring",
+      "courseCode": "TDT4252",
+      "courseName": "Advanced Software Engineering",
+      "credits": 7.5,
+      "semester": "2025-Spring",
+      "status": "ongoing"
+    },
+    {
+      "id": "tdt4260-2025-spring",
+      "courseCode": "TDT4260",
+      "courseName": "Computer Security",
+      "credits": 7.5,
+      "semester": "2025-Spring",
+      "status": "ongoing"
+    },
+    {
+      "id": "tdt4290-2025-spring",
+      "courseCode": "TDT4290",
+      "courseName": "Bachelor's Thesis",
+      "credits": 15,
+      "semester": "2025-Spring",
+      "status": "ongoing"
+    }
+  ]
+}
