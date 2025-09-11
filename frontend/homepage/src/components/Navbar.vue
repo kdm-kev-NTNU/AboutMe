@@ -19,7 +19,8 @@ const getButtonText = (key: string) => {
   const texts = {
     home: { en: 'Home', no: 'Hjem' },
     about: { en: 'About', no: 'Om' },
-    work: { en: 'Work', no: 'Arbeid' }
+    work: { en: 'Work', no: 'Arbeid' },
+    education: { en: 'Education', no: 'Utdanning' }
   }
   return texts[key][langStore.language]
 }
@@ -28,6 +29,7 @@ const getIndicatorPosition = () => {
   if (isActive('home')) return 'translate-x-0'
   if (isActive('about')) return 'translate-x-16'
   if (isActive('work-experience')) return 'translate-x-32'
+  if (isActive('education')) return 'translate-x-48'
   return 'translate-x-0 opacity-0'
 }
 </script>
@@ -60,6 +62,13 @@ const getIndicatorPosition = () => {
           @click="navigateTo('work-experience')"
         >
           {{ getButtonText('work') }}
+        </button>
+        <button
+          class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
+          :class="isActive('education') ? 'text-gray-700' : 'text-gray-500'"
+          @click="navigateTo('education')"
+        >
+          {{ getButtonText('education') }}
         </button>
       </div>
     </div>
