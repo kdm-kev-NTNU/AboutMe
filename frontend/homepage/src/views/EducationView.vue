@@ -139,7 +139,7 @@ const education = computed(() => {
 
 <template>
   <main class="education pt-20">
-    <div class="max-w-4xl mx-auto px-8 py-8">
+    <div class="max-w-4xl mx-auto px-8 py-8 relative z-10">
       <h1 class="text-3xl font-bold text-gray-800 mb-12 text-center">{{ pageTitle }}</h1>
       
       <!-- Education Cards -->
@@ -147,13 +147,13 @@ const education = computed(() => {
         <Card 
           v-for="edu in education" 
           :key="edu.id"
-          class="hover:shadow-lg transition-shadow duration-300"
+          class="education-card hover:shadow-lg transition-all duration-300"
         >
           <CardHeader>
             <div class="flex flex-col space-y-3">
               <div class="flex items-center justify-between">
-                <div class="text-sm font-medium text-green-600">{{ edu.period }}</div>
-                <Badge v-if="edu.status" :variant="getStatusVariant(edu.status)" class="text-xs">
+                <div class="text-sm font-medium text-blue-600">{{ edu.period }}</div>
+                <Badge v-if="edu.status" :variant="getStatusVariant(edu.status)" class="text-xs blue-status-badge">
                   {{ getStatusText(edu.status, langStore.language) }}
                 </Badge>
               </div>
@@ -187,7 +187,7 @@ const education = computed(() => {
         
         <div class="space-y-12">
           <div v-for="semesterGroup in coursesBySemester" :key="semesterGroup.semester" class="space-y-4">
-            <h3 class="text-lg font-semibold text-gray-700 border-b border-gray-200 pb-2">
+            <h3 class="text-lg font-semibold text-blue-700 border-b border-blue-200 pb-2">
               {{ semesterGroup.semester }}
             </h3>
             
@@ -195,7 +195,7 @@ const education = computed(() => {
               <Card 
                 v-for="course in semesterGroup.courses" 
                 :key="course.id"
-                class="hover:shadow-md transition-shadow duration-200"
+                class="course-card hover:shadow-md transition-all duration-200"
               >
                 <CardHeader class="pb-3">
                   <div class="flex items-start justify-between">
@@ -209,7 +209,7 @@ const education = computed(() => {
                     </div>
                     <Badge 
                       :variant="getCourseStatusVariant(course.status)" 
-                      class="text-xs ml-2 flex-shrink-0"
+                      class="text-xs ml-2 flex-shrink-0 blue-course-badge"
                     >
                       {{ getCourseStatusText(course.status, langStore.language) }}
                     </Badge>
@@ -235,6 +235,141 @@ const education = computed(() => {
 <style scoped>
 .education {
   min-height: 100vh;
-  background-color: #f9fafb;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  position: relative;
+}
+
+.education::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Education Card Styling */
+.education-card {
+  position: relative;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+.education-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb, #1d4ed8);
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.education-card:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.15) !important;
+}
+
+.education-card:hover::before {
+  opacity: 0.1;
+}
+
+/* Course Card Styling */
+.course-card {
+  position: relative;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(5px);
+}
+
+.course-card:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Blue Status Badge Styling */
+.blue-status-badge {
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  color: #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.05) !important;
+  transition: all 0.3s ease !important;
+}
+
+.blue-status-badge:hover {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  background: rgba(59, 130, 246, 0.1) !important;
+  color: #2563eb !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Blue Course Badge Styling */
+.blue-course-badge {
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  color: #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+.blue-course-badge:hover {
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  background: rgba(59, 130, 246, 0.08) !important;
+  color: #2563eb !important;
+}
+
+/* Page Title Styling */
+h1 {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease-in-out infinite;
+}
+
+h2 {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Grade styling */
+span[class*="bg-gray-100"] {
+  background: rgba(59, 130, 246, 0.1) !important;
+  color: #3b82f6 !important;
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .education-card:hover {
+    transform: translateY(-1px);
+  }
+  
+  .course-card:hover {
+    transform: none;
+  }
 }
 </style>
