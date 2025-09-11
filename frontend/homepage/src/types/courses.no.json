@@ -1,0 +1,180 @@
+{
+  "courses": [
+    {
+      "id": "sem1-idatt1003",
+      "courseCode": "IDATT1003",
+      "courseName": "Programmering 1",
+      "credits": 7.5,
+      "semester": "Semester 1 (Høst 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "sem1-idatt1004",
+      "courseCode": "IDATT1004",
+      "courseName": "Teambasert samhandling",
+      "credits": 7.5,
+      "semester": "Semester 1 (Høst 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "sem1-imat1002",
+      "courseCode": "IMAT1002",
+      "courseName": "Matematikk for ingeniørfag 1",
+      "credits": 7.5,
+      "semester": "Semester 1 (Høst 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "sem1-ingt1002",
+      "courseCode": "INGT1002",
+      "courseName": "Programmering, numerikk og sikkerhet",
+      "credits": 7.5,
+      "semester": "Semester 1 (Høst 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "sem2-idatt1005",
+      "courseCode": "IDATT1005",
+      "courseName": "Systemutvikling",
+      "credits": 7.5,
+      "semester": "Semester 2 (Vår 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem2-idatt2002",
+      "courseCode": "IDATT2002",
+      "courseName": "Databaser",
+      "credits": 7.5,
+      "semester": "Semester 2 (Vår 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem2-imat2024",
+      "courseCode": "IMAT2024",
+      "courseName": "Matematikk for ingeniørfag 2 D",
+      "credits": 7.5,
+      "semester": "Semester 2 (Vår 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem2-idatt2003",
+      "courseCode": "IDATT2003",
+      "courseName": "Programmering 2",
+      "credits": 7.5,
+      "semester": "Semester 2 (Vår 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem3-exph0600",
+      "courseCode": "EXPH0600",
+      "courseName": "Examen philosophicum for ingeniørfag",
+      "credits": 7.5,
+      "semester": "Semester 3 (Høst 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem3-idatt2101",
+      "courseCode": "IDATT2101",
+      "courseName": "Algoritmer og datastrukturer",
+      "credits": 7.5,
+      "semester": "Semester 3 (Høst 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem3-idatt2202",
+      "courseCode": "IDATT2202",
+      "courseName": "Operativsystemer",
+      "credits": 7.5,
+      "semester": "Semester 3 (Høst 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem3-istt1003",
+      "courseCode": "ISTT1003",
+      "courseName": "Statistikk",
+      "credits": 7.5,
+      "semester": "Semester 3 (Høst 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem4-idatt2104",
+      "courseCode": "IDATT2104",
+      "courseName": "Nettverksprogrammering",
+      "credits": 7.5,
+      "semester": "Semester 4 (Vår 2025)",
+      "status": "completed"
+    },
+    {
+      "id": "sem4-idatt2105",
+      "courseCode": "IDATT2105",
+      "courseName": "Full-stack applikasjonsutvikling",
+      "credits": 7.5,
+      "semester": "Semester 4 (Vår 2025)",
+      "status": "completed"
+    },
+    {
+      "id": "sem4-idatt2106",
+      "courseCode": "IDATT2106",
+      "courseName": "Systemutvikling 2 med smidig prosjekt",
+      "credits": 7.5,
+      "semester": "Semester 4 (Vår 2025)",
+      "status": "completed"
+    },
+    {
+      "id": "sem4-ifyt1002",
+      "courseCode": "IFYT1002",
+      "courseName": "Fysikk",
+      "credits": 7.5,
+      "semester": "Semester 4 (Vår 2025)",
+      "status": "completed"
+    },
+    {
+      "id": "sem5-idatt2506",
+      "courseCode": "IDATT2506",
+      "courseName": "Applikasjonsutvikling for mobile enheter",
+      "credits": 7.5,
+      "semester": "Semester 5 (Høst 2025)",
+      "status": "ongoing"
+    },
+    {
+      "id": "sem5-inft2503",
+      "courseCode": "INFT2503",
+      "courseName": "C++ for programmere",
+      "credits": 7.5,
+      "semester": "Semester 5 (Høst 2025)",
+      "status": "ongoing"
+    },
+    {
+      "id": "sem5-imat3011",
+      "courseCode": "IMAT3011",
+      "courseName": "Matematikk for ingeniørfag 3A",
+      "credits": 7.5,
+      "semester": "Semester 5 (Høst 2025)",
+      "status": "ongoing"
+    },
+    {
+      "id": "sem5-tdt4172",
+      "courseCode": "TDT4172",
+      "courseName": "Introduksjon til maskinlæring",
+      "credits": 7.5,
+      "semester": "Semester 5 (Høst 2025)",
+      "status": "ongoing"
+    },
+    {
+      "id": "sem6-idatt2901",
+      "courseCode": "IDATT2901",
+      "courseName": "Bacheloroppgave",
+      "credits": 22.5,
+      "semester": "Semester 6 (Vår 2026)",
+      "status": "planned"
+    },
+    {
+      "id": "sem6-ingt2301",
+      "courseCode": "INGT2301",
+      "courseName": "Ingeniørfaglig systemtenkning",
+      "credits": 7.5,
+      "semester": "Semester 6 (Vår 2026)",
+      "status": "planned"
+    }
+  ]
+}

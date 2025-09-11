@@ -1,0 +1,49 @@
+{
+  "projects": [
+    {
+      "id": "portfolio-project-2025",
+      "projectName": "Portfolio Project (RAG & AI)",
+      "projectDescription": "A personal project that combines self-presentation with exploring Retrieval-Augmented Generation (RAG) and Spring AI. The website serves as both a digital CV and a demonstration of AI technology: users can ask questions to a chatbot trained on documents about me (education, projects, interests). The project demonstrates how RAG can be used in practice to retrieve personalized and context-sensitive information.",
+      "startDate": "2025-09-01",
+      "endDate": null,
+      "technologies": ["Vue.js", "TypeScript", "Spring AI", "RAG", "OpenAI API"],
+      "status": "ongoing",
+      "githubUrl": "https://github.com/kdm-kev-NTNU/AboutMe",
+      "liveUrl": "https://kevindmazali.me"
+    },
+    {
+      "id": "krisefikser-2025",
+      "projectName": "Krisefikser",
+      "projectDescription": "A fully deployed website that provides a platform to improve crisis preparedness in Norway. This project was developed as part of an agile development course, focusing on real-world application of software engineering principles.",
+      "courseName": "IDATT2106 System Development 2 with Agile Project",
+      "startDate": "2025-04-01",
+      "endDate": "2025-05-31",
+      "technologies": ["Web Development", "Agile", "Deployment", "Crisis Management"],
+      "status": "completed",
+      "githubUrl": "https://github.com/idatt2106-v25-02/krisefikser",
+      "liveUrl": "https://krisefikser.app"
+    },
+    {
+      "id": "lego-analysis-2024",
+      "projectName": "LEGO Analysis",
+      "projectDescription": "As part of the Statistical Learning and Data Science course at NTNU, I conducted a LEGO-themed data analysis project applying regression, classification, and clustering methods to extract insights from a real-world dataset. This project demonstrates practical application of machine learning techniques on real data.",
+      "courseName": "ISTx1003 Statistical Learning and Data Science",
+      "startDate": "2024-10-01",
+      "endDate": "2024-11-30",
+      "technologies": ["Python", "Machine Learning", "Data Analysis", "Statistics", "Regression", "Classification", "Clustering"],
+      "status": "completed",
+      "githubUrl": "https://github.com/kdm-kev-NTNU/ISST1003_GR15"
+    },
+    {
+      "id": "roadmap-2024",
+      "projectName": "Roadmap",
+      "projectDescription": "This project implements a solution to the shortest-path problem using map data from the Nordic countries. The program utilizes both the Dijkstra algorithm and the ALT search algorithm to compare performance and accuracy. In addition, the program offers functionality to locate the nearest points of interest (POI).",
+      "courseName": "IDATT2101 Algorithms and Data Structures",
+      "startDate": "2024-10-01",
+      "endDate": "2024-11-30",
+      "technologies": ["Java", "Algorithms", "Dijkstra", "ALT Search", "Graph Theory", "Data Structures"],
+      "status": "completed",
+      "githubUrl": "https://github.com/kdm-kev-NTNU/kortestevei"
+    }
+  ]
+}

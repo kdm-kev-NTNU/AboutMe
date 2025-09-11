@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useLangStore } from '../stores/lang'
+import { Info, Github, Linkedin } from 'lucide-vue-next'
 
 const open = ref(false)
 const langStore = useLangStore()
@@ -12,71 +13,48 @@ function toggle() {
 </script>
 
 <template>
-  <button class="fab" @click="toggle" :aria-label="language === 'en' ? 'Open info' : 'Åpne info'">ℹ️</button>
+  <button class="fixed left-4 bottom-4 w-11 h-11 rounded-full border border-gray-300 bg-white cursor-pointer shadow-lg z-50 flex items-center justify-center transition-all duration-200 ease-in-out text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:scale-105 hover:text-gray-900 active:scale-95" @click="toggle" :aria-label="language === 'en' ? 'Open info' : 'Åpne info'">
+    <Info class="w-5 h-5" />
+  </button>
 
-  <div v-if="open" class="overlay" @click.self="toggle">
-    <div class="sheet">
-      <div class="sheet-header">
-        <h2 class="title">Kevin's AI</h2>
-        <button class="close" @click="toggle" aria-label="Close">✕</button>
+  <div v-if="open" class="fixed inset-0 bg-black/18 flex items-center justify-center p-4 z-100" @click.self="toggle">
+    <div class="w-full max-w-lg bg-white rounded-xl shadow-2xl p-4.5 pb-5.5">
+      <div class="flex items-center justify-center relative">
+        <h2 class="m-0 text-xl">About Me</h2>
+        <button class="absolute right-0 border-none bg-transparent cursor-pointer text-lg" @click="toggle" aria-label="Close">✕</button>
       </div>
 
-      <p class="sub">{{ language === 'en' ? 'Welcome to my AI portfolio!' : 'Velkommen til mitt AI-portfolio!' }}</p>
+      <p class="text-gray-500 my-1.5 mb-4 text-center">{{ language === 'en' ? 'Welcome to my portfolio!' : 'Velkommen til mitt portfolio!' }}</p>
 
-      <h3 class="section">{{ language === 'en' ? 'Links' : 'Lenker' }}</h3>
-      <ul class="links">
-        <li><a href="https://github.com/kdm-kev-NTNU/AboutMe" target="_blank" rel="noopener">{{ language === 'en' ? 'Project Repo' : 'Prosjekt-repo' }}</a></li>
-        <li><a href="https://github.com/kdm-kev-NTNU" target="_blank" rel="noopener">{{ language === 'en' ? 'GitHub Profile' : 'GitHub-profil' }}</a></li>
-      </ul>
-      <h3 class="section">{{ language === 'en' ? "How Kevin's AI Knows About Me" : 'Hvordan Kevin sin AI vet om meg' }}</h3>
-      <p class="text">{{ language === 'en'
+      <h3 class="my-4.5 mt-0 text-base">{{ language === 'en' ? 'Social Links' : 'Sosiale lenker' }}</h3>
+      <div class="flex flex-row gap-3 mb-5">
+        <a href="https://github.com/kdm-kev-NTNU" target="_blank" rel="noopener" class="flex items-center gap-3 px-4 py-3 rounded-lg no-underline text-gray-900 border border-gray-200 bg-gray-50 transition-all duration-200 ease-in-out flex-1 hover:bg-gray-100 hover:border-gray-300 hover:-translate-y-0.5 hover:shadow-md hover:border-gray-800 hover:bg-gray-50">
+          <Github class="w-4.5 h-4.5 text-blue-600 stroke-1.5" />
+          <span>{{ language === 'en' ? 'GitHub' : 'GitHub' }}</span>
+        </a>
+        <a href="https://linkedin.com/in/kevin-dennis-mazali/" target="_blank" rel="noopener" class="flex items-center gap-3 px-4 py-3 rounded-lg no-underline text-gray-900 border border-gray-200 bg-gray-50 transition-all duration-200 ease-in-out flex-1 hover:bg-gray-100 hover:border-gray-300 hover:-translate-y-0.5 hover:shadow-md hover:border-blue-600 hover:bg-blue-50">
+          <Linkedin class="w-4.5 h-4.5 text-blue-600 stroke-1.5" />
+          <span>{{ language === 'en' ? 'LinkedIn' : 'LinkedIn' }}</span>
+        </a>
+      </div>
+
+      <h3 class="my-4.5 mt-0 text-base">{{ language === 'en' ? "How Kevin's AI Knows About Me" : 'Hvordan Kevin sin AI vet om meg' }}</h3>
+      <p class="text-gray-700 leading-relaxed my-0 mb-5 p-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border-l-4 border-blue-600 text-sm shadow-sm">{{ language === 'en'
         ? "I provide an AI model context about my background and education and how it should answer your questions. This can still hallucinate, so don't trust everything blindly."
         : 'Jeg gir en AI-modell kontekst om min bakgrunn og utdanning og hvordan den skal svare på spørsmål. Den kan fortsatt hallusinere, så ikke stol blindt på alt.'
       }}</p>
-      <!-- <button class="warn" disabled>⚠️ {{ language === 'en' ? 'Do not click on this' : 'Ikke klikk på denne' }}</button> -->
+
+      <div class="mt-5">
+        <button class="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 text-sm cursor-not-allowed opacity-70" disabled>
+          {{ language === 'en' ? "Don't click here" : 'Ikke klikk her' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.fab {
-  position: fixed;
-  left: 16px;
-  bottom: 16px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(0,0,0,.08);
-}
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-.sheet {
-  width: min(540px, 100%);
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 24px 60px rgba(0,0,0,.15);
-  padding: 18px 18px 22px;
-}
-.sheet-header { display: flex; align-items: center; justify-content: space-between; }
-.title { margin: 0; font-size: 20px; }
-.close { border: none; background: transparent; cursor: pointer; font-size: 18px; }
-.sub { color: #6b7280; margin: 6px 0 16px; }
-.section { margin: 18px 0 10px; font-size: 16px; }
-.links { list-style: none; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
-.links a { color: #111827; text-decoration: none; }
-.links a:hover { text-decoration: underline; }
-.text { color: #374151; }
-.warn { margin-top: 14px; width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb; color: #111827; }
+/* No additional styles needed - fully converted to Tailwind */
 </style>
 
 
