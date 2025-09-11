@@ -100,13 +100,13 @@ const coursesBySemester = computed(() => {
     grouped[course.semester].push(course)
   })
   
-  // Sort semesters chronologically
+  // Sort semesters in descending order (most recent first)
   const sortedSemesters = Object.keys(grouped).sort((a, b) => {
     const [yearA, seasonA] = a.split('-')
     const [yearB, seasonB] = b.split('-')
     
-    if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB)
-    return seasonA === 'Spring' || seasonA === 'Vår' ? 1 : -1
+    if (yearA !== yearB) return parseInt(yearB) - parseInt(yearA) // Descending year order
+    return seasonB === 'Spring' || seasonB === 'Vår' ? 1 : -1 // Spring comes after Autumn
   })
   
   return sortedSemesters.map(semester => ({
