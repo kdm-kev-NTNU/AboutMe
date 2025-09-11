@@ -81,5 +81,5 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* Additional styles if needed */
+/* No additional styles needed - fully converted to Tailwind */
 </style>
