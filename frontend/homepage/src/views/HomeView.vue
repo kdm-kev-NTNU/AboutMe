@@ -59,6 +59,16 @@ onMounted(() => {
     <!-- Gradient Background Overlay -->
     <div class="home-gradient-overlay"></div>
     
+    <!-- Blue Blob Shapes -->
+    <div class="blob-container">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+      <div class="blob blob-4"></div>
+      <div class="blob blob-5"></div>
+      <div class="blob blob-6"></div>
+    </div>
+    
     <!-- Welcome Dialog -->
     <Dialog v-model:open="showWelcomeDialog">
       <DialogContent>
@@ -72,7 +82,7 @@ onMounted(() => {
     </Dialog>
 
     <!-- Main Content - Centered -->
-    <div class="flex-1 flex flex-col items-center justify-center py-8 overflow-y-auto">
+    <div class="flex-1 flex flex-col items-center justify-center py-8 overflow-y-auto relative z-10">
       <div class="flex flex-col items-center space-y-8">
         <section class="brand">
           <h1 class="text-7xl font-bold text-center mb-4">
@@ -120,7 +130,7 @@ onMounted(() => {
     </div>
 
     <!-- Form at Bottom -->
-    <div class="pb-8 flex-shrink-0">
+    <div class="pb-8 flex-shrink-0 relative z-10">
       <form class="home-composer flex gap-3 max-w-md mx-auto gradient-form" @submit.prevent="submitQuick">
         <Input
           v-model="quickQuestion"
@@ -271,6 +281,100 @@ onMounted(() => {
   background: rgba(59, 130, 246, 0.05);
 }
 
+/* Blue Blob Shapes */
+.blob-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  animation: float 6s ease-in-out infinite;
+}
+
+.blob-1 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.6) 0%, rgba(37, 99, 235, 0.5) 50%, transparent 70%);
+  top: 10%;
+  left: 5%;
+  animation-delay: 0s;
+  animation-duration: 8s;
+}
+
+.blob-2 {
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.55) 0%, rgba(59, 130, 246, 0.5) 50%, transparent 70%);
+  top: 60%;
+  right: 10%;
+  animation-delay: 2s;
+  animation-duration: 10s;
+}
+
+.blob-3 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.6) 0%, rgba(29, 78, 216, 0.5) 50%, transparent 70%);
+  top: 30%;
+  right: 20%;
+  animation-delay: 4s;
+  animation-duration: 7s;
+}
+
+.blob-4 {
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(147, 197, 253, 0.65) 0%, rgba(96, 165, 250, 0.55) 50%, transparent 70%);
+  bottom: 20%;
+  left: 15%;
+  animation-delay: 1s;
+  animation-duration: 9s;
+}
+
+.blob-5 {
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(29, 78, 216, 0.6) 0%, rgba(30, 64, 175, 0.5) 50%, transparent 70%);
+  top: 70%;
+  left: 60%;
+  animation-delay: 3s;
+  animation-duration: 11s;
+}
+
+.blob-6 {
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.7) 0%, rgba(37, 99, 235, 0.6) 50%, transparent 70%);
+  top: 15%;
+  left: 70%;
+  animation-delay: 5s;
+  animation-duration: 6s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20px, -30px) scale(1.1);
+  }
+  50% {
+    transform: translate(-15px, -20px) scale(0.9);
+  }
+  75% {
+    transform: translate(-25px, 10px) scale(1.05);
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .gradient-text {
@@ -279,6 +383,25 @@ onMounted(() => {
   
   .gradient-card {
     padding: 1rem;
+  }
+  
+  .blob {
+    filter: blur(30px);
+  }
+  
+  .blob-1, .blob-3 {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .blob-2, .blob-4, .blob-5 {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .blob-6 {
+    width: 120px;
+    height: 120px;
   }
 }
 </style>
