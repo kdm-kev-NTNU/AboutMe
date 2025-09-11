@@ -4,6 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 const router = useRouter()
 
@@ -122,7 +123,7 @@ onMounted(() => {
           class="flex-1"
           :placeholder="language === 'en' ? `Curious? Kevin's AI is here to answer!` : `Nysgjerrig? Kevin sin AI svarer gjerne!`"
         />
-        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200">Send →</button>
+        <Button type="submit">Send →</Button>
       </form>
     </div>
   </main>
