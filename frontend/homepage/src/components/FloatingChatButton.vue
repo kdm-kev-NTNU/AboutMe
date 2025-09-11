@@ -16,7 +16,7 @@ const isOnChatPage = computed(() => route.name === 'chat')
 const checkForActiveChat = () => {
   try {
     const messages = sessionStorage.getItem('chatMessages')
-    hasActiveChat.value = messages && JSON.parse(messages).length > 0
+    hasActiveChat.value = Boolean(messages && JSON.parse(messages).length > 0)
   } catch (error) {
     hasActiveChat.value = false
   }
