@@ -102,10 +102,10 @@ onMounted(() => {
             <button 
               v-for="q in visibleQuestions" 
               :key="q" 
-              class="bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-blue-300 hover:shadow-lg transition-all duration-300 group"
+              class="bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-gray-400 hover:shadow-lg transition-all duration-300 group"
               @click="ask(q)"
             >
-              <div class="text-gray-800 font-medium text-sm leading-relaxed group-hover:text-blue-600 transition-colors duration-300">
+              <div class="text-gray-800 font-medium text-sm leading-relaxed group-hover:text-gray-900 transition-colors duration-300">
                 {{ q }}
               </div>
             </button>
