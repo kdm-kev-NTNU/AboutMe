@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
+import { Brain, UserRound } from 'lucide-vue-next'
 
 type Message = { role: 'user' | 'assistant'; text: string }
 
@@ -101,9 +102,10 @@ onMounted(() => {
           <div class="max-w-2xl">
             <div class="flex items-start gap-3" :class="m.role === 'user' ? 'flex-row-reverse' : 'flex-row'">
               <!-- Avatar -->
-              <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium" 
+              <div class="w-8 h-8 rounded-full flex items-center justify-center" 
                    :class="m.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'">
-                {{ m.role === 'user' ? 'U' : 'AI' }}
+                <UserRound v-if="m.role === 'user'" class="w-4 h-4" />
+                <Brain v-else class="w-4 h-4" />
               </div>
               
               <!-- Message Bubble -->
@@ -124,8 +126,8 @@ onMounted(() => {
         <div v-if="isLoading" class="flex justify-start">
           <div class="max-w-2xl">
             <div class="flex items-start gap-3">
-              <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-medium">
-                AI
+              <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center">
+                <Brain class="w-4 h-4" />
               </div>
               <div class="flex-1">
                 <div class="text-xs text-gray-500 mb-1">Kevin's AI</div>
