@@ -21,6 +21,16 @@
       "type": "part-time"
     },
     {
+      "id": "oslo-teaching-2025",
+      "startDate": "2025-06-01",
+      "endDate": "2025-08-31",
+      "company": "Oslo Kommune",
+      "position": "Lærerassistent",
+      "description": "Sommerjobb: Bidra med sosiale aktiviteter og drift av sommerskolekurs",
+      "location": "Oslo, Norge",
+      "type": "summer-job"
+    },
+    {
       "id": "oslo-teaching-2024",
       "startDate": "2024-06-01",
       "endDate": "2024-08-31",
