@@ -53,7 +53,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="home">
+  <main class="home flex flex-col items-center justify-center min-h-screen py-8">
     <!-- Welcome Dialog -->
     <Dialog v-model:open="showWelcomeDialog">
       <DialogContent>
@@ -66,39 +66,48 @@ onMounted(() => {
       </DialogContent>
     </Dialog>
 
-    <section class="brand">
-      <h1 class="text-4xl font-bold text-center mb-4">Kevin's <span>AI</span>.</h1>
-      <div class="flex justify-center">
-        <div class="relative bg-gray-200 rounded-full p-1 flex">
-          <div 
-            class="absolute top-1 bottom-1 w-16 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out"
-            :class="language === 'en' ? 'translate-x-0' : 'translate-x-16'"
-          ></div>
+    <div class="flex flex-col items-center space-y-8">
+      <section class="brand">
+        <h1 class="text-4xl font-bold text-center mb-4">Kevin's <span>AI</span>.</h1>
+        <div class="flex justify-center">
+          <div class="relative bg-gray-200 rounded-full p-1 flex">
+            <div 
+              class="absolute top-1 bottom-1 w-16 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out"
+              :class="language === 'en' ? 'translate-x-0' : 'translate-x-16'"
+            ></div>
+            <button 
+              class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
+              :class="language === 'en' ? 'text-gray-700' : 'text-gray-500'"
+              @click="language = 'en'"
+            >
+              EN
+            </button>
+            <button 
+              class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
+              :class="language === 'no' ? 'text-gray-700' : 'text-gray-500'"
+              @click="language = 'no'"
+            >
+              NO
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="quick">
+        <div class="grid grid-cols-2 gap-4 max-w-2xl">
           <button 
-            class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
-            :class="language === 'en' ? 'text-gray-700' : 'text-gray-500'"
-            @click="language = 'en'"
+            v-for="q in visibleQuestions" 
+            :key="q" 
+            class="bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-blue-300 hover:shadow-lg transition-all duration-300 group"
+            @click="ask(q)"
           >
-            EN
-          </button>
-          <button 
-            class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
-            :class="language === 'no' ? 'text-gray-700' : 'text-gray-500'"
-            @click="language = 'no'"
-          >
-            NO
+            <div class="text-gray-800 font-medium text-sm leading-relaxed group-hover:text-blue-600 transition-colors duration-300">
+              {{ q }}
+            </div>
           </button>
         </div>
-      </div>
-    </section>
-
-    <section class="quick">
-      <div class="grid">
-        <button v-for="q in visibleQuestions" :key="q" class="btn-pill" @click="ask(q)">
-          {{ q }}
-        </button>
-      </div>
-    </section>
+      </section>
+    </div>
 
     <form class="home-composer" @submit.prevent="submitQuick">
       <input
