@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useLangStore } from '../stores/lang'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 const router = useRouter()
 
@@ -29,6 +30,7 @@ const questionsByLang: Record<'en' | 'no', string[]> = {
 const visibleQuestions = computed(() => questionsByLang[language.value])
 
 const quickQuestion = ref('')
+const showWelcomeDialog = ref(false)
 
 function ask(q: string) {
   router.push({ name: 'chat', query: { q } })
@@ -39,10 +41,31 @@ function submitQuick() {
   if (!q) return
   ask(q)
 }
+
+onMounted(() => {
+  // Check if user has already seen the welcome dialog in this tab session
+  const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome')
+  if (!hasSeenWelcome) {
+    showWelcomeDialog.value = true
+    sessionStorage.setItem('hasSeenWelcome', 'true')
+  }
+})
 </script>
 
 <template>
   <main class="home">
+    <!-- Welcome Dialog -->
+    <Dialog v-model:open="showWelcomeDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Welcome to Kevin's Portfolio!</DialogTitle>
+          <DialogDescription>
+            The website is still under development.
+          </DialogDescription>
+        </DialogHeader>
+      </DialogContent>
+    </Dialog>
+
     <section class="brand">
       <div class="sparkles">✦✦</div>
       <h1 class="logo">Kevin's <span>AI</span>.</h1>
