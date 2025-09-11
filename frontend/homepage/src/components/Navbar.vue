@@ -17,18 +17,18 @@ const isActive = (routeName: string) => {
   <nav class="center-nav">
     <div class="nav-container">
       <div class="relative bg-gray-200 rounded-full p-1 flex">
-        <div 
+        <div
           class="absolute top-1 bottom-1 w-16 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out"
-          :class="isActive('home') ? 'translate-x-0' : 'translate-x-16'"
+          :class="isActive('home') ? 'translate-x-0' : (isActive('about') ? 'translate-x-16' : 'translate-x-0 opacity-0')"
         ></div>
-        <button 
+        <button
           class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
           :class="isActive('home') ? 'text-gray-700' : 'text-gray-500'"
           @click="navigateTo('home')"
         >
           Home
         </button>
-        <button 
+        <button
           class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
           :class="isActive('about') ? 'text-gray-700' : 'text-gray-500'"
           @click="navigateTo('about')"
