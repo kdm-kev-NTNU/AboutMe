@@ -1,0 +1,74 @@
+{
+  "experiences": [
+    {
+      "id": "ntnu-programming-2025",
+      "startDate": "2025-08-01",
+      "endDate": null,
+      "company": "NTNU",
+      "position": "Student Assistant for Programming, Numerics and Security",
+      "description": "The course provides an interdisciplinary introduction to programming, numerical mathematics and ICT security, and is common to all engineering students. Students learn to use Python to solve technical problems, analyze numerical calculations and visualize data, while gaining basic insight into digital threats and risk assessment. Teaching emphasizes practical application through weekly exercises and final assessment in both programming and ICT security.",
+      "location": "Trondheim, Norway",
+      "type": "part-time"
+    },
+    {
+      "id": "engage-hub-2025",
+      "startDate": "2025-06-01",
+      "endDate": null,
+      "company": "Engage Resource Hub",
+      "position": "Student Assistant for Content Production",
+      "description": "Engage Resource Hub is part of the Engage Center for Entrepreneurship at NTNU, established under the Department of Industrial Economics and Technology Management. It collaborates with various study programs to offer educators resources that can be used in their own teaching. My role involves administering and publishing learning content on the platform, supporting the development of new features, and contributing to technical and design improvements.",
+      "location": "Trondheim, Norway",
+      "type": "part-time"
+    },
+    {
+      "id": "oslo-teaching-2025",
+      "startDate": "2025-06-01",
+      "endDate": "2025-08-31",
+      "company": "Oslo Municipality",
+      "position": "Teaching Assistant",
+      "description": "Summer job: Contributing to social activities and operation of summer school courses",
+      "location": "Oslo, Norway",
+      "type": "summer-job"
+    },
+    {
+      "id": "oslo-teaching-2024",
+      "startDate": "2024-06-01",
+      "endDate": "2024-08-31",
+      "company": "Oslo Municipality",
+      "position": "Teaching Assistant",
+      "description": "Summer job: Contributing to social activities and operation of summer school courses",
+      "location": "Oslo, Norway",
+      "type": "summer-job"
+    },
+    {
+      "id": "deichman-librarian-2022",
+      "startDate": "2022-04-01",
+      "endDate": "2022-12-31",
+      "company": "Deichman",
+      "position": "Youth Librarian",
+      "description": "Library operations with focus on customer service, book logistics and event setup",
+      "location": "Oslo, Norway",
+      "type": "part-time"
+    },
+    {
+      "id": "oslo-teaching-2022",
+      "startDate": "2022-06-01",
+      "endDate": "2022-08-31",
+      "company": "Oslo Municipality",
+      "position": "Teaching Assistant",
+      "description": "Summer job: Contributing to social activities and operation of summer school courses",
+      "location": "Oslo, Norway",
+      "type": "summer-job"
+    },
+    {
+      "id": "yummy-heaven-2020",
+      "startDate": "2020-10-01",
+      "endDate": "2023-01-31",
+      "company": "Yummy Heaven",
+      "position": "Store Employee",
+      "description": "Cleaning, restocking and cashier work",
+      "location": "Oslo, Norway",
+      "type": "part-time"
+    }
+  ]
+}

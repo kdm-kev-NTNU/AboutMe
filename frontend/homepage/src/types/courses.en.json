@@ -1,0 +1,180 @@
+{
+  "courses": [
+    {
+      "id": "sem1-idatt1003",
+      "courseCode": "IDATT1003",
+      "courseName": "Programming 1",
+      "credits": 7.5,
+      "semester": "Semester 1 (Autumn 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "sem1-idatt1004",
+      "courseCode": "IDATT1004",
+      "courseName": "Team-based collaboration",
+      "credits": 7.5,
+      "semester": "Semester 1 (Autumn 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "sem1-imat1002",
+      "courseCode": "IMAT1002",
+      "courseName": "Mathematics for engineers 1",
+      "credits": 7.5,
+      "semester": "Semester 1 (Autumn 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "sem1-ingt1002",
+      "courseCode": "INGT1002",
+      "courseName": "Programming, numerical mathematics and security",
+      "credits": 7.5,
+      "semester": "Semester 1 (Autumn 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "sem2-idatt1005",
+      "courseCode": "IDATT1005",
+      "courseName": "Software engineering",
+      "credits": 7.5,
+      "semester": "Semester 2 (Spring 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem2-idatt2002",
+      "courseCode": "IDATT2002",
+      "courseName": "Databases",
+      "credits": 7.5,
+      "semester": "Semester 2 (Spring 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem2-imat2024",
+      "courseCode": "IMAT2024",
+      "courseName": "Mathematics for engineering 2 D",
+      "credits": 7.5,
+      "semester": "Semester 2 (Spring 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem2-idatt2003",
+      "courseCode": "IDATT2003",
+      "courseName": "Programming 2",
+      "credits": 7.5,
+      "semester": "Semester 2 (Spring 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem3-exph0600",
+      "courseCode": "EXPH0600",
+      "courseName": "Examen philosophicum for Engineers",
+      "credits": 7.5,
+      "semester": "Semester 3 (Autumn 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem3-idatt2101",
+      "courseCode": "IDATT2101",
+      "courseName": "Algorithms and data structures",
+      "credits": 7.5,
+      "semester": "Semester 3 (Autumn 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem3-idatt2202",
+      "courseCode": "IDATT2202",
+      "courseName": "Operating Systems",
+      "credits": 7.5,
+      "semester": "Semester 3 (Autumn 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem3-istt1003",
+      "courseCode": "ISTT1003",
+      "courseName": "Statistics",
+      "credits": 7.5,
+      "semester": "Semester 3 (Autumn 2024)",
+      "status": "completed"
+    },
+    {
+      "id": "sem4-idatt2104",
+      "courseCode": "IDATT2104",
+      "courseName": "Network Programming",
+      "credits": 7.5,
+      "semester": "Semester 4 (Spring 2025)",
+      "status": "completed"
+    },
+    {
+      "id": "sem4-idatt2105",
+      "courseCode": "IDATT2105",
+      "courseName": "Full-stack application development",
+      "credits": 7.5,
+      "semester": "Semester 4 (Spring 2025)",
+      "status": "completed"
+    },
+    {
+      "id": "sem4-idatt2106",
+      "courseCode": "IDATT2106",
+      "courseName": "Software Engineering 2 with Agile project",
+      "credits": 7.5,
+      "semester": "Semester 4 (Spring 2025)",
+      "status": "completed"
+    },
+    {
+      "id": "sem4-ifyt1002",
+      "courseCode": "IFYT1002",
+      "courseName": "Physics",
+      "credits": 7.5,
+      "semester": "Semester 4 (Spring 2025)",
+      "status": "completed"
+    },
+    {
+      "id": "sem5-idatt2506",
+      "courseCode": "IDATT2506",
+      "courseName": "Application Development for Mobile Devices",
+      "credits": 7.5,
+      "semester": "Semester 5 (Autumn 2025)",
+      "status": "ongoing"
+    },
+    {
+      "id": "sem5-inft2503",
+      "courseCode": "INFT2503",
+      "courseName": "C++ for Programmers",
+      "credits": 7.5,
+      "semester": "Semester 5 (Autumn 2025)",
+      "status": "ongoing"
+    },
+    {
+      "id": "sem5-imat3011",
+      "courseCode": "IMAT3011",
+      "courseName": "Mathematics for Engineers 3A",
+      "credits": 7.5,
+      "semester": "Semester 5 (Autumn 2025)",
+      "status": "ongoing"
+    },
+    {
+      "id": "sem5-tdt4172",
+      "courseCode": "TDT4172",
+      "courseName": "Introduction to Machine Learning",
+      "credits": 7.5,
+      "semester": "Semester 5 (Autumn 2025)",
+      "status": "ongoing"
+    },
+    {
+      "id": "sem6-idatt2901",
+      "courseCode": "IDATT2901",
+      "courseName": "Bachelor Project",
+      "credits": 22.5,
+      "semester": "Semester 6 (Spring 2026)",
+      "status": "planned"
+    },
+    {
+      "id": "sem6-ingt2301",
+      "courseCode": "INGT2301",
+      "courseName": "Engineering System Thinking",
+      "credits": 7.5,
+      "semester": "Semester 6 (Spring 2026)",
+      "status": "planned"
+    }
+  ]
+}
