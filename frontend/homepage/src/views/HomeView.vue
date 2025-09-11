@@ -55,7 +55,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="home flex flex-col min-h-screen">
+  <main class="home flex flex-col min-h-screen pt-20">
     <!-- Welcome Dialog -->
     <Dialog v-model:open="showWelcomeDialog">
       <DialogContent>
