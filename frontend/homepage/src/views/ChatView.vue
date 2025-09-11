@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,41 @@ const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
 const langStore = useLangStore()
 const language = computed(() => langStore.language)
+
+// Session storage functions
+const saveMessagesToStorage = () => {
+  try {
+    sessionStorage.setItem('chatMessages', JSON.stringify(state.messages))
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
+  } catch (error) {
+    console.warn('Failed to save messages to session storage:', error)
+  }
+}
+
+const loadMessagesFromStorage = () => {
+  try {
+    const stored = sessionStorage.getItem('chatMessages')
+    if (stored) {
+      const messages = JSON.parse(stored)
+      if (Array.isArray(messages)) {
+        state.messages = messages
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load messages from session storage:', error)
+  }
+}
+
+// Watch for changes in messages and save to storage
+watch(() => state.messages, saveMessagesToStorage, { deep: true })
+
+// Clear chat function
+const clearChat = () => {
+  state.messages = []
+  sessionStorage.removeItem('chatMessages')
+  window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
+}
 
 async function send(text: string) {
   if (!text.trim() || isLoading.value) return
@@ -66,6 +101,9 @@ async function send(text: string) {
 }
 
 onMounted(() => {
+  // Load messages from session storage first
+  loadMessagesFromStorage()
+  
   const q = (route.query.q as string) || ''
   if (q) {
     input.value = q
@@ -83,6 +121,19 @@ onMounted(() => {
       <Alert v-if="errorText" variant="destructive" class="mb-6 flex-shrink-0">
         <AlertDescription>{{ errorText }}</AlertDescription>
       </Alert>
+
+      <!-- Chat Header with Clear Button -->
+      <div v-if="state.messages.length > 0" class="flex justify-between items-center mb-4 flex-shrink-0">
+        <h2 class="text-lg font-semibold text-gray-800">Chat with Kevin's AI</h2>
+        <Button 
+          @click="clearChat" 
+          variant="outline" 
+          size="sm"
+          class="text-gray-600 hover:text-red-600 hover:border-red-300"
+        >
+          Clear Chat
+        </Button>
+      </div>
 
       <!-- Messages Area -->
       <div class="flex-1 overflow-y-auto space-y-4 mb-8 pr-2">
