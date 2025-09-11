@@ -32,13 +32,13 @@ const coursesData = computed(() => {
 // Format date for display
 const formatDate = (dateString: string | null, language: 'en' | 'no'): string => {
   if (!dateString) return language === 'no' ? 'd.d.' : 'Present'
-  
+
   const date = new Date(dateString)
   const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'short'
   }
-  
+
   return new Intl.DateTimeFormat(language === 'no' ? 'nb-NO' : 'en-US', options).format(date)
 }
 
@@ -79,6 +79,16 @@ const getCourseStatusVariant = (status: string) => {
   }
 }
 
+// Get course status badge class for custom blue shades
+const getCourseStatusClass = (status: string) => {
+  switch (status) {
+    case 'ongoing': return 'blue-ongoing-badge'
+    case 'completed': return 'blue-completed-badge'
+    case 'planned': return 'blue-planned-badge'
+    default: return 'blue-completed-badge'
+  }
+}
+
 // Get course status text
 const getCourseStatusText = (status: string, language: 'en' | 'no') => {
   const statusTexts = {
@@ -92,23 +102,23 @@ const getCourseStatusText = (status: string, language: 'en' | 'no') => {
 // Group courses by semester
 const coursesBySemester = computed(() => {
   const grouped: { [key: string]: Course[] } = {}
-  
+
   coursesData.value.forEach(course => {
     if (!grouped[course.semester]) {
       grouped[course.semester] = []
     }
     grouped[course.semester].push(course)
   })
-  
+
   // Sort semesters in descending order (most recent first)
   const sortedSemesters = Object.keys(grouped).sort((a, b) => {
     const [yearA, seasonA] = a.split('-')
     const [yearB, seasonB] = b.split('-')
-    
+
     if (yearA !== yearB) return parseInt(yearB) - parseInt(yearA) // Descending year order
     return seasonB === 'Spring' || seasonB === 'Vår' ? 1 : -1 // Spring comes after Autumn
   })
-  
+
   return sortedSemesters.map(semester => ({
     semester,
     courses: grouped[semester]
@@ -141,11 +151,11 @@ const education = computed(() => {
   <main class="education pt-20">
     <div class="max-w-4xl mx-auto px-8 py-8 relative z-10">
       <h1 class="text-3xl font-bold text-gray-800 mb-12 text-center">{{ pageTitle }}</h1>
-      
+
       <!-- Education Cards -->
       <div class="space-y-8">
-        <Card 
-          v-for="edu in education" 
+        <Card
+          v-for="edu in education"
           :key="edu.id"
           class="education-card hover:shadow-lg transition-all duration-300"
         >
@@ -184,16 +194,16 @@ const education = computed(() => {
       <!-- Courses Section -->
       <div class="mt-16">
         <h2 class="text-2xl font-bold text-gray-800 mb-8 text-center">{{ coursesTitle }}</h2>
-        
+
         <div class="space-y-12">
           <div v-for="semesterGroup in coursesBySemester" :key="semesterGroup.semester" class="space-y-4">
             <h3 class="text-lg font-semibold text-blue-700 border-b border-blue-200 pb-2">
               {{ semesterGroup.semester }}
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card 
-                v-for="course in semesterGroup.courses" 
+              <Card
+                v-for="course in semesterGroup.courses"
                 :key="course.id"
                 class="course-card hover:shadow-md transition-all duration-200"
               >
@@ -207,9 +217,9 @@ const education = computed(() => {
                         {{ course.courseName }}
                       </h4>
                     </div>
-                    <Badge 
-                      :variant="getCourseStatusVariant(course.status)" 
-                      class="text-xs ml-2 flex-shrink-0 blue-course-badge"
+                    <Badge
+                      :variant="getCourseStatusVariant(course.status)"
+                      :class="['text-xs ml-2 flex-shrink-0', getCourseStatusClass(course.status)]"
                     >
                       {{ getCourseStatusText(course.status, langStore.language) }}
                     </Badge>
@@ -317,18 +327,44 @@ const education = computed(() => {
   transform: translateY(-1px) !important;
 }
 
-/* Blue Course Badge Styling */
-.blue-course-badge {
-  border: 1px solid rgba(59, 130, 246, 0.2) !important;
-  color: #3b82f6 !important;
-  background: rgba(59, 130, 246, 0.05) !important;
+/* Blue Course Badge Styling - Different shades for each status */
+.blue-ongoing-badge {
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  color: #1d4ed8 !important;
+  background: rgba(59, 130, 246, 0.15) !important;
   transition: all 0.2s ease !important;
 }
 
-.blue-course-badge:hover {
-  border-color: rgba(59, 130, 246, 0.4) !important;
-  background: rgba(59, 130, 246, 0.08) !important;
-  color: #2563eb !important;
+.blue-ongoing-badge:hover {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  background: rgba(59, 130, 246, 0.2) !important;
+  color: #1e40af !important;
+}
+
+.blue-completed-badge {
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+  color: #16a34a !important;
+  background: rgba(34, 197, 94, 0.1) !important;
+  transition: all 0.2s ease !important;
+}
+
+.blue-completed-badge:hover {
+  border-color: rgba(34, 197, 94, 0.5) !important;
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #15803d !important;
+}
+
+.blue-planned-badge {
+  border: 1px solid rgba(107, 114, 128, 0.3) !important;
+  color: #6b7280 !important;
+  background: rgba(107, 114, 128, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+.blue-planned-badge:hover {
+  border-color: rgba(107, 114, 128, 0.5) !important;
+  background: rgba(107, 114, 128, 0.1) !important;
+  color: #4b5563 !important;
 }
 
 /* Page Title Styling */
@@ -367,7 +403,7 @@ span[class*="bg-gray-100"] {
   .education-card:hover {
     transform: translateY(-1px);
   }
-  
+
   .course-card:hover {
     transform: none;
   }
