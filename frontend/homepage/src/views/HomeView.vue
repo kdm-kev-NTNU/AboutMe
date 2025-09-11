@@ -135,10 +135,10 @@ onMounted(() => {
         <Input
           v-model="quickQuestion"
           type="text"
-          class="flex-1"
+          class="flex-1 blue-accent-input"
           :placeholder="language === 'en' ? `Curious? Kevin's AI is here to answer!` : `Nysgjerrig? Kevin sin AI svarer gjerne!`"
         />
-        <Button type="submit" class="cursor-pointer">Send →</Button>
+        <Button type="submit" class="cursor-pointer blue-accent-button">Send →</Button>
       </form>
     </div>
   </main>
@@ -204,6 +204,12 @@ onMounted(() => {
 
 .gradient-form {
   position: relative;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  padding: 8px;
+  transition: all 0.3s ease;
 }
 
 .gradient-form::before {
@@ -214,14 +220,87 @@ onMounted(() => {
   right: -2px;
   bottom: -2px;
   background: linear-gradient(135deg, #3b82f6, #2563eb, #1d4ed8);
-  border-radius: 12px;
+  border-radius: 14px;
   opacity: 0;
   transition: opacity 0.3s ease;
   z-index: -1;
 }
 
+.gradient-form:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+}
+
 .gradient-form:hover::before {
-  opacity: 0.1;
+  opacity: 0.2;
+}
+
+.gradient-form:focus-within {
+  border-color: rgba(59, 130, 246, 0.6);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
+}
+
+.gradient-form:focus-within::before {
+  opacity: 0.3;
+}
+
+/* Blue accent button styling */
+.blue-accent-button {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  border: none !important;
+  color: white !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.blue-accent-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.blue-accent-button:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4) !important;
+}
+
+.blue-accent-button:hover::before {
+  left: 100%;
+}
+
+.blue-accent-button:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3) !important;
+}
+
+/* Blue accent input styling */
+.blue-accent-input {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 2px solid rgba(59, 130, 246, 0.2) !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.blue-accent-input:focus {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  outline: none !important;
+}
+
+.blue-accent-input::placeholder {
+  color: rgba(59, 130, 246, 0.6) !important;
+  font-weight: 500 !important;
 }
 
 /* Enhanced language toggle with gradient */
