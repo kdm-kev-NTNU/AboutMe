@@ -82,16 +82,20 @@ const projects = computed(() => {
 </script>
 
 <template>
-  <main class="projects pt-20">
+  <main class="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-slate-100 relative">
+    <!-- Background overlay -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);"></div>
+    </div>
     <div class="max-w-6xl mx-auto px-8 py-8 relative z-10">
-      <h1 class="text-3xl font-bold text-gray-800 mb-12 text-center">{{ pageTitle }}</h1>
+      <h1 class="text-3xl font-bold mb-12 text-center bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x">{{ pageTitle }}</h1>
       
       <!-- Projects Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card 
           v-for="project in projects" 
           :key="project.id"
-          class="project-card hover:shadow-lg transition-all duration-300"
+          class="relative border-2 border-transparent transition-all duration-300 bg-white/90 backdrop-blur-sm hover:border-blue-300/30 hover:bg-white/95 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/15 group"
         >
           <CardHeader>
             <div class="flex items-start justify-between mb-3">
@@ -116,7 +120,7 @@ const projects = computed(() => {
                 v-for="tech in project.technologies" 
                 :key="tech"
                 variant="outline" 
-                class="text-xs blue-tech-badge"
+                class="text-xs border border-blue-300/30 text-blue-600 bg-blue-50/50 hover:border-blue-300/50 hover:bg-blue-50 hover:text-blue-700 hover:-translate-y-0.5 transition-all duration-300"
               >
                 {{ tech }}
               </Badge>
@@ -136,7 +140,7 @@ const projects = computed(() => {
                 :href="project.githubUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="flex items-center gap-2 blue-outline-button"
+                class="flex items-center gap-2 border-2 border-blue-300/30 text-blue-600 bg-blue-50/50 hover:border-blue-300/60 hover:bg-blue-50 hover:text-blue-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300 relative overflow-hidden"
               >
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
@@ -151,7 +155,7 @@ const projects = computed(() => {
                 :href="project.liveUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="flex items-center gap-2 blue-primary-button"
+                class="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300 relative overflow-hidden"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -167,168 +171,24 @@ const projects = computed(() => {
 </template>
 
 <style scoped>
-.projects {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  position: relative;
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
-.projects::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-/* Project Card Styling */
-.project-card {
-  position: relative;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-}
-
-.project-card::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb, #1d4ed8);
-  border-radius: 12px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: -1;
-}
-
-.project-card:hover {
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(255, 255, 255, 0.95);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.15) !important;
-}
-
-.project-card:hover::before {
-  opacity: 0.1;
-}
-
-/* Blue Outline Button (GitHub) */
-.blue-outline-button {
-  border: 2px solid rgba(59, 130, 246, 0.3) !important;
-  color: #3b82f6 !important;
-  background: rgba(59, 130, 246, 0.05) !important;
-  transition: all 0.3s ease !important;
-  position: relative !important;
-  overflow: hidden !important;
-}
-
-.blue-outline-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
-  transition: left 0.5s ease;
-}
-
-.blue-outline-button:hover {
-  border-color: rgba(59, 130, 246, 0.6) !important;
-  background: rgba(59, 130, 246, 0.1) !important;
-  color: #2563eb !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2) !important;
-}
-
-.blue-outline-button:hover::before {
-  left: 100%;
-}
-
-/* Blue Primary Button (Live Demo) */
-.blue-primary-button {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-  border: none !important;
-  color: white !important;
-  font-weight: 600 !important;
-  transition: all 0.3s ease !important;
-  position: relative !important;
-  overflow: hidden !important;
-}
-
-.blue-primary-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-.blue-primary-button:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4) !important;
-}
-
-.blue-primary-button:hover::before {
-  left: 100%;
-}
-
-.blue-primary-button:active {
-  transform: translateY(0) !important;
-  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3) !important;
-}
-
-/* Blue Technology Badges */
-.blue-tech-badge {
-  border: 1px solid rgba(59, 130, 246, 0.3) !important;
-  color: #3b82f6 !important;
-  background: rgba(59, 130, 246, 0.05) !important;
-  transition: all 0.3s ease !important;
-}
-
-.blue-tech-badge:hover {
-  border-color: rgba(59, 130, 246, 0.5) !important;
-  background: rgba(59, 130, 246, 0.1) !important;
-  color: #2563eb !important;
-  transform: translateY(-1px) !important;
-}
-
-/* Page Title Styling */
-h1 {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.animate-gradient-x {
   background-size: 200% 200%;
-  animation: gradientShift 3s ease-in-out infinite;
-}
-
-@keyframes gradientShift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  animation: gradient-x 3s ease-in-out infinite;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .project-card:hover {
+  .hover\:-translate-y-0\.5:hover {
     transform: translateY(-1px);
-  }
-  
-  .blue-outline-button:hover,
-  .blue-primary-button:hover {
-    transform: none !important;
   }
 }
 </style>
