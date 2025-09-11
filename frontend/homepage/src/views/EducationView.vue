@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import type { Education, EducationData } from '../types/education'
 import type { Course, CourseData } from '../types/courses'
