@@ -11,7 +11,7 @@ const isActive = (routeName: string) => {
 }
 
 const getButtonText = (key: string) => {
-  const texts = {
+  const texts: Record<string, { en: string; no: string }> = {
     home: { en: 'Home', no: 'Hjem' },
     projects: { en: 'Projects', no: 'Prosjekter' },
     work: { en: 'Work', no: 'Arbeid' },
