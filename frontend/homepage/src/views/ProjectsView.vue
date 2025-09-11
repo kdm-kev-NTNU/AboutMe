@@ -83,7 +83,7 @@ const projects = computed(() => {
 
 <template>
   <main class="projects pt-20">
-    <div class="max-w-6xl mx-auto px-8 py-8">
+    <div class="max-w-6xl mx-auto px-8 py-8 relative z-10">
       <h1 class="text-3xl font-bold text-gray-800 mb-12 text-center">{{ pageTitle }}</h1>
       
       <!-- Projects Grid -->
@@ -169,7 +169,21 @@ const projects = computed(() => {
 <style scoped>
 .projects {
   min-height: 100vh;
-  background-color: #f9fafb;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  position: relative;
+}
+
+.projects::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 /* Project Card Styling */
