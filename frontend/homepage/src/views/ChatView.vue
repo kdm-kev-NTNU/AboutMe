@@ -117,7 +117,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="chat-page flex flex-col h-screen pt-20">
+  <main class="flex flex-col h-screen pt-20 min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 relative">
+    <!-- Background overlay -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);"></div>
+    </div>
     <!-- Chat Container -->
     <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full px-8 py-8 overflow-hidden relative z-10">
       <!-- Error Alert -->
@@ -131,14 +135,14 @@ onMounted(() => {
           @click="clearChat"
           variant="outline"
           size="sm"
-          class="blue-clear-button text-gray-600 hover:text-blue-600 hover:border-blue-300 cursor-pointer"
+          class="border-2 border-blue-300/30 text-blue-600 bg-blue-50/50 hover:border-blue-300/60 hover:bg-blue-50 hover:text-blue-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300 relative overflow-hidden cursor-pointer"
         >
           Clear Chat
         </Button>
       </div>
 
       <!-- Messages Area -->
-      <div class="chat-messages-area flex-1 overflow-y-auto space-y-4 mb-8 pr-2 border border-gray-200 rounded-lg p-4 bg-white">
+      <div class="flex-1 overflow-y-auto space-y-4 mb-8 pr-2 border-2 border-blue-100/20 rounded-lg p-4 bg-white/90 backdrop-blur-sm hover:border-blue-200/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
         <!-- Chat Messages -->
         <div v-for="(m, idx) in state.messages" :key="idx" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
           <div class="max-w-[80%]">
@@ -155,8 +159,10 @@ onMounted(() => {
                 <div class="text-xs text-gray-500 mb-1" :class="m.role === 'user' ? 'text-right' : 'text-left'">
                   {{ m.role === 'user' ? 'You' : 'Kevin\'s AI' }}
                 </div>
-                <div class="message-bubble bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm hover:shadow-lg transition-all duration-300"
-                     :class="m.role === 'user' ? 'user-message-bubble bg-blue-500 border-blue-500' : 'ai-message-bubble'">
+                <div class="relative transition-all duration-300 rounded-xl px-4 py-3 shadow-sm hover:shadow-lg"
+                     :class="m.role === 'user' 
+                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-2 border-blue-600 hover:from-blue-700 hover:to-blue-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40' 
+                       : 'bg-white/95 border-2 border-blue-100/20 hover:border-blue-200/30 hover:bg-white hover:shadow-lg hover:shadow-blue-500/10'">
                   <p class="text-sm leading-relaxed whitespace-pre-wrap" :class="m.role === 'user' ? 'text-white' : 'text-gray-700'">{{ m.text }}</p>
                 </div>
               </div>
@@ -173,7 +179,7 @@ onMounted(() => {
               </div>
               <div class="flex-1">
                 <div class="text-xs text-blue-600 mb-1 font-medium">Kevin's AI</div>
-                <div class="ai-message-bubble bg-white border border-blue-200 rounded-xl px-4 py-3 shadow-sm">
+                <div class="bg-white/95 border-2 border-blue-200/30 rounded-xl px-4 py-3 shadow-sm">
                   <div class="flex items-center gap-1">
                     <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
                     <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
@@ -188,15 +194,15 @@ onMounted(() => {
 
       <!-- Form at Bottom -->
       <div class="pb-8 flex-shrink-0">
-        <form class="chat-form flex gap-3" @submit.prevent="send(input)">
+        <form class="flex gap-3 relative bg-white/90 backdrop-blur-sm border-2 border-blue-200/20 rounded-xl p-2 transition-all duration-300 hover:border-blue-300/40 hover:bg-white/95 hover:shadow-lg hover:shadow-blue-500/15 focus-within:border-blue-300/60 focus-within:bg-white/98 focus-within:shadow-lg focus-within:shadow-blue-500/25" @submit.prevent="send(input)">
           <Input
             v-model="input"
             :disabled="isLoading"
             type="text"
-            class="flex-1 bg-white blue-chat-input"
+            class="flex-1 bg-white/80 border-2 border-blue-200/20 rounded-lg transition-all duration-300 focus:bg-white/95 focus:border-blue-300/50 focus:shadow-sm focus:shadow-blue-500/10 focus:outline-none placeholder:text-blue-600/60 placeholder:font-medium"
             :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'"
           />
-          <Button type="submit" :disabled="isLoading || !input.trim()" class="blue-send-button">
+          <Button type="submit" :disabled="isLoading || !input.trim()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300 relative overflow-hidden disabled:bg-blue-300/30 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-none">
             {{ isLoading ? 'Sending...' : 'Send →' }}
           </Button>
         </form>
@@ -206,207 +212,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.chat-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  position: relative;
-}
-
-.chat-page::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-/* Chat Messages Area */
-.chat-messages-area {
-  background: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(59, 130, 246, 0.1) !important;
-  transition: all 0.3s ease;
-}
-
-.chat-messages-area:hover {
-  border-color: rgba(59, 130, 246, 0.2) !important;
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.1);
-}
-
-/* Message Bubbles */
-.message-bubble {
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.user-message-bubble {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-  border: 2px solid #2563eb !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-}
-
-.user-message-bubble:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-}
-
-.ai-message-bubble {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 2px solid rgba(59, 130, 246, 0.1) !important;
-}
-
-.ai-message-bubble:hover {
-  border-color: rgba(59, 130, 246, 0.2) !important;
-  background: rgba(255, 255, 255, 1) !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
-}
-
-/* Chat Form Styling */
-.chat-form {
-  position: relative;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(59, 130, 246, 0.2);
-  border-radius: 12px;
-  padding: 8px;
-  transition: all 0.3s ease;
-}
-
-.chat-form::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb, #1d4ed8);
-  border-radius: 14px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: -1;
-}
-
-.chat-form:hover {
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
-}
-
-.chat-form:hover::before {
-  opacity: 0.2;
-}
-
-.chat-form:focus-within {
-  border-color: rgba(59, 130, 246, 0.6);
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
-}
-
-.chat-form:focus-within::before {
-  opacity: 0.3;
-}
-
-/* Blue Chat Input Styling */
-.blue-chat-input {
-  background: rgba(255, 255, 255, 0.8) !important;
-  border: 2px solid rgba(59, 130, 246, 0.2) !important;
-  border-radius: 8px !important;
-  transition: all 0.3s ease !important;
-}
-
-.blue-chat-input:focus {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-color: rgba(59, 130, 246, 0.5) !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-  outline: none !important;
-}
-
-.blue-chat-input::placeholder {
-  color: rgba(59, 130, 246, 0.6) !important;
-  font-weight: 500 !important;
-}
-
-/* Blue Send Button Styling */
-.blue-send-button {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-  border: none !important;
-  color: white !important;
-  font-weight: 600 !important;
-  transition: all 0.3s ease !important;
-  position: relative !important;
-  overflow: hidden !important;
-}
-
-.blue-send-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-.blue-send-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4) !important;
-}
-
-.blue-send-button:hover:not(:disabled)::before {
-  left: 100%;
-}
-
-.blue-send-button:active:not(:disabled) {
-  transform: translateY(0) !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3) !important;
-}
-
-.blue-send-button:disabled {
-  background: rgba(59, 130, 246, 0.3) !important;
-  cursor: not-allowed !important;
-}
-
-/* Blue Clear Button Styling */
-.blue-clear-button {
-  border: 2px solid rgba(59, 130, 246, 0.3) !important;
-  color: #3b82f6 !important;
-  background: rgba(59, 130, 246, 0.05) !important;
-  transition: all 0.3s ease !important;
-  position: relative !important;
-  overflow: hidden !important;
-}
-
-.blue-clear-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
-  transition: left 0.5s ease;
-}
-
-.blue-clear-button:hover {
-  border-color: rgba(59, 130, 246, 0.6) !important;
-  background: rgba(59, 130, 246, 0.1) !important;
-  color: #2563eb !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2) !important;
-}
-
-.blue-clear-button:hover::before {
-  left: 100%;
-}
-
 /* Avatar Styling */
 .w-8.h-8.rounded-full {
   transition: all 0.3s ease;
@@ -418,18 +223,8 @@ onMounted(() => {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .chat-form:hover {
-    transform: none;
-  }
-  
-  .blue-send-button:hover:not(:disabled),
-  .blue-clear-button:hover {
-    transform: none !important;
-  }
-  
-  .user-message-bubble:hover,
-  .ai-message-bubble:hover {
-    transform: none;
+  .hover\:-translate-y-0\.5:hover {
+    transform: translateY(-1px);
   }
 }
 </style>
