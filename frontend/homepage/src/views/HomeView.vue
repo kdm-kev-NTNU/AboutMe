@@ -67,13 +67,28 @@ onMounted(() => {
     </Dialog>
 
     <section class="brand">
-      <h1 class="logo">Kevin's <span>AI</span>.</h1>
-    </section>
-
-    <section class="lang">
-      <div class="lang-toggle">
-        <button class="lang-btn" :class="{ active: language === 'en' }" @click="language = 'en'">EN</button>
-        <button class="lang-btn" :class="{ active: language === 'no' }" @click="language = 'no'">NO</button>
+      <h1 class="text-4xl font-bold text-center mb-4">Kevin's <span>AI</span>.</h1>
+      <div class="flex justify-center">
+        <div class="relative bg-gray-200 rounded-full p-1 flex">
+          <div 
+            class="absolute top-1 bottom-1 w-16 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out"
+            :class="language === 'en' ? 'translate-x-0' : 'translate-x-16'"
+          ></div>
+          <button 
+            class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
+            :class="language === 'en' ? 'text-gray-700' : 'text-gray-500'"
+            @click="language = 'en'"
+          >
+            EN
+          </button>
+          <button 
+            class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
+            :class="language === 'no' ? 'text-gray-700' : 'text-gray-500'"
+            @click="language = 'no'"
+          >
+            NO
+          </button>
+        </div>
       </div>
     </section>
 
