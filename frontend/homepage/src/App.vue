@@ -2,6 +2,7 @@
 import { RouterView } from 'vue-router'
 import InfoSheet from './components/InfoSheet.vue'
 import Navbar from './components/Navbar.vue'
+import FloatingChatButton from './components/FloatingChatButton.vue'
 import { useLangStore } from './stores/lang'
 
 // Initialize the language store early so detection runs on app boot
@@ -13,6 +14,7 @@ useLangStore()
     <Navbar />
     <RouterView />
     <InfoSheet />
+    <FloatingChatButton />
   </div>
 </template>
 
