@@ -4,6 +4,7 @@ import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
+import { MapPin } from 'lucide-vue-next'
 import type { WorkExperience, WorkExperienceData } from '../types/workExperience'
 
 // Import JSON data
@@ -101,7 +102,10 @@ const experiences = computed(() => {
                   <CardTitle class="text-xl font-bold text-gray-800 mb-3">{{ experience.title }}</CardTitle>
                   <div class="flex flex-wrap gap-3 mt-2">
                     <span class="text-sm text-gray-600 font-semibold bg-gray-50 px-3 py-1 rounded-full">{{ experience.company }}</span>
-                    <span v-if="experience.location" class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">📍 {{ experience.location }}</span>
+                    <span v-if="experience.location" class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full flex items-center gap-1">
+                      <MapPin class="w-3 h-3" />
+                      {{ experience.location }}
+                    </span>
                     <Badge v-if="experience.type" variant="secondary" class="text-xs bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 border-0">
                       {{ experience.type.replace('-', ' ') }}
                     </Badge>
