@@ -17,23 +17,29 @@ function toggle() {
   <div v-if="open" class="overlay" @click.self="toggle">
     <div class="sheet">
       <div class="sheet-header">
-        <h2 class="title">Kevin's AI</h2>
+        <h2 class="title">About Me</h2>
         <button class="close" @click="toggle" aria-label="Close">✕</button>
       </div>
 
-      <p class="sub">{{ language === 'en' ? 'Welcome to my AI portfolio!' : 'Velkommen til mitt AI-portfolio!' }}</p>
+      <p class="sub">{{ language === 'en' ? 'Welcome to my portfolio!' : 'Velkommen til mitt portfolio!' }}</p>
 
-      <h3 class="section">{{ language === 'en' ? 'Links' : 'Lenker' }}</h3>
-      <ul class="links">
-        <li><a href="https://github.com/kdm-kev-NTNU/AboutMe" target="_blank" rel="noopener">{{ language === 'en' ? 'Project Repo' : 'Prosjekt-repo' }}</a></li>
-        <li><a href="https://github.com/kdm-kev-NTNU" target="_blank" rel="noopener">{{ language === 'en' ? 'GitHub Profile' : 'GitHub-profil' }}</a></li>
-      </ul>
-      <h3 class="section">{{ language === 'en' ? "How Kevin's AI Knows About Me" : 'Hvordan Kevin sin AI vet om meg' }}</h3>
-      <p class="text">{{ language === 'en'
-        ? "I provide an AI model context about my background and education and how it should answer your questions. This can still hallucinate, so don't trust everything blindly."
-        : 'Jeg gir en AI-modell kontekst om min bakgrunn og utdanning og hvordan den skal svare på spørsmål. Den kan fortsatt hallusinere, så ikke stol blindt på alt.'
-      }}</p>
-      <!-- <button class="warn" disabled>⚠️ {{ language === 'en' ? 'Do not click on this' : 'Ikke klikk på denne' }}</button> -->
+      <h3 class="section">{{ language === 'en' ? 'Social Links' : 'Sosiale lenker' }}</h3>
+      <div class="social-links">
+        <a href="https://github.com/kaamyashinde" target="_blank" rel="noopener" class="social-link github-link">
+          <span class="social-icon">🐙</span>
+          <span>{{ language === 'en' ? 'GitHub' : 'GitHub' }}</span>
+        </a>
+        <a href="https://linkedin.com/in/kaamyashinde" target="_blank" rel="noopener" class="social-link linkedin-link">
+          <span class="social-icon">💼</span>
+          <span>{{ language === 'en' ? 'LinkedIn' : 'LinkedIn' }}</span>
+        </a>
+      </div>
+      
+      <div class="button-section">
+        <button class="dont-click-button" disabled>
+          {{ language === 'en' ? "Don't click here" : 'Ikke klikk her' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -50,6 +56,22 @@ function toggle() {
   background: #fff;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.2s ease;
+}
+
+.fab:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: scale(1.05);
+}
+
+.fab:active {
+  transform: scale(0.95);
 }
 .overlay {
   position: fixed;
@@ -59,6 +81,7 @@ function toggle() {
   align-items: center;
   justify-content: center;
   padding: 16px;
+  z-index: 100;
 }
 .sheet {
   width: min(540px, 100%);
@@ -72,11 +95,40 @@ function toggle() {
 .close { border: none; background: transparent; cursor: pointer; font-size: 18px; }
 .sub { color: #6b7280; margin: 6px 0 16px; }
 .section { margin: 18px 0 10px; font-size: 16px; }
-.links { list-style: none; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
-.links a { color: #111827; text-decoration: none; }
-.links a:hover { text-decoration: underline; }
-.text { color: #374151; }
-.warn { margin-top: 14px; width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb; color: #111827; }
+.social-links { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.social-link { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  padding: 12px 16px; 
+  border-radius: 8px; 
+  text-decoration: none; 
+  color: #111827; 
+  border: 1px solid #e5e7eb; 
+  background: #f9fafb; 
+  transition: all 0.2s ease;
+}
+.social-link:hover { 
+  background: #f3f4f6; 
+  border-color: #d1d5db; 
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.github-link:hover { border-color: #333; background: #f6f8fa; }
+.linkedin-link:hover { border-color: #0077b5; background: #f0f8ff; }
+.social-icon { font-size: 18px; }
+.button-section { margin-top: 20px; }
+.dont-click-button { 
+  width: 100%; 
+  padding: 12px 16px; 
+  border-radius: 8px; 
+  border: 1px solid #e5e7eb; 
+  background: #f9fafb; 
+  color: #6b7280; 
+  font-size: 14px; 
+  cursor: not-allowed; 
+  opacity: 0.7;
+}
 </style>
 
 
