@@ -22,14 +22,14 @@ const isActive = (routeName: string) => {
           :class="isActive('home') ? 'translate-x-0' : (isActive('about') ? 'translate-x-16' : 'translate-x-0 opacity-0')"
         ></div>
         <button
-          class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
+          class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
           :class="isActive('home') ? 'text-gray-700' : 'text-gray-500'"
           @click="navigateTo('home')"
         >
           Home
         </button>
         <button
-          class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
+          class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
           :class="isActive('about') ? 'text-gray-700' : 'text-gray-500'"
           @click="navigateTo('about')"
         >

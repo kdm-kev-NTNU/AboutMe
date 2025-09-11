@@ -80,14 +80,14 @@ onMounted(() => {
                 :class="language === 'en' ? 'translate-x-0' : 'translate-x-16'"
               ></div>
               <button
-                class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
+                class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
                 :class="language === 'en' ? 'text-gray-700' : 'text-gray-500'"
                 @click="language = 'en'"
               >
                 EN
               </button>
               <button
-                class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300"
+                class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
                 :class="language === 'no' ? 'text-gray-700' : 'text-gray-500'"
                 @click="language = 'no'"
               >
@@ -105,7 +105,7 @@ onMounted(() => {
               class="bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-gray-400 hover:shadow-lg transition-all duration-300 group"
               @click="ask(q)"
             >
-              <div class="text-gray-800 font-medium text-sm leading-relaxed group-hover:text-gray-900 transition-colors duration-300">
+              <div class="text-gray-800 font-medium text-sm leading-relaxed group-hover:text-gray-900 transition-colors duration-300 cursor-pointer">
                 {{ q }}
               </div>
             </button>
@@ -123,7 +123,7 @@ onMounted(() => {
           class="flex-1"
           :placeholder="language === 'en' ? `Curious? Kevin's AI is here to answer!` : `Nysgjerrig? Kevin sin AI svarer gjerne!`"
         />
-        <Button type="submit">Send →</Button>
+        <Button type="submit" class="cursor-pointer">Send →</Button>
       </form>
     </div>
   </main>

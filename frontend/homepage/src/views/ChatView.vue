@@ -53,7 +53,7 @@ const clearChat = () => {
   // Clear session storage first
   sessionStorage.removeItem('chatMessages')
   window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
-  
+
   // Redirect to home page
   router.push({ name: 'home' })
 }
@@ -106,7 +106,7 @@ async function send(text: string) {
 onMounted(() => {
   // Load messages from session storage first
   loadMessagesFromStorage()
-  
+
   const q = (route.query.q as string) || ''
   if (q) {
     input.value = q
@@ -128,11 +128,11 @@ onMounted(() => {
       <!-- Chat Header with Clear Button -->
       <div v-if="state.messages.length > 0" class="flex justify-between items-center mb-4 flex-shrink-0">
         <h2 class="text-lg font-semibold text-gray-800">Chat with Kevin's AI</h2>
-        <Button 
-          @click="clearChat" 
-          variant="outline" 
+        <Button
+          @click="clearChat"
+          variant="outline"
           size="sm"
-          class="text-gray-600 hover:text-red-600 hover:border-red-300"
+          class="text-gray-600 hover:text-red-600 hover:border-red-300 cursor-pointer"
         >
           Clear Chat
         </Button>

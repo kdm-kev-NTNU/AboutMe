@@ -14,7 +14,7 @@ useLangStore()
     <Navbar />
     <RouterView />
     <InfoSheet />
-    <FloatingChatButton />
+    <FloatingChatButton class="cursor-pointer" />
   </div>
 </template>
 
