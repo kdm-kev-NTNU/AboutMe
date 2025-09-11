@@ -1,0 +1,64 @@
+{
+  "experiences": [
+    {
+      "id": "ntnu-programming-2025",
+      "startDate": "2025-08-01",
+      "endDate": null,
+      "company": "NTNU",
+      "position": "Studentassistent for Programmering, Numerikk og Sikkerhet",
+      "description": "Emnet gir en tverrfaglig innføring i programmering, numerisk matematikk og IKT-sikkerhet, og er felles for alle ingeniørstudenter. Studentene lærer å bruke Python til å løse tekniske problemer, analysere numeriske beregninger og visualisere data, samtidig som de får grunnleggende innsikt i digitale trusler og risikovurdering. Undervisningen vektlegger praktisk anvendelse gjennom ukentlige øvinger og avsluttende vurdering i både programmering og IKT-sikkerhet.",
+      "location": "Trondheim, Norge",
+      "type": "part-time"
+    },
+    {
+      "id": "engage-hub-2025",
+      "startDate": "2025-06-01",
+      "endDate": null,
+      "company": "Engage Resource Hub",
+      "position": "Studentassistent for innholdsproduksjon",
+      "description": "Engage Resource Hub er en del av Engage-senteret for entreprenørskap ved NTNU, etablert under Institutt for industriell økonomi og teknologiledelse. Den samarbeider med ulike studieprogrammer for å tilby undervisere ressurser som kan brukes i egen undervisning. Min rolle innebærer å administrere og publisere læringsinnhold på plattformen, støtte utvikling av nye funksjoner, samt bidra med tekniske og designmessige forbedringer.",
+      "location": "Trondheim, Norge",
+      "type": "part-time"
+    },
+    {
+      "id": "oslo-teaching-2024",
+      "startDate": "2024-06-01",
+      "endDate": "2024-08-31",
+      "company": "Oslo Kommune",
+      "position": "Lærerassistent",
+      "description": "Sommerjobb: Bidra med sosiale aktiviteter og drift av sommerskolekurs",
+      "location": "Oslo, Norge",
+      "type": "summer-job"
+    },
+    {
+      "id": "deichman-librarian-2022",
+      "startDate": "2022-04-01",
+      "endDate": "2022-12-31",
+      "company": "Deichman",
+      "position": "Ungdomsbibliotekar",
+      "description": "Bibliotekdrift med fokus på kundeservice, boklogistikk og rigging av arrangementer",
+      "location": "Oslo, Norge",
+      "type": "part-time"
+    },
+    {
+      "id": "oslo-teaching-2022",
+      "startDate": "2022-06-01",
+      "endDate": "2022-08-31",
+      "company": "Oslo Kommune",
+      "position": "Lærerassistent",
+      "description": "Sommerjobb: Bidra med sosiale aktiviteter og drift av sommerskolekurs",
+      "location": "Oslo, Norge",
+      "type": "summer-job"
+    },
+    {
+      "id": "yummy-heaven-2020",
+      "startDate": "2020-10-01",
+      "endDate": "2023-01-31",
+      "company": "Yummy Heaven",
+      "position": "Butikkmedarbeider",
+      "description": "Renhold, varepåfyll og kassearbeid",
+      "location": "Oslo, Norge",
+      "type": "part-time"
+    }
+  ]
+}
