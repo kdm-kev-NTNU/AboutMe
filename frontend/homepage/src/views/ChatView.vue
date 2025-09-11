@@ -126,8 +126,7 @@ onMounted(() => {
       </Alert>
 
       <!-- Chat Header with Clear Button -->
-      <div v-if="state.messages.length > 0" class="flex justify-between items-center mb-4 flex-shrink-0">
-        <h2 class="text-lg font-semibold text-gray-800">Chat with Kevin's AI</h2>
+      <div v-if="state.messages.length > 0" class="flex justify-center items-center mb-4 flex-shrink-0">
         <Button
           @click="clearChat"
           variant="outline"
