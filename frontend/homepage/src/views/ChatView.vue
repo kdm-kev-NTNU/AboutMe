@@ -76,30 +76,27 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-white border-b border-gray-100 px-6 py-4">
-      <div class="max-w-4xl mx-auto flex items-center justify-between">
-        <Button variant="ghost" @click="router.push({ name: 'home' })" class="text-gray-600 hover:text-gray-900">
-          ← Back to Home
-        </Button>
-        <h1 class="text-lg font-semibold text-gray-900">Chat with Kevin's AI</h1>
-        <div class="w-20"></div> <!-- Spacer for centering -->
-      </div>
+  <main class="flex flex-col min-h-screen">
+    <!-- Header with Title and Back Button -->
+    <div class="flex items-center justify-between py-8 px-8">
+      <Button variant="outline" @click="router.push({ name: 'home' })" class="flex items-center gap-2">
+        ← Back
+      </Button>
+      <h1 class="text-4xl font-bold text-center">Chat with Kevin's <span>AI</span></h1>
+      <div class="w-20"></div> <!-- Spacer for centering -->
     </div>
 
     <!-- Chat Container -->
-    <div class="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col">
-      <!-- Messages Area -->
-      <div class="flex-1 overflow-y-auto px-6 py-8 space-y-6">
-        <!-- Error Alert -->
-        <Alert v-if="errorText" variant="destructive" class="max-w-2xl mx-auto">
-          <AlertDescription>{{ errorText }}</AlertDescription>
-        </Alert>
+    <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full px-8">
+      <!-- Error Alert -->
+      <Alert v-if="errorText" variant="destructive" class="mb-6">
+        <AlertDescription>{{ errorText }}</AlertDescription>
+      </Alert>
 
-        <!-- Messages -->
+      <!-- Messages Area -->
+      <div class="flex-1 overflow-y-auto space-y-4 mb-8">
         <div v-for="(m, idx) in state.messages" :key="idx" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
-          <div class="max-w-2xl">
+          <div class="max-w-[80%]">
             <div class="flex items-start gap-3" :class="m.role === 'user' ? 'flex-row-reverse' : 'flex-row'">
               <!-- Avatar -->
               <div class="w-8 h-8 rounded-full flex items-center justify-center" 
@@ -113,7 +110,7 @@ onMounted(() => {
                 <div class="text-xs text-gray-500 mb-1" :class="m.role === 'user' ? 'text-right' : 'text-left'">
                   {{ m.role === 'user' ? 'You' : 'Kevin\'s AI' }}
                 </div>
-                <div class="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100" 
+                <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm hover:shadow-lg transition-all duration-300" 
                      :class="m.role === 'user' ? 'bg-blue-500 border-blue-500' : ''">
                   <p class="text-sm leading-relaxed whitespace-pre-wrap" :class="m.role === 'user' ? 'text-black' : ''">{{ m.text }}</p>
                 </div>
@@ -124,14 +121,14 @@ onMounted(() => {
 
         <!-- Loading Indicator -->
         <div v-if="isLoading" class="flex justify-start">
-          <div class="max-w-2xl">
+          <div class="max-w-[80%]">
             <div class="flex items-start gap-3">
               <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center">
                 <Brain class="w-4 h-4" />
               </div>
               <div class="flex-1">
                 <div class="text-xs text-gray-500 mb-1">Kevin's AI</div>
-                <div class="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100">
+                <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
                   <div class="flex items-center gap-1">
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
@@ -144,24 +141,22 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Input Area -->
-      <div class="border-t border-gray-100 bg-white px-6 py-4">
-        <form class="max-w-2xl mx-auto" @submit.prevent="send(input)">
-          <div class="flex gap-3">
-            <Input 
-              v-model="input" 
-              :disabled="isLoading" 
-              type="text" 
-              class="flex-1 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-              :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'" 
-            />
-            <Button type="submit" :disabled="isLoading || !input.trim()" class="px-6">
-              {{ isLoading ? 'Sending...' : 'Send' }}
-            </Button>
-          </div>
+      <!-- Form at Bottom -->
+      <div class="pb-8">
+        <form class="flex gap-3" @submit.prevent="send(input)">
+          <Input
+            v-model="input"
+            :disabled="isLoading"
+            type="text"
+            class="flex-1"
+            :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'"
+          />
+          <Button type="submit" :disabled="isLoading || !input.trim()">
+            {{ isLoading ? 'Sending...' : 'Send →' }}
+          </Button>
         </form>
       </div>
     </div>
-  </div>
+  </main>
 </template>
 
