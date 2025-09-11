@@ -61,25 +61,32 @@ const experiences = computed(() => {
 </script>
 
 <template>
-  <main class="work-experience pt-20">
-    <div class="max-w-6xl mx-auto px-8 py-8">
-      <h1 class="text-3xl font-bold text-gray-800 mb-12 text-center">{{ pageTitle }}</h1>
+  <main class="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-slate-100 relative">
+    <!-- Background overlay -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 50%);"></div>
+    </div>
+    <div class="max-w-6xl mx-auto px-8 py-8 relative z-10">
+      <h1 class="text-3xl font-bold mb-12 text-center bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x">{{ pageTitle }}</h1>
       
       <!-- Timeline Container -->
       <div class="relative timeline-mobile">
         <!-- Vertical Line with Gradient -->
-        <div class="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600 rounded-full timeline-line hidden md:block shadow-lg"></div>
+        <div class="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600 rounded-full hidden md:block shadow-lg shadow-blue-500/30"></div>
         
         <!-- Timeline Items -->
         <div class="space-y-16">
           <div 
             v-for="(experience, index) in experiences" 
             :key="index"
-            class="relative flex items-center timeline-item group"
-            :class="index % 2 === 0 ? 'justify-start md:justify-start' : 'justify-end md:justify-end'"
+            class="relative flex items-center opacity-0 translate-y-8 animate-fade-in-up group"
+            :class="[
+              index % 2 === 0 ? 'justify-start md:justify-start' : 'justify-end md:justify-end',
+              `animation-delay-${index + 1}`
+            ]"
           >
             <!-- Timeline Dot with Enhanced Styling -->
-            <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full border-4 border-white shadow-xl z-10 timeline-dot hidden md:block transition-all duration-300 group-hover:scale-125 group-hover:shadow-2xl">
+            <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full border-4 border-white shadow-xl z-10 hidden md:block transition-all duration-300 group-hover:scale-125 group-hover:shadow-2xl group-hover:shadow-blue-500/40">
               <div class="absolute inset-1 bg-white rounded-full opacity-20"></div>
             </div>
             
@@ -88,7 +95,7 @@ const experiences = computed(() => {
               class="w-full md:w-5/12 timeline-content"
               :class="index % 2 === 0 ? 'pr-0 md:pr-8' : 'pl-0 md:pl-8'"
             >
-              <Card class="hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 bg-white border-0 shadow-lg overflow-hidden">
+              <Card class="hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 bg-white border-0 shadow-lg overflow-hidden backdrop-blur-sm border border-white/20">
                 <!-- Gradient Header -->
                 <div class="h-1 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600"></div>
                 
@@ -124,36 +131,14 @@ const experiences = computed(() => {
 </template>
 
 <style scoped>
-.work-experience {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  position: relative;
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
-
-.work-experience::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 50%);
-  pointer-events: none;
-}
-
-/* Timeline Animations */
-.timeline-item {
-  opacity: 0;
-  transform: translateY(30px);
-  animation: fadeInUp 0.6s ease-out forwards;
-}
-
-.timeline-item:nth-child(1) { animation-delay: 0.1s; }
-.timeline-item:nth-child(2) { animation-delay: 0.2s; }
-.timeline-item:nth-child(3) { animation-delay: 0.3s; }
-.timeline-item:nth-child(4) { animation-delay: 0.4s; }
-.timeline-item:nth-child(5) { animation-delay: 0.5s; }
 
 @keyframes fadeInUp {
   to {
@@ -162,51 +147,20 @@ const experiences = computed(() => {
   }
 }
 
-/* Enhanced Timeline Line */
-.timeline-line {
-  background: linear-gradient(180deg, 
-    #60a5fa 0%, 
-    #3b82f6 25%, 
-    #2563eb 50%, 
-    #1d4ed8 75%, 
-    #1e40af 100%
-  );
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 3s ease-in-out infinite;
 }
 
-/* Timeline Dot Enhancements */
-.timeline-dot {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.8),
-              0 4px 20px rgba(59, 130, 246, 0.4);
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
 }
 
-.timeline-dot::before {
-  content: '';
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: -1;
-}
-
-.timeline-item:hover .timeline-dot::before {
-  opacity: 0.2;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 0.2; }
-  50% { transform: scale(1.2); opacity: 0.1; }
-}
-
-/* Card Enhancements */
-.timeline-content .card {
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
+.animation-delay-1 { animation-delay: 0.1s; }
+.animation-delay-2 { animation-delay: 0.2s; }
+.animation-delay-3 { animation-delay: 0.3s; }
+.animation-delay-4 { animation-delay: 0.4s; }
+.animation-delay-5 { animation-delay: 0.5s; }
 
 /* Mobile Timeline - Enhanced */
 @media (max-width: 768px) {
@@ -215,9 +169,7 @@ const experiences = computed(() => {
     padding-left: 2rem;
   }
   
-  .timeline-mobile .timeline-item {
-    display: block;
-    margin-bottom: 3rem;
+  .timeline-mobile .animate-fade-in-up {
     opacity: 1;
     transform: none;
     animation: none;
@@ -230,22 +182,17 @@ const experiences = computed(() => {
     padding-left: 0;
   }
   
-  .timeline-mobile .timeline-line {
+  .timeline-mobile .absolute.left-1\/2 {
     left: 1rem;
     transform: none;
     width: 2px;
-    background: linear-gradient(180deg, #60a5fa, #3b82f6, #2563eb);
   }
   
-  .timeline-mobile .timeline-dot {
+  .timeline-mobile .w-6.h-6 {
     left: 0.5rem;
     transform: none;
     width: 1rem;
     height: 1rem;
-  }
-  
-  .work-experience {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   }
 }
 
@@ -255,11 +202,11 @@ const experiences = computed(() => {
     padding-left: 1.5rem;
   }
   
-  .timeline-mobile .timeline-line {
+  .timeline-mobile .absolute.left-1\/2 {
     left: 0.75rem;
   }
   
-  .timeline-mobile .timeline-dot {
+  .timeline-mobile .w-6.h-6 {
     left: 0.25rem;
   }
 }
