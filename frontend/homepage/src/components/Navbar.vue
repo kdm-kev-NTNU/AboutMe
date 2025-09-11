@@ -25,12 +25,28 @@ const getButtonText = (key: string) => {
   return texts[key][langStore.language]
 }
 
+const getButtonWidth = () => {
+  // Calculate the width needed for the longest button text
+  const buttonTexts = [
+    getButtonText('home'),
+    getButtonText('about'),
+    getButtonText('work'),
+    getButtonText('education')
+  ]
+  
+  // Estimate width based on character count (roughly 8px per character for this font size)
+  const maxChars = Math.max(...buttonTexts.map(text => text.length))
+  return Math.max(64, maxChars * 8 + 16) // Minimum 64px, or character-based width + padding
+}
+
 const getIndicatorPosition = () => {
-  if (isActive('home')) return 'translate-x-0'
-  if (isActive('about')) return 'translate-x-16'
-  if (isActive('work-experience')) return 'translate-x-32'
-  if (isActive('education')) return 'translate-x-48'
-  return 'translate-x-0 opacity-0'
+  const buttonWidth = getButtonWidth()
+  
+  if (isActive('home')) return { transform: 'translateX(0px)', opacity: '1' }
+  if (isActive('about')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
+  if (isActive('work-experience')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
+  if (isActive('education')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
+  return { transform: 'translateX(0px)', opacity: '0' }
 }
 </script>
 
@@ -39,33 +55,40 @@ const getIndicatorPosition = () => {
     <div class="nav-container">
       <div class="relative bg-gray-200 rounded-full p-1 flex">
         <div
-          class="absolute top-1 bottom-1 w-16 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out"
-          :class="getIndicatorPosition()"
+          class="absolute top-1 bottom-1 bg-white rounded-full shadow-md transition-all duration-300 ease-in-out"
+          :style="{ 
+            width: getButtonWidth() + 'px',
+            ...getIndicatorPosition()
+          }"
         ></div>
         <button
-          class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
+          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
           :class="isActive('home') ? 'text-gray-700' : 'text-gray-500'"
+          :style="{ width: getButtonWidth() + 'px' }"
           @click="navigateTo('home')"
         >
           {{ getButtonText('home') }}
         </button>
         <button
-          class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
+          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
           :class="isActive('about') ? 'text-gray-700' : 'text-gray-500'"
+          :style="{ width: getButtonWidth() + 'px' }"
           @click="navigateTo('about')"
         >
           {{ getButtonText('about') }}
         </button>
         <button
-          class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
+          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
           :class="isActive('work-experience') ? 'text-gray-700' : 'text-gray-500'"
+          :style="{ width: getButtonWidth() + 'px' }"
           @click="navigateTo('work-experience')"
         >
           {{ getButtonText('work') }}
         </button>
         <button
-          class="relative z-10 w-16 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
+          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
           :class="isActive('education') ? 'text-gray-700' : 'text-gray-500'"
+          :style="{ width: getButtonWidth() + 'px' }"
           @click="navigateTo('education')"
         >
           {{ getButtonText('education') }}
