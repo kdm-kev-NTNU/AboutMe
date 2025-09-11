@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { computed } from 'vue'
 import { useLangStore } from '../stores/lang'
 
-const router = useRouter()
 const route = useRoute()
 const langStore = useLangStore()
-
-const navigateTo = (routeName: string) => {
-  router.push({ name: routeName })
-}
 
 const isActive = (routeName: string) => {
   return route.name === routeName
@@ -61,38 +56,38 @@ const getIndicatorPosition = () => {
             ...getIndicatorPosition()
           }"
         ></div>
-        <button
-          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
+        <RouterLink
+          to="/"
+          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer flex items-center justify-center"
           :class="isActive('home') ? 'text-gray-700' : 'text-gray-500'"
           :style="{ width: getButtonWidth() + 'px' }"
-          @click="navigateTo('home')"
         >
           {{ getButtonText('home') }}
-        </button>
-        <button
-          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
+        </RouterLink>
+        <RouterLink
+          to="/about"
+          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer flex items-center justify-center"
           :class="isActive('about') ? 'text-gray-700' : 'text-gray-500'"
           :style="{ width: getButtonWidth() + 'px' }"
-          @click="navigateTo('about')"
         >
           {{ getButtonText('about') }}
-        </button>
-        <button
-          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
+        </RouterLink>
+        <RouterLink
+          to="/work-experience"
+          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer flex items-center justify-center"
           :class="isActive('work-experience') ? 'text-gray-700' : 'text-gray-500'"
           :style="{ width: getButtonWidth() + 'px' }"
-          @click="navigateTo('work-experience')"
         >
           {{ getButtonText('work') }}
-        </button>
-        <button
-          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer"
+        </RouterLink>
+        <RouterLink
+          to="/education"
+          class="relative z-10 py-2 text-sm font-medium transition-colors duration-300 cursor-pointer flex items-center justify-center"
           :class="isActive('education') ? 'text-gray-700' : 'text-gray-500'"
           :style="{ width: getButtonWidth() + 'px' }"
-          @click="navigateTo('education')"
         >
           {{ getButtonText('education') }}
-        </button>
+        </RouterLink>
       </div>
     </div>
   </nav>
