@@ -1,0 +1,16 @@
+{
+  "education": [
+    {
+      "id": "ntnu-bachelor-2023",
+      "startDate": "2023-08-01",
+      "endDate": null,
+      "institution": "NTNU",
+      "degree": "Bachelor",
+      "field": "Ingeniørfag, Data – Systemutvikling",
+      "description": "Vil du utvikle fremtidens sikre og bærekraftige IT-løsninger? Det er vanskelig å se for seg en hverdag uten bruk av apper og digitale løsninger. Hvordan disse systemene er laget og utviklet påvirker blant annet bærekraftselementer som strømforbruk, levetid og effektivitet. Samfunnet er allerede betydelig digitalisert, og prosessen fortsetter i stadig høyere tempo. \n Dataingeniørstudiet gir deg praktisk kompetanse innen programmering, der du lærer å bygge bærekraftige IT-systemer og tjenester. IT-systemene må utvikles kontinuerlig i samarbeid med kunder og brukere. Det stilles høye krav til brukervennlighet, sikkerhet, personvern og klimaavtrykk. Som dataingeniør er du godt egnet til å løse disse problemstillingene.",
+      "location": "Trondheim, Norge",
+      "credits": 180,
+      "status": "ongoing"
+    }
+  ]
+}

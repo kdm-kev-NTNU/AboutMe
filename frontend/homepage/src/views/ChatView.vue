@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent } from '@/components/ui/card'
+import { Brain, UserRound } from 'lucide-vue-next'
 
 type Message = { role: 'user' | 'assistant'; text: string }
 
@@ -14,6 +19,44 @@ const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
 const langStore = useLangStore()
 const language = computed(() => langStore.language)
+
+// Session storage functions
+const saveMessagesToStorage = () => {
+  try {
+    sessionStorage.setItem('chatMessages', JSON.stringify(state.messages))
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
+  } catch (error) {
+    console.warn('Failed to save messages to session storage:', error)
+  }
+}
+
+const loadMessagesFromStorage = () => {
+  try {
+    const stored = sessionStorage.getItem('chatMessages')
+    if (stored) {
+      const messages = JSON.parse(stored)
+      if (Array.isArray(messages)) {
+        state.messages = messages
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load messages from session storage:', error)
+  }
+}
+
+// Watch for changes in messages and save to storage
+watch(() => state.messages, saveMessagesToStorage, { deep: true })
+
+// Clear chat function - redirects to home page
+const clearChat = () => {
+  // Clear session storage first
+  sessionStorage.removeItem('chatMessages')
+  window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
+
+  // Redirect to home page
+  router.push({ name: 'home' })
+}
 
 async function send(text: string) {
   if (!text.trim() || isLoading.value) return
@@ -61,6 +104,9 @@ async function send(text: string) {
 }
 
 onMounted(() => {
+  // Load messages from session storage first
+  loadMessagesFromStorage()
+
   const q = (route.query.q as string) || ''
   if (q) {
     input.value = q
@@ -71,131 +117,115 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="topbar">
-    <button class="back" @click="router.push({ name: 'home' })">← Back</button>
-  </div>
-  <div class="chat">
-    <div class="messages">
-      <div v-if="errorText" class="error-banner">{{ errorText }}</div>
-      <div v-for="(m, idx) in state.messages" :key="idx" class="message" :class="m.role">
-        <div class="bubble">{{ m.text }}</div>
+  <main class="flex flex-col h-screen pt-20 min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 relative">
+    <!-- Background overlay -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);"></div>
+    </div>
+    <!-- Chat Container -->
+    <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full px-8 py-8 overflow-hidden relative z-10">
+      <!-- Error Alert -->
+      <Alert v-if="errorText" variant="destructive" class="mb-6 flex-shrink-0">
+        <AlertDescription>{{ errorText }}</AlertDescription>
+      </Alert>
+
+      <!-- Chat Header with Clear Button -->
+      <div v-if="state.messages.length > 0" class="flex justify-center items-center mb-4 flex-shrink-0">
+        <Button
+          @click="clearChat"
+          variant="outline"
+          size="sm"
+          class="border-2 border-blue-300/30 text-blue-600 bg-blue-50/50 hover:border-blue-300/60 hover:bg-blue-50 hover:text-blue-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300 relative overflow-hidden cursor-pointer"
+        >
+          Clear Chat
+        </Button>
       </div>
-      <div v-if="isLoading" class="message assistant">
-        <div class="bubble typing">
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
+
+      <!-- Messages Area -->
+      <div class="flex-1 overflow-y-auto space-y-4 mb-8 pr-2 border-2 border-blue-100/20 rounded-lg p-4 bg-white/90 backdrop-blur-sm hover:border-blue-200/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
+        <!-- Chat Messages -->
+        <div v-for="(m, idx) in state.messages" :key="idx" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
+          <div class="max-w-[80%]">
+            <div class="flex items-start gap-3" :class="m.role === 'user' ? 'flex-row-reverse' : 'flex-row'">
+              <!-- Avatar -->
+              <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                   :class="m.role === 'user' ? 'bg-black text-white' : 'bg-gray-200 text-gray-600'">
+                <UserRound v-if="m.role === 'user'" class="w-4 h-4" />
+                <Brain v-else class="w-4 h-4" />
+              </div>
+
+              <!-- Message Bubble -->
+              <div class="flex-1">
+                <div class="text-xs text-gray-500 mb-1" :class="m.role === 'user' ? 'text-right' : 'text-left'">
+                  {{ m.role === 'user' ? 'You' : 'Kevin\'s AI' }}
+                </div>
+                <div class="relative transition-all duration-300 rounded-xl px-4 py-3 shadow-sm hover:shadow-lg"
+                     :class="m.role === 'user' 
+                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-2 border-blue-600 hover:from-blue-700 hover:to-blue-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40' 
+                       : 'bg-white/95 border-2 border-blue-100/20 hover:border-blue-200/30 hover:bg-white hover:shadow-lg hover:shadow-blue-500/10'">
+                  <p class="text-sm leading-relaxed whitespace-pre-wrap" :class="m.role === 'user' ? 'text-white' : 'text-gray-700'">{{ m.text }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div v-if="isLoading" class="flex justify-start">
+          <div class="max-w-[80%]">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                <Brain class="w-4 h-4" />
+              </div>
+              <div class="flex-1">
+                <div class="text-xs text-blue-600 mb-1 font-medium">Kevin's AI</div>
+                <div class="bg-white/95 border-2 border-blue-200/30 rounded-xl px-4 py-3 shadow-sm">
+                  <div class="flex items-center gap-1">
+                    <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                    <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                    <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Form at Bottom -->
+      <div class="pb-8 flex-shrink-0">
+        <form class="flex gap-3 relative bg-white/90 backdrop-blur-sm border-2 border-blue-200/20 rounded-xl p-2 transition-all duration-300 hover:border-blue-300/40 hover:bg-white/95 hover:shadow-lg hover:shadow-blue-500/15 focus-within:border-blue-300/60 focus-within:bg-white/98 focus-within:shadow-lg focus-within:shadow-blue-500/25" @submit.prevent="send(input)">
+          <Input
+            v-model="input"
+            :disabled="isLoading"
+            type="text"
+            class="flex-1 bg-white/80 border-2 border-blue-200/20 rounded-lg transition-all duration-300 focus:bg-white/95 focus:border-blue-300/50 focus:shadow-sm focus:shadow-blue-500/10 focus:outline-none placeholder:text-blue-600/60 placeholder:font-medium"
+            :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'"
+          />
+          <Button type="submit" :disabled="isLoading || !input.trim()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300 relative overflow-hidden disabled:bg-blue-300/30 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-none">
+            {{ isLoading ? 'Sending...' : 'Send →' }}
+          </Button>
+        </form>
+      </div>
     </div>
-    <form class="composer" @submit.prevent="send(input)">
-      <input v-model="input" :disabled="isLoading" type="text" :placeholder="language === 'en' ? 'Type a question…' : 'Skriv et spørsmål…'" />
-      <button type="submit" :disabled="isLoading">{{ isLoading ? 'Venter…' : 'Send' }}</button>
-    </form>
-  </div>
+  </main>
 </template>
 
 <style scoped>
-.topbar {
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 10;
-  border-bottom: 1px solid #eee;
-  padding: 10px 0;
+/* Avatar Styling */
+.w-8.h-8.rounded-full {
+  transition: all 0.3s ease;
 }
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 auto;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  cursor: pointer;
-}
-.back:hover { background: #f7f7f7; }
-.chat {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 140px);
-  max-width: 900px;
-  margin: 0 auto;
-}
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-.error-banner {
-  margin: 8px 0 12px;
-  padding: 10px 12px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  border-radius: 8px;
-}
-.message {
-  display: flex;
-  margin: 8px 0;
-}
-.message.user {
-  justify-content: flex-end;
-}
-.message.assistant {
-  justify-content: flex-start;
-}
-.bubble {
-  max-width: 70%;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: #f0f0f0;
-}
-.message.user .bubble {
-  background: #3b82f6;
-  color: white;
-}
-.composer {
-  display: flex;
-  gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #ddd;
-}
-.composer input {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-}
-.composer button {
-  padding: 10px 16px;
-  border: none;
-  background: #3b82f6;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.composer button:hover {
-  background: #2563eb;
-}
-.typing {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.dot {
-  width: 6px;
-  height: 6px;
-  background: #9ca3af;
-  border-radius: 50%;
-  animation: blink 1.2s infinite ease-in-out;
-}
-.dot:nth-child(2) { animation-delay: .2s; }
-.dot:nth-child(3) { animation-delay: .4s; }
 
-@keyframes blink {
-  0%, 80%, 100% { transform: scale(0.8); opacity: .4; }
-  40% { transform: scale(1); opacity: 1; }
+.w-8.h-8.rounded-full:hover {
+  transform: scale(1.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hover\:-translate-y-0\.5:hover {
+    transform: translateY(-1px);
+  }
 }
 </style>
+
