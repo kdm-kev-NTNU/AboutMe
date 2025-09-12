@@ -1,6 +1,36 @@
-# homepage
+# Homepage Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+This is the frontend application for Kevin's AboutMe portfolio website, built with Vue 3 and modern web technologies.
+
+## Tech Stack & Libraries
+
+### Core Framework
+- **Vue 3** - Progressive JavaScript framework with Composition API
+- **TypeScript** - Type-safe JavaScript development
+- **Vite 7** - Fast build tool and development server
+- **Vue Router 4** - Client-side routing
+- **Pinia** - State management for Vue
+
+### UI & Styling
+- **Tailwind CSS 4** - Utility-first CSS framework
+- **shadcn/ui** - High-quality, accessible component library (using Reka UI)
+- **Reka UI** - Vue 3 component library (shadcn/ui implementation)
+- **Lucide Vue Next** - Beautiful & consistent icon toolkit
+- **Class Variance Authority (CVA)** - Component variant management
+- **Tailwind Merge** - Utility for merging Tailwind classes
+- **clsx** - Utility for constructing className strings
+
+### Development Tools
+- **Vitest** - Unit testing framework
+- **Cypress** - End-to-end testing
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
+- **Vue DevTools** - Browser extension for debugging
+
+### Additional Libraries
+- **VueUse** - Collection of Vue composition utilities
+- **Vue Markdown Render** - Markdown rendering for Vue
+- **tw-animate-css** - Tailwind CSS animations
 
 ## Recommended IDE Setup
 

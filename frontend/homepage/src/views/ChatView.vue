@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed, watch } from 'vue'
+import { onMounted, reactive, ref, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { Button } from '@/components/ui/button'
@@ -7,8 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Brain, UserRound } from 'lucide-vue-next'
+import VueMarkdown from 'vue-markdown-render'
+import TypewriterAnimation from '@/components/TypewriterAnimation.vue'
 
-type Message = { role: 'user' | 'assistant'; text: string }
+
+type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +22,16 @@ const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
 const langStore = useLangStore()
 const language = computed(() => langStore.language)
+const messagesContainer = ref<HTMLElement>()
+
+// Scroll to bottom function
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
+  })
+}
 
 // Session storage functions
 const saveMessagesToStorage = () => {
@@ -37,7 +50,8 @@ const loadMessagesFromStorage = () => {
     if (stored) {
       const messages = JSON.parse(stored)
       if (Array.isArray(messages)) {
-        state.messages = messages
+        // Ensure loaded messages are not marked as new
+        state.messages = messages.map(msg => ({ ...msg, isNew: false }))
       }
     }
   } catch (error) {
@@ -47,6 +61,11 @@ const loadMessagesFromStorage = () => {
 
 // Watch for changes in messages and save to storage
 watch(() => state.messages, saveMessagesToStorage, { deep: true })
+
+// Watch for new messages and scroll to bottom
+watch(() => state.messages.length, () => {
+  scrollToBottom()
+})
 
 // Clear chat function - redirects to home page
 const clearChat = () => {
@@ -95,7 +114,7 @@ async function send(text: string) {
       return
     }
     const data: { answer: string } = await res.json()
-    state.messages.push({ role: 'assistant', text: data.answer })
+    state.messages.push({ role: 'assistant', text: data.answer, isNew: true })
   } catch (e: any) {
     errorText.value = 'Nettverksfeil. Prøv igjen.'
   } finally {
@@ -110,9 +129,15 @@ onMounted(() => {
   const q = (route.query.q as string) || ''
   if (q) {
     input.value = q
-    // auto-send the initial question from the homepage button
-    send(q)
+    // Only auto-send the initial question if there are no existing messages
+    // This prevents re-sending the question on page refresh
+    if (state.messages.length === 0) {
+      send(q)
+    }
   }
+
+  // Scroll to bottom after loading messages (for page refresh)
+  scrollToBottom()
 })
 </script>
 
@@ -142,7 +167,7 @@ onMounted(() => {
       </div>
 
       <!-- Messages Area -->
-      <div class="flex-1 overflow-y-auto space-y-4 mb-8 pr-2 border-2 border-blue-100/20 rounded-lg p-4 bg-white/90 backdrop-blur-sm hover:border-blue-200/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
+      <div ref="messagesContainer" class="flex-1 overflow-y-auto space-y-4 mb-8 pr-2 border-2 border-blue-100/20 rounded-lg p-4 bg-white/90 backdrop-blur-sm hover:border-blue-200/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
         <!-- Chat Messages -->
         <div v-for="(m, idx) in state.messages" :key="idx" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
           <div class="max-w-[80%]">
@@ -160,10 +185,12 @@ onMounted(() => {
                   {{ m.role === 'user' ? 'You' : 'Kevin\'s AI' }}
                 </div>
                 <div class="relative transition-all duration-300 rounded-xl px-4 py-3 shadow-sm hover:shadow-lg"
-                     :class="m.role === 'user' 
-                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-2 border-blue-600 hover:from-blue-700 hover:to-blue-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40' 
+                     :class="m.role === 'user'
+                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-2 border-blue-600 hover:from-blue-700 hover:to-blue-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40'
                        : 'bg-white/95 border-2 border-blue-100/20 hover:border-blue-200/30 hover:bg-white hover:shadow-lg hover:shadow-blue-500/10'">
-                  <p class="text-sm leading-relaxed whitespace-pre-wrap" :class="m.role === 'user' ? 'text-white' : 'text-gray-700'">{{ m.text }}</p>
+                  <p v-if="m.role === 'user'" class="text-sm leading-relaxed whitespace-pre-wrap text-white">{{ m.text }}</p>
+                  <TypewriterAnimation v-else-if="m.isNew" :text="m.text" :text-class="'text-gray-700'" :speed="25" @finished="m.isNew = false" @scroll="scrollToBottom"/>
+                  <vue-markdown v-else class="text-sm leading-relaxed whitespace-pre-wrap text-gray-700" :source="m.text"/>
                 </div>
               </div>
             </div>
