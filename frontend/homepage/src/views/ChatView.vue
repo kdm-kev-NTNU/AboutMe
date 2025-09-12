@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Brain, UserRound } from 'lucide-vue-next'
+import VueMarkdown from 'vue-markdown-render'
+
 
 type Message = { role: 'user' | 'assistant'; text: string }
 
@@ -160,10 +162,10 @@ onMounted(() => {
                   {{ m.role === 'user' ? 'You' : 'Kevin\'s AI' }}
                 </div>
                 <div class="relative transition-all duration-300 rounded-xl px-4 py-3 shadow-sm hover:shadow-lg"
-                     :class="m.role === 'user' 
-                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-2 border-blue-600 hover:from-blue-700 hover:to-blue-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40' 
+                     :class="m.role === 'user'
+                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-2 border-blue-600 hover:from-blue-700 hover:to-blue-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40'
                        : 'bg-white/95 border-2 border-blue-100/20 hover:border-blue-200/30 hover:bg-white hover:shadow-lg hover:shadow-blue-500/10'">
-                  <p class="text-sm leading-relaxed whitespace-pre-wrap" :class="m.role === 'user' ? 'text-white' : 'text-gray-700'">{{ m.text }}</p>
+                  <vue-markdown class="text-sm leading-relaxed whitespace-pre-wrap" :class="m.role === 'user' ? 'text-white' : 'text-gray-700'" :source="m.text"/>
                 </div>
               </div>
             </div>
