@@ -23,6 +23,16 @@ This project was built quickly as a personal initiative. Some edge cases and min
 - Local development with Vite proxy to Spring Boot
 - Production setup with an Nginx container for the frontend and a Docker image for the backend
 
+## Available Pages
+
+The frontend provides access to the following pages:
+
+- **Home Page** (`/`) - Landing page with quick questions and language toggle
+- **Chat Page** (`/chat`) - Interactive AI chat interface for asking questions about Kevin
+- **Projects Page** (`/projects`) - Showcase of Kevin's projects and work
+- **Work Experience Page** (`/work-experience`) - Professional experience and career history
+- **Education Page** (`/education`) - Academic background and coursework
+
 ## Tech Stack
 
 ### Frontend
