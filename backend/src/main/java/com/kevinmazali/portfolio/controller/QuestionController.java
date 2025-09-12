@@ -1,12 +1,10 @@
 package com.kevinmazali.portfolio.controller;
 
-
-
-
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.service.OpenAIService;
 import com.kevinmazali.portfolio.service.RequestLogService;
+import com.kevinmazali.portfolio.util.InputValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,7 +23,6 @@ public class QuestionController {
 
     private final OpenAIService openAIService;
     private final RequestLogService requestLogService;
-    private static final int MAX_PROMPT_CHARS = 3000;
 
     /**
      * Answers a user question using the RAG-enabled AI service.
@@ -41,21 +38,47 @@ public class QuestionController {
         @RequestBody Question question,
         @RequestHeader(name = "X-Chat-Id", required = false) String chatId
     ) {
+        // Get chatId from request attribute if not in header
         if (chatId == null || chatId.isBlank()) {
-            Object attr = ((jakarta.servlet.http.HttpServletRequest) org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
-                .resolveReference(org.springframework.web.context.request.RequestAttributes.REFERENCE_REQUEST))
-                .getAttribute("chatId");
-            if (attr instanceof String s && !s.isBlank()) {
-                chatId = s;
+            var requestAttributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (requestAttributes != null) {
+                var request = (jakarta.servlet.http.HttpServletRequest) requestAttributes
+                    .resolveReference(org.springframework.web.context.request.RequestAttributes.REFERENCE_REQUEST);
+                if (request != null) {
+                    Object attr = request.getAttribute("chatId");
+                    if (attr instanceof String s && !s.isBlank()) {
+                        chatId = s;
+                    }
+                }
             }
         }
-        if (question.question() != null && question.question().length() > MAX_PROMPT_CHARS) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Prompt too long"));
+        
+        // Validate chatId
+        if (!InputValidator.isValidChatId(chatId)) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invalid chat ID"));
         }
-        requestLogService.save("/ask", "POST", question.question(), chatId);
-        Answer answer = openAIService.getAnswer(question);
+        
+        // Validate question
+        if (question.question() == null || question.question().isBlank()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Question cannot be empty"));
+        }
+        
+        if (!InputValidator.isValidQuestion(question.question())) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invalid question format"));
+        }
+        
+        // Sanitize inputs
+        String sanitizedQuestion = InputValidator.sanitizeString(question.question());
+        String sanitizedChatId = InputValidator.sanitizeString(chatId);
+        
+        requestLogService.save("/ask", "POST", sanitizedQuestion, sanitizedChatId);
+        
+        // Create sanitized question object
+        Question sanitizedQuestionObj = new Question(sanitizedQuestion);
+        Answer answer = openAIService.getAnswer(sanitizedQuestionObj);
+        
         // Also log the answer for history
-        requestLogService.save("/ask:response", "POST", answer.answer(), chatId);
+        requestLogService.save("/ask:response", "POST", answer.answer(), sanitizedChatId);
         return answer;
     }
 

@@ -2,7 +2,6 @@ package com.kevinmazali.portfolio.config;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import jakarta.servlet.Filter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +18,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.lang.NonNull;
 
 /**
  * Web configuration including CORS and a lightweight rate limiter for the /ask endpoint.
@@ -33,7 +33,7 @@ public class WebConfig {
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
-            public void addCorsMappings(CorsRegistry registry) {
+            public void addCorsMappings(@NonNull CorsRegistry registry) {
                 registry.addMapping("/**")
                     .allowedOrigins(
                         "http://localhost:5173",
@@ -42,7 +42,16 @@ public class WebConfig {
                         "https://www.kevindmazali.me"
                     )
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                    .allowedHeaders("*")
+                    .allowedHeaders(
+                        "Content-Type",
+                        "Authorization", 
+                        "X-Chat-Id",
+                        "X-Requested-With",
+                        "Accept",
+                        "Origin",
+                        "Access-Control-Request-Method",
+                        "Access-Control-Request-Headers"
+                    )
                     .allowCredentials(true);
             }
         };
@@ -57,7 +66,7 @@ public class WebConfig {
     public Filter chatIdAssignmentFilter() {
         return new OncePerRequestFilter() {
             @Override
-            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
                 throws ServletException, IOException {
                 String chatId = request.getHeader("X-Chat-Id");
                 if (chatId == null || chatId.isBlank()) {
@@ -83,10 +92,10 @@ public class WebConfig {
                 if (generated) {
                     response.setHeader("X-Chat-Id", chatId);
                     Cookie cookie = new Cookie("chatId", chatId);
-                    cookie.setHttpOnly(false); // readable by FE to send as header if desired
+                    cookie.setHttpOnly(true); // Prevent XSS attacks
                     cookie.setPath("/");
                     cookie.setMaxAge(60 * 60 * 24 * 365);
-                    cookie.setSecure(false); // consider true behind HTTPS
+                    cookie.setSecure(true); // Only over HTTPS
                     response.addCookie(cookie);
                 }
 
@@ -106,20 +115,83 @@ public class WebConfig {
         return Bucket.builder().addLimit(limit).build();
     }
 
+    private Bucket newConversationBucket() {
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(20)
+            .refillGreedy(20, Duration.ofMinutes(1))
+            .initialTokens(20)
+            .build();
+        return Bucket.builder().addLimit(limit).build();
+    }
+
     private String key(HttpServletRequest req) {
         String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : null;
         String ip = req.getRemoteAddr();
         return "ask:" + (user != null ? "u:" + user : "ip:" + ip);
     }
 
+    private String conversationKey(HttpServletRequest req) {
+        String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : null;
+        String ip = req.getRemoteAddr();
+        return "conversations:" + (user != null ? "u:" + user : "ip:" + ip);
+    }
+
     /**
-     * Simple per-user/IP rate limiter using Bucket4j for the /ask endpoint.
+     * Adds security headers to all responses.
      */
     @Bean
-    public Filter rateLimitFilter() {
+    public Filter securityHeadersFilter() {
         return new OncePerRequestFilter() {
             @Override
-            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+                throws ServletException, IOException {
+                
+                // Prevent clickjacking
+                response.setHeader("X-Frame-Options", "DENY");
+                
+                // Prevent MIME type sniffing
+                response.setHeader("X-Content-Type-Options", "nosniff");
+                
+                // XSS Protection
+                response.setHeader("X-XSS-Protection", "1; mode=block");
+                
+                // Referrer Policy
+                response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+                
+                // Content Security Policy
+                response.setHeader("Content-Security-Policy", 
+                    "default-src 'self'; " +
+                    "script-src 'self' 'unsafe-inline'; " +
+                    "style-src 'self' 'unsafe-inline'; " +
+                    "img-src 'self' data: https:; " +
+                    "font-src 'self'; " +
+                    "connect-src 'self' https://api.openai.com; " +
+                    "frame-ancestors 'none'; " +
+                    "base-uri 'self'; " +
+                    "form-action 'self'");
+                
+                // Strict Transport Security (only for HTTPS)
+                if (request.isSecure()) {
+                    response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+                }
+                
+                // Permissions Policy
+                response.setHeader("Permissions-Policy", 
+                    "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+                
+                filterChain.doFilter(request, response);
+            }
+        };
+    }
+
+    /**
+     * Rate limiter for /ask endpoint (5 requests per 10 seconds).
+     */
+    @Bean
+    public Filter askRateLimitFilter() {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
                 throws ServletException, IOException {
                 if (!request.getRequestURI().startsWith("/ask")) {
                     filterChain.doFilter(request, response);
@@ -127,6 +199,32 @@ public class WebConfig {
                 }
 
                 Bucket bucket = buckets.computeIfAbsent(key(request), k -> newBucket());
+                if (bucket.tryConsume(1)) {
+                    filterChain.doFilter(request, response);
+                } else {
+                    response.setStatus(429);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"Too Many Requests\"}");
+                }
+            }
+        };
+    }
+
+    /**
+     * Rate limiter for /conversations endpoint (20 requests per minute).
+     */
+    @Bean
+    public Filter conversationRateLimitFilter() {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+                throws ServletException, IOException {
+                if (!request.getRequestURI().startsWith("/conversations")) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                Bucket bucket = buckets.computeIfAbsent(conversationKey(request), k -> newConversationBucket());
                 if (bucket.tryConsume(1)) {
                     filterChain.doFilter(request, response);
                 } else {
