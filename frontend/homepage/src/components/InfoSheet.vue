@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
-import { Info, Github, Linkedin } from 'lucide-vue-next'
+import { Info, Github, Linkedin, AlertTriangle } from 'lucide-vue-next'
 
 const open = ref(false)
 const router = useRouter()
@@ -52,11 +52,12 @@ function goToChatHistory() {
       }}</p>
 
       <div class="mt-5">
-        <button 
+        <button
           @click="goToChatHistory"
-          class="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm cursor-pointer hover:bg-gray-100 hover:border-gray-300 hover:text-gray-900 transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
+          class="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm cursor-pointer hover:bg-gray-100 hover:border-gray-300 hover:text-gray-900 transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md flex items-center justify-center gap-2"
         >
-          {{ language === 'en' ? "Don't click here" : 'Ikke klikk her' }}
+          <AlertTriangle class="w-4 h-4 flex-shrink-0 text-amber-400" />
+          <span>{{ language === 'en' ? "Don't click here" : 'Ikke klikk her' }}</span>
         </button>
       </div>
     </div>
