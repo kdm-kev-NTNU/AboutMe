@@ -1,7 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.model.RequestLog;
-import com.kevinmazali.portfolio.model.RequestLogRepository;
+import com.kevinmazali.portfolio.repository.RequestLogRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,13 +23,15 @@ public class RequestLogService {
      * @param path the request path (e.g. /ask)
      * @param method the HTTP method
      * @param payload the request or response payload
+     * @param requesterId optional chat/requester identifier
      */
     @Transactional
-    public void save(String path, String method, String payload) {
+    public void save(String path, String method, String payload, String requesterId) {
         RequestLog log = new RequestLog();
         log.setPath(path);
         log.setMethod(method);
         log.setPayload(payload);
+        log.setRequesterId(requesterId);
         requestLogRepository.save(log);
     }
 }
