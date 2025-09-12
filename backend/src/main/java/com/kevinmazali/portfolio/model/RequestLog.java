@@ -33,6 +33,9 @@ public class RequestLog {
     @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String payload;
 
+    @Column(nullable = true, length = 128)
+    private String requesterId;
+
     @Column(nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -46,6 +49,10 @@ public class RequestLog {
 
   public void setPayload(String payload) {
         this.payload = payload;
+    }
+
+  public void setRequesterId(String requesterId) {
+        this.requesterId = requesterId;
     }
 
   public void setCreatedAt(OffsetDateTime createdAt) {

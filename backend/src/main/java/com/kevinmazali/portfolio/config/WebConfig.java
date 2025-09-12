@@ -14,6 +14,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
@@ -43,6 +44,53 @@ public class WebConfig {
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders("*")
                     .allowCredentials(true);
+            }
+        };
+    }
+
+    /**
+     * Ensures each client has a stable chatId. If missing in request (header or cookie),
+     * generates a UUID, exposes it as request attribute "chatId", sets it in response header
+     * X-Chat-Id and a cookie "chatId"; controllers can read from request attribute as fallback.
+     */
+    @Bean
+    public Filter chatIdAssignmentFilter() {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+                throws ServletException, IOException {
+                String chatId = request.getHeader("X-Chat-Id");
+                if (chatId == null || chatId.isBlank()) {
+                    // try cookie
+                    if (request.getCookies() != null) {
+                        for (Cookie c : request.getCookies()) {
+                            if ("chatId".equals(c.getName()) && c.getValue() != null && !c.getValue().isBlank()) {
+                                chatId = c.getValue();
+                                break;
+                            }
+                        }
+                    }
+                }
+                boolean generated = false;
+                if (chatId == null || chatId.isBlank()) {
+                    chatId = java.util.UUID.randomUUID().toString();
+                    generated = true;
+                }
+
+                // expose for downstream usage
+                request.setAttribute("chatId", chatId);
+
+                if (generated) {
+                    response.setHeader("X-Chat-Id", chatId);
+                    Cookie cookie = new Cookie("chatId", chatId);
+                    cookie.setHttpOnly(false); // readable by FE to send as header if desired
+                    cookie.setPath("/");
+                    cookie.setMaxAge(60 * 60 * 24 * 365);
+                    cookie.setSecure(false); // consider true behind HTTPS
+                    response.addCookie(cookie);
+                }
+
+                filterChain.doFilter(request, response);
             }
         };
     }
