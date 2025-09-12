@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Brain, UserRound, MessageSquare, Calendar } from 'lucide-vue-next'
 import VueMarkdown from 'vue-markdown-render'
 
-type ChatMessage = { 
+type ChatMessage = {
   role: 'user' | 'assistant'
   text: string
   timestamp?: string
@@ -34,13 +34,13 @@ const errorText = ref('')
 const fetchChatHistory = async () => {
   isLoading.value = true
   errorText.value = ''
-  
+
   try {
     const res = await fetch('/api/conversations', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     })
-    
+
     if (!res.ok) {
       let msg = language.value === 'en' ? 'Something went wrong. Please try again.' : 'Noe gikk galt. Prøv igjen.'
       try {
@@ -54,9 +54,9 @@ const fetchChatHistory = async () => {
       errorText.value = msg
       return
     }
-    
+
     const data: ChatSession[] = await res.json()
-    chatSessions.value = data.sort((a, b) => 
+    chatSessions.value = data.sort((a, b) =>
       new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime()
     )
   } catch (e: any) {
@@ -127,19 +127,14 @@ onMounted(() => {
           <p class="text-gray-500 mb-6">
             {{ language === 'en' ? 'Start a conversation to see your chat history here.' : 'Start en samtale for å se chat-historikken din her.' }}
           </p>
-          <Button
-            @click="goBack"
-            class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300"
-          >
-            {{ language === 'en' ? 'Start Chatting' : 'Start å chatte' }}
-          </Button>
+         
         </div>
       </div>
 
       <!-- Chat Sessions Grid -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto">
-        <Card 
-          v-for="session in chatSessions" 
+        <Card
+          v-for="session in chatSessions"
           :key="session.id"
           class="bg-white/90 backdrop-blur-sm border-2 border-blue-100/20 hover:border-blue-200/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer hover:-translate-y-1"
           @click="openChat(session.id)"
@@ -148,12 +143,9 @@ onMounted(() => {
             <div class="flex items-center justify-between">
               <CardTitle class="text-lg text-gray-800 flex items-center gap-2">
                 <MessageSquare class="w-5 h-5 text-blue-600" />
-                {{ language === 'en' ? 'Chat Session' : 'Chat-sesjon' }}
+                  {{ session.preview.length > 120 ? session.preview.substring(0, 120) + '...' : session.preview }}
               </CardTitle>
-              <div class="flex items-center gap-2 text-sm text-gray-500">
-                <Calendar class="w-4 h-4" />
-                {{ formatDate(session.endedAt) }}
-              </div>
+
             </div>
           </CardHeader>
           <CardContent class="pt-0">
@@ -161,12 +153,10 @@ onMounted(() => {
             <div class="space-y-3">
               <!-- Preview Text -->
               <div class="min-w-0">
-                <div class="text-xs text-gray-500 mb-2">
-                  {{ language === 'en' ? 'Conversation Preview' : 'Samtale-forhåndsvisning' }}
-                </div>
-                <div class="text-sm text-gray-700 leading-relaxed">
-                  {{ session.preview.length > 120 ? session.preview.substring(0, 120) + '...' : session.preview }}
-                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-500">
+                <Calendar class="w-4 h-4" />
+                {{ formatDate(session.endedAt) }}
+              </div>
               </div>
             </div>
           </CardContent>
