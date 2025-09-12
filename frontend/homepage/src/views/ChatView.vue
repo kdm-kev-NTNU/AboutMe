@@ -143,11 +143,9 @@ onMounted(() => {
   const q = (route.query.q as string) || ''
   if (q && !conversationId) {
     input.value = q
-    // Only auto-send the initial question if there are no existing messages
-    // This prevents re-sending the question on page refresh
-    if (state.messages.length === 0) {
-      send(q)
-    }
+    // Always auto-send the question from home page, even if there are existing messages
+    // This ensures users don't have to click send twice when coming from home
+    send(q)
   }
 })
 </script>
