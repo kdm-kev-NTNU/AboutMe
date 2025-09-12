@@ -5,7 +5,7 @@ import { useLangStore } from '../stores/lang'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { ArrowRight } from 'lucide-vue-next'
+import { ArrowRight, MoveUpRight } from 'lucide-vue-next'
 
 const router = useRouter()
 
@@ -34,6 +34,7 @@ const visibleQuestions = computed(() => questionsByLang[language.value])
 
 const quickQuestion = ref('')
 const showWelcomeDialog = ref(false)
+const showHomeDialog = ref(false)
 
 function ask(q: string) {
   router.push({ name: 'chat', query: { q } })
@@ -43,6 +44,17 @@ function submitQuick() {
   const q = quickQuestion.value.trim()
   if (!q) return
   ask(q)
+}
+
+function startGuidedTour() {
+  showWelcomeDialog.value = false
+  showHomeDialog.value = true
+}
+
+
+function showEducationInfo() {
+  showHomeDialog.value = false
+
 }
 
 onMounted(() => {
@@ -89,10 +101,38 @@ onMounted(() => {
 
         <!-- Dialog Footer with Next Button -->
         <div class="flex justify-between mt-6">
-          <p class="text-blue-600 border-b-2 border-b-blue-200" >1 of 2</p>
-          <!-- Next Button (Disabled) -->
+          <p class=" text-blue-600 border-b-2 ">1 of 4</p>
+          <!-- Next Button -->
           <Button
-            disabled
+            @click="startGuidedTour"
+            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            Next
+            <ArrowRight class="w-4 h-4" />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Guided Tour Dialog -->
+    <Dialog v-model:open="showHomeDialog">
+      <DialogContent class="max-w-sm fixed top-56 left-1/5 transform -translate-x-1/2 z-50">
+        <DialogHeader>
+          <DialogTitle class="text-lg">Welcome to the Tour!</DialogTitle>
+          <DialogDescription class="space-y-3">
+            <p>This is the navigation bar where you can explore different sections of my portfolio.</p>
+            <p class="flex gap-2 text-blue-600">
+              You can ask questions about me using the AI chat feature in Home!
+            </p>
+          </DialogDescription>
+        </DialogHeader>
+
+        <!-- Dialog Footer -->
+        <div class="flex justify-between mt-6">
+          <p class=" text-blue-600 border-b-2 ">2 of 4</p>
+          <!-- Next Button -->
+          <Button
+            @click="showEducationInfo"
             class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
           >
             Next
