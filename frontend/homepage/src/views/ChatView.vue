@@ -188,7 +188,7 @@ onMounted(() => {
                      :class="m.role === 'user'
                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-2 border-blue-600 hover:from-blue-700 hover:to-blue-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40'
                        : 'bg-white/95 border-2 border-blue-100/20 hover:border-blue-200/30 hover:bg-white hover:shadow-lg hover:shadow-blue-500/10'">
-                  <vue-markdown v-if="m.role === 'user'" class="text-sm leading-relaxed whitespace-pre-wrap text-white" :source="m.text"/>
+                  <p v-if="m.role === 'user'" class="text-sm leading-relaxed whitespace-pre-wrap text-white">{{ m.text }}</p>
                   <TypewriterAnimation v-else-if="m.isNew" :text="m.text" :text-class="'text-gray-700'" :speed="25" @finished="m.isNew = false" @scroll="scrollToBottom"/>
                   <vue-markdown v-else class="text-sm leading-relaxed whitespace-pre-wrap text-gray-700" :source="m.text"/>
                 </div>
