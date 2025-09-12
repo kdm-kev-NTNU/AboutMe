@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { Info, Github, Linkedin } from 'lucide-vue-next'
 
 const open = ref(false)
+const router = useRouter()
 const langStore = useLangStore()
 const language = computed(() => langStore.language)
 
 function toggle() {
   open.value = !open.value
+}
+
+function goToChatHistory() {
+  open.value = false
+  router.push({ name: 'chat-history' })
 }
 </script>
 
@@ -45,7 +52,10 @@ function toggle() {
       }}</p>
 
       <div class="mt-5">
-        <button class="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 text-sm cursor-not-allowed opacity-70" disabled>
+        <button 
+          @click="goToChatHistory"
+          class="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm cursor-pointer hover:bg-gray-100 hover:border-gray-300 hover:text-gray-900 transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
+        >
           {{ language === 'en' ? "Don't click here" : 'Ikke klikk her' }}
         </button>
       </div>
