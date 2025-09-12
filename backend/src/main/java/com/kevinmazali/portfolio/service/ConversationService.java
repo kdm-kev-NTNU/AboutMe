@@ -1,7 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.model.RequestLog;
-import com.kevinmazali.portfolio.model.RequestLogRepository;
+import com.kevinmazali.portfolio.repository.RequestLogRepository;
 import com.kevinmazali.portfolio.model.dto.ConversationDtos;
 import org.springframework.stereotype.Service;
 
