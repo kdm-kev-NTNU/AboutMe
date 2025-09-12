@@ -1,5 +1,6 @@
-package com.kevinmazali.portfolio.model;
+package com.kevinmazali.portfolio.repository;
 
+import com.kevinmazali.portfolio.model.RequestLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.OffsetDateTime;
