@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -36,14 +37,25 @@ public class QuestionController {
      * @return {@link Answer} on success, or a 400 response with an error when the prompt is too long
      */
     @PostMapping("/ask")
-    public Object askQuestion(@RequestBody Question question) {
+    public Object askQuestion(
+        @RequestBody Question question,
+        @RequestHeader(name = "X-Chat-Id", required = false) String chatId
+    ) {
+        if (chatId == null || chatId.isBlank()) {
+            Object attr = ((jakarta.servlet.http.HttpServletRequest) org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                .resolveReference(org.springframework.web.context.request.RequestAttributes.REFERENCE_REQUEST))
+                .getAttribute("chatId");
+            if (attr instanceof String s && !s.isBlank()) {
+                chatId = s;
+            }
+        }
         if (question.question() != null && question.question().length() > MAX_PROMPT_CHARS) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", "Prompt too long"));
         }
-        requestLogService.save("/ask", "POST", question.question());
+        requestLogService.save("/ask", "POST", question.question(), chatId);
         Answer answer = openAIService.getAnswer(question);
         // Also log the answer for history
-        requestLogService.save("/ask:response", "POST", answer.answer());
+        requestLogService.save("/ask:response", "POST", answer.answer(), chatId);
         return answer;
     }
 
