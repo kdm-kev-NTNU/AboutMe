@@ -122,12 +122,42 @@ async function send(text: string) {
   }
 }
 
+// Load conversation from backend
+const loadConversation = async (conversationId: string) => {
+  try {
+    const res = await fetch(`/api/conversations/${conversationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    
+    if (res.ok) {
+      const conversation: { id: number, startedAt: string, endedAt: string, messages: Array<{ id: number, role: string, text: string, createdAt: string }> } = await res.json()
+      
+      // Convert backend messages to frontend format
+      state.messages = conversation.messages.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        text: msg.text,
+        isNew: false
+      }))
+    }
+  } catch (error) {
+    console.warn('Failed to load conversation:', error)
+  }
+}
+
 onMounted(() => {
-  // Load messages from session storage first
-  loadMessagesFromStorage()
+  const conversationId = route.query.conversationId as string
+  
+  if (conversationId) {
+    // Load specific conversation from backend
+    loadConversation(conversationId)
+  } else {
+    // Load messages from session storage for new conversations
+    loadMessagesFromStorage()
+  }
 
   const q = (route.query.q as string) || ''
-  if (q) {
+  if (q && !conversationId) {
     input.value = q
     // Only auto-send the initial question if there are no existing messages
     // This prevents re-sending the question on page refresh
