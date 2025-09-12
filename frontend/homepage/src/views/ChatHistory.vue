@@ -5,8 +5,10 @@ import { useLangStore } from '../stores/lang'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Brain, UserRound, MessageSquare, Calendar } from 'lucide-vue-next'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Brain, UserRound, MessageSquare, Calendar, Eye } from 'lucide-vue-next'
 import VueMarkdown from 'vue-markdown-render'
+import MessagesArea from '@/views/MessagesArea.vue'
 
 type ChatMessage = {
   role: 'user' | 'assistant'
@@ -29,6 +31,9 @@ const language = computed(() => langStore.language)
 const chatSessions = ref<ChatSession[]>([])
 const isLoading = ref(false)
 const errorText = ref('')
+const selectedConversationMessages = ref<ChatMessage[]>([])
+const isDialogOpen = ref(false)
+const isLoadingMessages = ref(false)
 
 // Fetch chat history from backend
 const fetchChatHistory = async () => {
@@ -83,6 +88,34 @@ const openChat = (conversationId: number) => {
   router.push({ name: 'chat', query: { conversationId: conversationId.toString() } })
 }
 
+// Load conversation messages for dialog
+const loadConversationMessages = async (conversationId: number) => {
+  isLoadingMessages.value = true
+  try {
+    const res = await fetch(`/api/conversations/${conversationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    if (res.ok) {
+      const conversation: { id: number, startedAt: string, endedAt: string, messages: Array<{ id: number, role: string, text: string, createdAt: string }> } = await res.json()
+
+      // Convert backend messages to frontend format
+      selectedConversationMessages.value = conversation.messages.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        text: msg.text,
+        timestamp: msg.createdAt
+      }))
+
+      isDialogOpen.value = true
+    }
+  } catch (error) {
+    console.warn('Failed to load conversation messages:', error)
+  } finally {
+    isLoadingMessages.value = false
+  }
+}
+
 onMounted(() => {
   fetchChatHistory()
 })
@@ -127,7 +160,7 @@ onMounted(() => {
           <p class="text-gray-500 mb-6">
             {{ language === 'en' ? 'Start a conversation to see your chat history here.' : 'Start en samtale for å se chat-historikken din her.' }}
           </p>
-         
+
         </div>
       </div>
 
@@ -136,8 +169,7 @@ onMounted(() => {
         <Card
           v-for="session in chatSessions"
           :key="session.id"
-          class="bg-white/90 backdrop-blur-sm border-2 border-blue-100/20 hover:border-blue-200/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer hover:-translate-y-1"
-          @click="openChat(session.id)"
+          class="bg-white/90 backdrop-blur-sm border-2 border-blue-100/20 hover:border-blue-200/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-1"
         >
           <CardHeader class="pb-3">
             <div class="flex items-center justify-between">
@@ -145,7 +177,6 @@ onMounted(() => {
                 <MessageSquare class="w-5 h-5 text-blue-600" />
                   {{ session.preview.length > 120 ? session.preview.substring(0, 120) + '...' : session.preview }}
               </CardTitle>
-
             </div>
           </CardHeader>
           <CardContent class="pt-0">
@@ -153,15 +184,64 @@ onMounted(() => {
             <div class="space-y-3">
               <!-- Preview Text -->
               <div class="min-w-0">
-                <div class="flex items-center gap-2 text-sm text-gray-500">
-                <Calendar class="w-4 h-4" />
-                {{ formatDate(session.endedAt) }}
-              </div>
+                <div class="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                  <Calendar class="w-4 h-4" />
+                  {{ formatDate(session.endedAt) }}
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-2">
+                  <Button
+                    @click="loadConversationMessages(session.id)"
+                    variant="outline"
+                    size="sm"
+                    class="flex-1 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                  >
+                    <Eye class="w-4 h-4 mr-1" />
+                    View
+                  </Button>
+                  <Button
+                    @click="openChat(session.id)"
+                    size="sm"
+                    class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                  >
+                    Continue
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <!-- Dialog for viewing conversation -->
+      <Dialog v-model:open="isDialogOpen">
+        <DialogContent class="max-w-4xl h-[80vh] flex flex-col">
+          <DialogHeader class="flex-shrink-0">
+            <DialogTitle class="text-xl font-semibold text-gray-800">
+              {{ language === 'en' ? 'Chat History' : 'Chat-historikk' }}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div class="flex-1 min-h-0 overflow-hidden">
+            <MessagesArea 
+              v-if="selectedConversationMessages.length > 0"
+              :messages="selectedConversationMessages"
+              :is-loading="isLoadingMessages"
+              :is-read-only="true"
+              :show-header="false"
+            />
+            
+            <!-- Loading state for messages -->
+            <div v-else-if="isLoadingMessages" class="flex items-center justify-center h-full">
+              <div class="text-center">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-gray-600">{{ language === 'en' ? 'Loading messages...' : 'Laster meldinger...' }}</p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   </main>
 </template>
