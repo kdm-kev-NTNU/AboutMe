@@ -21,13 +21,13 @@ const props = withDefaults(defineProps<Props>(), {
   headerText: 'Chat Messages'
 })
 
-const messagesContainer = ref<HTMLElement>()
+const scrollableContainer = ref<HTMLElement>()
 
 // Scroll to bottom function
 const scrollToBottom = () => {
   nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    if (scrollableContainer.value) {
+      scrollableContainer.value.scrollTop = scrollableContainer.value.scrollHeight
     }
   })
 }
@@ -51,10 +51,9 @@ watch(() => props.messages, () => {
     </div>
 
     <!-- Scrollable Container -->
-    <div class="flex-1 overflow-y-auto">
+    <div ref="scrollableContainer" class="flex-1 overflow-y-auto">
       <!-- Messages Area -->
       <div 
-        ref="messagesContainer" 
         class="space-y-4 pr-2 border-2 border-blue-100/20 rounded-lg p-4 bg-white/90 backdrop-blur-sm hover:border-blue-200/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300"
         :class="{ 'border-gray-200/20 hover:border-gray-300/30': isReadOnly }"
       >
