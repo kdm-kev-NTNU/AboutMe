@@ -5,6 +5,7 @@ import { useLangStore } from '../stores/lang'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { ArrowRight } from 'lucide-vue-next'
 
 const router = useRouter()
 
@@ -60,7 +61,7 @@ onMounted(() => {
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 50%);"></div>
     </div>
-    
+
     <!-- Blue Blob Shapes -->
     <div class="blob-container">
       <div class="blob blob-1"></div>
@@ -70,16 +71,34 @@ onMounted(() => {
       <div class="blob blob-5"></div>
       <div class="blob blob-6"></div>
     </div>
-    
+
     <!-- Welcome Dialog -->
     <Dialog v-model:open="showWelcomeDialog">
-      <DialogContent>
+      <DialogContent class="max-w-md">
         <DialogHeader>
           <DialogTitle>Welcome to Kevin's Portfolio!</DialogTitle>
-          <DialogDescription>
-            The website is still under development.
+          <DialogDescription class="space-y-3">
+            <p>Please be mindful that this website is still <i>under development.</i></p>
+            <p>AI Disclaimer: Please be aware that AI can hallucinate and may provide inaccurate information.</p>
+            <p class="flex items-center gap-2 text-blue-600">
+
+              Please do not share private or sensitive information in the chat.
+            </p>
           </DialogDescription>
         </DialogHeader>
+
+        <!-- Dialog Footer with Next Button -->
+        <div class="flex justify-between mt-6">
+          <p class="text-blue-600 border-b-2 border-b-blue-200" >1 of 2</p>
+          <!-- Next Button (Disabled) -->
+          <Button
+            disabled
+            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            Next
+            <ArrowRight class="w-4 h-4" />
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
 
@@ -260,25 +279,25 @@ onMounted(() => {
   .text-7xl {
     font-size: 3rem;
   }
-  
+
   .p-6 {
     padding: 1rem;
   }
-  
+
   .blob {
     filter: blur(30px);
   }
-  
+
   .blob-1, .blob-3 {
     width: 200px;
     height: 200px;
   }
-  
+
   .blob-2, .blob-4, .blob-5 {
     width: 150px;
     height: 150px;
   }
-  
+
   .blob-6 {
     width: 120px;
     height: 120px;
