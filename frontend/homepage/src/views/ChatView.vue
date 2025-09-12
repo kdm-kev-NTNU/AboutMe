@@ -8,9 +8,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Brain, UserRound } from 'lucide-vue-next'
 import VueMarkdown from 'vue-markdown-render'
+import TypewriterAnimation from '@/components/TypewriterAnimation.vue'
 
 
-type Message = { role: 'user' | 'assistant'; text: string }
+type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
 const route = useRoute()
 const router = useRouter()
@@ -49,7 +50,8 @@ const loadMessagesFromStorage = () => {
     if (stored) {
       const messages = JSON.parse(stored)
       if (Array.isArray(messages)) {
-        state.messages = messages
+        // Ensure loaded messages are not marked as new
+        state.messages = messages.map(msg => ({ ...msg, isNew: false }))
       }
     }
   } catch (error) {
@@ -112,7 +114,7 @@ async function send(text: string) {
       return
     }
     const data: { answer: string } = await res.json()
-    state.messages.push({ role: 'assistant', text: data.answer })
+    state.messages.push({ role: 'assistant', text: data.answer, isNew: true })
   } catch (e: any) {
     errorText.value = 'Nettverksfeil. Prøv igjen.'
   } finally {
@@ -186,7 +188,9 @@ onMounted(() => {
                      :class="m.role === 'user'
                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-2 border-blue-600 hover:from-blue-700 hover:to-blue-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40'
                        : 'bg-white/95 border-2 border-blue-100/20 hover:border-blue-200/30 hover:bg-white hover:shadow-lg hover:shadow-blue-500/10'">
-                  <vue-markdown class="text-sm leading-relaxed whitespace-pre-wrap" :class="m.role === 'user' ? 'text-white' : 'text-gray-700'" :source="m.text"/>
+                  <vue-markdown v-if="m.role === 'user'" class="text-sm leading-relaxed whitespace-pre-wrap text-white" :source="m.text"/>
+                  <TypewriterAnimation v-else-if="m.isNew" :text="m.text" :text-class="'text-gray-700'" :speed="25" @finished="m.isNew = false" @scroll="scrollToBottom"/>
+                  <vue-markdown v-else class="text-sm leading-relaxed whitespace-pre-wrap text-gray-700" :source="m.text"/>
                 </div>
               </div>
             </div>
