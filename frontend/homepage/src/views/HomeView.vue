@@ -36,6 +36,7 @@ const visibleQuestions = computed(() => questionsByLang[language.value])
 const quickQuestion = ref('')
 const showWelcomeDialog = ref(false)
 const showHomeDialog = ref(false)
+const showEductionDialog = ref(false)
 
 function ask(q: string) {
   router.push({ name: 'chat', query: { q } })
@@ -52,10 +53,13 @@ function startGuidedTour() {
   showHomeDialog.value = true
 }
 
-
 function showEducationInfo() {
   showHomeDialog.value = false
+  showEductionDialog.value = true
+}
 
+function showLinksInfo() {
+  showEductionDialog.value = false
 }
 
 onMounted(() => {
@@ -105,6 +109,16 @@ onMounted(() => {
       :index="2"
       @start-guided-tour="showEducationInfo"
       class="[fixed top-56 left-1/5 transform -translate-x-1/2 z-50]"
+    />
+
+    <TutorialDialog
+      v-model:open="showEductionDialog"
+      title="Get an overview about me!"
+      desc="This is where you can explore both my academic and professional background."
+      descBlue="Do check out the other projects that I have worked on."
+      :index="3"
+      @start-guided-tour="showEducationInfo"
+      class="[fixed top-56 left-4/5 transform -translate-x-1/2 z-50]"
     />
 
     <!-- Main Content - Centered -->
