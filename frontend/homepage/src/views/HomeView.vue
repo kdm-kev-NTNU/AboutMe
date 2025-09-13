@@ -37,6 +37,7 @@ const quickQuestion = ref('')
 const showWelcomeDialog = ref(false)
 const showHomeDialog = ref(false)
 const showEductionDialog = ref(false)
+const showInfoDialog = ref(false)
 
 function ask(q: string) {
   router.push({ name: 'chat', query: { q } })
@@ -60,6 +61,11 @@ function showEducationInfo() {
 
 function showLinksInfo() {
   showEductionDialog.value = false
+  showInfoDialog.value = true
+}
+
+function closeTutorial() {
+  showInfoDialog.value = false
 }
 
 onMounted(() => {
@@ -117,8 +123,18 @@ onMounted(() => {
       desc="This is where you can explore both my academic and professional background."
       descBlue="Do check out the other projects that I have worked on."
       :index="3"
-      @start-guided-tour="showEducationInfo"
+      @start-guided-tour="showLinksInfo"
       class="[fixed top-56 left-4/5 transform -translate-x-1/2 z-50]"
+    />
+
+     <TutorialDialog
+      v-model:open="showInfoDialog"
+      title="Want to connect with me?"
+      desc="Look here to check out my online presence!"
+      :index="4"
+      @start-guided-tour="closeTutorial"
+      class="[fixed bottom-56 left-1/5 transform -translate-x-1/2 z-50 -translate-y-1/2]"
+      :isEnd="true"
     />
 
     <!-- Main Content - Centered -->
