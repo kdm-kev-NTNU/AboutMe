@@ -23,12 +23,12 @@ function goToChatHistory() {
 // Computed property for button classes based on focus state
 const buttonClasses = computed(() => {
   const baseClasses = 'fixed left-4 bottom-4 w-11 h-11 rounded-full border border-gray-300 bg-white cursor-pointer shadow-lg flex items-center justify-center transition-all duration-200 ease-in-out text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:scale-105 hover:text-gray-900 active:scale-95'
-  
+
   if (isInfoDialogOpen.value) {
     // Higher z-index to appear above dialog overlay
     return `${baseClasses} z-[60]`
   }
-  
+
   // Normal styling
   return `${baseClasses} z-50`
 })
@@ -66,7 +66,7 @@ const buttonClasses = computed(() => {
         : 'Jeg gir en AI-modell kontekst om min bakgrunn og utdanning og hvordan den skal svare på spørsmål. Den kan fortsatt hallusinere, så ikke stol blindt på alt.'
       }}</p>
 
-      <div class="mt-5">
+      <!-- <div class="mt-5">
         <button
           @click="goToChatHistory"
           class="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm cursor-pointer hover:bg-gray-100 hover:border-gray-300 hover:text-gray-900 transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md flex items-center justify-center gap-2"
@@ -74,7 +74,7 @@ const buttonClasses = computed(() => {
           <AlertTriangle class="w-4 h-4 flex-shrink-0 text-amber-400" />
           <span>{{ language === 'en' ? "Don't click here" : 'Ikke klikk her' }}</span>
         </button>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
