@@ -6,11 +6,16 @@ import { useDialogState } from '../composables/useDialogState'
 
 const route = useRoute()
 const langStore = useLangStore()
-const { isWelcomeDialogOpen, isEducationDialogOpen } = useDialogState()
+const { isWelcomeDialogOpen, isEducationDialogOpen, isInfoDialogOpen } = useDialogState()
 
 const isActive = (routeName: string) => {
   // Don't show active state when welcome dialog is open
   if (isWelcomeDialogOpen.value) {
+    return false
+  }
+  
+  // Don't show active state when info dialog is open
+  if (isInfoDialogOpen.value) {
     return false
   }
   
@@ -51,6 +56,11 @@ const getIndicatorPosition = () => {
   
   // Hide indicator when education dialog is open since all items except home should appear active
   if (isEducationDialogOpen.value) {
+    return { transform: 'translateX(0px)', opacity: '0' }
+  }
+  
+  // Hide indicator when info dialog is open since no items should appear active
+  if (isInfoDialogOpen.value) {
     return { transform: 'translateX(0px)', opacity: '0' }
   }
   
