@@ -11,7 +11,8 @@ const props = defineProps<{
   descBlue?: string,
   index: number,
   open: boolean,
-  class?: string
+  class?: string,
+  isEnd?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -53,7 +54,7 @@ function startGuidedTour() {
           @click="startGuidedTour"
           class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
         >
-          Next
+         {{ isEnd?  "Done" : "Next" }}
           <ArrowRight class="w-4 h-4" />
         </Button>
       </div>
