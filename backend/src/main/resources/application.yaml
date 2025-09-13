@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:backend/.env[.properties]
   application:
     name: portfolio
   ai:
@@ -13,11 +15,12 @@ spring:
           model: text-embedding-3-large
           dimensions: 3072
   datasource:
-    url: jdbc:mysql://localhost:3307/aboutme?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
-    username: root
-    password: root
+    url: jdbc:mysql://localhost:3307/aboutme?useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -25,7 +28,7 @@ spring:
       hibernate:
         format_sql: true
 server:
-  port: ${PORT:8080}
+  port: ${PORT}
 sfg:
   aiapp:
     # Vector store plasseres alltid under 'backend/vectordatabase' uavhengig av working dir
@@ -34,12 +37,11 @@ sfg:
     encryptContent: true
     encryptionKeyBase64: ${VECTORSTORE_ENC_KEY}
     documentsToLoadDir: classpath:/tmp/docs/
-
-
 logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.boot.context.config: DEBUG
 
 
 
