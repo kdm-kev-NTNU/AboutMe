@@ -12,7 +12,7 @@ import { useDialogState } from '../composables/useDialogState'
 const router = useRouter()
 
 const langStore = useLangStore()
-const { setWelcomeDialogOpen } = useDialogState()
+const { setWelcomeDialogOpen, setEducationDialogOpen } = useDialogState()
 
 const language = computed({
   get: () => langStore.language,
@@ -74,6 +74,11 @@ function closeTutorial() {
 // Watch for changes in showWelcomeDialog and sync with global state
 watch(showWelcomeDialog, (newValue) => {
   setWelcomeDialogOpen(newValue)
+}, { immediate: true })
+
+// Watch for changes in showEducationDialog and sync with global state
+watch(showEducationDialog, (newValue) => {
+  setEducationDialogOpen(newValue)
 }, { immediate: true })
 
 onMounted(() => {

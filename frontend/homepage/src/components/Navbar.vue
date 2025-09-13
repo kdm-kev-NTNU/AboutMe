@@ -6,13 +6,19 @@ import { useDialogState } from '../composables/useDialogState'
 
 const route = useRoute()
 const langStore = useLangStore()
-const { isWelcomeDialogOpen } = useDialogState()
+const { isWelcomeDialogOpen, isEducationDialogOpen } = useDialogState()
 
 const isActive = (routeName: string) => {
   // Don't show active state when welcome dialog is open
   if (isWelcomeDialogOpen.value) {
     return false
   }
+  
+  // When education dialog is open, show all items as active except home
+  if (isEducationDialogOpen.value) {
+    return routeName !== 'home'
+  }
+  
   return route.name === routeName
 }
 
@@ -43,11 +49,26 @@ const getButtonWidth = () => {
 const getIndicatorPosition = () => {
   const buttonWidth = getButtonWidth()
   
+  // Hide indicator when education dialog is open since all items except home should appear active
+  if (isEducationDialogOpen.value) {
+    return { transform: 'translateX(0px)', opacity: '0' }
+  }
+  
   if (isActive('home')) return { transform: 'translateX(0px)', opacity: '1' }
   if (isActive('projects')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
   if (isActive('work-experience')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
   if (isActive('education')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
   return { transform: 'translateX(0px)', opacity: '0' }
+}
+
+const getButtonClasses = (routeName: string) => {
+  const baseClasses = 'gradient-navbar-button relative z-10 py-2 text-sm font-medium transition-all duration-300 cursor-pointer flex items-center justify-center rounded-full'
+  
+  if (isActive(routeName)) {
+    return `${baseClasses} text-blue-700 font-semibold bg-blue-50 border border-blue-200`
+  }
+  
+  return `${baseClasses} text-gray-500`
 }
 </script>
 
@@ -64,32 +85,28 @@ const getIndicatorPosition = () => {
         ></div>
         <RouterLink
           to="/"
-          class="gradient-navbar-button relative z-10 py-2 text-sm font-medium transition-all duration-300 cursor-pointer flex items-center justify-center rounded-full"
-          :class="isActive('home') ? 'text-blue-700 font-semibold' : 'text-gray-500'"
+          :class="getButtonClasses('home')"
           :style="{ width: getButtonWidth() + 'px' }"
         >
           {{ getButtonText('home') }}
         </RouterLink>
         <RouterLink
           to="/projects"
-          class="gradient-navbar-button relative z-10 py-2 text-sm font-medium transition-all duration-300 cursor-pointer flex items-center justify-center rounded-full"
-          :class="isActive('projects') ? 'text-blue-700 font-semibold' : 'text-gray-500'"
+          :class="getButtonClasses('projects')"
           :style="{ width: getButtonWidth() + 'px' }"
         >
           {{ getButtonText('projects') }}
         </RouterLink>
         <RouterLink
           to="/work-experience"
-          class="gradient-navbar-button relative z-10 py-2 text-sm font-medium transition-all duration-300 cursor-pointer flex items-center justify-center rounded-full"
-          :class="isActive('work-experience') ? 'text-blue-700 font-semibold' : 'text-gray-500'"
+          :class="getButtonClasses('work-experience')"
           :style="{ width: getButtonWidth() + 'px' }"
         >
           {{ getButtonText('work') }}
         </RouterLink>
         <RouterLink
           to="/education"
-          class="gradient-navbar-button relative z-10 py-2 text-sm font-medium transition-all duration-300 cursor-pointer flex items-center justify-center rounded-full"
-          :class="isActive('education') ? 'text-blue-700 font-semibold' : 'text-gray-500'"
+          :class="getButtonClasses('education')"
           :style="{ width: getButtonWidth() + 'px' }"
         >
           {{ getButtonText('education') }}
