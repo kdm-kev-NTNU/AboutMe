@@ -16,8 +16,8 @@ spring:
           dimensions: 3072
   datasource:
     url: jdbc:mysql://localhost:3307/aboutme?useSSL=false&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:root}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -27,7 +27,7 @@ spring:
       hibernate:
         format_sql: true
 server:
-  port: ${PORT:8080}
+  port: ${PORT}
 sfg:
   aiapp:
     # Vector store plasseres alltid under 'backend/vectordatabase' uavhengig av working dir
