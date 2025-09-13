@@ -10,7 +10,8 @@ const props = defineProps<{
   descOpt?: string,
   descBlue?: string,
   index: number,
-  open: boolean
+  open: boolean,
+  class?: string
 }>()
 
 const emit = defineEmits<{
@@ -30,7 +31,7 @@ function startGuidedTour() {
 
 <template>
   <Dialog v-model:open="showWelcomeDialog">
-    <DialogContent class="max-w-md">
+    <DialogContent :class="['max-w-md', props.class]">
       <DialogHeader>
         <DialogTitle>{{title}}</DialogTitle>
         <DialogDescription class="space-y-3">
