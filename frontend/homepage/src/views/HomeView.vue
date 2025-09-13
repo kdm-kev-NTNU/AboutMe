@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, MoveUpRight } from 'lucide-vue-next'
+import TutorialDialog from '@/components/TutorialDialog.vue'
 
 const router = useRouter()
 
@@ -85,62 +86,26 @@ onMounted(() => {
     </div>
 
     <!-- Welcome Dialog -->
-    <Dialog v-model:open="showWelcomeDialog">
-      <DialogContent class="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Welcome to Kevin's Portfolio!</DialogTitle>
-          <DialogDescription class="space-y-3">
-            <p>Please be mindful that this website is still <i>under development.</i></p>
-            <p>AI Disclaimer: Please be aware that AI can hallucinate and may provide inaccurate information.</p>
-            <p class="flex items-center gap-2 text-blue-600">
-
-              Please do not share private or sensitive information in the chat.
-            </p>
-          </DialogDescription>
-        </DialogHeader>
-
-        <!-- Dialog Footer with Next Button -->
-        <div class="flex justify-between mt-6">
-          <p class=" text-blue-600 border-b-2 ">1 of 4</p>
-          <!-- Next Button -->
-          <Button
-            @click="startGuidedTour"
-            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-          >
-            Next
-            <ArrowRight class="w-4 h-4" />
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <TutorialDialog
+      v-model:open="showWelcomeDialog"
+      title="Welcome to Kevin's Portfolio!"
+      desc="Please be mindful that this website is still under development."
+      descOpt="AI Disclaimer: Please be aware that AI can hallucinate and may provide inaccurate information."
+      descBlue="Please do not share private or sensitive information in the chat."
+      :index="1"
+      @start-guided-tour="startGuidedTour"
+    />
 
     <!-- Guided Tour Dialog -->
-    <Dialog v-model:open="showHomeDialog">
-      <DialogContent class="max-w-sm fixed top-56 left-1/5 transform -translate-x-1/2 z-50">
-        <DialogHeader>
-          <DialogTitle class="text-lg">Welcome to the Tour!</DialogTitle>
-          <DialogDescription class="space-y-3">
-            <p>This is the navigation bar where you can explore different sections of my portfolio.</p>
-            <p class="flex gap-2 text-blue-600">
-              You can ask questions about me using the AI chat feature in Home!
-            </p>
-          </DialogDescription>
-        </DialogHeader>
-
-        <!-- Dialog Footer -->
-        <div class="flex justify-between mt-6">
-          <p class=" text-blue-600 border-b-2 ">2 of 4</p>
-          <!-- Next Button -->
-          <Button
-            @click="showEducationInfo"
-            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-          >
-            Next
-            <ArrowRight class="w-4 h-4" />
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <TutorialDialog
+      v-model:open="showHomeDialog"
+      title="Welcome to the Tour!"
+      desc="This is the navigation bar where you can explore different sections of my portfolio."
+      descBlue="You can ask questions about me using the AI chat feature in Home!"
+      :index="2"
+      @start-guided-tour="showEducationInfo"
+      class="[fixed top-56 left-1/5 transform -translate-x-1/2 z-50]"
+    />
 
     <!-- Main Content - Centered -->
     <div class="flex-1 flex flex-col items-center justify-center py-8 overflow-y-auto relative z-10">
