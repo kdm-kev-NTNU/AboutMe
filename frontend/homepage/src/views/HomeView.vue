@@ -12,7 +12,7 @@ import { useDialogState } from '../composables/useDialogState'
 const router = useRouter()
 
 const langStore = useLangStore()
-const { setWelcomeDialogOpen, setEducationDialogOpen } = useDialogState()
+const { setWelcomeDialogOpen, setEducationDialogOpen, setInfoDialogOpen } = useDialogState()
 
 const language = computed({
   get: () => langStore.language,
@@ -79,6 +79,11 @@ watch(showWelcomeDialog, (newValue) => {
 // Watch for changes in showEducationDialog and sync with global state
 watch(showEducationDialog, (newValue) => {
   setEducationDialogOpen(newValue)
+}, { immediate: true })
+
+// Watch for changes in showInfoDialog and sync with global state
+watch(showInfoDialog, (newValue) => {
+  setInfoDialogOpen(newValue)
 }, { immediate: true })
 
 onMounted(() => {
