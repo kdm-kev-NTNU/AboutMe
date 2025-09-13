@@ -1,17 +1,14 @@
 package com.kevinmazali.portfolio.controller;
 
-
-
-
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.service.OpenAIService;
 import com.kevinmazali.portfolio.service.RequestLogService;
+import com.kevinmazali.portfolio.util.InputValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -25,7 +22,6 @@ public class QuestionController {
 
     private final OpenAIService openAIService;
     private final RequestLogService requestLogService;
-    private static final int MAX_PROMPT_CHARS = 3000;
 
     /**
      * Answers a user question using the RAG-enabled AI service.
@@ -38,24 +34,28 @@ public class QuestionController {
      */
     @PostMapping("/ask")
     public Object askQuestion(
-        @RequestBody Question question,
-        @RequestHeader(name = "X-Chat-Id", required = false) String chatId
+        @RequestBody Question question
     ) {
-        if (chatId == null || chatId.isBlank()) {
-            Object attr = ((jakarta.servlet.http.HttpServletRequest) org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
-                .resolveReference(org.springframework.web.context.request.RequestAttributes.REFERENCE_REQUEST))
-                .getAttribute("chatId");
-            if (attr instanceof String s && !s.isBlank()) {
-                chatId = s;
-            }
+        // Validate question
+        if (question.question() == null || question.question().isBlank()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Question cannot be empty"));
         }
-        if (question.question() != null && question.question().length() > MAX_PROMPT_CHARS) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Prompt too long"));
+        
+        if (!InputValidator.isValidQuestion(question.question())) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invalid question format"));
         }
-        requestLogService.save("/ask", "POST", question.question(), chatId);
-        Answer answer = openAIService.getAnswer(question);
+        
+        // Sanitize inputs
+        String sanitizedQuestion = InputValidator.sanitizeString(question.question());
+        
+        requestLogService.save("/ask", "POST", sanitizedQuestion, null);
+        
+        // Create sanitized question object
+        Question sanitizedQuestionObj = new Question(sanitizedQuestion);
+        Answer answer = openAIService.getAnswer(sanitizedQuestionObj);
+        
         // Also log the answer for history
-        requestLogService.save("/ask:response", "POST", answer.answer(), chatId);
+        requestLogService.save("/ask:response", "POST", answer.answer(), null);
         return answer;
     }
 
