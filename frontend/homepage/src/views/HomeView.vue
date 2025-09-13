@@ -103,7 +103,7 @@ onMounted(() => {
     <!-- Guided Tour Dialog -->
     <TutorialDialog
       v-model:open="showHomeDialog"
-      title="Welcome to the Tour!"
+      title="Want to chat with my AI clone?"
       desc="This is the navigation bar where you can explore different sections of my portfolio."
       descBlue="You can ask questions about me using the AI chat feature in Home!"
       :index="2"
