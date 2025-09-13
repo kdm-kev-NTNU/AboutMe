@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, MoveUpRight } from 'lucide-vue-next'
 import TutorialDialog from '@/components/TutorialDialog.vue'
+import { useDialogState } from '../composables/useDialogState'
 
 const router = useRouter()
 
 const langStore = useLangStore()
+const { setWelcomeDialogOpen } = useDialogState()
+
 const language = computed({
   get: () => langStore.language,
   set: (v: 'en' | 'no') => langStore.setLanguage(v),
@@ -36,7 +39,7 @@ const visibleQuestions = computed(() => questionsByLang[language.value])
 const quickQuestion = ref('')
 const showWelcomeDialog = ref(false)
 const showHomeDialog = ref(false)
-const showEductionDialog = ref(false)
+const showEducationDialog = ref(false)
 const showInfoDialog = ref(false)
 
 function ask(q: string) {
@@ -56,17 +59,22 @@ function startGuidedTour() {
 
 function showEducationInfo() {
   showHomeDialog.value = false
-  showEductionDialog.value = true
+  showEducationDialog.value = true
 }
 
 function showLinksInfo() {
-  showEductionDialog.value = false
+  showEducationDialog.value = false
   showInfoDialog.value = true
 }
 
 function closeTutorial() {
   showInfoDialog.value = false
 }
+
+// Watch for changes in showWelcomeDialog and sync with global state
+watch(showWelcomeDialog, (newValue) => {
+  setWelcomeDialogOpen(newValue)
+}, { immediate: true })
 
 onMounted(() => {
   // Check if user has already seen the welcome dialog in this tab session
@@ -118,7 +126,7 @@ onMounted(() => {
     />
 
     <TutorialDialog
-      v-model:open="showEductionDialog"
+      v-model:open="showEducationDialog"
       title="Get an overview about me!"
       desc="This is where you can explore both my academic and professional background."
       descBlue="Do check out the other projects that I have worked on."

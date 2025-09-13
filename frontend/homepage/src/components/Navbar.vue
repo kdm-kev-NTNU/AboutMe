@@ -2,11 +2,17 @@
 import { useRoute } from 'vue-router'
 import { computed } from 'vue'
 import { useLangStore } from '../stores/lang'
+import { useDialogState } from '../composables/useDialogState'
 
 const route = useRoute()
 const langStore = useLangStore()
+const { isWelcomeDialogOpen } = useDialogState()
 
 const isActive = (routeName: string) => {
+  // Don't show active state when welcome dialog is open
+  if (isWelcomeDialogOpen.value) {
+    return false
+  }
   return route.name === routeName
 }
 
