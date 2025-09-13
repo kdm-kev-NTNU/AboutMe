@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { ArrowRight, MoveUpRight } from 'lucide-vue-next'
+import TutorialDialog from '@/components/TutorialDialog.vue'
+import { useDialogState } from '../composables/useDialogState'
 
 const router = useRouter()
 
 const langStore = useLangStore()
+const { setWelcomeDialogOpen, setEducationDialogOpen, setInfoDialogOpen } = useDialogState()
+
 const language = computed({
   get: () => langStore.language,
   set: (v: 'en' | 'no') => langStore.setLanguage(v),
@@ -33,6 +38,9 @@ const visibleQuestions = computed(() => questionsByLang[language.value])
 
 const quickQuestion = ref('')
 const showWelcomeDialog = ref(false)
+const showHomeDialog = ref(false)
+const showEducationDialog = ref(false)
+const showInfoDialog = ref(false)
 
 function ask(q: string) {
   router.push({ name: 'chat', query: { q } })
@@ -43,6 +51,40 @@ function submitQuick() {
   if (!q) return
   ask(q)
 }
+
+function startGuidedTour() {
+  showWelcomeDialog.value = false
+  showHomeDialog.value = true
+}
+
+function showEducationInfo() {
+  showHomeDialog.value = false
+  showEducationDialog.value = true
+}
+
+function showLinksInfo() {
+  showEducationDialog.value = false
+  showInfoDialog.value = true
+}
+
+function closeTutorial() {
+  showInfoDialog.value = false
+}
+
+// Watch for changes in showWelcomeDialog and sync with global state
+watch(showWelcomeDialog, (newValue) => {
+  setWelcomeDialogOpen(newValue)
+}, { immediate: true })
+
+// Watch for changes in showEducationDialog and sync with global state
+watch(showEducationDialog, (newValue) => {
+  setEducationDialogOpen(newValue)
+}, { immediate: true })
+
+// Watch for changes in showInfoDialog and sync with global state
+watch(showInfoDialog, (newValue) => {
+  setInfoDialogOpen(newValue)
+}, { immediate: true })
 
 onMounted(() => {
   // Check if user has already seen the welcome dialog in this tab session
@@ -60,7 +102,7 @@ onMounted(() => {
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 50%);"></div>
     </div>
-    
+
     <!-- Blue Blob Shapes -->
     <div class="blob-container">
       <div class="blob blob-1"></div>
@@ -70,18 +112,48 @@ onMounted(() => {
       <div class="blob blob-5"></div>
       <div class="blob blob-6"></div>
     </div>
-    
+
     <!-- Welcome Dialog -->
-    <Dialog v-model:open="showWelcomeDialog">
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Welcome to Kevin's Portfolio!</DialogTitle>
-          <DialogDescription>
-            The website is still under development.
-          </DialogDescription>
-        </DialogHeader>
-      </DialogContent>
-    </Dialog>
+    <TutorialDialog
+      v-model:open="showWelcomeDialog"
+      title="Welcome to Kevin's Portfolio!"
+      desc="Please be mindful that this website is still under development."
+      descOpt="AI Disclaimer: Please be aware that AI can hallucinate and may provide inaccurate information."
+      descBlue="Please do not share private or sensitive information in the chat."
+      :index="1"
+      @start-guided-tour="startGuidedTour"
+    />
+
+    <!-- Guided Tour Dialog -->
+    <TutorialDialog
+      v-model:open="showHomeDialog"
+      title="Want to chat with my AI clone?"
+      desc="This is the navigation bar where you can explore different sections of my portfolio."
+      descBlue="You can ask questions about me using the AI chat feature in Home!"
+      :index="2"
+      @start-guided-tour="showEducationInfo"
+      class="[fixed top-56 left-1/5 transform -translate-x-1/2 z-50]"
+    />
+
+    <TutorialDialog
+      v-model:open="showEducationDialog"
+      title="Get an overview about me!"
+      desc="This is where you can explore both my academic and professional background."
+      descBlue="Do check out the other projects that I have worked on."
+      :index="3"
+      @start-guided-tour="showLinksInfo"
+      class="[fixed top-56 left-4/5 transform -translate-x-1/2 z-50]"
+    />
+
+     <TutorialDialog
+      v-model:open="showInfoDialog"
+      title="Want to connect with me?"
+      desc="Look here to check out my online presence!"
+      :index="4"
+      @start-guided-tour="closeTutorial"
+      class="[fixed bottom-56 left-1/5 transform -translate-x-1/2 z-50 -translate-y-1/2]"
+      :isEnd="true"
+    />
 
     <!-- Main Content - Centered -->
     <div class="flex-1 flex flex-col items-center justify-center py-8 overflow-y-auto relative z-10">
@@ -260,25 +332,25 @@ onMounted(() => {
   .text-7xl {
     font-size: 3rem;
   }
-  
+
   .p-6 {
     padding: 1rem;
   }
-  
+
   .blob {
     filter: blur(30px);
   }
-  
+
   .blob-1, .blob-3 {
     width: 200px;
     height: 200px;
   }
-  
+
   .blob-2, .blob-4, .blob-5 {
     width: 150px;
     height: 150px;
   }
-  
+
   .blob-6 {
     width: 120px;
     height: 120px;
