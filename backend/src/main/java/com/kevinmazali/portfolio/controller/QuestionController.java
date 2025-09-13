@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -35,29 +34,8 @@ public class QuestionController {
      */
     @PostMapping("/ask")
     public Object askQuestion(
-        @RequestBody Question question,
-        @RequestHeader(name = "X-Chat-Id", required = false) String chatId
+        @RequestBody Question question
     ) {
-        // Get chatId from request attribute if not in header
-        if (chatId == null || chatId.isBlank()) {
-            var requestAttributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
-            if (requestAttributes != null) {
-                var request = (jakarta.servlet.http.HttpServletRequest) requestAttributes
-                    .resolveReference(org.springframework.web.context.request.RequestAttributes.REFERENCE_REQUEST);
-                if (request != null) {
-                    Object attr = request.getAttribute("chatId");
-                    if (attr instanceof String s && !s.isBlank()) {
-                        chatId = s;
-                    }
-                }
-            }
-        }
-        
-        // Validate chatId
-        if (!InputValidator.isValidChatId(chatId)) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invalid chat ID"));
-        }
-        
         // Validate question
         if (question.question() == null || question.question().isBlank()) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", "Question cannot be empty"));
@@ -69,16 +47,15 @@ public class QuestionController {
         
         // Sanitize inputs
         String sanitizedQuestion = InputValidator.sanitizeString(question.question());
-        String sanitizedChatId = InputValidator.sanitizeString(chatId);
         
-        requestLogService.save("/ask", "POST", sanitizedQuestion, sanitizedChatId);
+        requestLogService.save("/ask", "POST", sanitizedQuestion, null);
         
         // Create sanitized question object
         Question sanitizedQuestionObj = new Question(sanitizedQuestion);
         Answer answer = openAIService.getAnswer(sanitizedQuestionObj);
         
         // Also log the answer for history
-        requestLogService.save("/ask:response", "POST", answer.answer(), sanitizedChatId);
+        requestLogService.save("/ask:response", "POST", answer.answer(), null);
         return answer;
     }
 

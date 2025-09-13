@@ -15,28 +15,9 @@ public class InputValidator {
     private static final Pattern SAFE_STRING_PATTERN = Pattern.compile("^[\\p{L}\\p{N}\\p{P}\\p{Z}]*$");
     
     private static final int MAX_QUESTION_LENGTH = 3000;
-    private static final int MAX_CHAT_ID_LENGTH = 50;
     private static final int MAX_REQUEST_ID_LENGTH = 100;
     
-    /**
-     * Validates and sanitizes a chat ID.
-     * 
-     * @param chatId the chat ID to validate
-     * @return true if valid, false otherwise
-     */
-    public static boolean isValidChatId(String chatId) {
-        if (chatId == null || chatId.isBlank()) {
-            return false;
-        }
-        
-        if (chatId.length() > MAX_CHAT_ID_LENGTH) {
-            return false;
-        }
-        
-        // Allow UUIDs or simple alphanumeric IDs
-        return UUID_PATTERN.matcher(chatId).matches() || 
-               SAFE_STRING_PATTERN.matcher(chatId).matches();
-    }
+    // chatId validation removed
     
     /**
      * Validates a question input.
@@ -100,22 +81,5 @@ public class InputValidator {
                    .trim();
     }
     
-    /**
-     * Validates a path parameter (for conversation ID).
-     * 
-     * @param pathParam the path parameter to validate
-     * @return true if valid, false otherwise
-     */
-    public static boolean isValidPathParameter(String pathParam) {
-        if (pathParam == null || pathParam.isBlank()) {
-            return false;
-        }
-        
-        try {
-            long id = Long.parseLong(pathParam);
-            return id > 0;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
+    // conversation path parameter validation removed
 }

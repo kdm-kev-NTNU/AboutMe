@@ -13,12 +13,13 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.lang.NonNull;
+import java.util.Collections;
 
 /**
  * Web configuration including CORS and a lightweight rate limiter for the /ask endpoint.
@@ -44,8 +45,7 @@ public class WebConfig {
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders(
                         "Content-Type",
-                        "Authorization", 
-                        "X-Chat-Id",
+                        "Authorization",
                         "X-Requested-With",
                         "Accept",
                         "Origin",
@@ -62,47 +62,7 @@ public class WebConfig {
      * generates a UUID, exposes it as request attribute "chatId", sets it in response header
      * X-Chat-Id and a cookie "chatId"; controllers can read from request attribute as fallback.
      */
-    @Bean
-    public Filter chatIdAssignmentFilter() {
-        return new OncePerRequestFilter() {
-            @Override
-            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
-                throws ServletException, IOException {
-                String chatId = request.getHeader("X-Chat-Id");
-                if (chatId == null || chatId.isBlank()) {
-                    // try cookie
-                    if (request.getCookies() != null) {
-                        for (Cookie c : request.getCookies()) {
-                            if ("chatId".equals(c.getName()) && c.getValue() != null && !c.getValue().isBlank()) {
-                                chatId = c.getValue();
-                                break;
-                            }
-                        }
-                    }
-                }
-                boolean generated = false;
-                if (chatId == null || chatId.isBlank()) {
-                    chatId = java.util.UUID.randomUUID().toString();
-                    generated = true;
-                }
-
-                // expose for downstream usage
-                request.setAttribute("chatId", chatId);
-
-                if (generated) {
-                    response.setHeader("X-Chat-Id", chatId);
-                    Cookie cookie = new Cookie("chatId", chatId);
-                    cookie.setHttpOnly(true); // Prevent XSS attacks
-                    cookie.setPath("/");
-                    cookie.setMaxAge(60 * 60 * 24 * 365);
-                    cookie.setSecure(true); // Only over HTTPS
-                    response.addCookie(cookie);
-                }
-
-                filterChain.doFilter(request, response);
-            }
-        };
-    }
+    // X-Chat-Id handling removed.
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
@@ -110,16 +70,6 @@ public class WebConfig {
         Bandwidth limit = Bandwidth.builder()
             .capacity(5)
             .refillGreedy(5, Duration.ofSeconds(10))
-            .initialTokens(5)
-            .build();
-        return Bucket.builder().addLimit(limit).build();
-    }
-
-    private Bucket newConversationBucket() {
-        Bandwidth limit = Bandwidth.builder()
-            .capacity(20)
-            .refillGreedy(20, Duration.ofMinutes(1))
-            .initialTokens(20)
             .build();
         return Bucket.builder().addLimit(limit).build();
     }
@@ -128,12 +78,6 @@ public class WebConfig {
         String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : null;
         String ip = req.getRemoteAddr();
         return "ask:" + (user != null ? "u:" + user : "ip:" + ip);
-    }
-
-    private String conversationKey(HttpServletRequest req) {
-        String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : null;
-        String ip = req.getRemoteAddr();
-        return "conversations:" + (user != null ? "u:" + user : "ip:" + ip);
     }
 
     /**
@@ -210,31 +154,7 @@ public class WebConfig {
         };
     }
 
-    /**
-     * Rate limiter for /conversations endpoint (20 requests per minute).
-     */
-    @Bean
-    public Filter conversationRateLimitFilter() {
-        return new OncePerRequestFilter() {
-            @Override
-            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
-                throws ServletException, IOException {
-                if (!request.getRequestURI().startsWith("/conversations")) {
-                    filterChain.doFilter(request, response);
-                    return;
-                }
-
-                Bucket bucket = buckets.computeIfAbsent(conversationKey(request), k -> newConversationBucket());
-                if (bucket.tryConsume(1)) {
-                    filterChain.doFilter(request, response);
-                } else {
-                    response.setStatus(429);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"error\":\"Too Many Requests\"}");
-                }
-            }
-        };
-    }
+    // Conversations rate limiter removed.
 }
 
 

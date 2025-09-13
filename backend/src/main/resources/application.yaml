@@ -1,6 +1,6 @@
 spring:
   config:
-    import: optional:file:.env[.properties]
+    import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:backend/.env[.properties]
   application:
     name: portfolio
   ai:
@@ -20,6 +20,7 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -36,12 +37,11 @@ sfg:
     encryptContent: true
     encryptionKeyBase64: ${VECTORSTORE_ENC_KEY}
     documentsToLoadDir: classpath:/tmp/docs/
-
-
 logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.boot.context.config: DEBUG
 
 
 
