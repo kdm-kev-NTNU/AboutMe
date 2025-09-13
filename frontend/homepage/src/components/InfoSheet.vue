@@ -2,11 +2,13 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
+import { useDialogState } from '../composables/useDialogState'
 import { Info, Github, Linkedin, AlertTriangle } from 'lucide-vue-next'
 
 const open = ref(false)
 const router = useRouter()
 const langStore = useLangStore()
+const { isInfoDialogOpen } = useDialogState()
 const language = computed(() => langStore.language)
 
 function toggle() {
@@ -17,10 +19,23 @@ function goToChatHistory() {
   open.value = false
   router.push({ name: 'chat-history' })
 }
+
+// Computed property for button classes based on focus state
+const buttonClasses = computed(() => {
+  const baseClasses = 'fixed left-4 bottom-4 w-11 h-11 rounded-full border border-gray-300 bg-white cursor-pointer shadow-lg flex items-center justify-center transition-all duration-200 ease-in-out text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:scale-105 hover:text-gray-900 active:scale-95'
+  
+  if (isInfoDialogOpen.value) {
+    // Higher z-index to appear above dialog overlay
+    return `${baseClasses} z-[60]`
+  }
+  
+  // Normal styling
+  return `${baseClasses} z-50`
+})
 </script>
 
 <template>
-  <button class="fixed left-4 bottom-4 w-11 h-11 rounded-full border border-gray-300 bg-white cursor-pointer shadow-lg z-50 flex items-center justify-center transition-all duration-200 ease-in-out text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:scale-105 hover:text-gray-900 active:scale-95" @click="toggle" :aria-label="language === 'en' ? 'Open info' : 'Åpne info'">
+  <button :class="buttonClasses" @click="toggle" :aria-label="language === 'en' ? 'Open info' : 'Åpne info'">
     <Info class="w-5 h-5" />
   </button>
 

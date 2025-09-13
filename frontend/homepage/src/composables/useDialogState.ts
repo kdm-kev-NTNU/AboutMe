@@ -4,6 +4,8 @@ import { ref, readonly } from 'vue'
 const isWelcomeDialogOpen = ref(false)
 // Global state for tracking if education dialog is open
 const isEducationDialogOpen = ref(false)
+// Global state for tracking if info dialog is open
+const isInfoDialogOpen = ref(false)
 
 export function useDialogState() {
   const setWelcomeDialogOpen = (open: boolean) => {
@@ -14,10 +16,16 @@ export function useDialogState() {
     isEducationDialogOpen.value = open
   }
 
+  const setInfoDialogOpen = (open: boolean) => {
+    isInfoDialogOpen.value = open
+  }
+
   return {
     isWelcomeDialogOpen: readonly(isWelcomeDialogOpen),
     setWelcomeDialogOpen,
     isEducationDialogOpen: readonly(isEducationDialogOpen),
-    setEducationDialogOpen
+    setEducationDialogOpen,
+    isInfoDialogOpen: readonly(isInfoDialogOpen),
+    setInfoDialogOpen
   }
 }
