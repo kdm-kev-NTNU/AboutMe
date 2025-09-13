@@ -2,7 +2,6 @@ package com.kevinmazali.portfolio.config;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import jakarta.servlet.Filter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,11 +13,13 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.lang.NonNull;
+import java.util.Collections;
 
 /**
  * Web configuration including CORS and a lightweight rate limiter for the /ask endpoint.
@@ -26,74 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Configuration
 public class WebConfig {
 
-    /**
-     * Configures permissive CORS for the known front-end origins.
-     */
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                    .allowedOrigins(
-                        "http://localhost:5173",
-                        "http://localhost:4173",
-                        "https://kevindmazali.me",
-                        "https://www.kevindmazali.me"
-                    )
-                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                    .allowedHeaders("*")
-                    .allowCredentials(true);
-            }
-        };
-    }
+    // CORS and headers are handled by Spring Security
 
-    /**
-     * Ensures each client has a stable chatId. If missing in request (header or cookie),
-     * generates a UUID, exposes it as request attribute "chatId", sets it in response header
-     * X-Chat-Id and a cookie "chatId"; controllers can read from request attribute as fallback.
-     */
-    @Bean
-    public Filter chatIdAssignmentFilter() {
-        return new OncePerRequestFilter() {
-            @Override
-            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-                throws ServletException, IOException {
-                String chatId = request.getHeader("X-Chat-Id");
-                if (chatId == null || chatId.isBlank()) {
-                    // try cookie
-                    if (request.getCookies() != null) {
-                        for (Cookie c : request.getCookies()) {
-                            if ("chatId".equals(c.getName()) && c.getValue() != null && !c.getValue().isBlank()) {
-                                chatId = c.getValue();
-                                break;
-                            }
-                        }
-                    }
-                }
-                boolean generated = false;
-                if (chatId == null || chatId.isBlank()) {
-                    chatId = java.util.UUID.randomUUID().toString();
-                    generated = true;
-                }
-
-                // expose for downstream usage
-                request.setAttribute("chatId", chatId);
-
-                if (generated) {
-                    response.setHeader("X-Chat-Id", chatId);
-                    Cookie cookie = new Cookie("chatId", chatId);
-                    cookie.setHttpOnly(false); // readable by FE to send as header if desired
-                    cookie.setPath("/");
-                    cookie.setMaxAge(60 * 60 * 24 * 365);
-                    cookie.setSecure(false); // consider true behind HTTPS
-                    response.addCookie(cookie);
-                }
-
-                filterChain.doFilter(request, response);
-            }
-        };
-    }
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
@@ -101,7 +36,6 @@ public class WebConfig {
         Bandwidth limit = Bandwidth.builder()
             .capacity(5)
             .refillGreedy(5, Duration.ofSeconds(10))
-            .initialTokens(5)
             .build();
         return Bucket.builder().addLimit(limit).build();
     }
@@ -112,20 +46,18 @@ public class WebConfig {
         return "ask:" + (user != null ? "u:" + user : "ip:" + ip);
     }
 
+    // Security headers are handled by Spring Security
+
     /**
-     * Simple per-user/IP rate limiter using Bucket4j for the /ask endpoint.
+     * Rate limiter for /ask endpoint (5 requests per 10 seconds).
      */
     @Bean
-    public Filter rateLimitFilter() {
-        return new OncePerRequestFilter() {
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> askRateLimitFilter() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<Filter>();
+        registration.setFilter(new OncePerRequestFilter() {
             @Override
-            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
                 throws ServletException, IOException {
-                if (!request.getRequestURI().startsWith("/ask")) {
-                    filterChain.doFilter(request, response);
-                    return;
-                }
-
                 Bucket bucket = buckets.computeIfAbsent(key(request), k -> newBucket());
                 if (bucket.tryConsume(1)) {
                     filterChain.doFilter(request, response);
@@ -135,8 +67,14 @@ public class WebConfig {
                     response.getWriter().write("{\"error\":\"Too Many Requests\"}");
                 }
             }
-        };
+        });
+        registration.addUrlPatterns("/ask");
+        registration.setName("askRateLimitFilter");
+        registration.setOrder(1);
+        return registration;
     }
+
+
 }
 
 
