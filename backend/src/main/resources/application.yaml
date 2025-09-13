@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: portfolio
   ai:
@@ -13,7 +15,7 @@ spring:
           model: text-embedding-3-large
           dimensions: 3072
   datasource:
-    url: jdbc:mysql://localhost:3307/aboutme?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=false&useSSL=true&requireSSL=true&verifyServerCertificate=true
+    url: jdbc:mysql://localhost:3307/aboutme?useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
