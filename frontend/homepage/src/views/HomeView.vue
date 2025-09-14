@@ -132,7 +132,7 @@ onMounted(() => {
       descBlue="You can ask questions about me using the AI chat feature in Home!"
       :index="2"
       @start-guided-tour="showEducationInfo"
-      class="[fixed top-56 left-1/5 transform -translate-x-1/2 z-50]"
+      class="[fixed top-56 md:left-1/2 lg:left-1/3 transform -translate-x-1/2 z-50 ]"
     />
 
     <TutorialDialog
@@ -142,7 +142,7 @@ onMounted(() => {
       descBlue="Do check out the other projects that I have worked on."
       :index="3"
       @start-guided-tour="showLinksInfo"
-      class="[fixed top-56 left-4/5 transform -translate-x-1/2 z-50]"
+      class="[fixed top-56 md:right-2/3 lg:left-2/3 transform -translate-x-1/2 z-50]"
     />
 
      <TutorialDialog
