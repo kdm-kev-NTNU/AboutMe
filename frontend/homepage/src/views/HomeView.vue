@@ -151,7 +151,7 @@ onMounted(() => {
       desc="Look here to check out my online presence!"
       :index="4"
       @start-guided-tour="closeTutorial"
-      class="[fixed bottom-56 left-1/5 transform -translate-x-1/2 z-50 -translate-y-1/2]"
+      class="[fixed bottom-56 md:left-1/2 lg:left-1/3 transform -translate-x-1/2 z-50 -translate-y-1/2]"
       :isEnd="true"
     />
 
