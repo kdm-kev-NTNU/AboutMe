@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const showForm = ref(false)
-const username = ref('GOAT')
+const username = ref('')
 const password = ref('')
 const isLoading = ref(false)
 const error = ref('')
