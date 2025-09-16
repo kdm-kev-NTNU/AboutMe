@@ -41,9 +41,15 @@ const fetchChatHistory = async () => {
   errorText.value = ''
 
   try {
+    const auth = (await import('@/stores/auth')).useAuthStore()
+    auth.restore()
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (auth.basicToken) {
+      headers['Authorization'] = `Basic ${auth.basicToken}`
+    }
     const res = await fetch('/api/conversations', {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
     })
 
     if (!res.ok) {

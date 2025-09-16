@@ -1,6 +1,8 @@
 package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.model.RequestLog;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.kevinmazali.portfolio.repository.RequestLogRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +33,23 @@ public class RequestLogService {
         log.setPath(path);
         log.setMethod(method);
         log.setPayload(payload);
-        log.setRequesterId(requesterId);
+        String computedRequester;
+        if (requesterId != null) {
+            computedRequester = requesterId;
+        } else {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && auth.getName() != null) {
+                String username = auth.getName();
+                if ("GOAT".equals(username)) {
+                    computedRequester = "GOAT";
+                } else {
+                    computedRequester = "Bruker";
+                }
+            } else {
+                computedRequester = "Bruker";
+            }
+        }
+        log.setRequesterId(computedRequester);
         requestLogRepository.save(log);
     }
 }
