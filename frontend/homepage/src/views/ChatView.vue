@@ -73,9 +73,15 @@ async function send(text: string) {
   input.value = ''
   try {
     isLoading.value = true
+    const auth = (await import('@/stores/auth')).useAuthStore()
+    auth.restore()
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (auth.basicToken) {
+      headers['Authorization'] = `Basic ${auth.basicToken}`
+    }
     const res = await fetch('/api/ask', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ question: text }),
     })
     if (!res.ok) {
