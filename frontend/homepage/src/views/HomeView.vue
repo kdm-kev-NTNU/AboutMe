@@ -117,8 +117,7 @@ onMounted(() => {
     <TutorialDialog
       v-model:open="showWelcomeDialog"
       title="Welcome to Kevin's Portfolio!"
-      desc="Please be mindful that this website is still under development."
-      descOpt="AI Disclaimer: Please be aware that AI can hallucinate and may provide inaccurate information."
+      desc="AI Disclaimer: Please be aware that AI can hallucinate and may provide inaccurate information."
       descBlue="Please do not share private or sensitive information in the chat."
       :index="1"
       @start-guided-tour="startGuidedTour"
