@@ -12,6 +12,27 @@ This project was built quickly as a personal initiative. Some edge cases and min
 - Vector store privacy: The vector store is encrypted at rest (AES‑GCM) so personal documents are not accessible without the decryption key.
 - Hallucinations: AI answers can be incorrect. Verify important information.
 
+## Security
+
+This section summarizes the main security mechanisms in the project:
+
+- Authentication and authorization
+  - Spring Security is enabled. The public endpoint `POST /ask` is open but rate‑limited.
+  - Admin/history functionality (when enabled) uses HTTP Basic. The frontend stores a Base64‑encoded Basic token in `sessionStorage` after a successful `POST /auth/login` and sends it as `Authorization: Basic <token>`.
+
+- Rate limiting
+  - Bucket4j enforces 5 requests per 10 seconds per user/IP for `POST /ask`.
+
+- CORS
+  - CORS uses an allowlist of origins (local development and `https://kevindmazali.me`). Credentials are allowed and standard headers (including `Authorization`) are permitted.
+
+- Data privacy and encryption
+  - The vector index can be encrypted at rest using AES‑GCM. Provide a Base64‑encoded 32‑byte key via `VECTORSTORE_ENC_KEY`.
+  - Minimal request/response auditing is stored in MySQL for troubleshooting. Avoid sharing sensitive information.
+
+- Input validation
+  - Questions are validated and sanitized server‑side with a maximum length of 3000 characters.
+
 ## Features
 
 - AI chat about Kevin with RAG (loads context from documents like CV, courses, projects)
