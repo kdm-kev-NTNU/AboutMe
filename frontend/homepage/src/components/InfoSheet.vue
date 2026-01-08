@@ -46,7 +46,7 @@ const buttonClasses = computed(() => {
         <button class="absolute right-0 border-none bg-transparent cursor-pointer text-lg" @click="toggle" aria-label="Close">✕</button>
       </div>
 
-      <p class="text-gray-500 my-1.5 mb-4 text-center">{{ language === 'en' ? 'Welcome to my portfolio!' : 'Velkommen til mitt portfolio!' }}</p>
+      <p class="text-gray-500 my-1.5 mb-4 text-center">{{ language === 'en' ? 'Welcome to my portfolio!' : 'Velkommen til porteføljen min!' }}</p>
 
       <h3 class="my-4.5 mt-0 text-base">{{ language === 'en' ? 'Social Links' : 'Sosiale lenker' }}</h3>
       <div class="flex flex-row gap-3 mb-5">

@@ -134,7 +134,7 @@
       "courseName": "Applikasjonsutvikling for mobile enheter",
       "credits": 7.5,
       "semester": "Semester 5 (Høst 2025)",
-      "status": "ongoing"
+      "status": "completed"
     },
     {
       "id": "sem5-inft2503",
@@ -142,7 +142,7 @@
       "courseName": "C++ for programmere",
       "credits": 7.5,
       "semester": "Semester 5 (Høst 2025)",
-      "status": "ongoing"
+      "status": "completed"
     },
     {
       "id": "sem5-imat3011",
@@ -150,7 +150,7 @@
       "courseName": "Matematikk for ingeniørfag 3A",
       "credits": 7.5,
       "semester": "Semester 5 (Høst 2025)",
-      "status": "ongoing"
+      "status": "completed"
     },
     {
       "id": "sem5-tdt4172",
@@ -158,7 +158,7 @@
       "courseName": "Introduksjon til maskinlæring",
       "credits": 7.5,
       "semester": "Semester 5 (Høst 2025)",
-      "status": "ongoing"
+      "status": "completed"
     },
     {
       "id": "sem6-idatt2901",
@@ -166,7 +166,7 @@
       "courseName": "Bacheloroppgave",
       "credits": 22.5,
       "semester": "Semester 6 (Vår 2026)",
-      "status": "planned"
+      "status": "ongoing"
     },
     {
       "id": "sem6-ingt2301",
@@ -174,7 +174,7 @@
       "courseName": "Ingeniørfaglig systemtenkning",
       "credits": 7.5,
       "semester": "Semester 6 (Vår 2026)",
-      "status": "planned"
+      "status": "ongoing"
     }
   ]
 }
