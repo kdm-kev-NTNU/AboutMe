@@ -42,7 +42,7 @@ server:
   port: ${PORT}
 sfg:
   aiapp:
-    documentsToLoadDir: classpath:/tmp/docs/
+    documentsToLoadDir: file:./data/docs/
     # When true, startup seeding re-ingests even if chunks already exist for the same content_hash
     forceReindex: false
 logging:

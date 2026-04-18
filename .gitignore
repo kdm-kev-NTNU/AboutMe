@@ -13,3 +13,6 @@ Thumbs.db
 
 # Local vector store exports (not used by runtime)
 backend/vectordatabase/
+
+# Source documents for Chroma ingestion (personal data)
+backend/data/
