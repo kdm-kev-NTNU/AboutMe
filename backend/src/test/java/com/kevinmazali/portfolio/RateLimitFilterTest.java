@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio;
 
+import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.controller.QuestionController;
 import com.kevinmazali.portfolio.model.Answer;
@@ -20,7 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = QuestionController.class)
-@Import({WebConfig.class, MockConfig.class})
+@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class })
 class RateLimitFilterTest {
 
     @Autowired
