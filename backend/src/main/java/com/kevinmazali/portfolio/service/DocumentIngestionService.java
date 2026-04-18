@@ -2,6 +2,8 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
 import com.kevinmazali.portfolio.model.ChromaCollectionSummary;
+import com.kevinmazali.portfolio.model.ChunkItem;
+import com.kevinmazali.portfolio.model.ChunkListResponse;
 import com.kevinmazali.portfolio.model.ChromaCollectionsResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
@@ -22,6 +24,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -275,6 +278,135 @@ public class DocumentIngestionService implements ApplicationRunner {
             Optional.ofNullable(a.lastIngestedAt).orElse("")))
         .sorted(Comparator.comparing(DocumentListEntry::filename))
         .collect(Collectors.toList());
+  }
+
+  private static final int CHUNK_LIST_MAX_LIMIT = 200;
+  private static final int CHUNK_FETCH_PAGE = 500;
+
+  /**
+   * Paginated chunk bodies + metadata from the active Chroma collection.
+   * When {@code documentId} is set, all matching chunks are loaded, sorted by {@code chunk_index},
+   * then windowed by {@code offset}/{@code limit} (for stable ordering in the UI).
+   */
+  public ChunkListResponse getChunks(@Nullable String documentId, int limit, int offset) {
+    String collectionId = requireCollectionId();
+    String tenant = chromaStoreProperties.getTenantName();
+    String database = chromaStoreProperties.getDatabaseName();
+    int lim = Math.min(Math.max(limit, 1), CHUNK_LIST_MAX_LIMIT);
+    int off = Math.max(offset, 0);
+
+    Long totalEmbeddings = chromaApi.countEmbeddings(tenant, database, collectionId);
+    long total = totalEmbeddings == null ? 0L : totalEmbeddings;
+
+    String trimmedDocId = documentId == null ? "" : documentId.trim();
+    Map<String, Object> where =
+        trimmedDocId.isEmpty() ? null : Map.of("document_id", trimmedDocId);
+
+    List<ChromaApi.QueryRequest.Include> includes = List.of(
+        ChromaApi.QueryRequest.Include.METADATAS,
+        ChromaApi.QueryRequest.Include.DOCUMENTS);
+
+    String collectionName = chromaStoreProperties.getCollectionName();
+
+    if (where != null) {
+      List<ChunkItem> all = fetchAllChunksMatching(collectionId, where, includes, tenant, database);
+      all.sort(Comparator.comparing(ChunkItem::chunkIndex, Comparator.nullsLast(Comparator.naturalOrder())));
+      long totalMatching = all.size();
+      int from = Math.min(off, all.size());
+      int to = Math.min(off + lim, all.size());
+      List<ChunkItem> page = all.subList(from, to);
+      return new ChunkListResponse(collectionName, total, totalMatching, lim, off, page);
+    }
+
+    ChromaApi.GetEmbeddingResponse resp = chromaApi.getEmbeddings(
+        tenant,
+        database,
+        collectionId,
+        new ChromaApi.GetEmbeddingsRequest(null, null, lim, off, includes));
+    List<ChunkItem> page = mapResponseToChunkItems(resp);
+    return new ChunkListResponse(collectionName, total, total, lim, off, page);
+  }
+
+  private List<ChunkItem> fetchAllChunksMatching(
+      String collectionId,
+      Map<String, Object> where,
+      List<ChromaApi.QueryRequest.Include> includes,
+      String tenant,
+      String database) {
+    List<ChunkItem> all = new ArrayList<>();
+    int chromaOffset = 0;
+    while (true) {
+      ChromaApi.GetEmbeddingResponse resp = chromaApi.getEmbeddings(
+          tenant,
+          database,
+          collectionId,
+          new ChromaApi.GetEmbeddingsRequest(null, where, CHUNK_FETCH_PAGE, chromaOffset, includes));
+      List<ChunkItem> batch = mapResponseToChunkItems(resp);
+      if (batch.isEmpty()) {
+        break;
+      }
+      all.addAll(batch);
+      if (batch.size() < CHUNK_FETCH_PAGE) {
+        break;
+      }
+      chromaOffset += CHUNK_FETCH_PAGE;
+    }
+    return all;
+  }
+
+  private List<ChunkItem> mapResponseToChunkItems(ChromaApi.GetEmbeddingResponse resp) {
+    if (resp == null) {
+      return List.of();
+    }
+    List<String> ids = flattenStringCells(resp.ids());
+    List<String> documents = flattenStringCells(resp.documents());
+    List<Map<String, Object>> metas = flattenMetadata(resp.metadata());
+    int n = Math.max(Math.max(ids.size(), documents.size()), metas.size());
+    List<ChunkItem> out = new ArrayList<>(n);
+    for (int i = 0; i < n; i++) {
+      String id = i < ids.size() ? ids.get(i) : "";
+      String text = i < documents.size() ? documents.get(i) : "";
+      Map<String, Object> row = i < metas.size() ? metas.get(i) : null;
+      Map<String, Object> meta = row == null ? new HashMap<>() : new HashMap<>(row);
+      String title = Optional.ofNullable(meta.get("filename"))
+          .map(String::valueOf)
+          .filter(s -> !s.isBlank())
+          .orElse("");
+      Integer chunkIndex = parseChunkIndex(meta.get("chunk_index"));
+      out.add(new ChunkItem(id, title, chunkIndex, text == null ? "" : text, meta));
+    }
+    return out;
+  }
+
+  private static List<String> flattenStringCells(@Nullable List<?> raw) {
+    List<String> out = new ArrayList<>();
+    if (raw == null) {
+      return out;
+    }
+    for (Object row : raw) {
+      if (row instanceof List<?> inner) {
+        for (Object cell : inner) {
+          out.add(cell == null ? "" : String.valueOf(cell));
+        }
+      } else if (row != null) {
+        out.add(String.valueOf(row));
+      }
+    }
+    return out;
+  }
+
+  private static Integer parseChunkIndex(@Nullable Object o) {
+    if (o == null) {
+      return null;
+    }
+    if (o instanceof Number n) {
+      return n.intValue();
+    }
+    try {
+      return Integer.parseInt(String.valueOf(o));
+    } catch (NumberFormatException e) {
+      return null;
+    }
   }
 
   public void deleteByDocumentId(String documentId) {
