@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -50,6 +51,9 @@ import java.util.stream.Collectors;
 @Service
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class DocumentIngestionService implements ApplicationRunner {
+
+  /** Max paths per {@link #ingestFromPaths} request to avoid abuse. */
+  private static final int MAX_PATH_INGEST_BATCH = 100;
 
   private static final List<String> SUPPORTED_EXTENSIONS = List.of(
       "pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
@@ -138,6 +142,105 @@ public class DocumentIngestionService implements ApplicationRunner {
       }
     }
     return results;
+  }
+
+  /**
+   * Ingest files resolved from paths relative to {@link VectorStoreProperties#getDocumentsToLoadDir()}.
+   * Paths must not contain {@code ..} or absolute segments. One {@link IngestionResult} per input path.
+   */
+  public List<IngestionResult> ingestFromPaths(List<String> relativePaths, boolean force) throws IOException {
+    List<IngestionResult> results = new ArrayList<>();
+    if (relativePaths == null || relativePaths.isEmpty()) {
+      results.add(new IngestionResult("", "", 0, false, "No paths provided"));
+      return results;
+    }
+    if (relativePaths.size() > MAX_PATH_INGEST_BATCH) {
+      results.add(new IngestionResult("", "", 0, false,
+          "Too many paths (max " + MAX_PATH_INGEST_BATCH + ")"));
+      return results;
+    }
+    String baseDir = vectorStoreProperties.getDocumentsToLoadDir();
+    if (baseDir == null || baseDir.isBlank()) {
+      results.add(new IngestionResult("", "", 0, false, "documentsToLoadDir is not configured"));
+      return results;
+    }
+    if (!baseDir.endsWith("/")) {
+      baseDir = baseDir + "/";
+    }
+    PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+    for (String raw : relativePaths) {
+      String sanitized = sanitizeRelativePath(raw);
+      if (sanitized == null) {
+        results.add(new IngestionResult("", raw == null ? "" : raw.trim(), 0, false,
+            "Invalid path (empty or contains '..' or absolute segments)"));
+        continue;
+      }
+      if (sanitized.isEmpty()) {
+        results.add(new IngestionResult("", "", 0, false, "Empty path after trim"));
+        continue;
+      }
+      String ext = extensionFromFilename(sanitized);
+      if (ext.isEmpty() || !SUPPORTED_EXTENSIONS.contains(ext)) {
+        results.add(new IngestionResult("", sanitized, 0, false, "Unsupported file type: " + ext));
+        continue;
+      }
+      Resource resource = resolver.getResource(baseDir + sanitized);
+      try {
+        if (!resource.exists() || !resource.isReadable()) {
+          results.add(new IngestionResult("", sanitized, 0, false, "File not found or not readable"));
+          continue;
+        }
+        results.add(ingestFromResource(resource, force));
+      } catch (Exception e) {
+        log.warn("Path ingest failed for {}: {}", sanitized, e.getMessage());
+        results.add(new IngestionResult("", sanitized, 0, false,
+            e.getMessage() != null ? e.getMessage() : "Ingest failed"));
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Returns a relative path using forward slashes, or {@code null} if empty, absolute, or contains {@code ..}.
+   */
+  @Nullable
+  static String sanitizeRelativePath(@Nullable String raw) {
+    if (raw == null) {
+      return null;
+    }
+    String p = raw.trim().replace('\\', '/');
+    if (p.isEmpty()) {
+      return null;
+    }
+    if (p.startsWith("/")) {
+      return null;
+    }
+    String[] parts = p.split("/");
+    StringBuilder sb = new StringBuilder();
+    for (String part : parts) {
+      if (part.isEmpty()) {
+        continue;
+      }
+      if (".".equals(part) || "..".equals(part)) {
+        return null;
+      }
+      if (sb.length() > 0) {
+        sb.append('/');
+      }
+      sb.append(part);
+    }
+    if (sb.isEmpty()) {
+      return null;
+    }
+    return sb.toString();
+  }
+
+  private static String extensionFromFilename(String filename) {
+    int i = filename.lastIndexOf('.');
+    if (i < 0 || i == filename.length() - 1) {
+      return "";
+    }
+    return filename.substring(i + 1).toLowerCase(Locale.ROOT);
   }
 
   public IngestionResult ingestMultipart(MultipartFile file, String titleOverride, boolean force) throws IOException {
