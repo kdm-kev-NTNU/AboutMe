@@ -16,6 +16,8 @@ import org.springframework.test.context.TestPropertySource;
 		"spring.jpa.hibernate.ddl-auto=create-drop",
 		"spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
 		"spring.ai.openai.api-key=test-placeholder-key-for-context-tests-only",
+		"spring.ai.model.chat=none",
+		"portfolio.chat.default-model-id=gpt-4o-mini",
 		"server.port=0"
 	}
 )

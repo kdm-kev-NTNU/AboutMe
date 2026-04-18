@@ -6,8 +6,11 @@ import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
+import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
+import com.kevinmazali.portfolio.service.ChatModelCatalog;
 import com.kevinmazali.portfolio.service.OpenAIService;
 import com.kevinmazali.portfolio.service.RequestLogService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -16,9 +19,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,7 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = QuestionController.class)
+@WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-4o-mini")
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class })
 class QuestionControllerTest {
 
@@ -38,6 +43,15 @@ class QuestionControllerTest {
 
 	@Autowired
 	private RequestLogService requestLogService;
+
+	@Autowired
+	private ChatModelCatalog chatModelCatalog;
+
+	@BeforeEach
+	void resetCatalogStub() {
+		reset(chatModelCatalog);
+		when(chatModelCatalog.isModelConfigured(any(SupportedChatModel.class))).thenReturn(true);
+	}
 
 	@Test
 	void askRejectsEmptyQuestion() throws Exception {
@@ -73,7 +87,32 @@ class QuestionControllerTest {
 
 		verify(requestLogService).save(eq("/ask"), eq("POST"), eq("What is your name?"), isNull());
 		verify(requestLogService).save(eq("/ask:response"), eq("POST"), eq("ok"), isNull());
-		verify(openAIService, times(1)).getAnswer(any(Question.class));
+		verify(openAIService, times(1)).getAnswer(argThat(q ->
+			"What is your name?".equals(q.question()) && "gpt-4o-mini".equals(q.model())));
+	}
+
+	@Test
+	void askRejectsUnknownModel() throws Exception {
+		mockMvc.perform(post("/ask")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"question\":\"What is your name?\",\"model\":\"not-a-real-model\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error").value("Unknown chat model."));
+
+		verify(openAIService, never()).getAnswer(any());
+	}
+
+	@Test
+	void askRejectsModelWhenProviderNotConfigured() throws Exception {
+		when(chatModelCatalog.isModelConfigured(any(SupportedChatModel.class))).thenReturn(false);
+
+		mockMvc.perform(post("/ask")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"question\":\"What is your name?\",\"model\":\"gpt-4o-mini\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error").exists());
+
+		verify(openAIService, never()).getAnswer(any());
 	}
 
 	@Test

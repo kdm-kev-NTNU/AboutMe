@@ -10,11 +10,20 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     show-sql: false
   ai:
+    model:
+      chat: none
     openai:
       api-key: test-placeholder-key-for-context-tests-only
+    anthropic:
+      # Non-empty placeholder so Anthropic chat autoconfig loads in @SpringBootTest (never called against real API).
+      api-key: sk-ant-api03-test-placeholder-for-spring-context-only
 
 server:
   port: 0
+
+portfolio:
+  chat:
+    default-model-id: gpt-4o-mini
 
 logging:
   level:
