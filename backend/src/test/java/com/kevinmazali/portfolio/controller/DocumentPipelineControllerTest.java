@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -31,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = DocumentPipelineController.class)
-@Import({ SecurityConfig.class, MvcTestUserDetailsConfig.class })
+@Import({ SecurityConfig.class, MvcTestUserDetailsConfig.class, DocumentPipelineControllerAdvice.class })
 class DocumentPipelineControllerTest {
 
 	@Autowired
@@ -83,6 +84,28 @@ class DocumentPipelineControllerTest {
 		mockMvc.perform(get("/admin/tools/documents"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[0].documentId").value("id1"));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void listReturns503WhenChromaCollectionMissing() throws Exception {
+		when(documentIngestionService.listDocuments())
+			.thenThrow(new IllegalStateException("Chroma collection not found: portfolio-documents"));
+
+		mockMvc.perform(get("/admin/tools/documents"))
+			.andExpect(status().isServiceUnavailable())
+			.andExpect(jsonPath("$.error").value("Chroma collection not found: portfolio-documents"));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void listReturns503OnRestClientFailure() throws Exception {
+		when(documentIngestionService.listDocuments())
+			.thenThrow(new ResourceAccessException("Connection refused"));
+
+		mockMvc.perform(get("/admin/tools/documents"))
+			.andExpect(status().isServiceUnavailable())
+			.andExpect(jsonPath("$.error").value("Connection refused"));
 	}
 
 	@Test
