@@ -127,16 +127,14 @@ const coursesBySemester = computed(() => {
     grouped[course.semester].push(course)
   })
 
-  // Sort semesters in descending order (most recent first)
+  const getSemesterNumber = (semesterLabel: string): number => {
+    const match = semesterLabel.match(/semester\s+(\d+)/i)
+    return match ? parseInt(match[1], 10) : 0
+  }
+
+  // Sort semesters in descending order (Semester 6 -> Semester 1)
   const sortedSemesters = Object.keys(grouped).sort((a, b) => {
-    const semesterA = extractSemesterSortKey(a)
-    const semesterB = extractSemesterSortKey(b)
-
-    if (semesterA.year !== semesterB.year) {
-      return semesterB.year - semesterA.year
-    }
-
-    return semesterB.seasonRank - semesterA.seasonRank
+    return getSemesterNumber(b) - getSemesterNumber(a)
   })
 
   return sortedSemesters.map(semester => ({
