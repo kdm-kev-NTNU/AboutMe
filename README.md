@@ -143,6 +143,7 @@ Optional:
 - `SPRING_DATASOURCE_URL`: JDBC URL override (see [`.env.example`](.env.example); the `backend` service in Compose sets this to the `db` container)
 - `CHROMA_COLLECTION`: Active Chroma collection name (default `portfolio-documents`, see `application.yaml`)
 - `CHROMA_HTTP_HOST` / `CHROMA_PORT`: Overrides for the Chroma HTTP client (defaults in `application.yaml`: `http://localhost` and `8100`). The `backend` service in Compose sets `http://chromadb` and `8000`. On Railway, set these to your Chroma service private URL and port.
+- `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD`: If both are set and that username is not already in the `users` table, the backend creates an `ADMIN` user on startup (BCrypt). Clear the password variable after first login on shared hosts.
 
 Example (PowerShell):
 
