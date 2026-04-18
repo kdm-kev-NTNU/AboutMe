@@ -47,6 +47,11 @@ const router = createRouter({
       component: ChatHistory,
     },
     {
+      path: '/privacy-policy',
+      name: 'privacy-policy',
+      component: () => import('../views/PrivacyPolicyView.vue'),
+    },
+    {
       path: '/admin/tools',
       name: 'admin-tools',
       meta: { requiresAdmin: true },
