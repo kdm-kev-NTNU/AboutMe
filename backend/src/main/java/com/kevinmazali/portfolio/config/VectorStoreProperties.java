@@ -8,7 +8,7 @@ import org.springframework.core.io.Resource;
 import java.util.List;
 
 /**
- * Configuration properties for document seeding sources and optional content encryption.
+ * Configuration properties for document seeding sources (Chroma ingest).
  */
 @Getter
 @Configuration
@@ -19,18 +19,6 @@ public class VectorStoreProperties {
    * Document sources to ingest on first startup. Supports file:, classpath:, http:, https:.
    */
   private List<Resource> documentsToLoad;
-
-  /**
-   * Enables encryption of document content stored in the vector store. Default: true.
-   */
-  private boolean encryptContent = true;
-
-  /**
-   * Base64-encoded AES-256 key (32 bytes) used for encryption/decryption.
-   * Can alternatively be provided via the VECTORSTORE_ENC_KEY environment variable.
-   * When both are present, this property takes precedence.
-   */
-  private String encryptionKeyBase64;
 
   /**
    * Base directory to scan for documents to ingest. Supports classpath:, file:, etc.
@@ -46,14 +34,6 @@ public class VectorStoreProperties {
 
   public void setDocumentsToLoad(List<Resource> documentsToLoad) {
     this.documentsToLoad = documentsToLoad;
-  }
-
-  public void setEncryptContent(boolean encryptContent) {
-    this.encryptContent = encryptContent;
-  }
-
-  public void setEncryptionKeyBase64(String encryptionKeyBase64) {
-    this.encryptionKeyBase64 = encryptionKeyBase64;
   }
 
   public void setDocumentsToLoadDir(String documentsToLoadDir) {

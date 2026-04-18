@@ -1,7 +1,5 @@
 package com.kevinmazali.portfolio.service;
 
-import com.kevinmazali.portfolio.config.VectorStoreProperties;
-import com.kevinmazali.portfolio.crypto.CryptoService;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +15,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +22,6 @@ import java.util.Map;
  * Default implementation of {@link OpenAIService} that performs RAG:
  * - expands the query to multiple languages,
  * - retrieves similar documents from the vector store,
- * - optionally decrypts content,
  * - builds a prompt and invokes the chat model.
  */
 @Service
@@ -34,14 +30,12 @@ public class OpenAIServiceImpl implements OpenAIService {
 
   private final ChatModel chatModel;
   private final VectorStore vectorStore;
-  private final VectorStoreProperties vectorStoreProperties;
 
   /**
    * Executes a Retrieval-Augmented Generation flow:
    * 1) expand the query to English and Norwegian,
    * 2) retrieve and de-duplicate the most similar documents,
-   * 3) decrypt chunks when encryption metadata is present,
-   * 4) compose the prompt and call the chat model.
+   * 3) compose the prompt and call the chat model.
    *
    * @param question the user question
    * @return the generated {@link Answer}
@@ -64,25 +58,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         .limit(40)
         .toList();
 
-    // 2) Decrypt content when needed
-    CryptoService crypto = cryptoForVectorStoreDecryption();
-    List<String> contentList = documents.stream()
-        .map(d -> {
-          Object enc = d.getMetadata().get("enc");
-          if ("aesgcm".equals(enc) && crypto != null) {
-            String iv = String.valueOf(d.getMetadata().get("enc_iv"));
-            String ct = d.getText();
-            try {
-              return crypto.decrypt(iv, ct);
-            } catch (RuntimeException ex) {
-              Object src = d.getMetadata().getOrDefault("source", "(unknown source)");
-              return "[Could not decrypt chunk – source: " + src + "]";
-            }
-          } else {
-            return d.getText();
-          }
-        })
-        .toList();
+    List<String> contentList = documents.stream().map(Document::getText).toList();
 
     // 3) Read prompt template from classpath (also works when packaged as a JAR)
     String ragPromptTemplate = loadPromptTemplateFromClasspath("templates/rag-prompt-template.st");
@@ -143,26 +119,6 @@ public class OpenAIServiceImpl implements OpenAIService {
       if (end < 0) return null;
       return json.substring(start + 1, end);
     } catch (Exception ex) {
-      return null;
-    }
-  }
-
-  /**
-   * Resolves the same AES key material as ingestion ({@code sfg.aiapp.encryptionKeyBase64}
-   * then {@code VECTORSTORE_ENC_KEY}), or returns {@code null} when absent or invalid.
-   */
-  private CryptoService cryptoForVectorStoreDecryption() {
-    String keyBase64 = vectorStoreProperties.getEncryptionKeyBase64();
-    if (keyBase64 == null || keyBase64.isBlank()) {
-      keyBase64 = System.getenv("VECTORSTORE_ENC_KEY");
-    }
-    if (keyBase64 == null || keyBase64.isBlank()) {
-      return null;
-    }
-    try {
-      byte[] key = Base64.getDecoder().decode(keyBase64);
-      return new CryptoService(key);
-    } catch (IllegalArgumentException e) {
       return null;
     }
   }
