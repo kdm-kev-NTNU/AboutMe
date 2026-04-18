@@ -8,19 +8,12 @@ import org.springframework.core.io.Resource;
 import java.util.List;
 
 /**
- * Configuration properties for the vector store, document seeding sources,
- * and optional content encryption.
+ * Configuration properties for document seeding sources and optional content encryption.
  */
 @Getter
 @Configuration
 @ConfigurationProperties(prefix = "sfg.aiapp")
 public class VectorStoreProperties {
-
-  /**
-   * Absolute or relative path to the persisted {@code SimpleVectorStore} JSON file.
-   * Example: /data/vectorstore.json
-   */
-  private String vectorStorePath;
 
   /**
    * Document sources to ingest on first startup. Supports file:, classpath:, http:, https:.
@@ -45,9 +38,10 @@ public class VectorStoreProperties {
    */
   private String documentsToLoadDir;
 
-  public void setVectorStorePath(String vectorStorePath) {
-    this.vectorStorePath = vectorStorePath;
-  }
+  /**
+   * Reserved for future startup re-index behaviour (currently unused).
+   */
+  private boolean forceReindex = false;
 
   public void setDocumentsToLoad(List<Resource> documentsToLoad) {
     this.documentsToLoad = documentsToLoad;
@@ -63,5 +57,9 @@ public class VectorStoreProperties {
 
   public void setDocumentsToLoadDir(String documentsToLoadDir) {
     this.documentsToLoadDir = documentsToLoadDir;
+  }
+
+  public void setForceReindex(boolean forceReindex) {
+    this.forceReindex = forceReindex;
   }
 }
