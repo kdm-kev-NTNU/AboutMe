@@ -6,11 +6,20 @@ AboutMe is a personal portfolio with an AI chat that answers questions about Kev
 
 NB: Known issues
 
-This project was built quickly as a personal initiative. Some edge cases and minor issues may exist. Feedback and improvement suggestions are very welcome. email: kevindmazali@gmail.com
+This project was built quickly as a personal initiative. Some edge cases and minor issues may exist. Feedback and improvement suggestions are very welcome. email: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)
 
 - Privacy: Conversations may be stored in the database to improve answers and stability. Do not share sensitive information.
 - Vector store privacy: The vector store is encrypted at rest (AES‑GCM) so personal documents are not accessible without the decryption key.
 - Hallucinations: AI answers can be incorrect. Verify important information.
+
+## Repository structure
+
+Monorepo layout:
+
+- `backend/` — Spring Boot API (RAG, auth, document pipeline)
+- `frontend/homepage/` — Vue 3 SPA (see [frontend/homepage/README.md](frontend/homepage/README.md) for IDE setup and npm scripts)
+- `docker-compose.yml` — MySQL and ChromaDB for local development
+- `.github/workflows/` — CI (e.g. Semgrep on `main`)
 
 ## Security
 
@@ -19,19 +28,17 @@ This section summarizes the main security mechanisms in the project:
 - Authentication and authorization
   - Spring Security is enabled. The public endpoint `POST /ask` is open but rate‑limited.
   - Admin tools (`/admin/**`, including document ingest APIs) require an `ADMIN` user and HTTP Basic. The frontend stores a Base64‑encoded Basic token in `sessionStorage` after a successful `POST /auth/login` and sends it as `Authorization: Basic <token>` on protected calls.
-
 - Rate limiting
   - Bucket4j enforces 5 requests per 10 seconds per user/IP for `POST /ask`.
-
 - CORS
   - CORS uses an allowlist of origins (local development and `https://kevindmazali.me`). Credentials are allowed and standard headers (including `Authorization`) are permitted.
-
 - Data privacy and encryption
   - The vector index can be encrypted at rest using AES‑GCM. Provide a Base64‑encoded 32‑byte key via `VECTORSTORE_ENC_KEY`.
   - Minimal request/response auditing is stored in MySQL for troubleshooting. Avoid sharing sensitive information.
-
 - Input validation
   - Questions are validated and sanitized server‑side with a maximum length of 3000 characters.
+- CI (static analysis)
+  - A Semgrep workflow runs on pushes and pull requests to `main`, plus a weekly schedule. Uploading SARIF may require repository secrets (`SEMGREP_APP_TOKEN`, `SEMGREP_DEPLOYMENT_ID`) as configured in `.github/workflows/semgrep.yml`.
 
 ## Features
 
@@ -41,7 +48,7 @@ This section summarizes the main security mechanisms in the project:
 - Internal **Admin tools** page (`/admin/tools`) to upload and manage indexed documents
 - API rate limiting (Bucket4j) to prevent abuse
 - Logs requests and answers to MySQL (for insights and troubleshooting)
-- Vue 3 frontend with language toggle, quick questions, and responsive chat UI
+- Vue 3 frontend with language toggle, quick questions, responsive chat UI, and chat history
 - Local development with Vite proxy to Spring Boot
 - Production setup with an Nginx container for the frontend and a Docker image for the backend
 
@@ -54,6 +61,8 @@ The frontend provides access to the following pages:
 - **Projects Page** (`/projects`) - Showcase of Kevin's projects and work
 - **Work Experience Page** (`/work-experience`) - Professional experience and career history
 - **Education Page** (`/education`) - Academic background and coursework
+- **Chat history** (`/chat-history`) - History of past chat interactions
+- **Privacy policy** (`/privacy-policy`) - Privacy information for the site
 - **Internal tools** (`/admin/tools`, admin only) - Document ingest, ChromaDB status, delete by `document_id`
 
 ## Tech Stack
@@ -64,12 +73,13 @@ The frontend provides access to the following pages:
 - Pinia for state management
 - Vue Router
 - Vite 7 (dev/build)
+- Tailwind CSS 4 and Reka UI (shadcn-style components), Lucide icons
 - Vitest (unit tests) and Cypress (E2E)
 - Nginx (production serving in Docker)
 
 ### Backend
 
-- Spring Boot 3.5 (Java 21)
+- Spring Boot 3.5.5 (Java 21)
 - Spring Web, Spring Data JPA, Lombok
 - MySQL
 - Spring AI (OpenAI Chat + Embeddings) and Tika document reader
@@ -104,27 +114,44 @@ This starts **MySQL** on port **3307** (database `aboutme`, user `root/root`) an
 
 ### 3) Set environment variables
 
-The backend uses the following variables:
+The backend reads `application.yaml` and may load optional `.env` / `.env.properties` from the repository root or `backend/` (see `spring.config.import` in [backend/src/main/resources/application.yaml](backend/src/main/resources/application.yaml)). Do not commit secrets.
+
+Required for a typical local run:
 
 - `OPENAI_API_KEY`: Required for Chat/Embeddings
-- `VECTORSTORE_ENC_KEY`: Optional Base64‑encoded 32‑byte key for encrypting/decrypting vector content (AES‑256 GCM). When set, content is encrypted on ingest and decrypted on query.
-- `CHROMA_HTTP_HOST` / `CHROMA_PORT`: Optional overrides for the Chroma HTTP client (defaults `http://localhost` and `8100` for host‑mapped Docker). In the backend Docker image, defaults target the `chromadb` service on port `8000`.
+- `PORT`: HTTP port for the API (e.g. `8080`; there is no default in `application.yaml`)
+- `DB_USERNAME` / `DB_PASSWORD`: MySQL credentials (with `docker-compose` as written, use `root` / `root`)
+
+Optional:
+
+- `VECTORSTORE_ENC_KEY`: Base64‑encoded 32‑byte key for AES‑256 GCM on vector chunk text. The app is configured with content encryption enabled (`encryptContent: true`); set this key so ingest/query use encryption consistently (without it, the server logs a warning and encryption may be skipped).
+- `CHROMA_HTTP_HOST` / `CHROMA_PORT`: Overrides for the Chroma HTTP client (defaults `http://localhost` and `8100` for host‑mapped Docker). In the backend Docker image, defaults target the `chromadb` service on port `8000`.
 
 Example (PowerShell):
 
 ```powershell
 $env:OPENAI_API_KEY = "sk-..."
+$env:PORT = "8080"
+$env:DB_USERNAME = "root"
+$env:DB_PASSWORD = "root"
 $env:VECTORSTORE_ENC_KEY = "BASE64_32BYTE_KEY=="
 ```
 
 ### 4) Run the backend
 
+From `backend/`:
+
 ```bash
-cd backend
 ./mvnw spring-boot:run
 ```
 
-- Starts on port 8080 (can be overridden via `PORT`)
+On Windows (same directory):
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+- Serves on the port given by `PORT` (e.g. 8080)
 - When the Chroma collection is **empty**, the app seeds documents from `classpath:/tmp/docs/` (or from `sfg.aiapp.documentsToLoad` if configured). Use **Admin → Internal tools** (`/admin/tools`) to upload additional files into ChromaDB.
 
 ### 5) Run the frontend
@@ -163,3 +190,4 @@ Admin document pipeline (HTTP Basic, `ROLE_ADMIN`):
 
 - Developed by Kevin Dennis Mazali (`kdm-kev-NTNU`)
 - Document base: CV, course and project documents (classpath seed and/or admin ingest into ChromaDB)
+
