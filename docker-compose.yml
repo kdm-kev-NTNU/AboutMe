@@ -15,7 +15,24 @@ services:
       timeout: 5s
       retries: 20
 
+  chromadb:
+    image: chromadb/chroma:1.0.13
+    container_name: aboutme-chromadb
+    ports:
+      - "8100:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=false
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8000' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   mysql_data:
+  chroma_data:
 
 

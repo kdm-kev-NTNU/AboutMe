@@ -18,9 +18,8 @@ WORKDIR /app
 
 RUN touch .env
 
-# Ensure vectordatabase exists and copy seed files from repo
-RUN mkdir -p /app/vectordatabase
-COPY vectordatabase/ /app/vectordatabase/
+ENV CHROMA_HTTP_HOST=http://chromadb
+ENV CHROMA_PORT=8000
 
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
