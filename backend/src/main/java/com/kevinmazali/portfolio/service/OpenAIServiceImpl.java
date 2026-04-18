@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio.service;
 
+import com.kevinmazali.portfolio.config.VectorStoreProperties;
 import com.kevinmazali.portfolio.crypto.CryptoService;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
@@ -33,6 +34,7 @@ public class OpenAIServiceImpl implements OpenAIService {
 
   private final ChatModel chatModel;
   private final VectorStore vectorStore;
+  private final VectorStoreProperties vectorStoreProperties;
 
   /**
    * Executes a Retrieval-Augmented Generation flow:
@@ -63,7 +65,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         .toList();
 
     // 2) Decrypt content when needed
-    CryptoService crypto = cryptoFromEnv();
+    CryptoService crypto = cryptoForVectorStoreDecryption();
     List<String> contentList = documents.stream()
         .map(d -> {
           Object enc = d.getMetadata().get("enc");
@@ -146,17 +148,22 @@ public class OpenAIServiceImpl implements OpenAIService {
   }
 
   /**
-   * Creates a {@link CryptoService} from the VECTORSTORE_ENC_KEY environment variable,
-   * or returns {@code null} when the key is not present or invalid.
+   * Resolves the same AES key material as ingestion ({@code sfg.aiapp.encryptionKeyBase64}
+   * then {@code VECTORSTORE_ENC_KEY}), or returns {@code null} when absent or invalid.
    */
-  private CryptoService cryptoFromEnv() {
-    String b64 = System.getenv("VECTORSTORE_ENC_KEY");
-    if (b64 == null || b64.isBlank()) return null;
-    byte[] key = Base64.getDecoder().decode(b64);
+  private CryptoService cryptoForVectorStoreDecryption() {
+    String keyBase64 = vectorStoreProperties.getEncryptionKeyBase64();
+    if (keyBase64 == null || keyBase64.isBlank()) {
+      keyBase64 = System.getenv("VECTORSTORE_ENC_KEY");
+    }
+    if (keyBase64 == null || keyBase64.isBlank()) {
+      return null;
+    }
     try {
+      byte[] key = Base64.getDecoder().decode(keyBase64);
       return new CryptoService(key);
     } catch (IllegalArgumentException e) {
-      return null; // wrong length -> disable decryption
+      return null;
     }
   }
 
