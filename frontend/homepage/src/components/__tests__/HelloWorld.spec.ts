@@ -18,7 +18,7 @@ describe('HelloWorld', () => {
     })
 
     expect(wrapper.text()).toContain('Hello Vitest')
-    expect(wrapper.text()).toContain("What\'s next?")
+    expect(wrapper.text()).toContain("What's next?")
   })
 
   it('renders norwegian copy when language is set to no', () => {
