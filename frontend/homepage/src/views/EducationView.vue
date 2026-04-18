@@ -116,13 +116,14 @@ const coursesBySemester = computed(() => {
     grouped[course.semester].push(course)
   })
 
-  // Sort semesters in descending order (most recent first)
-  const sortedSemesters = Object.keys(grouped).sort((a, b) => {
-    const [yearA, seasonA] = a.split('-')
-    const [yearB, seasonB] = b.split('-')
+  const getSemesterNumber = (semesterLabel: string): number => {
+    const match = semesterLabel.match(/semester\s+(\d+)/i)
+    return match ? parseInt(match[1], 10) : 0
+  }
 
-    if (yearA !== yearB) return parseInt(yearB) - parseInt(yearA) // Descending year order
-    return seasonB === 'Spring' || seasonB === 'Vår' ? 1 : -1 // Spring comes after Autumn
+  // Sort semesters in descending order (Semester 6 -> Semester 1)
+  const sortedSemesters = Object.keys(grouped).sort((a, b) => {
+    return getSemesterNumber(b) - getSemesterNumber(a)
   })
 
   return sortedSemesters.map(semester => ({
