@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed, watch, nextTick } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Card, CardContent } from '@/components/ui/card'
-import { Brain, UserRound } from 'lucide-vue-next'
 import MessagesArea from '@/views/MessagesArea.vue'
+import { askQuestion } from '@/api/generated/portfolio'
 
 
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
@@ -75,37 +74,21 @@ async function send(text: string) {
     isLoading.value = true
     const auth = (await import('@/stores/auth')).useAuthStore()
     auth.restore()
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (auth.basicToken) {
-      headers['Authorization'] = `Basic ${auth.basicToken}`
-    }
-    const res = await fetch('/api/ask', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ question: text }),
-    })
-    if (!res.ok) {
-      // Try parse JSON error from backend
-      let msg = 'Noe gikk galt. Prøv igjen.'
-      try {
-        const data = await res.json() as any
-        if (data && typeof data.error === 'string') {
-          msg = data.error
-        }
-      } catch (_) {
-        // ignore parse errors
-      }
-      if (res.status === 429) {
-        msg = 'For mange forespørsler. Vent litt før du prøver igjen.'
-      } else if (res.status === 400 && !msg) {
-        msg = 'Ugyldig forespørsel.'
-      }
-      errorText.value = msg
+    const r = await askQuestion({ question: text })
+    if (r.status === 200) {
+      state.messages.push({ role: 'assistant', text: r.data.answer, isNew: true })
       return
     }
-    const data: { answer: string } = await res.json()
-    state.messages.push({ role: 'assistant', text: data.answer, isNew: true })
-  } catch (e: any) {
+    if (r.status === 429) {
+      errorText.value = 'For mange forespørsler. Vent litt før du prøver igjen.'
+      return
+    }
+    if (r.status === 400 || r.status === 503) {
+      errorText.value = r.data.error || 'Noe gikk galt. Prøv igjen.'
+      return
+    }
+    errorText.value = 'Noe gikk galt. Prøv igjen.'
+  } catch {
     errorText.value = 'Nettverksfeil. Prøv igjen.'
   } finally {
     isLoading.value = false

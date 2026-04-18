@@ -1,22 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { authLogin } from '@/api/generated/portfolio'
 import { useAuthStore } from '../auth'
+
+vi.mock('@/api/generated/portfolio', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@/api/generated/portfolio')>()
+  return { ...mod, authLogin: vi.fn() }
+})
 
 describe('auth store', () => {
   beforeEach(() => {
     sessionStorage.clear()
     setActivePinia(createPinia())
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
+    vi.mocked(authLogin).mockReset()
   })
 
   it('stores username, role and basic token on successful login', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ username: 'GOAT', role: 'ADMIN' }),
-      }),
-    )
+    vi.mocked(authLogin).mockResolvedValue({
+      status: 200,
+      data: { username: 'GOAT', role: 'ADMIN' },
+      headers: new Headers(),
+    })
 
     const store = useAuthStore()
     await store.login('GOAT', 'secret')
@@ -28,12 +33,11 @@ describe('auth store', () => {
   })
 
   it('throws on login failure and keeps state empty', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: false,
-      }),
-    )
+    vi.mocked(authLogin).mockResolvedValue({
+      status: 401,
+      data: { error: 'Invalid credentials' },
+      headers: new Headers(),
+    })
 
     const store = useAuthStore()
 
