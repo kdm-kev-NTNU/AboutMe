@@ -16,7 +16,7 @@ This project was built quickly as a personal initiative. Some edge cases and min
 
 Monorepo layout:
 
-- `backend/` — Spring Boot API (RAG, auth, document pipeline)
+- `backend/` — Spring Boot API (RAG, auth, document pipeline). Seed files for Chroma ingestion live in `backend/data/docs/` (directory is gitignored; create it locally with your PDFs/DOCX/MD).
 - `frontend/homepage/` — Vue 3 SPA (see [frontend/homepage/README.md](frontend/homepage/README.md) for IDE setup and npm scripts)
 - `scripts/` — Windows helper [`dev.ps1`](scripts/dev.ps1) (Docker services + backend/frontend in separate terminals)
 - `docker-compose.yml` — MySQL, ChromaDB, backend API, and frontend (Nginx) for local / full-stack runs
@@ -124,7 +124,9 @@ This starts:
 - **Backend** (Spring Boot) on **8080**
 - **Frontend** (Nginx + static build) on **5173** (proxies `/api/*` to the backend)
 
-Chroma connectivity check (no auth): `GET http://localhost:8080/health/chroma`. Admin re-seed of classpath documents: `POST http://localhost:8080/admin/tools/documents/reseed` (HTTP Basic, `ADMIN` user).
+Chroma connectivity check (no auth): `GET http://localhost:8080/health/chroma`. Admin re-seed of seed documents: `POST http://localhost:8080/admin/tools/documents/reseed` (HTTP Basic, `ADMIN` user).
+
+The backend image does not bundle seed documents. `docker-compose.yml` mounts `./backend/data` read-only into the container at `/app/data`, so `file:./data/docs/` resolves to `/app/data/docs/` (container `WORKDIR` is `/app`). Populate `backend/data/docs/` on the host before the first run if you want startup seeding in Docker.
 
 ### 3) Set environment variables
 
@@ -166,7 +168,7 @@ On Windows (same directory):
 ```
 
 - Serves on the port given by `PORT` (e.g. 8080)
-- When the Chroma collection is **empty**, the app seeds documents from the directory in `sfg.aiapp.documents-to-load-dir` (YAML: `documentsToLoadDir`, default `classpath:/tmp/docs/`). You can instead set `sfg.aiapp.documents-to-load` to a list of Spring `Resource` locations. With `sfg.aiapp.force-reindex: true`, startup seeding re-ingests seed files even when the collection already has embeddings (replacing chunks per content hash). Use **Admin → Internal tools** (`/admin/tools`) to upload additional files into ChromaDB.
+- When the Chroma collection is **empty**, the app seeds documents from `sfg.aiapp.documentsToLoadDir` (default `file:./data/docs/`, i.e. `backend/data/docs/` when the process working directory is `backend/`). That directory is **gitignored**; copy your seed PDFs/DOCX/MD there locally. You can instead set `sfg.aiapp.documents-to-load` to a list of Spring `Resource` locations. With `sfg.aiapp.force-reindex: true`, startup seeding re-ingests seed files even when the collection already has embeddings (replacing chunks per content hash). Use **Admin → Internal tools** (`/admin/tools`) to upload additional files into ChromaDB.
 
 ### 5) Run the frontend
 
@@ -206,10 +208,10 @@ Admin document pipeline (HTTP Basic, `ROLE_ADMIN`). Multipart uploads are limite
 - `GET /admin/tools/documents` — aggregated documents in the active collection
 - `DELETE /admin/tools/documents/{documentId}` — delete all chunks for a `document_id`
 - `GET /admin/tools/documents/collections` — collection list and embedding count
-- `POST /admin/tools/documents/reseed` — re-ingest classpath seed documents (same sources as startup seed); returns a list of ingestion results
+- `POST /admin/tools/documents/reseed` — re-ingest seed documents from `documentsToLoadDir` (same sources as startup seed); returns a list of ingestion results
 
 ## Credits
 
 - Developed by Kevin Dennis Mazali (`kdm-kev-NTNU`)
-- Document base: CV, course and project documents (classpath seed and/or admin ingest into ChromaDB)
+- Document base: CV, course and project documents (filesystem seed under `backend/data/docs/` and/or admin ingest into ChromaDB)
 
