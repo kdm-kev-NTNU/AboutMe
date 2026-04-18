@@ -18,7 +18,7 @@ Monorepo layout:
 
 - `backend/` — Spring Boot API (RAG, auth, document pipeline)
 - `frontend/homepage/` — Vue 3 SPA (see [frontend/homepage/README.md](frontend/homepage/README.md) for IDE setup and npm scripts)
-- `docker-compose.yml` — MySQL and ChromaDB for local development
+- `docker-compose.yml` — MySQL, ChromaDB, backend API, and frontend (Nginx) for local / full-stack runs
 - `.github/workflows/` — CI (e.g. Semgrep on `main`)
 
 ## Security
@@ -88,6 +88,8 @@ The frontend provides access to the following pages:
 
 ## Getting Started
 
+**Windows shortcut:** From the repo root, run `.\scripts\dev.ps1` (after [Prerequisites](#prerequisites) and a root `.env` from `.env.example`) to run `docker compose up -d` and open the Spring Boot API and Vite dev server in separate windows; then open `http://localhost:5173`.
+
 ### Prerequisites
 
 - Node.js (v20+)
@@ -104,13 +106,22 @@ git clone https://github.com/kdm-kev-NTNU/AboutMe.git
 cd AboutMe
 ```
 
-### 2) Start the database
+### 2) Start Docker services
 
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
 
-This starts **MySQL** on port **3307** (database `aboutme`, user `root/root`) and **ChromaDB** on port **8100** (see `docker-compose.yml`).
+Set `OPENAI_API_KEY` in your shell (or use a root `.env` file and `docker compose --env-file .env up -d`) before starting so the **backend** container can call OpenAI.
+
+This starts:
+
+- **MySQL** on host port **3307** (database `aboutme`, user `root/root`)
+- **ChromaDB** on host port **8100**
+- **Backend** (Spring Boot) on **8080**
+- **Frontend** (Nginx + static build) on **5173** (proxies `/api/*` to the backend)
+
+Chroma connectivity check (no auth): `GET http://localhost:8080/health/chroma`. Admin re-seed of classpath documents: `POST http://localhost:8080/admin/tools/documents/reseed` (HTTP Basic, `ADMIN` user).
 
 ### 3) Set environment variables
 
