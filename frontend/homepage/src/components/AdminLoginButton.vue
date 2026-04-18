@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -43,7 +44,13 @@ function logout() {
         <div v-if="error" class="text-red-600 text-xs mt-1">{{ error }}</div>
       </div>
     </div>
-    <div v-else class="flex items-center gap-2">
+    <div v-else class="flex items-center gap-2 flex-wrap justify-end max-w-[min(100vw-2rem,24rem)]">
+      <RouterLink
+        to="/admin/tools"
+        class="px-3 py-2 rounded-md text-sm text-white bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
+      >
+        Internal tools
+      </RouterLink>
       <span class="text-sm text-gray-700">Innlogget som {{ auth.username }}</span>
       <button class="px-3 py-2 rounded-md text-white bg-gray-600 hover:bg-gray-700 cursor-pointer" @click="logout">Logg ut</button>
     </div>
