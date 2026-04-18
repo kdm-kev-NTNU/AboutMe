@@ -8,8 +8,6 @@ spring:
       max-file-size: 50MB
       max-request-size: 55MB
   ai:
-    model:
-      chat: none
     vectorstore:
       chroma:
         client:
