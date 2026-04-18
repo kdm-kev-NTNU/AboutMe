@@ -40,23 +40,24 @@ export interface TooManyRequestsError {
 export interface Question {
   /** @maxLength 3000 */
   question: string;
-  /** Allow-listed chat model id; omit to use server default. */
+  /** Allow-listed chat model id; omit for server default */
   model?: string;
 }
 
+export interface ChatModelOption {
+  id?: string;
+  provider?: ChatModelOptionProvider;
+  label?: string;
+}
+
 export type ChatModelOptionProvider = typeof ChatModelOptionProvider[keyof typeof ChatModelOptionProvider];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ChatModelOptionProvider = {
   OPENAI: 'OPENAI',
   ANTHROPIC: 'ANTHROPIC',
 } as const;
-
-export interface ChatModelOption {
-  id: string;
-  provider: ChatModelOptionProvider;
-  label: string;
-}
 
 export interface Answer {
   answer: string;
@@ -99,10 +100,46 @@ export interface ChromaCollectionsResponse {
   collections?: ChromaCollectionSummary[];
 }
 
+export type ChunkItemMetadata = { [key: string]: unknown };
+
+export interface ChunkItem {
+  id?: string;
+  documentTitle?: string;
+  /** @nullable */
+  chunkIndex?: number | null;
+  text?: string;
+  metadata?: ChunkItemMetadata;
+}
+
+export interface ChunkListResponse {
+  collectionName?: string;
+  total?: number;
+  totalMatching?: number;
+  limit?: number;
+  offset?: number;
+  chunks?: ChunkItem[];
+}
+
+export interface PathIngestRequest {
+  paths: string[];
+  force?: boolean;
+}
+
 export type AdminDocumentsUploadBody = {
   file: Blob;
   title?: string;
   force?: boolean;
+};
+
+export type AdminDocumentsUploadBatchBody = {
+  files: Blob[];
+  force?: boolean;
+};
+
+export type AdminDocumentsChunksParams = {
+documentId?: string;
+limit?: number;
+offset?: number;
 };
 
 /**
@@ -193,8 +230,9 @@ export const askQuestion = async (question: Question, options?: RequestInit): Pr
     body: JSON.stringify(
       question,)
   }
-);
-}
+);}
+
+
 
 /**
  * @summary List chat models
@@ -203,9 +241,9 @@ export type listChatModelsResponse200 = {
   data: ChatModelOption[]
   status: 200
 }
-
+    
 export type listChatModelsResponseComposite = listChatModelsResponse200;
-
+    
 export type listChatModelsResponse = listChatModelsResponseComposite & {
   headers: Headers;
 }
@@ -218,7 +256,7 @@ export const getListChatModelsUrl = () => {
   return `/chat/models`
 }
 
-export const listChatModels = async (options?: RequestInit): Promise<listChatModelsResponse> => {
+export const listChatModels = async ( options?: RequestInit): Promise<listChatModelsResponse> => {
   
   return customFetch<listChatModelsResponse>(getListChatModelsUrl(),
   {      
@@ -321,6 +359,93 @@ if(adminDocumentsUploadBody.force !== undefined) {
 
 
 /**
+ * @summary Upload and ingest multiple documents
+ */
+export type adminDocumentsUploadBatchResponse200 = {
+  data: IngestionResult[]
+  status: 200
+}
+
+export type adminDocumentsUploadBatchResponse400 = {
+  data: IngestionResult[]
+  status: 400
+}
+    
+export type adminDocumentsUploadBatchResponseComposite = adminDocumentsUploadBatchResponse200 | adminDocumentsUploadBatchResponse400;
+    
+export type adminDocumentsUploadBatchResponse = adminDocumentsUploadBatchResponseComposite & {
+  headers: Headers;
+}
+
+export const getAdminDocumentsUploadBatchUrl = () => {
+
+
+  
+
+  return `/admin/tools/documents/upload/batch`
+}
+
+export const adminDocumentsUploadBatch = async (adminDocumentsUploadBatchBody: AdminDocumentsUploadBatchBody, options?: RequestInit): Promise<adminDocumentsUploadBatchResponse> => {
+    const formData = new FormData();
+adminDocumentsUploadBatchBody.files.forEach(value => formData.append(`files`, value));
+if(adminDocumentsUploadBatchBody.force !== undefined) {
+ formData.append(`force`, adminDocumentsUploadBatchBody.force.toString())
+ }
+
+  return customFetch<adminDocumentsUploadBatchResponse>(getAdminDocumentsUploadBatchUrl(),
+  {      
+    ...options,
+    method: 'POST'
+    ,
+    body: 
+      formData,
+  }
+);}
+
+
+
+/**
+ * @summary Ingest documents by path relative to documentsToLoadDir
+ */
+export type adminDocumentsIngestByPathResponse200 = {
+  data: IngestionResult[]
+  status: 200
+}
+
+export type adminDocumentsIngestByPathResponse400 = {
+  data: IngestionResult[]
+  status: 400
+}
+    
+export type adminDocumentsIngestByPathResponseComposite = adminDocumentsIngestByPathResponse200 | adminDocumentsIngestByPathResponse400;
+    
+export type adminDocumentsIngestByPathResponse = adminDocumentsIngestByPathResponseComposite & {
+  headers: Headers;
+}
+
+export const getAdminDocumentsIngestByPathUrl = () => {
+
+
+  
+
+  return `/admin/tools/documents/ingest-by-path`
+}
+
+export const adminDocumentsIngestByPath = async (pathIngestRequest: PathIngestRequest, options?: RequestInit): Promise<adminDocumentsIngestByPathResponse> => {
+  
+  return customFetch<adminDocumentsIngestByPathResponse>(getAdminDocumentsIngestByPathUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      pathIngestRequest,)
+  }
+);}
+
+
+
+/**
  * @summary List documents
  */
 export type adminDocumentsListResponse200 = {
@@ -345,6 +470,48 @@ export const getAdminDocumentsListUrl = () => {
 export const adminDocumentsList = async ( options?: RequestInit): Promise<adminDocumentsListResponse> => {
   
   return customFetch<adminDocumentsListResponse>(getAdminDocumentsListUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List chunks in the active collection
+ */
+export type adminDocumentsChunksResponse200 = {
+  data: ChunkListResponse
+  status: 200
+}
+    
+export type adminDocumentsChunksResponseComposite = adminDocumentsChunksResponse200;
+    
+export type adminDocumentsChunksResponse = adminDocumentsChunksResponseComposite & {
+  headers: Headers;
+}
+
+export const getAdminDocumentsChunksUrl = (params?: AdminDocumentsChunksParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/admin/tools/documents/chunks?${stringifiedParams}` : `/admin/tools/documents/chunks`
+}
+
+export const adminDocumentsChunks = async (params?: AdminDocumentsChunksParams, options?: RequestInit): Promise<adminDocumentsChunksResponse> => {
+  
+  return customFetch<adminDocumentsChunksResponse>(getAdminDocumentsChunksUrl(params),
   {      
     ...options,
     method: 'GET'

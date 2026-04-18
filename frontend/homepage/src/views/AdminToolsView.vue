@@ -2,30 +2,19 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import {
+  adminDocumentsChunks,
   adminDocumentsCollections,
   adminDocumentsDelete,
+  adminDocumentsIngestByPath,
   adminDocumentsList,
+  adminDocumentsReseed,
   adminDocumentsUpload,
+  adminDocumentsUploadBatch,
   type ChromaCollectionsResponse,
+  type ChunkListResponse,
   type DocumentListEntry,
+  type IngestionResult,
 } from '@/api/generated/portfolio'
-
-interface ChunkItem {
-  id: string
-  documentTitle: string
-  chunkIndex: number | null
-  text: string
-  metadata: Record<string, unknown>
-}
-
-interface ChunkListResponse {
-  collectionName: string
-  total: number
-  totalMatching: number
-  limit: number
-  offset: number
-  chunks: ChunkItem[]
-}
 
 const auth = useAuthStore()
 const title = ref('')
@@ -36,6 +25,18 @@ const error = ref('')
 const documents = ref<DocumentListEntry[]>([])
 const chromaInfo = ref<ChromaCollectionsResponse | null>(null)
 
+const uploadProgress = ref('')
+const batchResults = ref<IngestionResult[]>([])
+
+const pathIngestText = ref('')
+const pathIngestForce = ref(false)
+const pathIngestBusy = ref(false)
+const pathIngestError = ref('')
+const pathIngestResults = ref<IngestionResult[]>([])
+
+const reseedBusy = ref(false)
+const reseedMessage = ref('')
+
 const chunksData = ref<ChunkListResponse | null>(null)
 const chunksBusy = ref(false)
 const chunkError = ref('')
@@ -44,12 +45,14 @@ const chunkLimit = ref(25)
 const chunkOffset = ref(0)
 const expandedChunkId = ref<string | null>(null)
 
-function authHeaders(): HeadersInit {
-  const h: Record<string, string> = {}
-  if (auth.basicToken) {
-    h['Authorization'] = `Basic ${auth.basicToken}`
+function formatHttpError(status: number, data: unknown): string {
+  if (status === 401) return 'Ikke autorisert (logg inn som admin)'
+  if (data && typeof data === 'object') {
+    const o = data as Record<string, unknown>
+    if (typeof o.error === 'string' && o.error) return o.error
+    if (typeof o.message === 'string' && o.message) return o.message
   }
-  return h
+  return `Feilet (${status})`
 }
 
 async function loadData() {
@@ -57,7 +60,7 @@ async function loadData() {
   try {
     const [dRes, cRes] = await Promise.all([adminDocumentsList(), adminDocumentsCollections()])
     if (dRes.status !== 200) {
-      throw new Error(dRes.status === 401 ? 'Ikke autorisert (logg inn som admin)' : `Liste feilet (${dRes.status})`)
+      throw new Error(formatHttpError(dRes.status, dRes.data))
     }
     if (cRes.status !== 200) {
       throw new Error(`Chroma status feilet (${cRes.status})`)
@@ -69,37 +72,116 @@ async function loadData() {
   }
 }
 
+async function reseedClasspath() {
+  if (!confirm('Re-seede alle seed-dokumenter fra server (documentsToLoadDir / classpath)? Eksisterende chunks med samme innhold erstattes.')) {
+    return
+  }
+  reseedBusy.value = true
+  reseedMessage.value = ''
+  error.value = ''
+  try {
+    const r = await adminDocumentsReseed()
+    if (r.status !== 200) {
+      throw new Error(formatHttpError(r.status, r.data))
+    }
+    const list = r.data ?? []
+    const ok = list.filter((x) => (x.chunksIngested ?? 0) > 0 || x.skipped).length
+    reseedMessage.value = `Reseed ferdig: ${list.length} fil(er), ${ok} med innhold.`
+    await loadData()
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Ukjent feil'
+  } finally {
+    reseedBusy.value = false
+  }
+}
+
 async function upload() {
   const input = document.getElementById('ingest-file') as HTMLInputElement | null
-  const file = input?.files?.[0]
-  if (!file) {
-    status.value = 'Velg en fil først.'
+  const files = input?.files ? Array.from(input.files) : []
+  if (files.length === 0) {
+    status.value = 'Velg minst én fil.'
     return
   }
   busy.value = true
   status.value = ''
+  uploadProgress.value = ''
   error.value = ''
+  batchResults.value = []
+
   try {
-    const r = await adminDocumentsUpload({
-      file,
-      title: title.value.trim() || undefined,
-      force: force.value,
-    })
-    if (r.status !== 200) {
-      const errBody = r.data
-      throw new Error(errBody?.message || `Opplasting feilet (${r.status})`)
+    if (files.length === 1) {
+      const r = await adminDocumentsUpload({
+        file: files[0],
+        title: title.value.trim() || undefined,
+        force: force.value,
+      })
+      if (r.status !== 200) {
+        throw new Error(formatHttpError(r.status, r.data))
+      }
+      const body = r.data
+      const docIdPreview = (body.documentId ?? '').slice(0, 12)
+      status.value = body.skipped
+        ? `Hoppet over: ${body.message}`
+        : `OK: ${body.chunksIngested ?? 0} chunks for ${body.filename ?? ''}${docIdPreview ? ` (${docIdPreview}…)` : ''}`
+      batchResults.value = [body]
+    } else {
+      const r = await adminDocumentsUploadBatch({
+        files,
+        force: force.value,
+      })
+      const batchRes = r as { status: number; data: unknown }
+      if (batchRes.status !== 200 && batchRes.status !== 400) {
+        throw new Error(formatHttpError(batchRes.status, batchRes.data))
+      }
+      const results = Array.isArray(batchRes.data) ? batchRes.data : []
+      batchResults.value = results
+      const ok = results.filter((x) => (x.chunksIngested ?? 0) > 0 || x.skipped).length
+      uploadProgress.value = `${results.length} fil(er) behandlet (${ok} med resultat)`
+      status.value = `Batch: ${results.length} fil(er). Se tabellen under for detaljer.`
+      if (batchRes.status === 400 && results.length > 0) {
+        status.value = results[0]?.message ?? status.value
+      }
     }
-    const body = r.data
-    const docIdPreview = (body.documentId ?? '').slice(0, 12)
-    status.value = body.skipped
-      ? `Hoppet over: ${body.message}`
-      : `OK: ${body.chunksIngested ?? 0} chunks for ${body.filename ?? ''}${docIdPreview ? ` (${docIdPreview}…)` : ''}`
     if (input) input.value = ''
     await loadData()
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Ukjent feil'
   } finally {
     busy.value = false
+    uploadProgress.value = ''
+  }
+}
+
+async function runPathIngest() {
+  const lines = pathIngestText.value
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (lines.length === 0) {
+    pathIngestError.value = 'Skriv minst én sti (én per linje), relativ til documentsToLoadDir (f.eks. data/docs/).'
+    return
+  }
+  pathIngestBusy.value = true
+  pathIngestError.value = ''
+  pathIngestResults.value = []
+  try {
+    const r = await adminDocumentsIngestByPath({
+      paths: lines,
+      force: pathIngestForce.value,
+    })
+    const pathRes = r as { status: number; data: unknown }
+    if (pathRes.status !== 200 && pathRes.status !== 400) {
+      throw new Error(formatHttpError(pathRes.status, pathRes.data))
+    }
+    pathIngestResults.value = Array.isArray(pathRes.data) ? pathRes.data : []
+    if (pathRes.status === 400 && pathIngestResults.value.length > 0) {
+      pathIngestError.value = pathIngestResults.value[0]?.message ?? 'Ugyldig forespørsel'
+    }
+    await loadData()
+  } catch (e: unknown) {
+    pathIngestError.value = e instanceof Error ? e.message : 'Ukjent feil'
+  } finally {
+    pathIngestBusy.value = false
   }
 }
 
@@ -137,19 +219,15 @@ async function loadChunks() {
   chunkError.value = ''
   expandedChunkId.value = null
   try {
-    const params = new URLSearchParams()
-    params.set('limit', String(chunkLimit.value))
-    params.set('offset', String(chunkOffset.value))
-    if (chunkDocumentFilter.value.trim()) {
-      params.set('documentId', chunkDocumentFilter.value.trim())
-    }
-    const res = await fetch(`/api/admin/tools/documents/chunks?${params.toString()}`, {
-      headers: authHeaders(),
+    const res = await adminDocumentsChunks({
+      documentId: chunkDocumentFilter.value.trim() || undefined,
+      limit: chunkLimit.value,
+      offset: chunkOffset.value,
     })
-    if (!res.ok) {
-      throw new Error(res.status === 401 ? 'Ikke autorisert' : `Chunks feilet (${res.status})`)
+    if (res.status !== 200) {
+      throw new Error(formatHttpError(res.status, res.data))
     }
-    chunksData.value = (await res.json()) as ChunkListResponse
+    chunksData.value = res.data
   } catch (e: unknown) {
     chunkError.value = e instanceof Error ? e.message : 'Ukjent feil'
     chunksData.value = null
@@ -166,13 +244,24 @@ function chunkPrev() {
 function chunkNext() {
   const d = chunksData.value
   if (!d) return
-  if (chunkOffset.value + d.chunks.length >= d.totalMatching) return
+  const totalMatching = d.totalMatching ?? 0
+  const len = d.chunks?.length ?? 0
+  if (chunkOffset.value + len >= totalMatching) return
   chunkOffset.value += chunkLimit.value
   void loadChunks()
 }
 
 function toggleChunkExpand(id: string) {
   expandedChunkId.value = expandedChunkId.value === id ? null : id
+}
+
+function resultRowClass(row: IngestionResult): string {
+  const chunks = row.chunksIngested ?? 0
+  if (row.skipped) return 'text-amber-800 bg-amber-50/50'
+  if (chunks > 0) return 'text-green-800 bg-green-50/30'
+  const msg = row.message ?? ''
+  if (msg && msg !== 'OK') return 'text-red-700 bg-red-50/30'
+  return ''
 }
 
 onMounted(() => {
@@ -202,30 +291,45 @@ onMounted(() => {
         </ul>
       </div>
       <p v-else class="text-gray-500 text-sm">Laster…</p>
-      <button
-        type="button"
-        class="mt-4 px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 cursor-pointer"
-        :disabled="busy"
-        @click="loadData"
-      >
-        Oppdater
-      </button>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 cursor-pointer"
+          :disabled="busy || reseedBusy"
+          @click="loadData"
+        >
+          Oppdater
+        </button>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm rounded-md bg-amber-100 hover:bg-amber-200 cursor-pointer disabled:opacity-50"
+          :disabled="busy || reseedBusy"
+          @click="reseedClasspath"
+        >
+          {{ reseedBusy ? 'Re-seeder…' : 'Re-seed seed-dokumenter' }}
+        </button>
+      </div>
+      <p v-if="reseedMessage" class="mt-2 text-sm text-green-700">{{ reseedMessage }}</p>
     </section>
 
     <section class="mb-10 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 class="text-lg font-semibold mb-4">Last opp dokument</h2>
+      <h2 class="text-lg font-semibold mb-4">Last opp dokument(er)</h2>
+      <p class="text-sm text-gray-600 mb-4">
+        Velg én fil for valgfri tittel. Flere filer sendes i én batch til serveren.
+      </p>
       <div class="space-y-4 max-w-xl">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Fil</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Filer</label>
           <input
             id="ingest-file"
             type="file"
+            multiple
             accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg,.gif,.bmp,.tiff,.webp,.svg"
             class="block w-full text-sm text-gray-600"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Tittel (valgfritt)</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tittel (valgfritt, kun første fil)</label>
           <input v-model="title" type="text" class="w-full border rounded px-3 py-2 text-sm" placeholder="Brukes som visningsnavn" />
         </div>
         <label class="flex items-center gap-2 text-sm text-gray-700">
@@ -240,7 +344,90 @@ onMounted(() => {
         >
           {{ busy ? 'Jobber…' : 'Kjør ingest' }}
         </button>
+        <p v-if="uploadProgress" class="text-sm text-gray-600">{{ uploadProgress }}</p>
         <p v-if="status" class="text-sm text-green-700">{{ status }}</p>
+      </div>
+
+      <div v-if="batchResults.length > 0" class="mt-6 overflow-x-auto">
+        <h3 class="text-sm font-medium text-gray-800 mb-2">Resultat per fil</h3>
+        <table class="min-w-full text-sm text-left border border-gray-100 rounded-md">
+          <thead>
+            <tr class="border-b bg-gray-50 text-gray-600">
+              <th class="py-2 px-3">Fil</th>
+              <th class="py-2 px-3">Chunks</th>
+              <th class="py-2 px-3">Status</th>
+              <th class="py-2 px-3">Melding</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(row, i) in batchResults"
+              :key="i"
+              class="border-b border-gray-100"
+              :class="resultRowClass(row)"
+            >
+              <td class="py-2 px-3">{{ row.filename || '—' }}</td>
+              <td class="py-2 px-3">{{ row.chunksIngested ?? 0 }}</td>
+              <td class="py-2 px-3">
+                <span v-if="row.skipped">Hoppet over</span>
+                <span v-else-if="(row.chunksIngested ?? 0) > 0">OK</span>
+                <span v-else>—</span>
+              </td>
+              <td class="py-2 px-3 text-xs">{{ row.message || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mb-10 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold mb-2">Ingest etter sti på server</h2>
+      <p class="text-sm text-gray-600 mb-4">
+        Én relativ sti per linje under konfigurert <code class="text-xs bg-gray-100 px-1 rounded">sfg.aiapp.documentsToLoadDir</code>
+        (typisk <code class="text-xs bg-gray-100 px-1 rounded">file:./data/docs/</code>). Eksempel: <code class="text-xs">rapport.pdf</code> eller
+        <code class="text-xs">undermappe/doc.pdf</code>
+      </p>
+      <label class="flex items-center gap-2 text-sm text-gray-700 mb-3">
+        <input v-model="pathIngestForce" type="checkbox" />
+        Tving re-indeks for disse stiene
+      </label>
+      <textarea
+        v-model="pathIngestText"
+        rows="6"
+        class="w-full border rounded px-3 py-2 text-sm font-mono"
+        placeholder="fil1.pdf&#10;mapper/fil2.pdf"
+      />
+      <button
+        type="button"
+        class="mt-3 px-4 py-2 rounded-md text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-sm cursor-pointer"
+        :disabled="pathIngestBusy"
+        @click="runPathIngest"
+      >
+        {{ pathIngestBusy ? 'Jobber…' : 'Kjør batch-ingest fra stier' }}
+      </button>
+      <p v-if="pathIngestError" class="mt-2 text-sm text-red-600">{{ pathIngestError }}</p>
+      <div v-if="pathIngestResults.length > 0" class="mt-4 overflow-x-auto">
+        <table class="min-w-full text-sm text-left border border-gray-100 rounded-md">
+          <thead>
+            <tr class="border-b bg-gray-50 text-gray-600">
+              <th class="py-2 px-3">Sti / fil</th>
+              <th class="py-2 px-3">Chunks</th>
+              <th class="py-2 px-3">Melding</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(row, i) in pathIngestResults"
+              :key="i"
+              class="border-b border-gray-100"
+              :class="resultRowClass(row)"
+            >
+              <td class="py-2 px-3">{{ row.filename || '—' }}</td>
+              <td class="py-2 px-3">{{ row.chunksIngested ?? 0 }}</td>
+              <td class="py-2 px-3 text-xs">{{ row.message || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -328,12 +515,12 @@ onMounted(() => {
           <span class="font-medium">Collection:</span> {{ chunksData.collectionName }} ·
           <span class="font-medium">Treff:</span> {{ chunksData.totalMatching }} av {{ chunksData.total }} embeddings i collection
         </p>
-        <p v-if="chunksData.chunks.length > 0">
-          Viser {{ chunksData.offset + 1 }}–{{ chunksData.offset + chunksData.chunks.length }} (offset {{ chunksData.offset }}, limit {{ chunksData.limit }})
+        <p v-if="(chunksData.chunks?.length ?? 0) > 0">
+          Viser {{ (chunksData.offset ?? 0) + 1 }}–{{ (chunksData.offset ?? 0) + (chunksData.chunks?.length ?? 0) }} (offset {{ chunksData.offset }}, limit {{ chunksData.limit }})
         </p>
       </div>
-      <div v-if="chunksData && chunksData.chunks.length === 0" class="text-sm text-gray-500">Ingen chunks i dette vinduet.</div>
-      <div v-else-if="chunksData && chunksData.chunks.length > 0" class="overflow-x-auto border border-gray-100 rounded-md">
+      <div v-if="chunksData && (chunksData.chunks?.length ?? 0) === 0" class="text-sm text-gray-500">Ingen chunks i dette vinduet.</div>
+      <div v-else-if="chunksData && (chunksData.chunks?.length ?? 0) > 0" class="overflow-x-auto border border-gray-100 rounded-md">
         <table class="min-w-full text-sm text-left">
           <thead>
             <tr class="border-b bg-gray-50 text-gray-600">
@@ -344,16 +531,16 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody>
-            <template v-for="c in chunksData.chunks" :key="c.id">
+            <template v-for="c in chunksData.chunks" :key="c.id ?? ''">
               <tr
                 class="border-b border-gray-100 hover:bg-gray-50/80 cursor-pointer align-top"
-                @click="toggleChunkExpand(c.id)"
+                @click="c.id && toggleChunkExpand(c.id)"
               >
                 <td class="py-2 px-3 text-gray-400">{{ expandedChunkId === c.id ? '▼' : '▶' }}</td>
                 <td class="py-2 px-3">{{ c.documentTitle || '—' }}</td>
                 <td class="py-2 px-3 font-mono text-xs">{{ c.chunkIndex ?? '—' }}</td>
                 <td class="py-2 px-3 text-gray-800 whitespace-pre-wrap break-words max-w-md">
-                  {{ truncatePreview(c.text) }}
+                  {{ truncatePreview(c.text ?? '') }}
                 </td>
               </tr>
               <tr v-if="expandedChunkId === c.id" class="bg-gray-50 border-b border-gray-100">
@@ -364,7 +551,7 @@ onMounted(() => {
                   <pre class="whitespace-pre-wrap break-words text-gray-800 mb-3 max-h-64 overflow-y-auto bg-white border rounded p-2">{{ c.text || '(tom)' }}</pre>
                   <details class="mt-2">
                     <summary class="cursor-pointer font-medium text-gray-700">Metadata (JSON)</summary>
-                    <pre class="mt-2 max-h-48 overflow-auto bg-white border rounded p-2 text-gray-800">{{ JSON.stringify(c.metadata, null, 2) }}</pre>
+                    <pre class="mt-2 max-h-48 overflow-auto bg-white border rounded p-2 text-gray-800">{{ JSON.stringify(c.metadata ?? {}, null, 2) }}</pre>
                   </details>
                 </td>
               </tr>
@@ -373,7 +560,7 @@ onMounted(() => {
         </table>
       </div>
       <div
-        v-if="chunksData && chunksData.totalMatching > 0"
+        v-if="chunksData && (chunksData.totalMatching ?? 0) > 0"
         class="mt-4 flex flex-wrap items-center gap-3"
       >
         <button
@@ -387,7 +574,7 @@ onMounted(() => {
         <button
           type="button"
           class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 cursor-pointer disabled:opacity-40"
-          :disabled="chunksBusy || !chunksData || chunkOffset + chunksData.chunks.length >= chunksData.totalMatching"
+          :disabled="chunksBusy || !chunksData || chunkOffset + (chunksData.chunks?.length ?? 0) >= (chunksData.totalMatching ?? 0)"
           @click="chunkNext"
         >
           Neste
