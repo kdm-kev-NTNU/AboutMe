@@ -12,7 +12,8 @@ const getButtonText = (key: string) => {
     home: { en: 'Home', no: 'Hjem' },
     projects: { en: 'Projects', no: 'Prosjekter' },
     work: { en: 'Work', no: 'Arbeid' },
-    education: { en: 'Education', no: 'Utdanning' }
+    education: { en: 'Education', no: 'Utdanning' },
+    techStack: { en: 'Tech stack', no: 'Teknologistakk' },
   }
   return texts[key][langStore.language]
 }
@@ -23,7 +24,8 @@ const getButtonWidth = () => {
     getButtonText('home'),
     getButtonText('projects'),
     getButtonText('work'),
-    getButtonText('education')
+    getButtonText('education'),
+    getButtonText('techStack'),
   ]
   
   // Estimate width based on character count (roughly 8px per character for this font size)
@@ -38,6 +40,7 @@ const getIndicatorPosition = () => {
   if (isActive('projects')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
   if (isActive('work-experience')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
   if (isActive('education')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
+  if (isActive('tech-stack')) return { transform: `translateX(${buttonWidth * 4}px)`, opacity: '1' }
   return { transform: 'translateX(0px)', opacity: '0' }
 }
 
@@ -90,6 +93,13 @@ const getButtonClasses = (routeName: string) => {
           :style="{ width: getButtonWidth() + 'px' }"
         >
           {{ getButtonText('education') }}
+        </RouterLink>
+        <RouterLink
+          to="/tech-stack"
+          :class="getButtonClasses('tech-stack')"
+          :style="{ width: getButtonWidth() + 'px' }"
+        >
+          {{ getButtonText('techStack') }}
         </RouterLink>
       </div>
     </div>
