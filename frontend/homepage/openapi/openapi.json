@@ -1,0 +1,357 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AboutMe Portfolio API",
+    "description": "REST API for the portfolio (RAG chat, auth, health, admin documents). SPA uses /api prefix via Vite or Nginx.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://localhost:8080", "description": "Direct backend" },
+    { "url": "http://localhost:5173/api", "description": "Vite dev proxy" }
+  ],
+  "tags": [
+    { "name": "Authentication", "description": "Login for SPA" },
+    { "name": "Chat", "description": "RAG chat" },
+    { "name": "Health", "description": "Ops health" },
+    { "name": "Admin documents", "description": "ADMIN + HTTP Basic" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Admin endpoints require ROLE_ADMIN"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string", "format": "password" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": ["username", "role"],
+        "properties": {
+          "username": { "type": "string" },
+          "role": { "type": "string", "enum": ["USER", "ADMIN"] }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
+      "ServiceUnavailableError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
+      "TooManyRequestsError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
+      "Question": {
+        "type": "object",
+        "required": ["question"],
+        "properties": {
+          "question": { "type": "string", "maxLength": 3000 }
+        }
+      },
+      "Answer": {
+        "type": "object",
+        "required": ["answer"],
+        "properties": {
+          "answer": { "type": "string" }
+        }
+      },
+      "ChromaHealthResponse": {
+        "type": "object",
+        "properties": {
+          "healthy": { "type": "boolean" },
+          "collectionName": { "type": "string", "nullable": true },
+          "embeddingCount": { "type": "integer", "format": "int64", "nullable": true },
+          "message": { "type": "string", "nullable": true }
+        }
+      },
+      "IngestionResult": {
+        "type": "object",
+        "properties": {
+          "documentId": { "type": "string" },
+          "filename": { "type": "string" },
+          "chunksIngested": { "type": "integer", "format": "int32" },
+          "skipped": { "type": "boolean" },
+          "message": { "type": "string" }
+        }
+      },
+      "DocumentListEntry": {
+        "type": "object",
+        "properties": {
+          "documentId": { "type": "string" },
+          "filename": { "type": "string" },
+          "chunkCount": { "type": "integer", "format": "int32" },
+          "lastIngestedAt": { "type": "string" }
+        }
+      },
+      "ChromaCollectionSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" }
+        }
+      },
+      "ChromaCollectionsResponse": {
+        "type": "object",
+        "properties": {
+          "activeCollectionName": { "type": "string" },
+          "activeCollectionEmbeddingCount": { "type": "integer", "format": "int64", "nullable": true },
+          "collections": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChromaCollectionSummary" }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login",
+        "operationId": "authLogin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ask": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Ask a question",
+        "operationId": "askQuestion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Question" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Answer" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TooManyRequestsError" }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceUnavailableError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/chroma": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "ChromaDB health",
+        "operationId": "healthChroma",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChromaHealthResponse" }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChromaHealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/upload": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Upload and ingest",
+        "operationId": "adminDocumentsUpload",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "title": { "type": "string" },
+                  "force": { "type": "boolean", "default": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IngestionResult" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IngestionResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents": {
+      "get": {
+        "tags": ["Admin documents"],
+        "summary": "List documents",
+        "operationId": "adminDocumentsList",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/DocumentListEntry" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/collections": {
+      "get": {
+        "tags": ["Admin documents"],
+        "summary": "List Chroma collections",
+        "operationId": "adminDocumentsCollections",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChromaCollectionsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/reseed": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Re-seed classpath documents",
+        "operationId": "adminDocumentsReseed",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/{documentId}": {
+      "delete": {
+        "tags": ["Admin documents"],
+        "summary": "Delete document",
+        "operationId": "adminDocumentsDelete",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": { "description": "Bad Request" }
+        }
+      }
+    }
+  }
+}

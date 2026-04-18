@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ChatView from '../views/ChatView.vue'
 import ChatHistory from '../views/ChatHistory.vue'
-import { useAuthStore } from '@/stores/auth'
+import { registerAdminRouteGuard } from './guards'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -65,15 +65,6 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
-  if (to.meta.requiresAdmin) {
-    const auth = useAuthStore()
-    auth.restore()
-    if (auth.role !== 'ADMIN') {
-      return { path: '/' }
-    }
-  }
-  return true
-})
+registerAdminRouteGuard(router)
 
 export default router
