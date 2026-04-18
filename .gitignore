@@ -1,6 +1,6 @@
 # IDE
 .idea/
-.vscode/settings.json
+/.vscode/
 
 # OS
 .DS_Store
@@ -10,3 +10,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Local vector store exports (not used by runtime)
+backend/vectordatabase/
+
+# Source documents for Chroma ingestion (personal data)
+backend/data/

@@ -42,6 +42,11 @@ const router = createRouter({
       component: () => import('../views/EducationView.vue'),
     },
     {
+      path: '/tech-stack',
+      name: 'tech-stack',
+      component: () => import('../views/TechStackView.vue'),
+    },
+    {
       path: '/chat-history',
       name: 'chat-history',
       component: ChatHistory,

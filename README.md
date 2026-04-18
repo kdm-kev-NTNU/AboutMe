@@ -9,16 +9,18 @@ NB: Known issues
 This project was built quickly as a personal initiative. Some edge cases and minor issues may exist. Feedback and improvement suggestions are very welcome. email: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)
 
 - Privacy: Conversations may be stored in the database to improve answers and stability. Do not share sensitive information.
-- Vector store privacy: The vector store is encrypted at rest (AES‑GCM) so personal documents are not accessible without the decryption key.
+- Vector store privacy: Chunk text and embeddings live in ChromaDB; treat the database and backups as sensitive if documents are personal.
 - Hallucinations: AI answers can be incorrect. Verify important information.
 
 ## Repository structure
 
 Monorepo layout:
 
-- `backend/` — Spring Boot API (RAG, auth, document pipeline)
+- `backend/` — Spring Boot API (RAG, auth, document pipeline). Seed files for Chroma ingestion live in `backend/data/docs/` (directory is gitignored; create it locally with your PDFs/DOCX/MD).
 - `frontend/homepage/` — Vue 3 SPA (see [frontend/homepage/README.md](frontend/homepage/README.md) for IDE setup and npm scripts)
-- `docker-compose.yml` — MySQL and ChromaDB for local development
+- `scripts/` — Windows helper [`dev.ps1`](scripts/dev.ps1) (Docker services + backend/frontend in separate terminals)
+- `docker-compose.yml` — MySQL, ChromaDB, backend API, and frontend (Nginx) for local / full-stack runs
+- `.env.example` — template for root or `backend/` `.env` (never commit secrets)
 - `.github/workflows/` — CI (e.g. Semgrep on `main`)
 
 ## Security
@@ -31,9 +33,8 @@ This section summarizes the main security mechanisms in the project:
 - Rate limiting
   - Bucket4j enforces 5 requests per 10 seconds per user/IP for `POST /ask`.
 - CORS
-  - CORS uses an allowlist of origins (local development and `https://kevindmazali.me`). Credentials are allowed and standard headers (including `Authorization`) are permitted.
-- Data privacy and encryption
-  - The vector index can be encrypted at rest using AES‑GCM. Provide a Base64‑encoded 32‑byte key via `VECTORSTORE_ENC_KEY`.
+  - CORS uses an allowlist of origins: `http://localhost:5173`, `http://localhost:4173` (Vite preview / Cypress), `https://kevindmazali.me`, and `https://www.kevindmazali.me`. Credentials are allowed and standard headers (including `Authorization`) are permitted.
+- Data privacy
   - Minimal request/response auditing is stored in MySQL for troubleshooting. Avoid sharing sensitive information.
 - Input validation
   - Questions are validated and sanitized server‑side with a maximum length of 3000 characters.
@@ -44,7 +45,7 @@ This section summarizes the main security mechanisms in the project:
 
 - AI chat about Kevin with RAG (loads context from documents like CV, courses, projects)
 - Multilingual query understanding (NO/EN) with simple query expansion
-- Vector index in **ChromaDB** (Docker) with optional AES‑GCM on chunk text before storage
+- Vector index in **ChromaDB** (Docker)
 - Internal **Admin tools** page (`/admin/tools`) to upload and manage indexed documents
 - API rate limiting (Bucket4j) to prevent abuse
 - Logs requests and answers to MySQL (for insights and troubleshooting)
@@ -82,15 +83,17 @@ The frontend provides access to the following pages:
 - Spring Boot 3.5.5 (Java 21)
 - Spring Web, Spring Data JPA, Lombok
 - MySQL
-- Spring AI (OpenAI Chat + Embeddings) and Tika document reader
+- Spring AI 1.0.1 (OpenAI Chat + Embeddings) and Tika document reader
 - ChromaDB (Spring AI vector store) for embeddings and metadata
 - Bucket4j for rate limiting
 
 ## Getting Started
 
+**Windows shortcut:** From the repo root, run `.\scripts\dev.ps1` (after [Prerequisites](#prerequisites) and a root `.env` from `.env.example`) to run `docker compose up -d` and open the Spring Boot API and Vite dev server in separate windows; then open `http://localhost:5173`.
+
 ### Prerequisites
 
-- Node.js (v20+)
+- Node.js — match [`engines` in `frontend/homepage/package.json`](frontend/homepage/package.json) (currently `^20.19.0` or `>=22.12.0`)
 - npm (bundled with Node)
 - JDK 21
 - Maven
@@ -104,27 +107,41 @@ git clone https://github.com/kdm-kev-NTNU/AboutMe.git
 cd AboutMe
 ```
 
-### 2) Start the database
+### 2) Start Docker services
 
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
-This starts **MySQL** on port **3307** (database `aboutme`, user `root/root`) and **ChromaDB** on port **8100** (see `docker-compose.yml`).
+(If you only have the legacy CLI, the same file works as `docker-compose up -d --build`.)
+
+Set `OPENAI_API_KEY` in your shell (or use a root `.env` file and `docker compose --env-file .env up -d --build`) before starting so the **backend** container can call OpenAI.
+
+This starts:
+
+- **MySQL** on host port **3307** (database `aboutme`, user `root/root`)
+- **ChromaDB** on host port **8100**
+- **Backend** (Spring Boot) on **8080**
+- **Frontend** (Nginx + static build) on **5173** (proxies `/api/*` to the backend)
+
+Chroma connectivity check (no auth): `GET http://localhost:8080/health/chroma`. Admin re-seed of seed documents: `POST http://localhost:8080/admin/tools/documents/reseed` (HTTP Basic, `ADMIN` user).
+
+The backend image does not bundle seed documents. `docker-compose.yml` mounts `./backend/data` read-only into the container at `/app/data`, so `file:./data/docs/` resolves to `/app/data/docs/` (container `WORKDIR` is `/app`). Populate `backend/data/docs/` on the host before the first run if you want startup seeding in Docker.
 
 ### 3) Set environment variables
 
-The backend reads `application.yaml` and may load optional `.env` / `.env.properties` from the repository root or `backend/` (see `spring.config.import` in [backend/src/main/resources/application.yaml](backend/src/main/resources/application.yaml)). Do not commit secrets.
+The backend reads `application.yaml` and, via `spring.config.import`, optionally loads `.env` / `.env.properties` from the process working directory (typically the repo root when using `scripts/dev.ps1`), the current directory, or `backend/` — see the first lines of [backend/src/main/resources/application.yaml](backend/src/main/resources/application.yaml). Copy [`.env.example`](.env.example) to `.env` at the repo root (or under `backend/`). Do not commit secrets.
 
 Required for a typical local run:
 
 - `OPENAI_API_KEY`: Required for Chat/Embeddings
 - `PORT`: HTTP port for the API (e.g. `8080`; there is no default in `application.yaml`)
-- `DB_USERNAME` / `DB_PASSWORD`: MySQL credentials (with `docker-compose` as written, use `root` / `root`)
+- `DB_USERNAME` / `DB_PASSWORD`: MySQL credentials (with `docker compose` as written, use `root` / `root`)
 
 Optional:
 
-- `VECTORSTORE_ENC_KEY`: Base64‑encoded 32‑byte key for AES‑256 GCM on vector chunk text. The app is configured with content encryption enabled (`encryptContent: true`); set this key so ingest/query use encryption consistently (without it, the server logs a warning and encryption may be skipped).
+- `SPRING_DATASOURCE_URL`: JDBC URL override (see [`.env.example`](.env.example); the `backend` service in Compose sets this to the `db` container)
+- `CHROMA_COLLECTION`: Active Chroma collection name (default `portfolio-documents`, see `application.yaml`)
 - `CHROMA_HTTP_HOST` / `CHROMA_PORT`: Overrides for the Chroma HTTP client (defaults `http://localhost` and `8100` for host‑mapped Docker). In the backend Docker image, defaults target the `chromadb` service on port `8000`.
 
 Example (PowerShell):
@@ -134,7 +151,6 @@ $env:OPENAI_API_KEY = "sk-..."
 $env:PORT = "8080"
 $env:DB_USERNAME = "root"
 $env:DB_PASSWORD = "root"
-$env:VECTORSTORE_ENC_KEY = "BASE64_32BYTE_KEY=="
 ```
 
 ### 4) Run the backend
@@ -152,7 +168,7 @@ On Windows (same directory):
 ```
 
 - Serves on the port given by `PORT` (e.g. 8080)
-- When the Chroma collection is **empty**, the app seeds documents from `classpath:/tmp/docs/` (or from `sfg.aiapp.documentsToLoad` if configured). Use **Admin → Internal tools** (`/admin/tools`) to upload additional files into ChromaDB.
+- When the Chroma collection is **empty**, the app seeds documents from `sfg.aiapp.documentsToLoadDir` (default `file:./data/docs/`, i.e. `backend/data/docs/` when the process working directory is `backend/`). That directory is **gitignored**; copy your seed PDFs/DOCX/MD there locally. You can instead set `sfg.aiapp.documents-to-load` to a list of Spring `Resource` locations. With `sfg.aiapp.force-reindex: true`, startup seeding re-ingests seed files even when the collection already has embeddings (replacing chunks per content hash). Use **Admin → Internal tools** (`/admin/tools`) to upload additional files into ChromaDB.
 
 ### 5) Run the frontend
 
@@ -179,15 +195,23 @@ Go to `http://localhost:5173` and try the quick questions or ask your own in the
 
 The frontend calls this as `/api/ask` in dev/prod, where `/api` is proxied to the backend.
 
-Admin document pipeline (HTTP Basic, `ROLE_ADMIN`):
+- `POST /auth/login` (public)
+  - Body: `{ "username": "...", "password": "..." }`
+  - Success: JSON including `username` and `role` (`ADMIN` or `USER`). The admin UI then stores a Base64-encoded HTTP Basic credential in `sessionStorage` for subsequent protected calls.
 
-- `POST /admin/tools/documents/upload` — multipart field `file`, optional `title`, optional `force=true`
+- `GET /health/chroma` (public)
+  - JSON fields: `healthy` (boolean), `collectionName`, `embeddingCount` (nullable long), `message` (nullable string, e.g. error detail). Returns HTTP 503 when Chroma is unreachable or the collection is missing.
+
+Admin document pipeline (HTTP Basic, `ROLE_ADMIN`). Multipart uploads are limited to **50 MB** per file and **55 MB** per request (`application.yaml`).
+
+- `POST /admin/tools/documents/upload` — multipart field `file`, optional `title`, optional `force=true`. Allowed extensions: `pdf`, `docx`, `doc`, `txt`, `md`, `png`, `jpg`, `jpeg`, `gif`, `bmp`, `tiff`, `webp`, `svg`.
 - `GET /admin/tools/documents` — aggregated documents in the active collection
 - `DELETE /admin/tools/documents/{documentId}` — delete all chunks for a `document_id`
 - `GET /admin/tools/documents/collections` — collection list and embedding count
+- `POST /admin/tools/documents/reseed` — re-ingest seed documents from `documentsToLoadDir` (same sources as startup seed); returns a list of ingestion results
 
 ## Credits
 
 - Developed by Kevin Dennis Mazali (`kdm-kev-NTNU`)
-- Document base: CV, course and project documents (classpath seed and/or admin ingest into ChromaDB)
+- Document base: CV, course and project documents (filesystem seed under `backend/data/docs/` and/or admin ingest into ChromaDB)
 
