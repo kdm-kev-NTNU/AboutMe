@@ -54,6 +54,13 @@
           "error": { "type": "string" }
         }
       },
+      "TooManyRequestsError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
       "Question": {
         "type": "object",
         "required": ["question"],
@@ -177,6 +184,14 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TooManyRequestsError" }
               }
             }
           },
