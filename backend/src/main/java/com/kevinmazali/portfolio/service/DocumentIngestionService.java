@@ -5,7 +5,6 @@ import com.kevinmazali.portfolio.model.ChromaCollectionSummary;
 import com.kevinmazali.portfolio.model.ChromaCollectionsResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chroma.vectorstore.ChromaApi;
 import org.springframework.ai.document.Document;
@@ -17,6 +16,7 @@ import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.ai.vectorstore.chroma.autoconfigure.ChromaVectorStoreProperties;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ByteArrayResource;
@@ -45,7 +45,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class DocumentIngestionService implements ApplicationRunner {
 
@@ -56,6 +55,17 @@ public class DocumentIngestionService implements ApplicationRunner {
   private final ChromaApi chromaApi;
   private final ChromaVectorStoreProperties chromaStoreProperties;
   private final VectorStoreProperties vectorStoreProperties;
+
+  public DocumentIngestionService(
+      @Lazy VectorStore vectorStore,
+      ChromaApi chromaApi,
+      ChromaVectorStoreProperties chromaStoreProperties,
+      VectorStoreProperties vectorStoreProperties) {
+    this.vectorStore = vectorStore;
+    this.chromaApi = chromaApi;
+    this.chromaStoreProperties = chromaStoreProperties;
+    this.vectorStoreProperties = vectorStoreProperties;
+  }
 
   @Override
   public void run(ApplicationArguments args) {

@@ -2,7 +2,6 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
-import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -10,6 +9,7 @@ import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -25,11 +25,15 @@ import java.util.Map;
  * - builds a prompt and invokes the chat model.
  */
 @Service
-@RequiredArgsConstructor
 public class OpenAIServiceImpl implements OpenAIService {
 
   private final ChatModel chatModel;
   private final VectorStore vectorStore;
+
+  public OpenAIServiceImpl(ChatModel chatModel, @Lazy VectorStore vectorStore) {
+    this.chatModel = chatModel;
+    this.vectorStore = vectorStore;
+  }
 
   /**
    * Executes a Retrieval-Augmented Generation flow:
