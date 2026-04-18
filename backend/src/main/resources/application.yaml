@@ -8,6 +8,8 @@ spring:
       max-file-size: 50MB
       max-request-size: 55MB
   ai:
+    model:
+      chat: none
     vectorstore:
       chroma:
         client:
@@ -19,12 +21,19 @@ spring:
       api-key: ${OPENAI_API_KEY}
       chat:
         options:
+          model: gpt-4o-mini
           # Limit completion tokens per response
           max-tokens: 400
       embedding:
         options:
           model: text-embedding-3-large
           dimensions: 3072
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          model: claude-sonnet-4-20250514
+          max-tokens: 400
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/aboutme?useSSL=false&allowPublicKeyRetrieval=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
@@ -40,6 +49,11 @@ spring:
         format_sql: true
 server:
   port: ${PORT}
+portfolio:
+  chat:
+    # Used when the client omits "model" on POST /ask
+    default-model-id: gpt-4o-mini
+
 sfg:
   aiapp:
     documentsToLoadDir: file:./data/docs/

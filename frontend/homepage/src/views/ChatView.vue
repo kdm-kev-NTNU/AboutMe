@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import MessagesArea from '@/views/MessagesArea.vue'
-import { askQuestion } from '@/api/generated/portfolio'
+import { askQuestion, listChatModels } from '@/api/generated/portfolio'
 
 
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
@@ -20,6 +20,39 @@ const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
 const langStore = useLangStore()
 const language = computed(() => langStore.language)
+
+const MODEL_STORAGE_KEY = 'chatSelectedModel'
+const chatModels = ref<Array<{ id: string; provider: string; label: string }>>([])
+const selectedModelId = ref('')
+
+async function loadChatModels() {
+  try {
+    const r = await listChatModels()
+    if (r.status !== 200) {
+      return
+    }
+    chatModels.value = r.data
+    const stored = sessionStorage.getItem(MODEL_STORAGE_KEY)
+    if (stored && chatModels.value.some((m) => m.id === stored)) {
+      selectedModelId.value = stored
+    } else if (chatModels.value.length > 0) {
+      selectedModelId.value = chatModels.value[0].id
+    }
+  } catch {
+    // non-fatal: backend will apply default model
+  }
+}
+
+watch(selectedModelId, (id) => {
+  if (!id) {
+    return
+  }
+  try {
+    sessionStorage.setItem(MODEL_STORAGE_KEY, id)
+  } catch {
+    // ignore
+  }
+})
 
 // Session storage functions
 const saveMessagesToStorage = () => {
@@ -64,7 +97,10 @@ async function send(text: string) {
   if (!text.trim() || isLoading.value) return
   // client-side validation to mirror backend
   if (text.length > MAX_PROMPT_CHARS) {
-    errorText.value = `Prompten er for lang (${text.length}/${MAX_PROMPT_CHARS}).`;
+    errorText.value =
+      language.value === 'en'
+        ? `Prompt is too long (${text.length}/${MAX_PROMPT_CHARS}).`
+        : `Prompten er for lang (${text.length}/${MAX_PROMPT_CHARS}).`
     return
   }
   errorText.value = ''
@@ -74,7 +110,11 @@ async function send(text: string) {
     isLoading.value = true
     const auth = (await import('@/stores/auth')).useAuthStore()
     auth.restore()
-    const r = await askQuestion({ question: text })
+    const payload: { question: string; model?: string } = { question: text }
+    if (selectedModelId.value) {
+      payload.model = selectedModelId.value
+    }
+    const r = await askQuestion(payload)
     if (r.status === 200) {
       state.messages.push({ role: 'assistant', text: r.data.answer, isNew: true })
       return
@@ -118,7 +158,9 @@ const loadConversation = async (conversationId: string) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadChatModels()
+
   const conversationId = route.query.conversationId as string
 
   if (conversationId) {
@@ -174,7 +216,25 @@ onMounted(() => {
       </div>
 
       <!-- Form at Bottom -->
-      <div class="pb-8 flex-shrink-0">
+      <div class="pb-8 flex-shrink-0 space-y-2">
+        <div
+          v-if="chatModels.length > 0"
+          class="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-slate-700 px-1"
+        >
+          <label for="chat-model-select" class="font-medium shrink-0">
+            {{ language === 'en' ? 'Model' : 'Modell' }}
+          </label>
+          <select
+            id="chat-model-select"
+            v-model="selectedModelId"
+            :disabled="isLoading"
+            class="w-full sm:max-w-md rounded-lg border-2 border-blue-200/40 bg-white/90 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none disabled:opacity-50"
+          >
+            <option v-for="m in chatModels" :key="m.id" :value="m.id">
+              {{ m.label }} ({{ m.provider }})
+            </option>
+          </select>
+        </div>
         <form class="flex gap-3 relative bg-white/90 backdrop-blur-sm border-2 border-blue-200/20 rounded-xl p-2 transition-all duration-300 hover:border-blue-300/40 hover:bg-white/95 hover:shadow-lg hover:shadow-blue-500/15 focus-within:border-blue-300/60 focus-within:bg-white/98 focus-within:shadow-lg focus-within:shadow-blue-500/25" @submit.prevent="send(input)">
           <Input
             v-model="input"
