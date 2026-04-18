@@ -73,6 +73,16 @@ public class DocumentPipelineController {
     return documentIngestionService.describeCollections();
   }
 
+  /**
+   * Re-ingests classpath seed documents (same sources as startup seed), replacing existing chunks
+   * per content hash. Requires admin credentials.
+   */
+  @PostMapping("/reseed")
+  public ResponseEntity<List<IngestionResult>> reseedClasspath() throws IOException {
+    List<IngestionResult> results = documentIngestionService.reseedClasspathDocuments();
+    return ResponseEntity.ok(results);
+  }
+
   private static String extension(String filename) {
     int i = filename.lastIndexOf('.');
     if (i < 0 || i == filename.length() - 1) {

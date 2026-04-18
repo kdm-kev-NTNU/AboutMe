@@ -39,7 +39,8 @@ public class VectorStoreProperties {
   private String documentsToLoadDir;
 
   /**
-   * Reserved for future startup re-index behaviour (currently unused).
+   * When {@code true}, startup classpath seeding re-ingests seed files even if the Chroma collection
+   * already has embeddings, replacing chunks per {@code content_hash} / {@code document_id}.
    */
   private boolean forceReindex = false;
 
