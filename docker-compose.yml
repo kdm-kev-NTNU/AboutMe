@@ -49,7 +49,6 @@ services:
       CHROMA_HTTP_HOST: http://chromadb
       CHROMA_PORT: "8000"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      VECTORSTORE_ENC_KEY: ${VECTORSTORE_ENC_KEY:-}
     ports:
       - "8080:8080"
 
