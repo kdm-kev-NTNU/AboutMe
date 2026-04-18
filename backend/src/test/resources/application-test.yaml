@@ -10,8 +10,6 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     show-sql: false
   ai:
-    model:
-      chat: none
     openai:
       api-key: test-placeholder-key-for-context-tests-only
     anthropic:

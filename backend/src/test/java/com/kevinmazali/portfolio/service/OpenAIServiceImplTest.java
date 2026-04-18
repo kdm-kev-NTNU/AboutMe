@@ -7,12 +7,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,34 +28,42 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class OpenAIServiceImplTest {
 
-	@Mock
-	private ChatModel chatModel;
+  @Mock
+  private OpenAiChatModel openAiChatModel;
 
-	@Mock
-	private VectorStore vectorStore;
+  @Mock
+  private VectorStore vectorStore;
 
-	private OpenAIServiceImpl openAIServiceImpl;
+  @Mock
+  private ObjectProvider<AnthropicChatModel> anthropicChatModelProvider;
 
-	@BeforeEach
-	void setUp() {
-		openAIServiceImpl = new OpenAIServiceImpl(chatModel, vectorStore);
-	}
+  private OpenAIServiceImpl openAIServiceImpl;
 
-	@Test
-	void getAnswerReturnsChatModelOutput() {
-		when(vectorStore.similaritySearch(any(SearchRequest.class)))
-			.thenReturn(List.of(new Document("ctx", new HashMap<>())));
+  @BeforeEach
+  void setUp() {
+    when(anthropicChatModelProvider.getIfAvailable()).thenReturn(null);
+    openAIServiceImpl = new OpenAIServiceImpl(
+        openAiChatModel,
+        anthropicChatModelProvider,
+        vectorStore,
+        "gpt-4o-mini");
+  }
 
-		ChatResponse expand = mock(ChatResponse.class, RETURNS_DEEP_STUBS);
-		when(expand.getResult().getOutput().getText()).thenReturn("{\"en\":\"Hello\",\"no\":\"Hei\"}");
+  @Test
+  void getAnswerReturnsChatModelOutput() {
+    when(vectorStore.similaritySearch(any(SearchRequest.class)))
+        .thenReturn(List.of(new Document("ctx", new HashMap<>())));
 
-		ChatResponse rag = mock(ChatResponse.class, RETURNS_DEEP_STUBS);
-		when(rag.getResult().getOutput().getText()).thenReturn("final answer text");
+    ChatResponse expand = mock(ChatResponse.class, RETURNS_DEEP_STUBS);
+    when(expand.getResult().getOutput().getText()).thenReturn("{\"en\":\"Hello\",\"no\":\"Hei\"}");
 
-		when(chatModel.call(any(Prompt.class))).thenReturn(expand, rag);
+    ChatResponse rag = mock(ChatResponse.class, RETURNS_DEEP_STUBS);
+    when(rag.getResult().getOutput().getText()).thenReturn("final answer text");
 
-		Answer answer = openAIServiceImpl.getAnswer(new Question("Hi"));
+    when(openAiChatModel.call(any(Prompt.class))).thenReturn(expand, rag);
 
-		assertEquals("final answer text", answer.answer());
-	}
+    Answer answer = openAIServiceImpl.getAnswer(new Question("Hi"));
+
+    assertEquals("final answer text", answer.answer());
+  }
 }
