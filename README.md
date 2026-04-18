@@ -52,6 +52,7 @@ This section summarizes the main security mechanisms in the project:
 - Vue 3 frontend with language toggle, quick questions, responsive chat UI, and chat history
 - Local development with Vite proxy to Spring Boot
 - Production setup with an Nginx container for the frontend and a Docker image for the backend
+- **OpenAPI / Swagger UI** on the backend (`http://localhost:8080/swagger-ui/index.html` when the API runs on 8080; OpenAPI JSON at `http://localhost:8080/v3/api-docs`). The Vue app can sync types and clients with [Orval](https://orval.dev/) — see [frontend/homepage/README.md](frontend/homepage/README.md) (`npm run api:pull`, `npm run api:generate`). With Nginx, the same UI is available under `/api/swagger-ui/index.html` on the site origin.
 
 ## Available Pages
 
@@ -82,6 +83,7 @@ The frontend provides access to the following pages:
 
 - Spring Boot 3.5.5 (Java 21)
 - Spring Web, Spring Data JPA, Lombok
+- Springdoc OpenAPI (Swagger UI + `/v3/api-docs`)
 - MySQL
 - Spring AI 1.0.1 (OpenAI Chat + Embeddings) and Tika document reader
 - ChromaDB (Spring AI vector store) for embeddings and metadata
