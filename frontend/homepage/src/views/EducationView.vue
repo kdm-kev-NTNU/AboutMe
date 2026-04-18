@@ -105,6 +105,17 @@ const getCourseStatusText = (status: string, language: 'en' | 'no') => {
   return statusTexts[status as keyof typeof statusTexts]?.[language] || status
 }
 
+const extractSemesterSortKey = (semester: string): { year: number; seasonRank: number } => {
+  const yearMatch = semester.match(/(20\d{2})/)
+  const year = yearMatch ? Number.parseInt(yearMatch[1], 10) : 0
+
+  const normalized = semester.toLowerCase()
+  const isSpring = normalized.includes('spring') || normalized.includes('vår')
+  const seasonRank = isSpring ? 1 : 0 // Spring is later than autumn within the same year
+
+  return { year, seasonRank }
+}
+
 // Group courses by semester
 const coursesBySemester = computed(() => {
   const grouped: { [key: string]: Course[] } = {}
@@ -118,11 +129,14 @@ const coursesBySemester = computed(() => {
 
   // Sort semesters in descending order (most recent first)
   const sortedSemesters = Object.keys(grouped).sort((a, b) => {
-    const [yearA, seasonA] = a.split('-')
-    const [yearB, seasonB] = b.split('-')
+    const semesterA = extractSemesterSortKey(a)
+    const semesterB = extractSemesterSortKey(b)
 
-    if (yearA !== yearB) return parseInt(yearB) - parseInt(yearA) // Descending year order
-    return seasonB === 'Spring' || seasonB === 'Vår' ? 1 : -1 // Spring comes after Autumn
+    if (semesterA.year !== semesterB.year) {
+      return semesterB.year - semesterA.year
+    }
+
+    return semesterB.seasonRank - semesterA.seasonRank
   })
 
   return sortedSemesters.map(semester => ({
