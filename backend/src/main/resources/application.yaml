@@ -3,7 +3,18 @@ spring:
     import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:backend/.env[.properties]
   application:
     name: portfolio
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
   ai:
+    vectorstore:
+      chroma:
+        client:
+          host: ${CHROMA_HTTP_HOST:http://localhost}
+          port: ${CHROMA_PORT:8100}
+        collection-name: ${CHROMA_COLLECTION:portfolio-documents}
+        initialize-schema: true
     openai:
       api-key: ${OPENAI_API_KEY}
       chat:
@@ -31,12 +42,11 @@ server:
   port: ${PORT}
 sfg:
   aiapp:
-    # Vector store plasseres alltid under 'backend/vectordatabase' uavhengig av working dir
-    # Denne veien tolkes som relativ til backend av appen (ikke prosessens cwd)
-    vectorStorePath: vectordatabase/vectorstore.json
     encryptContent: true
     encryptionKeyBase64: ${VECTORSTORE_ENC_KEY}
     documentsToLoadDir: classpath:/tmp/docs/
+    # When true, startup seeding re-ingests even if chunks already exist for the same content_hash
+    forceReindex: false
 logging:
   level:
     org.hibernate.SQL: DEBUG
