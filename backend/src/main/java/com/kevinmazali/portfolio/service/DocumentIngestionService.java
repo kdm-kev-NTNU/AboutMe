@@ -1,7 +1,6 @@
 package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
-import com.kevinmazali.portfolio.crypto.CryptoService;
 import com.kevinmazali.portfolio.model.ChromaCollectionSummary;
 import com.kevinmazali.portfolio.model.ChromaCollectionsResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
@@ -32,7 +31,6 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -42,7 +40,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Phased document pipeline (read → split → optional encrypt → ChromaDB), inspired by
+ * Phased document pipeline (read → split → ChromaDB), inspired by
  * Piscada-style ingestion, adapted for Spring AI {@link VectorStore}.
  */
 @Slf4j
@@ -78,24 +76,55 @@ public class DocumentIngestionService implements ApplicationRunner {
         chromaStoreProperties.getTenantName(),
         chromaStoreProperties.getDatabaseName(),
         collectionId);
-    if (count != null && count > 0) {
+    boolean forceReindex = vectorStoreProperties.isForceReindex();
+    if (count != null && count > 0 && !forceReindex) {
       log.info("Chroma collection '{}' already has {} embeddings; skipping classpath seed.",
           chromaStoreProperties.getCollectionName(), count);
       return;
+    }
+    if (forceReindex && count != null && count > 0) {
+      log.warn(
+          "forceReindex=true: re-ingesting classpath seed documents (existing {} embeddings in '{}').",
+          count, chromaStoreProperties.getCollectionName());
     }
     List<Resource> resources = resolveClasspathResources();
     if (resources.isEmpty()) {
       log.info("No classpath/file seed documents found for initial Chroma ingest.");
       return;
     }
-    log.info("Seeding Chroma from {} resource(s).", resources.size());
+    log.info("Seeding Chroma from {} resource(s) (force replace={}).", resources.size(), forceReindex);
     for (Resource res : resources) {
       try {
-        ingestFromResource(res, false);
+        ingestFromResource(res, forceReindex);
       } catch (Exception e) {
         log.error("Seed ingest failed for {}: {}", safeName(res), e.getMessage(), e);
       }
     }
+  }
+
+  /**
+   * Re-ingests all classpath seed documents ({@code documentsToLoad} or {@code documentsToLoadDir}),
+   * replacing existing chunks per {@code document_id} (content hash). Admin-only at the HTTP layer.
+   */
+  public List<IngestionResult> reseedClasspathDocuments() throws IOException {
+    requireCollectionId();
+    List<Resource> resources = resolveClasspathResources();
+    if (resources.isEmpty()) {
+      log.warn("reseedClasspathDocuments: no seed resources resolved.");
+      return List.of();
+    }
+    log.info("Admin reseed: re-ingesting {} classpath resource(s) with force replace.", resources.size());
+    List<IngestionResult> results = new ArrayList<>();
+    for (Resource res : resources) {
+      try {
+        results.add(ingestFromResource(res, true));
+      } catch (Exception e) {
+        log.error("Reseed ingest failed for {}: {}", safeName(res), e.getMessage(), e);
+        String name = Optional.ofNullable(res.getFilename()).orElse(safeName(res));
+        results.add(new IngestionResult("", name, 0, false, e.getMessage()));
+      }
+    }
+    return results;
   }
 
   public IngestionResult ingestMultipart(MultipartFile file, String titleOverride, boolean force) throws IOException {
@@ -153,7 +182,6 @@ public class DocumentIngestionService implements ApplicationRunner {
     }
 
     String ingestedAt = Instant.now().toString();
-    CryptoService crypto = vectorStoreProperties.isEncryptContent() ? createCryptoService() : null;
     List<Document> toAdd = new ArrayList<>();
     for (int i = 0; i < splitDocs.size(); i++) {
       Document d = splitDocs.get(i);
@@ -166,12 +194,6 @@ public class DocumentIngestionService implements ApplicationRunner {
       meta.put("ingested_at", ingestedAt);
 
       String text = d.getText();
-      if (crypto != null && text != null && !text.isBlank()) {
-        CryptoService.EncResult encrypted = crypto.encrypt(text);
-        text = encrypted.cipherBase64();
-        meta.put("enc", "aesgcm");
-        meta.put("enc_iv", encrypted.ivBase64());
-      }
 
       String chunkId = contentHash + "_" + i;
       toAdd.add(Document.builder()
@@ -367,24 +389,6 @@ public class DocumentIngestionService implements ApplicationRunner {
       }
     }
     return processedDocs;
-  }
-
-  private CryptoService createCryptoService() {
-    try {
-      String keyBase64 = vectorStoreProperties.getEncryptionKeyBase64();
-      if (keyBase64 == null || keyBase64.isBlank()) {
-        keyBase64 = System.getenv("VECTORSTORE_ENC_KEY");
-      }
-      if (keyBase64 == null || keyBase64.isBlank()) {
-        log.warn("No encryption key found in configuration or VECTORSTORE_ENC_KEY environment variable");
-        return null;
-      }
-      byte[] keyBytes = Base64.getDecoder().decode(keyBase64);
-      return new CryptoService(keyBytes);
-    } catch (Exception e) {
-      log.error("Error creating CryptoService: {}", e.getMessage(), e);
-      return null;
-    }
   }
 
   @SuppressWarnings("unchecked")
