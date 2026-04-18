@@ -1,31 +1,11 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { computed } from 'vue'
 import { useLangStore } from '../stores/lang'
-import { useDialogState } from '../composables/useDialogState'
 
 const route = useRoute()
 const langStore = useLangStore()
-const { isWelcomeDialogOpen, isEducationDialogOpen, isInfoDialogOpen } = useDialogState()
 
-const isActive = (routeName: string) => {
-  // Don't show active state when welcome dialog is open
-  if (isWelcomeDialogOpen.value) {
-    return false
-  }
-  
-  // Don't show active state when info dialog is open
-  if (isInfoDialogOpen.value) {
-    return false
-  }
-  
-  // When education dialog is open, show all items as active except home
-  if (isEducationDialogOpen.value) {
-    return routeName !== 'home'
-  }
-  
-  return route.name === routeName
-}
+const isActive = (routeName: string) => route.name === routeName
 
 const getButtonText = (key: string) => {
   const texts: Record<string, { en: string; no: string }> = {
@@ -53,17 +33,7 @@ const getButtonWidth = () => {
 
 const getIndicatorPosition = () => {
   const buttonWidth = getButtonWidth()
-  
-  // Hide indicator when education dialog is open since all items except home should appear active
-  if (isEducationDialogOpen.value) {
-    return { transform: 'translateX(0px)', opacity: '0' }
-  }
-  
-  // Hide indicator when info dialog is open since no items should appear active
-  if (isInfoDialogOpen.value) {
-    return { transform: 'translateX(0px)', opacity: '0' }
-  }
-  
+
   if (isActive('home')) return { transform: 'translateX(0px)', opacity: '1' }
   if (isActive('projects')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
   if (isActive('work-experience')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }

@@ -1,8 +1,10 @@
 // https://on.cypress.io/api
 
-describe('My First Test', () => {
-  it('visits the app root url', () => {
+describe('Home page', () => {
+  it('loads without blocking tutorial modal', () => {
     cy.visit('/')
-    cy.contains('h1', 'You did it!')
+    cy.get('h1').should('contain.text', 'Kevin')
+    cy.get('[data-slot="dialog-content"]').should('not.exist')
+    cy.get('[role="alert"]').should('exist')
   })
 })
