@@ -18,8 +18,7 @@ WORKDIR /app
 
 RUN touch .env
 
-ENV CHROMA_HTTP_HOST=http://chromadb
-ENV CHROMA_PORT=8000
+# CHROMA_HTTP_HOST / CHROMA_PORT: set via docker-compose or Railway (no image defaults).
 
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
