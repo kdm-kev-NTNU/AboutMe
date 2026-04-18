@@ -154,6 +154,22 @@ $env:SPRING_DATASOURCE_USERNAME = "root"
 $env:SPRING_DATASOURCE_PASSWORD = "root"
 ```
 
+### Tests and coverage (backend)
+
+From `backend/`, run unit and slice tests (no Docker required for the default suite):
+
+```bash
+./mvnw test
+```
+
+After tests, generate a JaCoCo HTML report with:
+
+```bash
+./mvnw verify
+```
+
+Open `backend/target/site/jacoco/index.html` in a browser. For a report without running `verify`, use `./mvnw test org.jacoco:jacoco-maven-plugin:report`.
+
 ### 4) Run the backend
 
 From `backend/`:
