@@ -7,7 +7,6 @@ export default defineConfig({
       mode: 'single',
       target: './src/api/generated/portfolio.ts',
       client: 'fetch',
-      httpClient: 'fetch',
       baseUrl: '',
       override: {
         mutator: {
