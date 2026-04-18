@@ -136,21 +136,21 @@ Required for a typical local run:
 
 - `OPENAI_API_KEY`: Required for Chat/Embeddings
 - `PORT`: HTTP port for the API (e.g. `8080`; there is no default in `application.yaml`)
-- `DB_USERNAME` / `DB_PASSWORD`: MySQL credentials (with `docker compose` as written, use `root` / `root`)
+- `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD`: MySQL credentials (with `docker compose` as written, use `root` / `root`; defaults in `application.yaml` are also `root` if unset)
 
 Optional:
 
 - `SPRING_DATASOURCE_URL`: JDBC URL override (see [`.env.example`](.env.example); the `backend` service in Compose sets this to the `db` container)
 - `CHROMA_COLLECTION`: Active Chroma collection name (default `portfolio-documents`, see `application.yaml`)
-- `CHROMA_HTTP_HOST` / `CHROMA_PORT`: Overrides for the Chroma HTTP client (defaults `http://localhost` and `8100` for host‑mapped Docker). In the backend Docker image, defaults target the `chromadb` service on port `8000`.
+- `CHROMA_HTTP_HOST` / `CHROMA_PORT`: Overrides for the Chroma HTTP client (defaults in `application.yaml`: `http://localhost` and `8100`). The `backend` service in Compose sets `http://chromadb` and `8000`. On Railway, set these to your Chroma service private URL and port.
 
 Example (PowerShell):
 
 ```powershell
 $env:OPENAI_API_KEY = "sk-..."
 $env:PORT = "8080"
-$env:DB_USERNAME = "root"
-$env:DB_PASSWORD = "root"
+$env:SPRING_DATASOURCE_USERNAME = "root"
+$env:SPRING_DATASOURCE_PASSWORD = "root"
 ```
 
 ### 4) Run the backend
