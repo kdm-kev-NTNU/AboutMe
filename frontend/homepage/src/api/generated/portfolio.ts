@@ -40,6 +40,22 @@ export interface TooManyRequestsError {
 export interface Question {
   /** @maxLength 3000 */
   question: string;
+  /** Allow-listed chat model id; omit to use server default. */
+  model?: string;
+}
+
+export type ChatModelOptionProvider = typeof ChatModelOptionProvider[keyof typeof ChatModelOptionProvider];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ChatModelOptionProvider = {
+  OPENAI: 'OPENAI',
+  ANTHROPIC: 'ANTHROPIC',
+} as const;
+
+export interface ChatModelOption {
+  id: string;
+  provider: ChatModelOptionProvider;
+  label: string;
 }
 
 export interface Answer {
@@ -176,6 +192,40 @@ export const askQuestion = async (question: Question, options?: RequestInit): Pr
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       question,)
+  }
+);
+}
+
+/**
+ * @summary List chat models
+ */
+export type listChatModelsResponse200 = {
+  data: ChatModelOption[]
+  status: 200
+}
+
+export type listChatModelsResponseComposite = listChatModelsResponse200;
+
+export type listChatModelsResponse = listChatModelsResponseComposite & {
+  headers: Headers;
+}
+
+export const getListChatModelsUrl = () => {
+
+
+  
+
+  return `/chat/models`
+}
+
+export const listChatModels = async (options?: RequestInit): Promise<listChatModelsResponse> => {
+  
+  return customFetch<listChatModelsResponse>(getListChatModelsUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
   }
 );}
 
