@@ -78,24 +78,55 @@ public class DocumentIngestionService implements ApplicationRunner {
         chromaStoreProperties.getTenantName(),
         chromaStoreProperties.getDatabaseName(),
         collectionId);
-    if (count != null && count > 0) {
+    boolean forceReindex = vectorStoreProperties.isForceReindex();
+    if (count != null && count > 0 && !forceReindex) {
       log.info("Chroma collection '{}' already has {} embeddings; skipping classpath seed.",
           chromaStoreProperties.getCollectionName(), count);
       return;
+    }
+    if (forceReindex && count != null && count > 0) {
+      log.warn(
+          "forceReindex=true: re-ingesting classpath seed documents (existing {} embeddings in '{}').",
+          count, chromaStoreProperties.getCollectionName());
     }
     List<Resource> resources = resolveClasspathResources();
     if (resources.isEmpty()) {
       log.info("No classpath/file seed documents found for initial Chroma ingest.");
       return;
     }
-    log.info("Seeding Chroma from {} resource(s).", resources.size());
+    log.info("Seeding Chroma from {} resource(s) (force replace={}).", resources.size(), forceReindex);
     for (Resource res : resources) {
       try {
-        ingestFromResource(res, false);
+        ingestFromResource(res, forceReindex);
       } catch (Exception e) {
         log.error("Seed ingest failed for {}: {}", safeName(res), e.getMessage(), e);
       }
     }
+  }
+
+  /**
+   * Re-ingests all classpath seed documents ({@code documentsToLoad} or {@code documentsToLoadDir}),
+   * replacing existing chunks per {@code document_id} (content hash). Admin-only at the HTTP layer.
+   */
+  public List<IngestionResult> reseedClasspathDocuments() throws IOException {
+    requireCollectionId();
+    List<Resource> resources = resolveClasspathResources();
+    if (resources.isEmpty()) {
+      log.warn("reseedClasspathDocuments: no seed resources resolved.");
+      return List.of();
+    }
+    log.info("Admin reseed: re-ingesting {} classpath resource(s) with force replace.", resources.size());
+    List<IngestionResult> results = new ArrayList<>();
+    for (Resource res : resources) {
+      try {
+        results.add(ingestFromResource(res, true));
+      } catch (Exception e) {
+        log.error("Reseed ingest failed for {}: {}", safeName(res), e.getMessage(), e);
+        String name = Optional.ofNullable(res.getFilename()).orElse(safeName(res));
+        results.add(new IngestionResult("", name, 0, false, e.getMessage()));
+      }
+    }
+    return results;
   }
 
   public IngestionResult ingestMultipart(MultipartFile file, String titleOverride, boolean force) throws IOException {
