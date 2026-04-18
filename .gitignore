@@ -1,3 +1,12 @@
-# IDE files
+# IDE
 .idea/
-.github/
+.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local environment (secrets / machine-specific)
+.env
+.env.*
+!.env.example
