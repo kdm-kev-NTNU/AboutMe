@@ -42,8 +42,6 @@ server:
   port: ${PORT}
 sfg:
   aiapp:
-    encryptContent: true
-    encryptionKeyBase64: ${VECTORSTORE_ENC_KEY}
     documentsToLoadDir: classpath:/tmp/docs/
     # When true, startup seeding re-ingests even if chunks already exist for the same content_hash
     forceReindex: false
