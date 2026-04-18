@@ -3,6 +3,8 @@ package com.kevinmazali.portfolio.controller;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.ApiError;
 import com.kevinmazali.portfolio.model.Question;
+import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
+import com.kevinmazali.portfolio.service.ChatModelCatalog;
 import com.kevinmazali.portfolio.service.OpenAIService;
 import com.kevinmazali.portfolio.service.RequestLogService;
 import com.kevinmazali.portfolio.util.InputValidator;
@@ -12,8 +14,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,13 +28,25 @@ import org.springframework.web.bind.annotation.RestController;
  * Rate limiting and CORS are configured in {@link com.kevinmazali.portfolio.config.WebConfig}.
  */
 @Slf4j
-@RequiredArgsConstructor
 @RestController
 @Tag(name = "Chat", description = "RAG-backed question answering")
 public class QuestionController {
 
     private final OpenAIService openAIService;
     private final RequestLogService requestLogService;
+    private final ChatModelCatalog chatModelCatalog;
+    private final String defaultChatModelId;
+
+    public QuestionController(
+        OpenAIService openAIService,
+        RequestLogService requestLogService,
+        ChatModelCatalog chatModelCatalog,
+        @Value("${portfolio.chat.default-model-id}") String defaultChatModelId) {
+        this.openAIService = openAIService;
+        this.requestLogService = requestLogService;
+        this.chatModelCatalog = chatModelCatalog;
+        this.defaultChatModelId = defaultChatModelId;
+    }
 
     @Operation(summary = "Ask a question", description = "Runs RAG over indexed documents and returns an answer. Rate limited (5 requests / 10s per IP).")
     @ApiResponses({
@@ -40,7 +54,7 @@ public class QuestionController {
             content = @Content(schema = @Schema(implementation = Answer.class))),
         @ApiResponse(responseCode = "400", description = "Empty, invalid, or too long question",
             content = @Content(schema = @Schema(implementation = ApiError.class))),
-        @ApiResponse(responseCode = "503", description = "OpenAI or Chroma unavailable",
+        @ApiResponse(responseCode = "503", description = "LLM provider or Chroma unavailable",
             content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/ask")
@@ -55,9 +69,22 @@ public class QuestionController {
 
         String sanitizedQuestion = InputValidator.sanitizeString(question.question());
 
+        String effectiveModelId = (question.model() == null || question.model().isBlank())
+            ? defaultChatModelId
+            : question.model().trim();
+
+        var selected = SupportedChatModel.fromModelId(effectiveModelId);
+        if (selected.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiError("Unknown chat model."));
+        }
+        if (!chatModelCatalog.isModelConfigured(selected.get())) {
+            return ResponseEntity.badRequest()
+                .body(new ApiError("That model is not available. Configure the API key for its provider."));
+        }
+
         requestLogService.save("/ask", "POST", sanitizedQuestion, null);
 
-        Question sanitizedQuestionObj = new Question(sanitizedQuestion);
+        Question sanitizedQuestionObj = new Question(sanitizedQuestion, effectiveModelId);
         try {
             Answer answer = openAIService.getAnswer(sanitizedQuestionObj);
             requestLogService.save("/ask:response", "POST", answer.answer(), null);
