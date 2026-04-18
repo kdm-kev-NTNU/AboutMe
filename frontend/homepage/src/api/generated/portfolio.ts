@@ -33,6 +33,10 @@ export interface ServiceUnavailableError {
   error: string;
 }
 
+export interface TooManyRequestsError {
+  error: string;
+}
+
 export interface Question {
   /** @maxLength 3000 */
   question: string;
@@ -139,12 +143,17 @@ export type askQuestionResponse400 = {
   status: 400
 }
 
+export type askQuestionResponse429 = {
+  data: TooManyRequestsError
+  status: 429
+}
+
 export type askQuestionResponse503 = {
   data: ServiceUnavailableError
   status: 503
 }
     
-export type askQuestionResponseComposite = askQuestionResponse200 | askQuestionResponse400 | askQuestionResponse503;
+export type askQuestionResponseComposite = askQuestionResponse200 | askQuestionResponse400 | askQuestionResponse429 | askQuestionResponse503;
     
 export type askQuestionResponse = askQuestionResponseComposite & {
   headers: Headers;

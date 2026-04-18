@@ -68,6 +68,12 @@ npm run build
 npm run test:unit
 ```
 
+Coverage (HTML under `coverage/`):
+
+```sh
+npm run test:unit:coverage
+```
+
 ### Run End-to-End Tests with [Cypress](https://www.cypress.io/)
 
 ```sh
