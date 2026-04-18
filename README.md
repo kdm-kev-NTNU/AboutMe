@@ -9,7 +9,7 @@ NB: Known issues
 This project was built quickly as a personal initiative. Some edge cases and minor issues may exist. Feedback and improvement suggestions are very welcome. email: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)
 
 - Privacy: Conversations may be stored in the database to improve answers and stability. Do not share sensitive information.
-- Vector store privacy: The vector store is encrypted at rest (AES‑GCM) so personal documents are not accessible without the decryption key.
+- Vector store privacy: Chunk text and embeddings live in ChromaDB; treat the database and backups as sensitive if documents are personal.
 - Hallucinations: AI answers can be incorrect. Verify important information.
 
 ## Repository structure
@@ -34,8 +34,7 @@ This section summarizes the main security mechanisms in the project:
   - Bucket4j enforces 5 requests per 10 seconds per user/IP for `POST /ask`.
 - CORS
   - CORS uses an allowlist of origins: `http://localhost:5173`, `http://localhost:4173` (Vite preview / Cypress), `https://kevindmazali.me`, and `https://www.kevindmazali.me`. Credentials are allowed and standard headers (including `Authorization`) are permitted.
-- Data privacy and encryption
-  - The vector index can be encrypted at rest using AES‑GCM. Provide a Base64‑encoded 32‑byte key via `VECTORSTORE_ENC_KEY`.
+- Data privacy
   - Minimal request/response auditing is stored in MySQL for troubleshooting. Avoid sharing sensitive information.
 - Input validation
   - Questions are validated and sanitized server‑side with a maximum length of 3000 characters.
@@ -46,7 +45,7 @@ This section summarizes the main security mechanisms in the project:
 
 - AI chat about Kevin with RAG (loads context from documents like CV, courses, projects)
 - Multilingual query understanding (NO/EN) with simple query expansion
-- Vector index in **ChromaDB** (Docker) with optional AES‑GCM on chunk text before storage
+- Vector index in **ChromaDB** (Docker)
 - Internal **Admin tools** page (`/admin/tools`) to upload and manage indexed documents
 - API rate limiting (Bucket4j) to prevent abuse
 - Logs requests and answers to MySQL (for insights and troubleshooting)
@@ -141,7 +140,6 @@ Optional:
 
 - `SPRING_DATASOURCE_URL`: JDBC URL override (see [`.env.example`](.env.example); the `backend` service in Compose sets this to the `db` container)
 - `CHROMA_COLLECTION`: Active Chroma collection name (default `portfolio-documents`, see `application.yaml`)
-- `VECTORSTORE_ENC_KEY`: Base64‑encoded 32‑byte key for AES‑256 GCM on vector chunk text. The app is configured with content encryption enabled (`encryptContent: true`); set this key so ingest/query use encryption consistently (without it, the server logs a warning and encryption may be skipped).
 - `CHROMA_HTTP_HOST` / `CHROMA_PORT`: Overrides for the Chroma HTTP client (defaults `http://localhost` and `8100` for host‑mapped Docker). In the backend Docker image, defaults target the `chromadb` service on port `8000`.
 
 Example (PowerShell):
@@ -151,7 +149,6 @@ $env:OPENAI_API_KEY = "sk-..."
 $env:PORT = "8080"
 $env:DB_USERNAME = "root"
 $env:DB_PASSWORD = "root"
-$env:VECTORSTORE_ENC_KEY = "BASE64_32BYTE_KEY=="
 ```
 
 ### 4) Run the backend
