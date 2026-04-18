@@ -1,32 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-
-interface IngestionResult {
-  documentId: string
-  filename: string
-  chunksIngested: number
-  skipped: boolean
-  message: string
-}
-
-interface DocumentListEntry {
-  documentId: string
-  filename: string
-  chunkCount: number
-  lastIngestedAt: string
-}
-
-interface ChromaCollectionSummary {
-  id: string
-  name: string
-}
-
-interface ChromaCollectionsResponse {
-  activeCollectionName: string
-  activeCollectionEmbeddingCount: number
-  collections: ChromaCollectionSummary[]
-}
+import {
+  adminDocumentsCollections,
+  adminDocumentsDelete,
+  adminDocumentsList,
+  adminDocumentsUpload,
+  type ChromaCollectionsResponse,
+  type DocumentListEntry,
+} from '@/api/generated/portfolio'
 
 interface ChunkItem {
   id: string
@@ -73,18 +55,15 @@ function authHeaders(): HeadersInit {
 async function loadData() {
   error.value = ''
   try {
-    const [dRes, cRes] = await Promise.all([
-      fetch('/api/admin/tools/documents', { headers: authHeaders() }),
-      fetch('/api/admin/tools/documents/collections', { headers: authHeaders() }),
-    ])
-    if (!dRes.ok) {
+    const [dRes, cRes] = await Promise.all([adminDocumentsList(), adminDocumentsCollections()])
+    if (dRes.status !== 200) {
       throw new Error(dRes.status === 401 ? 'Ikke autorisert (logg inn som admin)' : `Liste feilet (${dRes.status})`)
     }
-    if (!cRes.ok) {
+    if (cRes.status !== 200) {
       throw new Error(`Chroma status feilet (${cRes.status})`)
     }
-    documents.value = (await dRes.json()) as DocumentListEntry[]
-    chromaInfo.value = (await cRes.json()) as ChromaCollectionsResponse
+    documents.value = dRes.data
+    chromaInfo.value = cRes.data
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Ukjent feil'
   }
@@ -101,32 +80,20 @@ async function upload() {
   status.value = ''
   error.value = ''
   try {
-    const form = new FormData()
-    form.append('file', file)
-    if (title.value.trim()) {
-      form.append('title', title.value.trim())
-    }
-    form.append('force', force.value ? 'true' : 'false')
-    const res = await fetch('/api/admin/tools/documents/upload', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: form,
+    const r = await adminDocumentsUpload({
+      file,
+      title: title.value.trim() || undefined,
+      force: force.value,
     })
-    let body: IngestionResult | null = null
-    try {
-      body = (await res.json()) as IngestionResult
-    } catch {
-      /* non-JSON error body */
+    if (r.status !== 200) {
+      const errBody = r.data
+      throw new Error(errBody?.message || `Opplasting feilet (${r.status})`)
     }
-    if (!res.ok) {
-      throw new Error(body?.message || `Opplasting feilet (${res.status})`)
-    }
-    if (!body) {
-      throw new Error('Uventet svar fra server')
-    }
+    const body = r.data
+    const docIdPreview = (body.documentId ?? '').slice(0, 12)
     status.value = body.skipped
       ? `Hoppet over: ${body.message}`
-      : `OK: ${body.chunksIngested} chunks for ${body.filename} (${body.documentId.slice(0, 12)}…)`
+      : `OK: ${body.chunksIngested ?? 0} chunks for ${body.filename ?? ''}${docIdPreview ? ` (${docIdPreview}…)` : ''}`
     if (input) input.value = ''
     await loadData()
   } catch (e: unknown) {
@@ -141,12 +108,10 @@ async function removeDoc(documentId: string) {
   busy.value = true
   error.value = ''
   try {
-    const res = await fetch(`/api/admin/tools/documents/${encodeURIComponent(documentId)}`, {
-      method: 'DELETE',
-      headers: authHeaders(),
-    })
-    if (!res.ok && res.status !== 204) {
-      throw new Error(`Sletting feilet (${res.status})`)
+    const r = await adminDocumentsDelete(documentId)
+    const delStatus = r.status
+    if (delStatus !== 204 && delStatus !== 400) {
+      throw new Error(`Sletting feilet (${delStatus})`)
     }
     await loadData()
   } catch (e: unknown) {
@@ -295,17 +260,17 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="d in documents" :key="d.documentId" class="border-b border-gray-100">
+            <tr v-for="(d, docIdx) in documents" :key="d.documentId ?? docIdx" class="border-b border-gray-100">
               <td class="py-2 pr-4">{{ d.filename }}</td>
-              <td class="py-2 pr-4 font-mono text-xs">{{ d.documentId.slice(0, 16) }}…</td>
+              <td class="py-2 pr-4 font-mono text-xs">{{ (d.documentId ?? '').slice(0, 16) }}…</td>
               <td class="py-2 pr-4">{{ d.chunkCount }}</td>
               <td class="py-2 pr-4 text-gray-600">{{ d.lastIngestedAt || '—' }}</td>
               <td class="py-2">
                 <button
                   type="button"
                   class="text-red-600 hover:underline cursor-pointer disabled:opacity-50"
-                  :disabled="busy"
-                  @click="removeDoc(d.documentId)"
+                  :disabled="busy || !d.documentId"
+                  @click="d.documentId && removeDoc(d.documentId)"
                 >
                   Slett
                 </button>

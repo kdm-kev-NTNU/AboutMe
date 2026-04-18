@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { authLogin } from '@/api/generated/portfolio'
 
 interface AuthState {
   username: string | null
@@ -14,15 +15,11 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     async login(username: string, password: string) {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      })
-      if (!res.ok) {
+      const r = await authLogin({ username, password })
+      if (r.status !== 200) {
         throw new Error('Invalid credentials')
       }
-      const data = await res.json() as { username: string; role: 'USER' | 'ADMIN' }
+      const data = r.data
       this.username = data.username
       this.role = data.role
       this.basicToken = btoa(`${username}:${password}`)
@@ -47,5 +44,3 @@ export const useAuthStore = defineStore('auth', {
     }
   }
 })
-
-
