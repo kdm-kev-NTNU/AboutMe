@@ -22,7 +22,7 @@ public class VectorStoreProperties {
 
   /**
    * Base directory to scan for documents to ingest. Supports classpath:, file:, etc.
-   * Example: classpath:/tmp/docs/
+   * Example: file:./data/docs/ or classpath:/static/docs/
    */
   private String documentsToLoadDir;
 
