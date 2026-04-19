@@ -32,6 +32,19 @@ This section summarizes the main security mechanisms in the project:
   - Admin tools (`/admin/**`, including document ingest APIs) require an `ADMIN` user and HTTP Basic. The frontend stores a Base64‑encoded Basic token in `sessionStorage` after a successful `POST /auth/login` and sends it as `Authorization: Basic <token>` on protected calls.
 - Rate limiting
   - Bucket4j enforces 5 requests per 10 seconds for `POST /ask`, keyed by **client IP** or by **authenticated principal** when present (so logged-in users are not pooled with anonymous traffic). Can be disabled with `portfolio.ask-rate-limit.enabled=false` (see [WebConfig.java](backend/src/main/java/com/kevinmazali/portfolio/config/WebConfig.java)).
+  - `POST /auth/login` is limited to **5 attempts per 60 seconds per IP** (`portfolio.login-rate-limit.enabled=true` by default). Failed logins are logged server-side (username + IP only).
+- Production profile
+  - Set **`SPRING_PROFILES_ACTIVE=prod`** in production (e.g. Railway). This loads [application-prod.yaml](backend/src/main/resources/application-prod.yaml): disables verbose SQL / Hibernate binder logging, turns off Spring AI prompt/completion observation logging, and disables Swagger/OpenAPI exposure.
+- HTTP security headers
+  - [SecurityConfig.java](backend/src/main/java/com/kevinmazali/portfolio/config/SecurityConfig.java) sets `X-Content-Type-Options`, `X-Frame-Options: DENY`, HSTS (when the request is HTTPS), and a restrictive `Content-Security-Policy` suitable for JSON API responses.
+- Chat UI markdown
+  - Assistant messages are rendered with **markdown-it** and **DOMPurify** ([SafeMarkdown.vue](frontend/homepage/src/components/SafeMarkdown.vue)) to reduce XSS from model output.
+- Request logs
+  - Payloads persisted in `request_log` are **truncated to 500 characters** (see [RequestLogService.java](backend/src/main/java/com/kevinmazali/portfolio/service/RequestLogService.java)).
+- Public health
+  - `GET /health/chroma` returns a **generic** message when Chroma is down; internal host/diagnostics are **logged only** on the server.
+- Database TLS (production)
+  - The default JDBC URL in `application.yaml` is for local dev (`useSSL=false`). In production, set **`SPRING_DATASOURCE_URL`** to a MySQL URL that enables TLS (e.g. Railway’s template often includes `sslMode=REQUIRED` / `useSSL=true`). Verify your provider’s connection string.
 - CORS
   - CORS uses an allowlist of origins: `http://localhost:5173`, `http://localhost:4173` (Vite preview / Cypress), `https://kevindmazali.me`, and `https://www.kevindmazali.me`. Credentials are allowed and standard headers (including `Authorization`) are permitted.
 - Data privacy
