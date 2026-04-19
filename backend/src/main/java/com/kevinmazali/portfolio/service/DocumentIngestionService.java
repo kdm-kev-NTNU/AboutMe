@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.service;
 import com.kevinmazali.portfolio.config.PortfolioChromaProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
 import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
+import com.kevinmazali.portfolio.util.ChromaClientDiagnostics;
 import com.kevinmazali.portfolio.model.ChromaCollectionSummary;
 import com.kevinmazali.portfolio.model.ChunkItem;
 import com.kevinmazali.portfolio.model.ChunkListResponse;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.env.Environment;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ByteArrayResource;
@@ -29,6 +31,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -67,6 +70,7 @@ public class DocumentIngestionService implements ApplicationRunner {
 
   private final VectorStore vectorStore;
   private final ObjectProvider<ChromaApi> chromaApiProvider;
+  private final Environment environment;
   private final ChromaVectorStoreProperties chromaStoreProperties;
   private final VectorStoreProperties vectorStoreProperties;
   private final PortfolioChromaProperties portfolioChromaProperties;
@@ -74,11 +78,13 @@ public class DocumentIngestionService implements ApplicationRunner {
   public DocumentIngestionService(
       @Lazy VectorStore vectorStore,
       ObjectProvider<ChromaApi> chromaApiProvider,
+      Environment environment,
       ChromaVectorStoreProperties chromaStoreProperties,
       VectorStoreProperties vectorStoreProperties,
       PortfolioChromaProperties portfolioChromaProperties) {
     this.vectorStore = vectorStore;
     this.chromaApiProvider = chromaApiProvider;
+    this.environment = environment;
     this.chromaStoreProperties = chromaStoreProperties;
     this.vectorStoreProperties = vectorStoreProperties;
     this.portfolioChromaProperties = portfolioChromaProperties;
@@ -92,8 +98,10 @@ public class DocumentIngestionService implements ApplicationRunner {
     }
     ChromaApi api = chromaApiProvider.getIfAvailable();
     if (api == null) {
+      String chromaUrl = chromaClientBaseUrl();
       throw new IllegalStateException(
-          "ChromaApi bean is missing while portfolio.chroma.enabled=true; check Chroma autoconfiguration.");
+          "ChromaApi bean is missing while portfolio.chroma.enabled=true; check Chroma autoconfiguration. "
+              + "Configured Chroma client URL (host:port): " + chromaUrl);
     }
     return api;
   }
@@ -625,15 +633,27 @@ public class DocumentIngestionService implements ApplicationRunner {
     return resp != null && resp.ids() != null && !resp.ids().isEmpty();
   }
 
+  private String chromaClientBaseUrl() {
+    String host = environment.getProperty("spring.ai.vectorstore.chroma.client.host", "");
+    int port = environment.getProperty("spring.ai.vectorstore.chroma.client.port", Integer.class, 8100);
+    return ChromaClientDiagnostics.baseUrl(host, port);
+  }
+
   private String requireCollectionId() {
-    ChromaApi.Collection col = chromaApi().getCollection(
-        chromaStoreProperties.getTenantName(),
-        chromaStoreProperties.getDatabaseName(),
-        chromaStoreProperties.getCollectionName());
-    if (col == null) {
-      throw new IllegalStateException("Chroma collection not found: " + chromaStoreProperties.getCollectionName());
+    String base = chromaClientBaseUrl();
+    try {
+      ChromaApi.Collection col = chromaApi().getCollection(
+          chromaStoreProperties.getTenantName(),
+          chromaStoreProperties.getDatabaseName(),
+          chromaStoreProperties.getCollectionName());
+      if (col == null) {
+        throw new IllegalStateException("Chroma collection not found: " + chromaStoreProperties.getCollectionName()
+            + " (Chroma URL: " + base + ")");
+      }
+      return col.id();
+    } catch (RestClientException e) {
+      throw new IllegalStateException(ChromaClientDiagnostics.describeChromaFailure(e, base), e);
     }
-    return col.id();
   }
 
   private List<Resource> resolveClasspathResources() throws IOException {

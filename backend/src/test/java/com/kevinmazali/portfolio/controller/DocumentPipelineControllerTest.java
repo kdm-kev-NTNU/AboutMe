@@ -37,7 +37,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = DocumentPipelineController.class)
+@WebMvcTest(controllers = DocumentPipelineController.class, properties = {
+		"spring.ai.vectorstore.chroma.client.host=http://localhost",
+		"spring.ai.vectorstore.chroma.client.port=8100"
+})
 @Import({ SecurityConfig.class, MvcTestUserDetailsConfig.class, DocumentPipelineControllerAdvice.class })
 class DocumentPipelineControllerTest {
 
@@ -111,7 +114,8 @@ class DocumentPipelineControllerTest {
 
 		mockMvc.perform(get("/admin/tools/documents"))
 			.andExpect(status().isServiceUnavailable())
-			.andExpect(jsonPath("$.error").value("Connection refused"));
+			.andExpect(jsonPath("$.error").value(containsString("Connection refused")))
+			.andExpect(jsonPath("$.error").value(containsString("http://localhost:8100")));
 	}
 
 	@Test

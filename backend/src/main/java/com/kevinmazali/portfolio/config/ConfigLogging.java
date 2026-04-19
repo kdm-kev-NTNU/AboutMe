@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio.config;
 
+import com.kevinmazali.portfolio.util.ChromaClientDiagnostics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -57,6 +58,11 @@ public class ConfigLogging implements ApplicationRunner {
             environment.getProperty("spring.ai.vectorstore.chroma.client.host", "<unset>"));
         log.info("Config: spring.ai.vectorstore.chroma.client.port={}",
             environment.getProperty("spring.ai.vectorstore.chroma.client.port", "<unset>"));
+        int chromaPort = environment.getProperty("spring.ai.vectorstore.chroma.client.port", Integer.class, 8100);
+        log.info("Config: Chroma REST client base URL (host:port, same as ChromaApi)={}",
+            ChromaClientDiagnostics.baseUrl(
+                environment.getProperty("spring.ai.vectorstore.chroma.client.host"),
+                chromaPort));
         log.info("Config: management.otlp.tracing.endpoint={}",
             environment.getProperty("management.otlp.tracing.endpoint", "<unset>"));
     }
