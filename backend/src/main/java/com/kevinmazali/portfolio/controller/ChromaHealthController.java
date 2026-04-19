@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chroma.vectorstore.ChromaApi;
 import org.springframework.ai.vectorstore.chroma.autoconfigure.ChromaVectorStoreProperties;
 import org.springframework.beans.factory.ObjectProvider;
@@ -22,12 +23,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Unauthenticated health check for ChromaDB (ops / load balancers).
+ * Client-facing error messages are generic; details are logged server-side only.
  */
+@Slf4j
 @RestController
 @RequestMapping("/health")
 @RequiredArgsConstructor
 @Tag(name = "Health", description = "Operational health endpoints")
 public class ChromaHealthController {
+
+  /** Public response when Chroma is enabled but unreachable or misconfigured (no host/port in body). */
+  static final String PUBLIC_VECTOR_STORE_DOWN = "Vector store is currently unavailable.";
 
   private final ObjectProvider<ChromaApi> chromaApiProvider;
   private final Environment environment;
@@ -58,28 +64,30 @@ public class ChromaHealthController {
     }
     ChromaApi chromaApi = chromaApiProvider.getIfAvailable();
     if (chromaApi == null) {
+      log.warn("Chroma health: ChromaApi bean missing while Chroma is enabled (collection={}).", collectionName);
       return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ChromaHealthResponse(
           false,
           collectionName,
           null,
-          "ChromaApi bean is missing while Chroma is enabled; check application wiring."));
+          PUBLIC_VECTOR_STORE_DOWN));
     }
     String tenant = chromaStoreProperties.getTenantName();
     String database = chromaStoreProperties.getDatabaseName();
     try {
       ChromaApi.Collection col = chromaApi.getCollection(tenant, database, collectionName);
       if (col == null) {
+        log.warn("Chroma health: collection '{}' not found in tenant={}, database={}.", collectionName, tenant, database);
         return ResponseEntity.status(503).body(new ChromaHealthResponse(
-            false, collectionName, null, "Chroma collection not found: " + collectionName));
+            false, collectionName, null, PUBLIC_VECTOR_STORE_DOWN));
       }
       Long count = chromaApi.countEmbeddings(tenant, database, col.id());
       long safeCount = count == null ? 0L : count;
       return ResponseEntity.ok(new ChromaHealthResponse(true, collectionName, safeCount, null));
     } catch (Exception e) {
       String base = chromaClientBaseUrl();
-      String message = ChromaClientDiagnostics.healthFailureMessage(e, base);
+      log.warn("Chroma health check failed: {}", ChromaClientDiagnostics.healthFailureMessage(e, base));
       return ResponseEntity.status(503).body(new ChromaHealthResponse(
-          false, collectionName, null, message));
+          false, collectionName, null, PUBLIC_VECTOR_STORE_DOWN));
     }
   }
 
