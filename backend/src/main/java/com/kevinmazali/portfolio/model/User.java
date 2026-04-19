@@ -16,6 +16,10 @@ import lombok.Setter;
 
 import java.time.OffsetDateTime;
 
+/**
+ * JPA entity backing HTTP Basic auth. Passwords are stored as bcrypt hashes; {@link Role} drives
+ * {@code ROLE_*} authorities in {@link com.kevinmazali.portfolio.security.JpaUserDetailsService}.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -25,6 +29,7 @@ import java.time.OffsetDateTime;
 @Table(name = "users")
 public class User {
 
+    /** Domain role; mapped to Spring Security granted authorities with a {@code ROLE_} prefix. */
     public enum Role { USER, ADMIN }
 
     @Id
