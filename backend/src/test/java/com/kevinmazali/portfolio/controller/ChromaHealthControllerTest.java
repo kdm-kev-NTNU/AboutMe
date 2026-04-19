@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chroma.vectorstore.ChromaApi;
 import org.springframework.ai.vectorstore.chroma.autoconfigure.ChromaVectorStoreProperties;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -31,7 +30,7 @@ class ChromaHealthControllerTest {
 	private MockMvc mockMvc;
 
 	@MockBean
-	private ObjectProvider<ChromaApi> chromaApiProvider;
+	private ChromaApi chromaApi;
 
 	@MockBean
 	private ChromaVectorStoreProperties chromaStoreProperties;
@@ -39,12 +38,8 @@ class ChromaHealthControllerTest {
 	@MockBean
 	private PortfolioChromaProperties portfolioChromaProperties;
 
-	private ChromaApi chromaApi;
-
 	@BeforeEach
 	void wireChromaApi() {
-		chromaApi = mock(ChromaApi.class);
-		when(chromaApiProvider.getIfAvailable()).thenReturn(chromaApi);
 		when(portfolioChromaProperties.isEnabled()).thenReturn(true);
 	}
 
