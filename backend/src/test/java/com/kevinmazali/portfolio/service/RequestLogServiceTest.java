@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 
@@ -75,5 +76,25 @@ class RequestLogServiceTest {
 		requestLogService.save("/ask", "POST", "payload", null);
 
 		verify(requestLogRepository).save(argThat(log -> "Bruker".equals(log.getRequesterId())));
+	}
+
+	@Test
+	void truncatePayloadShortensLongStrings() {
+		String longPayload = "a".repeat(600);
+		requestLogService.save("/ask", "POST", longPayload, null);
+
+		verify(requestLogRepository).save(argThat(log -> {
+			String p = log.getPayload();
+			return p != null && p.length() < longPayload.length() && p.endsWith("...[truncated]");
+		}));
+	}
+
+	@Test
+	void truncatePayloadHelperMatchesServiceBehavior() {
+		assertEquals("hi", RequestLogService.truncatePayload("hi"));
+		String longPayload = "x".repeat(501);
+		String t = RequestLogService.truncatePayload(longPayload);
+		assertTrue(t.endsWith("...[truncated]"));
+		assertEquals(500 + "...[truncated]".length(), t.length());
 	}
 }

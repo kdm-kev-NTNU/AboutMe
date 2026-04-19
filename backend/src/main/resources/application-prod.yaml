@@ -1,0 +1,26 @@
+# Production overrides: reduce log leakage, disable Swagger, and avoid logging full prompts/completions.
+# Activate with SPRING_PROFILES_ACTIVE=prod (e.g. Railway).
+
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  ai:
+    chat:
+      observations:
+        log-prompt: false
+        log-completion: false
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.boot.context.config: WARN
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

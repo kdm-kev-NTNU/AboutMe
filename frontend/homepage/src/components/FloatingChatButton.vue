@@ -18,7 +18,7 @@ const checkForActiveChat = () => {
   try {
     const messages = sessionStorage.getItem('chatMessages')
     hasActiveChat.value = Boolean(messages && JSON.parse(messages).length > 0)
-  } catch (error) {
+  } catch {
     hasActiveChat.value = false
   }
 }

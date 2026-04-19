@@ -21,7 +21,7 @@ async function submit() {
   try {
     await auth.login(username.value, password.value)
     showForm.value = false
-  } catch (e: any) {
+  } catch {
     error.value = 'Feil brukernavn eller passord'
   } finally {
     isLoading.value = false

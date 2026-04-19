@@ -8,11 +8,11 @@ import java.util.Optional;
  */
 public enum SupportedChatModel {
 
-  GPT_4O_MINI("gpt-4o-mini", ChatProvider.OPENAI, "GPT-4o mini"),
-  GPT_4O("gpt-4o", ChatProvider.OPENAI, "GPT-4o"),
+  GPT_5_4_MINI("gpt-5.4-mini", ChatProvider.OPENAI, "GPT-5.4 mini"),
+  GPT_5_4("gpt-5.4", ChatProvider.OPENAI, "GPT-5.4"),
 
-  CLAUDE_SONNET_4("claude-sonnet-4-20250514", ChatProvider.ANTHROPIC, "Claude Sonnet 4"),
-  CLAUDE_3_5_HAIKU("claude-3-5-haiku-20241022", ChatProvider.ANTHROPIC, "Claude 3.5 Haiku");
+  CLAUDE_HAIKU_4_5("claude-haiku-4-5-20251001", ChatProvider.ANTHROPIC, "Claude Haiku 4.5"),
+  CLAUDE_SONNET_4_6("claude-sonnet-4-6", ChatProvider.ANTHROPIC, "Claude Sonnet 4.6");
 
   private final String modelId;
   private final ChatProvider provider;

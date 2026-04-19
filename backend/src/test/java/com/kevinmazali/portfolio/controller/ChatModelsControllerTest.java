@@ -33,13 +33,13 @@ class ChatModelsControllerTest {
   @Test
   void listModelsReturnsJsonArray() throws Exception {
     when(chatModelCatalog.listAvailableModels()).thenReturn(List.of(
-        new ChatModelOption("gpt-4o-mini", ChatProvider.OPENAI, "GPT-4o mini")
+        new ChatModelOption("gpt-5.4-mini", ChatProvider.OPENAI, "GPT-5.4 mini")
     ));
 
     mockMvc.perform(get("/chat/models"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].id").value("gpt-4o-mini"))
+        .andExpect(jsonPath("$[0].id").value("gpt-5.4-mini"))
         .andExpect(jsonPath("$[0].provider").value("OPENAI"))
-        .andExpect(jsonPath("$[0].label").value("GPT-4o mini"));
+        .andExpect(jsonPath("$[0].label").value("GPT-5.4 mini"));
   }
 }

@@ -158,6 +158,14 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.12</version>
+				<configuration>
+					<!-- Focus gate on executable code; models and Spring wiring are thin or DTO-like. -->
+					<excludes>
+						<exclude>**/com/kevinmazali/portfolio/model/**</exclude>
+						<exclude>**/com/kevinmazali/portfolio/config/**</exclude>
+						<exclude>**/com/kevinmazali/portfolio/PortfolioApplication.class</exclude>
+					</excludes>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>
@@ -185,7 +193,7 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.22</minimum>
+											<minimum>0.35</minimum>
 										</limit>
 									</limits>
 								</rule>
