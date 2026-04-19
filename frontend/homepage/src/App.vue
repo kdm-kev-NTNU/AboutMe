@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterView, RouterLink, useRoute } from 'vue-router'
-import InfoSheet from './components/InfoSheet.vue'
 import Navbar from './components/Navbar.vue'
 import FloatingChatButton from './components/FloatingChatButton.vue'
 import AdminLoginButton from './components/AdminLoginButton.vue'
@@ -38,7 +37,6 @@ const cookieSettingsLabel = computed(() => (langStore.language === 'no' ? 'Infor
         {{ cookieSettingsLabel }}
       </button>
     </footer>
-    <InfoSheet />
     <FloatingChatButton class="cursor-pointer" />
   </div>
 </template>
