@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { MotionPlugin } from '@vueuse/motion'
 import type { Component } from 'vue'
 import AboutView from '../AboutView.vue'
 import TechStackView from '../TechStackView.vue'
@@ -17,7 +18,7 @@ describe('portfolio views (smoke)', () => {
 		// Reset persisted language so tests do not inherit 'no' from earlier cases in this file.
 		useLangStore().setLanguage('en')
 		return mount(component, {
-			global: { plugins: [pinia] },
+			global: { plugins: [pinia, MotionPlugin] },
 		})
 	}
 
@@ -37,7 +38,7 @@ describe('portfolio views (smoke)', () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
 		useLangStore().setLanguage('no')
-		const wrapper = mount(TechStackView, { global: { plugins: [pinia] } })
+		const wrapper = mount(TechStackView, { global: { plugins: [pinia, MotionPlugin] } })
 		await flushPromises()
 		expect(wrapper.text()).toContain('Teknologistakk')
 		expect(wrapper.text()).toMatch(/Spring AI|Backend/i)

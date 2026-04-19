@@ -5,6 +5,7 @@ import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.RagAnswer;
 import com.kevinmazali.portfolio.model.chat.ChatProvider;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -28,6 +29,7 @@ import java.util.Map;
  * expands the query, retrieves similar documents, builds a prompt, and invokes
  * an OpenAI or Anthropic chat model depending on the selected allow-listed model.
  */
+@Slf4j
 @Service
 public class OpenAIServiceImpl implements OpenAIService {
 
@@ -65,18 +67,45 @@ public class OpenAIServiceImpl implements OpenAIService {
       throw new IllegalStateException("Anthropic chat is not available (missing API key or autoconfiguration).");
     }
 
+    // #region agent log
+    log.info("[DEBUG-b64a63] vectorStore class={}, question={}", vectorStore.getClass().getName(), question.question());
+    // #endregion
+
     // Cross-language retrieval: run similarity search once per expanded query, then dedupe and cap.
     List<String> queries = expandQueryToLanguages(question.question(), model);
+
+    // #region agent log
+    log.info("[DEBUG-b64a63] expanded queries={}", queries);
+    // #endregion
+
     List<Document> documents = queries.stream()
-        .flatMap(q -> vectorStore.similaritySearch(
-            SearchRequest.builder()
-                .query(q)
-                .topK(40)
-                .build()
-        ).stream())
+        .flatMap(q -> {
+          log.info("[DEBUG-b64a63] searching query='{}' topK=40", q);
+          try {
+            List<Document> results = vectorStore.similaritySearch(
+                SearchRequest.builder()
+                    .query(q)
+                    .topK(40)
+                    .build()
+            );
+            log.info("[DEBUG-b64a63] query='{}' returned {} docs", q, results.size());
+            return results.stream();
+          } catch (Exception ex) {
+            log.error("[DEBUG-b64a63] similaritySearch FAILED for query='{}': {}", q, ex.getMessage(), ex);
+            return java.util.stream.Stream.<Document>empty();
+          }
+        })
         .distinct()
         .limit(40)
         .toList();
+
+    // #region agent log
+    log.info("[DEBUG-b64a63] total retrieved docs={}", documents.size());
+    if (!documents.isEmpty()) {
+      documents.stream().limit(3).forEach(d ->
+          log.info("[DEBUG-b64a63] doc snippet: {}", d.getText().substring(0, Math.min(150, d.getText().length()))));
+    }
+    // #endregion
 
     // Build RAG prompt from DB-managed template (per provider) plus flattened chunk text.
     List<String> contentList = documents.stream().map(Document::getText).toList();

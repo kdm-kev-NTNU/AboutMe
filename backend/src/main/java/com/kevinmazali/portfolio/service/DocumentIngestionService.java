@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.PortfolioChromaProperties;
+import com.kevinmazali.portfolio.config.SanitizerProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
 import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
 import com.kevinmazali.portfolio.util.ChromaClientDiagnostics;
@@ -10,6 +11,7 @@ import com.kevinmazali.portfolio.model.ChunkListResponse;
 import com.kevinmazali.portfolio.model.ChromaCollectionsResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
+import com.kevinmazali.portfolio.model.SanitizeResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chroma.vectorstore.ChromaApi;
 import org.springframework.ai.document.Document;
@@ -74,6 +76,9 @@ public class DocumentIngestionService implements ApplicationRunner {
   private final ChromaVectorStoreProperties chromaStoreProperties;
   private final VectorStoreProperties vectorStoreProperties;
   private final PortfolioChromaProperties portfolioChromaProperties;
+  private final NoiseCleaner noiseCleaner;
+  private final PiiSanitizerService piiSanitizerService;
+  private final boolean sanitizerEnabled;
 
   public DocumentIngestionService(
       @Lazy VectorStore vectorStore,
@@ -81,13 +86,19 @@ public class DocumentIngestionService implements ApplicationRunner {
       Environment environment,
       ChromaVectorStoreProperties chromaStoreProperties,
       VectorStoreProperties vectorStoreProperties,
-      PortfolioChromaProperties portfolioChromaProperties) {
+      PortfolioChromaProperties portfolioChromaProperties,
+      NoiseCleaner noiseCleaner,
+      ObjectProvider<PiiSanitizerService> piiSanitizerProvider,
+      SanitizerProperties sanitizerProperties) {
     this.vectorStore = vectorStore;
     this.chromaApiProvider = chromaApiProvider;
     this.environment = environment;
     this.chromaStoreProperties = chromaStoreProperties;
     this.vectorStoreProperties = vectorStoreProperties;
     this.portfolioChromaProperties = portfolioChromaProperties;
+    this.noiseCleaner = noiseCleaner;
+    this.piiSanitizerService = piiSanitizerProvider.getIfAvailable();
+    this.sanitizerEnabled = sanitizerProperties.isEnabled();
   }
 
   private ChromaApi chromaApi() {
@@ -373,6 +384,7 @@ public class DocumentIngestionService implements ApplicationRunner {
     }
 
     List<Document> processed = processMultimodalDocuments(docs, resource, displayFilename);
+    processed = sanitizeDocuments(processed);
     TextSplitter splitter = new TokenTextSplitter();
     List<Document> splitDocs = splitter.apply(processed);
     if (splitDocs == null || splitDocs.isEmpty()) {
@@ -406,6 +418,39 @@ public class DocumentIngestionService implements ApplicationRunner {
     vectorStore.add(toAdd);
     log.info("Ingested {} chunks for document_id={} ({})", toAdd.size(), contentHash, displayFilename);
     return new IngestionResult(contentHash, displayFilename, toAdd.size(), false, "OK");
+  }
+
+  private List<Document> sanitizeDocuments(List<Document> documents) {
+    if (!sanitizerEnabled) {
+      return documents;
+    }
+    List<Document> result = new ArrayList<>(documents.size());
+    for (Document doc : documents) {
+      String text = doc.getText();
+      if (text == null || text.isBlank()) {
+        result.add(doc);
+        continue;
+      }
+
+      NoiseCleaner.NoiseCleaningResult noiseResult = noiseCleaner.cleanNoise(text);
+      String cleaned = noiseResult.cleanedText();
+
+      Map<String, Object> meta = new HashMap<>(doc.getMetadata());
+      meta.put("noise_chars_removed", noiseResult.originalLength() - noiseResult.cleanedLength());
+
+      if (piiSanitizerService != null) {
+        SanitizeResult piiResult = piiSanitizerService.sanitize(cleaned);
+        cleaned = piiResult.sanitizedText();
+        meta.put("pii_status", piiResult.complianceStatus());
+        meta.put("pii_detected_count", piiResult.piiDetectedCount());
+      }
+
+      result.add(Document.builder()
+          .text(cleaned)
+          .metadata(meta)
+          .build());
+    }
+    return result;
   }
 
   public List<DocumentListEntry> listDocuments() {

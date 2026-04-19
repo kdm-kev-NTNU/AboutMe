@@ -61,6 +61,9 @@ portfolio:
   phoenix:
     base-url: ${PHOENIX_BASE_URL:}
     api-key: ${PHOENIX_API_KEY:}
+  sanitizer:
+    enabled: ${SANITIZER_ENABLED:true}
+    redaction-format: "{{{REDACTED-%t}}}"
 
 sfg:
   aiapp:
