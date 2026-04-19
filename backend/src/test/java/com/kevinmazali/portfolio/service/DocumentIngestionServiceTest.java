@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.PortfolioChromaProperties;
+import com.kevinmazali.portfolio.config.SanitizerProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
 import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,19 +46,26 @@ class DocumentIngestionServiceTest {
   @Mock
   private PortfolioChromaProperties portfolioChromaProperties;
   @Mock
+  private ObjectProvider<PiiSanitizerService> piiSanitizerProvider;
+  @Mock
   private ApplicationArguments applicationArguments;
 
   private DocumentIngestionService service;
 
   @BeforeEach
   void setUp() {
+    SanitizerProperties sanitizerProperties = new SanitizerProperties();
+    sanitizerProperties.setEnabled(false);
     service = new DocumentIngestionService(
         vectorStore,
         chromaApiProvider,
         environment,
         chromaStoreProperties,
         vectorStoreProperties,
-        portfolioChromaProperties);
+        portfolioChromaProperties,
+        new NoiseCleaner(),
+        piiSanitizerProvider,
+        sanitizerProperties);
   }
 
   @Test

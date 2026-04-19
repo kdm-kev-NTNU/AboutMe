@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.PortfolioChromaProperties;
+import com.kevinmazali.portfolio.config.SanitizerProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
 import com.kevinmazali.portfolio.model.ChromaCollectionsResponse;
 import com.kevinmazali.portfolio.model.IngestionResult;
@@ -68,6 +69,8 @@ class DocumentIngestionServiceChromaMockTest {
   @Mock
   private PortfolioChromaProperties portfolioChromaProperties;
   @Mock
+  private ObjectProvider<PiiSanitizerService> piiSanitizerProvider;
+  @Mock
   private ChromaApi chromaApi;
 
   private DocumentIngestionService service;
@@ -76,13 +79,18 @@ class DocumentIngestionServiceChromaMockTest {
   void setUp() {
     reset(vectorStore, chromaApiProvider, environment, chromaStoreProperties, vectorStoreProperties,
         portfolioChromaProperties, chromaApi);
+    SanitizerProperties sanitizerProperties = new SanitizerProperties();
+    sanitizerProperties.setEnabled(false);
     service = new DocumentIngestionService(
         vectorStore,
         chromaApiProvider,
         environment,
         chromaStoreProperties,
         vectorStoreProperties,
-        portfolioChromaProperties);
+        portfolioChromaProperties,
+        new NoiseCleaner(),
+        piiSanitizerProvider,
+        sanitizerProperties);
   }
 
   private void stubChromaEnabledAndCollection() {
