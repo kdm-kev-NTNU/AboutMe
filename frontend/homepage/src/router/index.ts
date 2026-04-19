@@ -74,6 +74,12 @@ const router = createRouter({
       meta: { requiresAdmin: true },
       component: () => import('../views/AdminChunksView.vue'),
     },
+    {
+      path: '/admin/prompts',
+      name: 'admin-prompts',
+      meta: { requiresAdmin: true },
+      component: () => import('../views/AdminPromptsView.vue'),
+    },
   ],
 })
 
