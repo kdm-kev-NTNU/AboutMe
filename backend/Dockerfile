@@ -5,12 +5,11 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml .
-# Create empty .env if it doesn't exist
+COPY .mvn .mvn
 # Download all required dependencies into one layer
-RUN mvn dependency:go-offline -B
+RUN mvn dependency:go-offline -B -s .mvn/settings.xml
 COPY src ./src
-# Build with limited memory usage for more stability
-RUN mvn clean package -DskipTests -Dmaven.test.skip=true -Dmaven.compiler.fork=true -Dmaven.compiler.maxmem=512m
+RUN mvn clean package -DskipTests -Dmaven.test.skip=true -Dmaven.compiler.fork=true -Dmaven.compiler.maxmem=512m -s .mvn/settings.xml
 
 # Production stage
 FROM eclipse-temurin:21-jre

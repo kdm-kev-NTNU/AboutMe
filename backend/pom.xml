@@ -31,15 +31,7 @@
 		<spring-ai.version>1.0.5</spring-ai.version>
 		<phileas.version>2.12.3</phileas.version>
 	</properties>
-	<repositories>
-		<repository>
-			<id>philterd-repository-releases</id>
-			<url>https://artifacts.philterd.ai/releases</url>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
+	<!-- Philterd repo is declared in .mvn/settings.xml to avoid slow lookups for standard deps -->
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
