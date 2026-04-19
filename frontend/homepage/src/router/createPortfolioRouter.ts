@@ -51,6 +51,11 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				component: () => import('../views/TechStackView.vue'),
 			},
 			{
+				path: '/feedback',
+				name: 'feedback',
+				component: () => import('../views/FeedbackView.vue'),
+			},
+			{
 				path: '/chat-history',
 				name: 'chat-history',
 				component: ChatHistory,

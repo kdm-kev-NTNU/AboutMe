@@ -7,7 +7,7 @@ import { ChatModelOptionProvider } from '@/api/generated/portfolio'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Info, Github, Linkedin } from 'lucide-vue-next'
+import { Info, Github, Linkedin, MessageSquare } from 'lucide-vue-next'
 
 const router = useRouter()
 
@@ -254,6 +254,13 @@ function submitQuick() {
         >
           <Linkedin class="size-5" />
         </a>
+        <RouterLink
+          to="/feedback"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+          :aria-label="language === 'en' ? 'Send feedback' : 'Gi tilbakemelding'"
+        >
+          <MessageSquare class="size-5" />
+        </RouterLink>
       </div>
 
       <form class="flex gap-3 max-w-md mx-auto relative bg-white/90 backdrop-blur-sm border-2 border-blue-200/20 rounded-xl p-2 transition-all duration-300 hover:border-blue-300/40 hover:bg-white/95 hover:shadow-lg hover:shadow-blue-500/15 focus-within:border-blue-300/60 focus-within:bg-white/98 focus-within:shadow-lg focus-within:shadow-blue-500/25" @submit.prevent="submitQuick">
