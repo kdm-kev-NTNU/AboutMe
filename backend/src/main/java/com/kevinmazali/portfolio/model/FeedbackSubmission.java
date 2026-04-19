@@ -27,17 +27,10 @@ public class FeedbackSubmission {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
 
-    @Column(length = 320)
-    private String replyEmail;
-
     @Column(nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
     public void setMessage(String message) {
         this.message = message;
-    }
-
-    public void setReplyEmail(String replyEmail) {
-        this.replyEmail = replyEmail;
     }
 }

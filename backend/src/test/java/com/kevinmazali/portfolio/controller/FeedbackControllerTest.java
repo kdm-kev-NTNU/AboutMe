@@ -41,16 +41,6 @@ class FeedbackControllerTest {
     }
 
     @Test
-    void submitFeedbackAcceptsOptionalEmail() throws Exception {
-        mockMvc.perform(post("/feedback")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"message\":\"Nice chat feature\",\"replyEmail\":\"test@example.com\"}"))
-            .andExpect(status().isNoContent());
-
-        verify(feedbackRepository).save(any(FeedbackSubmission.class));
-    }
-
-    @Test
     void submitFeedbackRejectsEmptyMessage() throws Exception {
         mockMvc.perform(post("/feedback")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -79,17 +69,6 @@ class FeedbackControllerTest {
                 .content("{\"message\":\"<script>alert(1)</script>\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error").value("Invalid or empty feedback message"));
-
-        verify(feedbackRepository, never()).save(any());
-    }
-
-    @Test
-    void submitFeedbackRejectsInvalidEmail() throws Exception {
-        mockMvc.perform(post("/feedback")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"message\":\"Good site\",\"replyEmail\":\"not-an-email\"}"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.error").value("Invalid e-mail format"));
 
         verify(feedbackRepository, never()).save(any());
     }
