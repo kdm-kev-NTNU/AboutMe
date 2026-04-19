@@ -50,7 +50,7 @@ spring:
       hibernate:
         format_sql: true
 server:
-  port: ${PORT}
+  port: ${PORT:8080}
 portfolio:
   chat:
     # Used when the client omits "model" on POST /ask
