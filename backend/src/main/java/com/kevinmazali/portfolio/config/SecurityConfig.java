@@ -17,10 +17,18 @@ import org.springframework.http.HttpMethod;
 
 import java.util.List;
 
+/**
+ * Spring Security: HTTP Basic for authenticated routes, role-based rules for {@code /admin/**},
+ * and a CORS allow-list aligned with the Vue SPA and production site origins.
+ * <p>Most API routes stay {@code permitAll}; admin document and prompt APIs require {@code ROLE_ADMIN}.</p>
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    /**
+     * Disables CSRF (stateless API + SPA), enables HTTP Basic and CORS, and locks {@code /admin/**} to admins.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -36,6 +44,9 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * CORS for browser calls from Vite dev servers and the deployed homepage domain.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -62,11 +73,13 @@ public class SecurityConfig {
         return source;
     }
 
+    /** Password hashing for persisted {@link com.kevinmazali.portfolio.model.User} credentials. */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /** Exposes the default authentication manager used by Spring Security filters. */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
