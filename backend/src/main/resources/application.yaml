@@ -63,9 +63,6 @@ portfolio:
     api-key: ${PHOENIX_API_KEY:}
   sanitizer:
     enabled: ${SANITIZER_ENABLED:true}
-    ph-eye-url: ${PH_EYE_URL:}
-    valkey-host: ${VALKEY_HOST:}
-    valkey-port: ${VALKEY_PORT:6379}
     redaction-format: "{{{REDACTED-%t}}}"
 
 sfg:
