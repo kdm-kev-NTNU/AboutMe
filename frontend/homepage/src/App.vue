@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterView, RouterLink } from 'vue-router'
+import { RouterView, RouterLink, useRoute } from 'vue-router'
 import InfoSheet from './components/InfoSheet.vue'
 import Navbar from './components/Navbar.vue'
 import FloatingChatButton from './components/FloatingChatButton.vue'
@@ -9,6 +9,9 @@ import { useLangStore } from './stores/lang'
 
 // Initialize the language store early so detection runs on app boot
 const langStore = useLangStore()
+const route = useRoute()
+
+const showPublicPageHeader = computed(() => route.name !== 'admin-tools')
 
 const privacyLabel = computed(() => (langStore.language === 'no' ? 'Personvernerklæring' : 'Privacy Policy'))
 const cookieSettingsLabel = computed(() => (langStore.language === 'no' ? 'Informasjonskapsler' : 'Cookie Settings'))
@@ -16,7 +19,7 @@ const cookieSettingsLabel = computed(() => (langStore.language === 'no' ? 'Infor
 
 <template>
   <div class="min-h-screen bg-gray-50">
-    <Navbar />
+    <Navbar v-if="showPublicPageHeader" />
     <AdminLoginButton />
     <RouterView />
     <footer class="relative z-20 border-t border-gray-100 bg-gray-50/80 py-3 text-center text-xs text-gray-400 backdrop-blur-sm">
