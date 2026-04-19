@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Selectable chat model for the RAG UI")
 public record ChatModelOption(
-    @Schema(description = "Provider API model id", example = "gpt-4o-mini")
+    @Schema(description = "Provider API model id", example = "gpt-5.4-mini")
     String id,
     @Schema(description = "LLM vendor")
     ChatProvider provider,

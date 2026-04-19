@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * JSON login used by the Vue app to validate credentials without sending Basic auth on every page load.
  * Successful responses inform the client role; admin routes still require HTTP Basic per request.
  */
+@Slf4j
 @RestController
 @RequestMapping("/auth")
 @Tag(name = "Authentication", description = "Login for SPA; use returned credentials with HTTP Basic on admin routes")
@@ -51,7 +54,7 @@ public class AuthController {
             content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.username(), request.password())
@@ -66,6 +69,8 @@ public class AuthController {
                 isAdmin ? User.Role.ADMIN.name() : User.Role.USER.name()
             ));
         } catch (BadCredentialsException ex) {
+            String userLabel = request.username() == null ? "<null>" : request.username();
+            log.warn("Failed login attempt for username='{}' from IP={}", userLabel, httpRequest.getRemoteAddr());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError("Invalid credentials"));
         }
     }

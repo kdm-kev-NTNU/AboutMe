@@ -19,7 +19,7 @@ spring:
       api-key: ${OPENAI_API_KEY}
       chat:
         options:
-          model: gpt-4o-mini
+          model: gpt-5.4-mini
           # Limit completion tokens per response
           max-tokens: 400
       embedding:
@@ -30,7 +30,7 @@ spring:
       api-key: ${ANTHROPIC_API_KEY:}
       chat:
         options:
-          model: claude-sonnet-4-20250514
+          model: claude-sonnet-4-6
           max-tokens: 400
     chat:
       observations:
@@ -54,10 +54,13 @@ server:
 portfolio:
   chat:
     # Used when the client omits "model" on POST /ask
-    default-model-id: gpt-4o-mini
+    default-model-id: gpt-5.4-mini
   chroma:
     # Set CHROMA_ENABLED=false when Chroma is not deployed (chat works without RAG; admin pipeline returns 501).
     enabled: ${CHROMA_ENABLED:true}
+  phoenix:
+    base-url: ${PHOENIX_BASE_URL:}
+    api-key: ${PHOENIX_API_KEY:}
 
 sfg:
   aiapp:

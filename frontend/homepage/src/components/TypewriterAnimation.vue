@@ -1,17 +1,16 @@
 <template>
   <div class="typewriter-container">
-    <vue-markdown 
-      v-if="displayedText" 
-      :source="displayedText" 
-      class="text-sm leading-relaxed whitespace-pre-wrap"
-      :class="textClass"
+    <SafeMarkdown
+      v-if="displayedText"
+      :source="displayedText"
+      :content-class="textClass"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue'
-import VueMarkdown from 'vue-markdown-render'
+import { ref, watch, nextTick } from 'vue'
+import SafeMarkdown from '@/components/SafeMarkdown.vue'
 
 interface Props {
   text: string

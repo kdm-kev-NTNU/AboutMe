@@ -33,7 +33,7 @@ public class MockConfig {
         ChatModelCatalog catalog = Mockito.mock(ChatModelCatalog.class);
         lenient().when(catalog.isModelConfigured(any(SupportedChatModel.class))).thenReturn(true);
         lenient().when(catalog.listAvailableModels()).thenReturn(List.of(
-            new ChatModelOption("gpt-4o-mini", ChatProvider.OPENAI, "GPT-4o mini")
+            new ChatModelOption("gpt-5.4-mini", ChatProvider.OPENAI, "GPT-5.4 mini")
         ));
         return catalog;
     }

@@ -51,7 +51,7 @@ class OpenAIServiceImplTest {
         openAiChatModel,
         anthropicChatModelProvider,
         vectorStore,
-        "gpt-4o-mini",
+        "gpt-5.4-mini",
         promptVersionService);
   }
 
