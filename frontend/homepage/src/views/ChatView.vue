@@ -9,10 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import MessagesArea from '@/views/MessagesArea.vue'
 import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
 
-/**
- * RAG chat surface: messages live in sessionStorage for the current tab (see FloatingChatButton),
- * optional `conversationId` loads history from REST, and `askQuestion` hits POST /ask with optional model id.
- */
+// RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
 // --- Route + local UI state ---
