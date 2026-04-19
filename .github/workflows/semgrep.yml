@@ -1,3 +1,9 @@
+# Semgrep — SAST + SARIF upload (separate from Tests workflow; no deploy here).
+#
+# Triggers: push/PR to main or master; weekly schedule. Requires SEMGREP_APP_TOKEN and
+# SEMGREP_DEPLOYMENT_ID for App publish; skipped on fork PRs when secrets are unavailable.
+# PR merge gate for unit/integration checks: .github/workflows/tests.yml.
+#
 # This workflow uses actions that are not certified by GitHub.
 # They are provided by a third-party and are governed by
 # separate terms of service, privacy policy, and support
@@ -12,10 +18,9 @@ name: Semgrep
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main, master]
   pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ "main" ]
+    branches: [main, master]
   schedule:
     - cron: '22 17 * * 1'
 
@@ -24,12 +29,14 @@ permissions:
 
 jobs:
   semgrep:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
     name: Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       # Checkout project source
       - uses: actions/checkout@v4
