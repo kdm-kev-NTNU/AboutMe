@@ -182,7 +182,7 @@ Optional:
 - `OTLP_EXPORT_ENABLED`: Set to `true` to export traces to OTLP (default `false`)
 - `PHOENIX_OTLP_ENDPOINT`: OTLP gRPC tracing endpoint (default in `application.yaml`: `http://localhost:4317`; in full-stack Compose the backend uses `http://phoenix:4317`)
 - `PHOENIX_API_KEY`: Optional Bearer token for OTLP export headers when your collector requires it
-- `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`: Default chat model when `POST /ask` omits `model` (Spring property `portfolio.chat.default-model-id`, default `gpt-4o-mini`)
+- `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`: Default chat model when `POST /ask` omits `model` (Spring property `portfolio.chat.default-model-id`, default `gpt-5.4-mini`)
 - `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD`: If both are set and that username is not already in the `users` table, the backend creates an `ADMIN` user on startup (BCrypt). Clear the password variable after first login on shared hosts.
 - `OPENAPI_URL`: Used by the frontend’s `npm run api:pull` (default `http://localhost:8080/v3/api-docs` per [`.env.example`](.env.example))
 
@@ -263,8 +263,8 @@ Go to `http://localhost:5173` and try the quick questions or ask your own in the
 ## API
 
 - `POST /ask`
-  - Body: `{ "question": "...", "model": "<optional>" }` — if `model` is omitted, the server uses `portfolio.chat.default-model-id` (default `gpt-4o-mini`)
-  - Allowed `model` values (must match exactly): `gpt-4o-mini`, `gpt-4o`, `claude-sonnet-4-20250514`, `claude-3-5-haiku-20241022`. Unknown ids or models whose provider has no API key configured return **400**.
+  - Body: `{ "question": "...", "model": "<optional>" }` — if `model` is omitted, the server uses `portfolio.chat.default-model-id` (default `gpt-5.4-mini`)
+  - Allowed `model` values (must match exactly): `gpt-5.4-mini`, `gpt-5.4`, `claude-haiku-4-5-20251001`, `claude-sonnet-4-6`. Unknown ids or models whose provider has no API key configured return **400**.
   - Response: `{ "answer": "..." }`
   - Validation: Max 3000 characters in `question`
   - Rate limit: 5 requests per 10 seconds per user/IP (HTTP 429 on violation)
