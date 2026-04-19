@@ -85,6 +85,7 @@ class EvaluatorServiceTest {
 
     assertTrue(Double.isNaN(s.score()));
     assertEquals("error", s.label());
+    assertTrue(s.explanation().contains("Unknown evaluator model"));
   }
 
   private void stubOpenAiReturns(String text) {
