@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import AboutView from '../AboutView.vue'
@@ -7,10 +7,6 @@ import PrivacyPolicyView from '../PrivacyPolicyView.vue'
 import ProjectsView from '../ProjectsView.vue'
 
 describe('portfolio views (smoke)', () => {
-	beforeEach(() => {
-		setActivePinia(createPinia())
-	})
-
 	function mountView(component: Parameters<typeof mount>[0]) {
 		const pinia = createPinia()
 		setActivePinia(pinia)
