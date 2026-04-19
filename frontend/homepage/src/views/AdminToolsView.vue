@@ -171,6 +171,7 @@ async function loadServerFiles() {
   } catch (e: unknown) {
     serverFilesLoadError.value = e instanceof Error ? e.message : 'Ukjent feil'
     serverFileList.value = []
+    selectedForIngest.value = new Set()
   } finally {
     serverFilesLoading.value = false
   }
