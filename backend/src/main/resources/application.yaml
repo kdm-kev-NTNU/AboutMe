@@ -2,7 +2,7 @@ spring:
   config:
     import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:backend/.env[.properties]
   application:
-    name: portfolio
+    name: aboutme-backend
   servlet:
     multipart:
       max-file-size: 50MB
@@ -32,6 +32,10 @@ spring:
         options:
           model: claude-sonnet-4-20250514
           max-tokens: 400
+    chat:
+      observations:
+        log-prompt: true
+        log-completion: true
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/aboutme?useSSL=false&allowPublicKeyRetrieval=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
@@ -71,4 +75,13 @@ springdoc:
     operations-sorter: alpha
     tags-sorter: alpha
     try-it-out-enabled: true
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${PHOENIX_OTLP_ENDPOINT:http://localhost:4317}
+      transport: grpc
 

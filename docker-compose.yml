@@ -31,6 +31,17 @@ services:
       retries: 10
       start_period: 10s
 
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: aboutme-phoenix
+    ports:
+      - "6006:6006"
+      - "4317:4317"
+    volumes:
+      - phoenix_data:/mnt/data
+    environment:
+      - PHOENIX_WORKING_DIR=/mnt/data
+
   backend:
     build:
       context: ./backend
@@ -49,6 +60,7 @@ services:
       CHROMA_HTTP_HOST: http://chromadb
       CHROMA_PORT: "8000"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      PHOENIX_OTLP_ENDPOINT: http://phoenix:4317
     ports:
       - "8080:8080"
     volumes:
@@ -70,3 +82,4 @@ services:
 volumes:
   mysql_data:
   chroma_data:
+  phoenix_data:
