@@ -109,7 +109,7 @@ public class OpenAIServiceImpl implements OpenAIService {
       case OPENAI -> {
         OpenAiChatOptions opts = OpenAiChatOptions.builder()
             .model(model.modelId())
-            .maxTokens(CHAT_MAX_TOKENS)
+            .maxCompletionTokens(CHAT_MAX_TOKENS)
             .build();
         yield openAiChatModel.call(new Prompt(basePrompt.getInstructions(), opts));
       }

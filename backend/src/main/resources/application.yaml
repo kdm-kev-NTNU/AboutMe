@@ -21,7 +21,7 @@ spring:
         options:
           model: gpt-5.4-mini
           # Limit completion tokens per response
-          max-tokens: 400
+          max-completion-tokens: 400
       embedding:
         options:
           model: text-embedding-3-large
