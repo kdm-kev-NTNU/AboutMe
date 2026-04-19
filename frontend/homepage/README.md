@@ -1,6 +1,6 @@
 # Homepage Frontend
 
-This is the frontend application for Kevin's AboutMe portfolio website, built with Vue 3 and modern web technologies.
+This is the frontend application for Kevin's AboutMe portfolio website, built with Vue 3 and modern web technologies. Admin-only routes (`/admin/tools`, `/admin/pipeline`, `/admin/chunks`, `/admin/prompts`) are summarized in the [repository root README](../../README.md#available-pages).
 
 ## Tech Stack & Libraries
 
@@ -56,6 +56,18 @@ npm install
 npm run dev
 ```
 
+### API client (Orval)
+
+The TypeScript client is generated from the OpenAPI description in [`openapi/openapi.json`](openapi/openapi.json). HTTP calls go through [`src/api/orval-mutator.ts`](src/api/orval-mutator.ts), which prefixes paths with `/api` (matching the Vite dev proxy and production Nginx) and attaches `Authorization: Basic` when `sessionStorage` contains the auth payload from login.
+
+When you change backend endpoints or DTOs:
+
+1. Start the API on port **8080** (see repo root README).
+2. Refresh the spec: `npm run api:pull` (optional env `OPENAPI_URL`, default `http://localhost:8080/v3/api-docs`).
+3. Regenerate: `npm run api:generate`.
+
+Generated files live under `src/api/generated/`; do not edit them by hand.
+
 ### Type-Check, Compile and Minify for Production
 
 ```sh
@@ -66,6 +78,12 @@ npm run build
 
 ```sh
 npm run test:unit
+```
+
+Coverage (HTML under `coverage/`):
+
+```sh
+npm run test:unit:coverage
 ```
 
 ### Run End-to-End Tests with [Cypress](https://www.cypress.io/)

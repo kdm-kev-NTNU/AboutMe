@@ -1,0 +1,78 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import Navbar from '../Navbar.vue'
+
+describe('Navbar', () => {
+	beforeEach(() => {
+		localStorage.clear()
+		setActivePinia(createPinia())
+	})
+
+	function makeRouter() {
+		return createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: '/', name: 'home', component: { template: '<div />' } },
+				{ path: '/projects', name: 'projects', component: { template: '<div />' } },
+				{ path: '/work-experience', name: 'work-experience', component: { template: '<div />' } },
+				{ path: '/education', name: 'education', component: { template: '<div />' } },
+				{ path: '/tech-stack', name: 'tech-stack', component: { template: '<div />' } },
+			],
+		})
+	}
+
+	it('shows English nav labels by default', async () => {
+		const router = makeRouter()
+		await router.push('/')
+		await router.isReady()
+		const wrapper = mount(Navbar, {
+			global: {
+				plugins: [createPinia(), router],
+				stubs: { RouterLink: { template: '<a><slot /></a>', props: ['to'] } },
+			},
+		})
+		await flushPromises()
+		expect(wrapper.text()).toContain('Home')
+		expect(wrapper.text()).toContain('Projects')
+		expect(wrapper.text()).toContain('Tech stack')
+	})
+
+	it('shows Norwegian labels when language is no', async () => {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		const { useLangStore } = await import('../../stores/lang')
+		useLangStore().setLanguage('no')
+
+		const router = makeRouter()
+		await router.push('/')
+		await router.isReady()
+		const wrapper = mount(Navbar, {
+			global: {
+				plugins: [pinia, router],
+				stubs: { RouterLink: { template: '<a><slot /></a>', props: ['to'] } },
+			},
+		})
+		await flushPromises()
+		expect(wrapper.text()).toContain('Hjem')
+		expect(wrapper.text()).toContain('Prosjekter')
+		expect(wrapper.text()).toContain('Teknologistakk')
+	})
+
+	it('marks active route with stronger button styling', async () => {
+		const router = makeRouter()
+		await router.push('/education')
+		await router.isReady()
+		const wrapper = mount(Navbar, {
+			global: {
+				plugins: [createPinia(), router],
+				stubs: { RouterLink: { template: '<a><slot /></a>', props: ['to'] } },
+			},
+		})
+		await flushPromises()
+		const links = wrapper.findAll('a')
+		const educationLink = links.find((a) => a.text().includes('Education'))
+		expect(educationLink?.classes().join(' ')).toContain('font-semibold')
+	})
+})

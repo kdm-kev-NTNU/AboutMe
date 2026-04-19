@@ -2,25 +2,47 @@ spring:
   config:
     import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:backend/.env[.properties]
   application:
-    name: portfolio
+    name: aboutme-backend
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
   ai:
+    vectorstore:
+      chroma:
+        client:
+          host: ${CHROMA_HTTP_HOST:http://localhost}
+          port: ${CHROMA_PORT:8100}
+        collection-name: ${CHROMA_COLLECTION:portfolio-documents}
+        initialize-schema: true
     openai:
       api-key: ${OPENAI_API_KEY}
       chat:
         options:
+          model: gpt-5.4-mini
           # Limit completion tokens per response
-          max-tokens: 400
+          max-completion-tokens: 400
       embedding:
         options:
           model: text-embedding-3-large
           dimensions: 3072
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          model: claude-sonnet-4-6
+          max-tokens: 400
+    chat:
+      observations:
+        log-prompt: true
+        log-completion: true
   datasource:
-    url: jdbc:mysql://localhost:3307/aboutme?useSSL=false&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/aboutme?useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    database-platform: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -28,21 +50,52 @@ spring:
       hibernate:
         format_sql: true
 server:
-  port: ${PORT}
+  port: ${PORT:8080}
+portfolio:
+  chat:
+    # Used when the client omits "model" on POST /ask
+    default-model-id: gpt-5.4-mini
+  chroma:
+    # Set CHROMA_ENABLED=false when Chroma is not deployed (chat works without RAG; admin pipeline returns 501).
+    enabled: ${CHROMA_ENABLED:true}
+  phoenix:
+    base-url: ${PHOENIX_BASE_URL:}
+    api-key: ${PHOENIX_API_KEY:}
+  sanitizer:
+    enabled: ${SANITIZER_ENABLED:true}
+    redaction-format: "{{{REDACTED-%t}}}"
+
 sfg:
   aiapp:
-    # Vector store plasseres alltid under 'backend/vectordatabase' uavhengig av working dir
-    # Denne veien tolkes som relativ til backend av appen (ikke prosessens cwd)
-    vectorStorePath: vectordatabase/vectorstore.json
-    encryptContent: true
-    encryptionKeyBase64: ${VECTORSTORE_ENC_KEY}
-    documentsToLoadDir: classpath:/tmp/docs/
+    documentsToLoadDir: file:./data/docs/
+    # When true, startup seeding re-ingests even if chunks already exist for the same content_hash
+    forceReindex: false
 logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.boot.context.config: DEBUG
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui
+    operations-sorter: alpha
+    tags-sorter: alpha
+    try-it-out-enabled: true
 
-
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      # Opt-in OTLP: set OTLP_EXPORT_ENABLED=true plus PHOENIX_OTLP_ENDPOINT and PHOENIX_API_KEY (Bearer) for Phoenix/Arize.
+      export:
+        enabled: ${OTLP_EXPORT_ENABLED:false}
+      endpoint: ${PHOENIX_OTLP_ENDPOINT:http://localhost:4317}
+      transport: grpc
+      headers:
+        authorization: Bearer ${PHOENIX_API_KEY:}
 

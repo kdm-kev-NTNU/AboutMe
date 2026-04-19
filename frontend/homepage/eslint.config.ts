@@ -18,7 +18,7 @@ export default defineConfigWithVueTs(
     files: ['**/*.{ts,mts,tsx,vue}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
+  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**', 'src/api/generated/**']),
 
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
@@ -36,4 +36,13 @@ export default defineConfigWithVueTs(
     ],
   },
   skipFormatting,
+
+  // shadcn-style primitives use single-word filenames; Navbar predates the rule.
+  {
+    name: 'app/ui-primitives-single-word-names',
+    files: ['src/components/ui/**/*.vue', 'src/components/Navbar.vue'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+    },
+  },
 )

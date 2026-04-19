@@ -1,0 +1,24 @@
+package com.kevinmazali.portfolio.config;
+
+import org.springframework.boot.web.client.RestClientCustomizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+
+/**
+ * Prevents Apache HttpClient 5 from advertising Brotli ({@code br}) encoding to upstream APIs.
+ * OpenAI sometimes returns Brotli-compressed responses whose decompression truncates the JSON,
+ * causing {@link com.fasterxml.jackson.core.io.JsonEOFException} inside Spring AI's chat model
+ * deserialization.
+ *
+ * @see <a href="https://github.com/spring-projects/spring-ai/issues/2345">spring-ai#2345</a>
+ */
+@Configuration
+public class HttpClientConfig {
+
+    @Bean
+    RestClientCustomizer disableBrotliEncoding() {
+        return builder -> builder.defaultHeaders(headers ->
+                headers.set(HttpHeaders.ACCEPT_ENCODING, "gzip, deflate"));
+    }
+}

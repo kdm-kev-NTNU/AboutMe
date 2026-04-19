@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed, watch, nextTick } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
+import { useChatModelStore } from '../stores/model'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Card, CardContent } from '@/components/ui/card'
-import { Brain, UserRound } from 'lucide-vue-next'
 import MessagesArea from '@/views/MessagesArea.vue'
+import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
 
-
+// RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
+// --- Route + local UI state ---
 const route = useRoute()
 const router = useRouter()
 const input = ref('')
@@ -20,9 +21,31 @@ const errorText = ref('')
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
 const langStore = useLangStore()
+const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
 
-// Session storage functions
+const providerLabels = computed(() =>
+  language.value === 'no'
+    ? { heading: 'AI-leverandør', openai: 'OpenAI', anthropic: 'Anthropic' }
+    : { heading: 'AI provider', openai: 'OpenAI', anthropic: 'Anthropic' },
+)
+
+const modelsForActiveProvider = computed(() => {
+  const p = chatModelStore.activeProvider
+  if (!p) return chatModelStore.models
+  return chatModelStore.modelsForProvider(p)
+})
+
+const selectedModelId = computed({
+  get: () => chatModelStore.selectedModelId,
+  set: (id: string) => chatModelStore.setSelectedModelId(id),
+})
+
+const showProviderToggle = computed(
+  () => chatModelStore.hasOpenAI && chatModelStore.hasAnthropic,
+)
+
+// --- Ephemeral transcript (same-tab only; not a substitute for server-side conversation storage) ---
 const saveMessagesToStorage = () => {
   try {
     sessionStorage.setItem('chatMessages', JSON.stringify(state.messages))
@@ -48,10 +71,9 @@ const loadMessagesFromStorage = () => {
   }
 }
 
-// Watch for changes in messages and save to storage
 watch(() => state.messages, saveMessagesToStorage, { deep: true })
 
-// Clear chat function - redirects to home page
+// Drops the in-memory transcript and returns to the marketing shell.
 const clearChat = () => {
   // Clear session storage first
   sessionStorage.removeItem('chatMessages')
@@ -61,11 +83,15 @@ const clearChat = () => {
   router.push({ name: 'home' })
 }
 
+// Calls the portfolio backend; auth store is restored so optional future authenticated /ask works the same way.
 async function send(text: string) {
   if (!text.trim() || isLoading.value) return
   // client-side validation to mirror backend
   if (text.length > MAX_PROMPT_CHARS) {
-    errorText.value = `Prompten er for lang (${text.length}/${MAX_PROMPT_CHARS}).`;
+    errorText.value =
+      language.value === 'en'
+        ? `Prompt is too long (${text.length}/${MAX_PROMPT_CHARS}).`
+        : `Prompten er for lang (${text.length}/${MAX_PROMPT_CHARS}).`
     return
   }
   errorText.value = ''
@@ -75,44 +101,32 @@ async function send(text: string) {
     isLoading.value = true
     const auth = (await import('@/stores/auth')).useAuthStore()
     auth.restore()
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (auth.basicToken) {
-      headers['Authorization'] = `Basic ${auth.basicToken}`
+    const payload: { question: string; model?: string } = { question: text }
+    if (chatModelStore.selectedModelId) {
+      payload.model = chatModelStore.selectedModelId
     }
-    const res = await fetch('/api/ask', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ question: text }),
-    })
-    if (!res.ok) {
-      // Try parse JSON error from backend
-      let msg = 'Noe gikk galt. Prøv igjen.'
-      try {
-        const data = await res.json() as any
-        if (data && typeof data.error === 'string') {
-          msg = data.error
-        }
-      } catch (_) {
-        // ignore parse errors
-      }
-      if (res.status === 429) {
-        msg = 'For mange forespørsler. Vent litt før du prøver igjen.'
-      } else if (res.status === 400 && !msg) {
-        msg = 'Ugyldig forespørsel.'
-      }
-      errorText.value = msg
+    const r = await askQuestion(payload)
+    if (r.status === 200) {
+      state.messages.push({ role: 'assistant', text: r.data.answer, isNew: true })
       return
     }
-    const data: { answer: string } = await res.json()
-    state.messages.push({ role: 'assistant', text: data.answer, isNew: true })
-  } catch (e: any) {
+    if (r.status === 429) {
+      errorText.value = 'For mange forespørsler. Vent litt før du prøver igjen.'
+      return
+    }
+    if (r.status === 400 || r.status === 503) {
+      errorText.value = r.data.error || 'Noe gikk galt. Prøv igjen.'
+      return
+    }
+    errorText.value = 'Noe gikk galt. Prøv igjen.'
+  } catch {
     errorText.value = 'Nettverksfeil. Prøv igjen.'
   } finally {
     isLoading.value = false
   }
 }
 
-// Load conversation from backend
+/** When deep-linking with ?conversationId=, hydrate the thread from the API instead of sessionStorage. */
 const loadConversation = async (conversationId: string) => {
   try {
     const res = await fetch(`/api/conversations/${conversationId}`, {
@@ -135,22 +149,21 @@ const loadConversation = async (conversationId: string) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await chatModelStore.ensureModelsLoaded()
+
   const conversationId = route.query.conversationId as string
 
   if (conversationId) {
-    // Load specific conversation from backend
     loadConversation(conversationId)
   } else {
-    // Load messages from session storage for new conversations
     loadMessagesFromStorage()
   }
 
   const q = (route.query.q as string) || ''
   if (q && !conversationId) {
     input.value = q
-    // Always auto-send the question from home page, even if there are existing messages
-    // This ensures users don't have to click send twice when coming from home
+    // Home page passes ?q=: auto-send once so the user does not need a second click on /chat.
     send(q)
   }
 })
@@ -191,7 +204,72 @@ onMounted(() => {
       </div>
 
       <!-- Form at Bottom -->
-      <div class="pb-8 flex-shrink-0">
+      <div class="pb-8 flex-shrink-0 space-y-2">
+        <div
+          v-if="chatModelStore.models.length > 0"
+          class="flex flex-col gap-3 text-sm text-slate-700 px-1"
+        >
+          <div v-if="showProviderToggle" class="flex flex-col gap-2">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+              {{ providerLabels.heading }}
+            </p>
+            <div class="flex justify-center">
+              <div
+                class="relative rounded-full p-1 flex bg-gradient-to-r from-slate-200 to-slate-300 shadow-md border-2 border-transparent bg-clip-padding"
+              >
+                <div
+                  class="absolute top-1 bottom-1 w-28 rounded-full shadow-lg transition-transform duration-300 ease-in-out bg-gradient-to-r from-white to-slate-50 border border-blue-200"
+                  :class="
+                    chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
+                      ? 'translate-x-0'
+                      : 'translate-x-28'
+                  "
+                ></div>
+                <button
+                  type="button"
+                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden disabled:opacity-40"
+                  :class="
+                    chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
+                      ? 'text-blue-700 font-semibold'
+                      : 'text-gray-500'
+                  "
+                  :disabled="isLoading || !chatModelStore.hasOpenAI"
+                  @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.OPENAI)"
+                >
+                  {{ providerLabels.openai }}
+                </button>
+                <button
+                  type="button"
+                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden disabled:opacity-40"
+                  :class="
+                    chatModelStore.activeProvider === ChatModelOptionProvider.ANTHROPIC
+                      ? 'text-blue-700 font-semibold'
+                      : 'text-gray-500'
+                  "
+                  :disabled="isLoading || !chatModelStore.hasAnthropic"
+                  @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.ANTHROPIC)"
+                >
+                  {{ providerLabels.anthropic }}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+            <label for="chat-model-select" class="font-medium shrink-0">
+              {{ language === 'en' ? 'Model' : 'Modell' }}
+            </label>
+            <select
+              id="chat-model-select"
+              v-model="selectedModelId"
+              :disabled="isLoading"
+              class="w-full sm:max-w-md rounded-lg border-2 border-blue-200/40 bg-white/90 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none disabled:opacity-50"
+            >
+              <option v-for="m in modelsForActiveProvider" :key="m.id" :value="m.id">
+                {{ m.label }} ({{ m.provider }})
+              </option>
+            </select>
+          </div>
+        </div>
         <form class="flex gap-3 relative bg-white/90 backdrop-blur-sm border-2 border-blue-200/20 rounded-xl p-2 transition-all duration-300 hover:border-blue-300/40 hover:bg-white/95 hover:shadow-lg hover:shadow-blue-500/15 focus-within:border-blue-300/60 focus-within:bg-white/98 focus-within:shadow-lg focus-within:shadow-blue-500/25" @submit.prevent="send(input)">
           <Input
             v-model="input"

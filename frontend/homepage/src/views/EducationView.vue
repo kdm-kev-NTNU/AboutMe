@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import type { Education, EducationData } from '../types/education'
+import type { EducationData } from '../types/education'
 import type { Course, CourseData } from '../types/courses'
 
 // Import JSON data
@@ -90,11 +90,6 @@ const getCourseStatusVariant = (status: string) => {
   }
 }
 
-// Convert \n characters to HTML line breaks
-const formatDescription = (text: string) => {
-  return text.replace(/\n/g, '<br>')
-}
-
 // Get course status text
 const getCourseStatusText = (status: string, language: 'en' | 'no') => {
   const statusTexts = {
@@ -116,13 +111,14 @@ const coursesBySemester = computed(() => {
     grouped[course.semester].push(course)
   })
 
-  // Sort semesters in descending order (most recent first)
-  const sortedSemesters = Object.keys(grouped).sort((a, b) => {
-    const [yearA, seasonA] = a.split('-')
-    const [yearB, seasonB] = b.split('-')
+  const getSemesterNumber = (semesterLabel: string): number => {
+    const match = semesterLabel.match(/semester\s+(\d+)/i)
+    return match ? parseInt(match[1], 10) : 0
+  }
 
-    if (yearA !== yearB) return parseInt(yearB) - parseInt(yearA) // Descending year order
-    return seasonB === 'Spring' || seasonB === 'Vår' ? 1 : -1 // Spring comes after Autumn
+  // Sort semesters in descending order (Semester 6 -> Semester 1)
+  const sortedSemesters = Object.keys(grouped).sort((a, b) => {
+    return getSemesterNumber(b) - getSemesterNumber(a)
   })
 
   return sortedSemesters.map(semester => ({
@@ -133,7 +129,7 @@ const coursesBySemester = computed(() => {
 
 // Sort education by start date (most recent first) and format for display
 const education = computed(() => {
-  return educationData.value
+  return [...educationData.value]
     .sort((a, b) => {
       // Sort by start date descending (most recent first)
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
@@ -196,7 +192,7 @@ const education = computed(() => {
             </div>
           </CardHeader>
           <CardContent>
-            <p class="text-gray-600 leading-relaxed" v-html="formatDescription(edu.description)"></p>
+            <p class="text-gray-600 leading-relaxed whitespace-pre-line">{{ edu.description }}</p>
           </CardContent>
         </Card>
       </div>

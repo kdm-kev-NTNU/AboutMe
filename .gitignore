@@ -1,2 +1,21 @@
-# IDE files
+# IDE
 .idea/
+/.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local environment (secrets / machine-specific)
+.env
+.env.*
+!.env.example
+
+# Local vector store exports (not used by runtime)
+backend/vectordatabase/
+
+# Source documents for Chroma ingestion (personal data)
+backend/data/*
+!backend/data/docs/
+backend/data/docs/*
+!backend/data/docs/.gitkeep

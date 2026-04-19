@@ -4,7 +4,7 @@ import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { MapPin } from 'lucide-vue-next'
-import type { WorkExperience, WorkExperienceData } from '../types/workExperience'
+import type { WorkExperienceData } from '../types/workExperience'
 
 // Import JSON data
 import workExperienceEn from '../types/workExperience.en.json'
@@ -48,7 +48,7 @@ const formatPeriod = (startDate: string, endDate: string | null, language: 'en' 
 
 // Sort experiences by start date (most recent first) and format for display
 const experiences = computed(() => {
-  return workExperienceData.value
+  return [...workExperienceData.value]
     .sort((a, b) => {
       // Sort by start date descending (most recent first)
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()

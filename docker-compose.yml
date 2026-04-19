@@ -15,7 +15,77 @@ services:
       timeout: 5s
       retries: 20
 
+  # Chroma listens on 8000 in-container; host maps 8100 for local dev.
+  # Railway private networking is often IPv6-only: if the backend cannot connect to Chroma over
+  # *.railway.internal, set CHROMA_HOST_ADDR=:: (or equivalent) on the Chroma service so uvicorn binds IPv6.
+  chromadb:
+    image: chromadb/chroma:1.0.13
+    container_name: aboutme-chromadb
+    ports:
+      - "8100:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=false
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8000' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: aboutme-phoenix
+    ports:
+      - "6006:6006"
+      - "4317:4317"
+    volumes:
+      - phoenix_data:/mnt/data
+    environment:
+      - PHOENIX_WORKING_DIR=/mnt/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aboutme-backend
+    depends_on:
+      db:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/aboutme?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      PORT: "8080"
+      CHROMA_HTTP_HOST: http://chromadb
+      CHROMA_PORT: "8000"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      PHOENIX_OTLP_ENDPOINT: http://phoenix:4317
+      PHOENIX_BASE_URL: http://phoenix:6006
+      SANITIZER_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      # Host seed docs for Chroma (gitignored; matches file:./data/docs/ with WORKDIR /app)
+      - ./backend/data:/app/data:ro
+
+  frontend:
+    build:
+      context: ./frontend/homepage
+      dockerfile: Dockerfile
+    container_name: aboutme-frontend
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "5173:80"
+
 volumes:
   mysql_data:
-
-
+  chroma_data:
+  phoenix_data:
