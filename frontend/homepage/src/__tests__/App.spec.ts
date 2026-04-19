@@ -10,6 +10,7 @@ import { useLangStore } from '../stores/lang'
 describe('App shell', () => {
 	beforeEach(() => {
 		sessionStorage.clear()
+		localStorage.clear()
 	})
 
 	function mountAppShell(router: Router) {
