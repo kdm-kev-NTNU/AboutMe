@@ -64,15 +64,13 @@ const heroNodes = computed(() =>
   isNo.value
     ? [
         { label: 'Frontend', icon: MonitorSmartphone },
-        { label: 'API', icon: Workflow },
-        { label: 'Backend', icon: Server },
+        { label: 'Backend (REST)', icon: Server },
         { label: 'Database & Vektorer', icon: Database },
         { label: 'AI-modeller', icon: BrainCircuit },
       ]
     : [
         { label: 'Frontend', icon: MonitorSmartphone },
-        { label: 'API', icon: Workflow },
-        { label: 'Backend', icon: Server },
+        { label: 'Backend (REST)', icon: Server },
         { label: 'Database & Vectors', icon: Database },
         { label: 'AI Models', icon: BrainCircuit },
       ],

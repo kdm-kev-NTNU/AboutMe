@@ -19,8 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.lang.NonNull;
 
 /**
- * Registers servlet filters that rate-limit {@code POST /ask} and {@code POST /auth/login}
- * (token buckets per client key or IP).
+ * Registers servlet filters that rate-limit {@code POST /ask}, {@code POST /auth/login}, and
+ * {@code POST /feedback} (token buckets per client key or IP).
  * CORS is configured in {@link SecurityConfig}.
  */
 @Configuration
@@ -33,6 +33,9 @@ public class WebConfig {
 
     /** One token bucket per client IP for /auth/login (credential stuffing mitigation). */
     private final Map<String, Bucket> loginBuckets = new ConcurrentHashMap<>();
+
+    /** One token bucket per client IP for /feedback (spam mitigation). */
+    private final Map<String, Bucket> feedbackBuckets = new ConcurrentHashMap<>();
 
     private Bucket newBucket() {
         Bandwidth limit = Bandwidth.builder()
@@ -59,6 +62,18 @@ public class WebConfig {
 
     private String loginKey(HttpServletRequest req) {
         return "login:ip:" + req.getRemoteAddr();
+    }
+
+    private Bucket newFeedbackBucket() {
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(3)
+            .refillGreedy(3, Duration.ofSeconds(60))
+            .build();
+        return Bucket.builder().addLimit(limit).build();
+    }
+
+    private String feedbackKey(HttpServletRequest req) {
+        return "feedback:ip:" + req.getRemoteAddr();
     }
 
     /**
@@ -115,7 +130,32 @@ public class WebConfig {
         return registration;
     }
 
-
+    /**
+     * Rate limiter for {@code POST /feedback} (3 submissions per 60 seconds per client IP).
+     */
+    @Bean
+    @ConditionalOnProperty(name = "portfolio.feedback-rate-limit.enabled", havingValue = "true", matchIfMissing = true)
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> feedbackRateLimitFilter() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<Filter>();
+        registration.setFilter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+                throws ServletException, IOException {
+                Bucket bucket = feedbackBuckets.computeIfAbsent(feedbackKey(request), k -> newFeedbackBucket());
+                if (bucket.tryConsume(1)) {
+                    filterChain.doFilter(request, response);
+                } else {
+                    response.setStatus(429);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"Too Many Requests\"}");
+                }
+            }
+        });
+        registration.addUrlPatterns("/feedback");
+        registration.setName("feedbackRateLimitFilter");
+        registration.setOrder(2);
+        return registration;
+    }
 }
 
 

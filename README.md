@@ -1,310 +1,87 @@
-# AboutMe (Kevin's AI)
+# AboutMe
 
-## About
+Personal portfolio with an AI chat that answers from your own documents (RAG). Norwegian and English in the UI; stack is **Vue 3**, **Spring Boot**, **MySQL**, and **ChromaDB**. Optional OTLP traces to **Phoenix** when you enable it.
 
-AboutMe is a personal portfolio with an AI chat that answers questions about Kevin based on his CV, coursework, and project documentation. The solution uses Retrieval‑Augmented Generation (RAG) to pull relevant context from documents, supports both Norwegian and English, and includes built‑in rate limiting and logging.
+## Repository layout
 
-NB: Known issues
+| Path | What |
+|------|------|
+| `backend/` | Spring Boot API (RAG, auth, admin document pipeline) |
+| `frontend/homepage/` | Vue 3 SPA — [frontend/homepage/README.md](frontend/homepage/README.md) for npm scripts and Orval |
+| `scripts/dev.ps1` | Windows: Docker for infra, then opens API + Vite in separate terminals |
+| `docker-compose.yml` | MySQL, ChromaDB, Phoenix, backend, Nginx frontend |
+| `.github/workflows/` | `tests.yml` (Maven verify + frontend unit coverage), `semgrep.yml` |
 
-This project was built quickly as a personal initiative. Some edge cases and minor issues may exist. Feedback and improvement suggestions are very welcome. email: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)
+Seed documents for Chroma go in **`backend/data/docs/`** (gitignored). With hybrid dev, create that folder and add PDFs/DOCX/MD as needed.
 
-- Privacy: Conversations may be stored in the database to improve answers and stability. Do not share sensitive information.
-- Vector store privacy: Chunk text and embeddings live in ChromaDB; treat the database and backups as sensitive if documents are personal.
-- Hallucinations: AI answers can be incorrect. Verify important information.
+## Prerequisites
 
-## Repository structure
+- **Node** — see `engines` in [frontend/homepage/package.json](frontend/homepage/package.json)
+- **JDK 21** and the Maven wrapper in `backend/` (`./mvnw` / `mvnw.cmd`)
+- **Docker** + Compose
+- **OpenAI API key** (embeddings + RAG; required for a normal setup)
+- Optional: **Anthropic** key for Claude models in the chat UI
 
-Monorepo layout:
+## Run locally
 
-- `backend/` — Spring Boot API (RAG, auth, document pipeline). Seed files for Chroma ingestion live in `backend/data/docs/` (directory is gitignored; create it locally with your PDFs/DOCX/MD).
-- `frontend/homepage/` — Vue 3 SPA (see [frontend/homepage/README.md](frontend/homepage/README.md) for IDE setup and npm scripts)
-- `scripts/` — Windows helper [`dev.ps1`](scripts/dev.ps1) (Docker infra: MySQL, ChromaDB, Phoenix; then backend and Vite in separate terminals)
-- `docker-compose.yml` — MySQL, ChromaDB, Arize Phoenix (OTLP + UI), backend API, and frontend (Nginx) for full-stack Docker runs
-- `.env.example` — template for root or `backend/` `.env` (never commit secrets)
-- `.github/workflows/` — CI: [tests.yml](.github/workflows/tests.yml) (backend `./mvnw verify`, frontend `npm run test:unit:coverage` on pushes to `main`/`master` and on pull requests) and [semgrep.yml](.github/workflows/semgrep.yml) (Semgrep on `main`, weekly schedule)
+### Option A — full stack in Docker
 
-## Security
-
-This section summarizes the main security mechanisms in the project:
-
-- Authentication and authorization
-  - Spring Security is enabled. The public endpoint `POST /ask` is open but rate‑limited.
-  - Admin tools (`/admin/**`, including document ingest APIs) require an `ADMIN` user and HTTP Basic. The frontend stores a Base64‑encoded Basic token in `sessionStorage` after a successful `POST /auth/login` and sends it as `Authorization: Basic <token>` on protected calls.
-- Rate limiting
-  - Bucket4j enforces 5 requests per 10 seconds for `POST /ask`, keyed by **client IP** or by **authenticated principal** when present (so logged-in users are not pooled with anonymous traffic). Can be disabled with `portfolio.ask-rate-limit.enabled=false` (see [WebConfig.java](backend/src/main/java/com/kevinmazali/portfolio/config/WebConfig.java)).
-  - `POST /auth/login` is limited to **5 attempts per 60 seconds per IP** (`portfolio.login-rate-limit.enabled=true` by default). Failed logins are logged server-side (username + IP only).
-- Production profile
-  - Set **`SPRING_PROFILES_ACTIVE=prod`** in production (e.g. Railway). This loads [application-prod.yaml](backend/src/main/resources/application-prod.yaml): disables verbose SQL / Hibernate binder logging, turns off Spring AI prompt/completion observation logging, and disables Swagger/OpenAPI exposure.
-- HTTP security headers
-  - [SecurityConfig.java](backend/src/main/java/com/kevinmazali/portfolio/config/SecurityConfig.java) sets `X-Content-Type-Options`, `X-Frame-Options: DENY`, HSTS (when the request is HTTPS), and a restrictive `Content-Security-Policy` suitable for JSON API responses.
-- Chat UI markdown
-  - Assistant messages are rendered with **markdown-it** and **DOMPurify** ([SafeMarkdown.vue](frontend/homepage/src/components/SafeMarkdown.vue)) to reduce XSS from model output.
-- Request logs
-  - Payloads persisted in `request_log` are **truncated to 500 characters** (see [RequestLogService.java](backend/src/main/java/com/kevinmazali/portfolio/service/RequestLogService.java)).
-- Public health
-  - `GET /health/chroma` returns a **generic** message when Chroma is down; internal host/diagnostics are **logged only** on the server.
-- Database TLS (production)
-  - The default JDBC URL in `application.yaml` is for local dev (`useSSL=false`). In production, set **`SPRING_DATASOURCE_URL`** to a MySQL URL that enables TLS (e.g. Railway’s template often includes `sslMode=REQUIRED` / `useSSL=true`). Verify your provider’s connection string.
-- CORS
-  - CORS uses an allowlist of origins: `http://localhost:5173`, `http://localhost:4173` (Vite preview / Cypress), `https://kevindmazali.me`, and `https://www.kevindmazali.me`. Credentials are allowed and standard headers (including `Authorization`) are permitted.
-- Data privacy
-  - Minimal request/response auditing is stored in MySQL for troubleshooting. Avoid sharing sensitive information.
-- Input validation
-  - Questions are validated and sanitized server‑side with a maximum length of 3000 characters.
-- CI (static analysis)
-  - Semgrep runs on `main` (see [CI/CD](#cicd)); uploading SARIF uses repository secrets (`SEMGREP_APP_TOKEN`, `SEMGREP_DEPLOYMENT_ID`) in [semgrep.yml](.github/workflows/semgrep.yml).
-
-## Features
-
-- AI chat about Kevin with RAG (loads context from documents like CV, courses, projects)
-- Multilingual query understanding (NO/EN) with simple query expansion
-- Vector index in **ChromaDB** (Docker)
-- Internal **admin** pages (`/admin/tools`, pipeline, chunks, prompts) for documents, ingestion pipeline, chunk inspection, and versioned RAG prompts
-- Optional **Anthropic Claude** chat models when `ANTHROPIC_API_KEY` is set (embeddings still use OpenAI)
-- **Opt-in OTLP tracing** to Phoenix (`management.otlp` in Spring Boot): set `OTLP_EXPORT_ENABLED=true`, `PHOENIX_OTLP_ENDPOINT` (gRPC), and optionally `PHOENIX_API_KEY` (Bearer) — see [application.yaml](backend/src/main/resources/application.yaml) and [`.env.example`](.env.example)
-- API rate limiting (Bucket4j) to prevent abuse
-- Logs requests and answers to MySQL (for insights and troubleshooting)
-- Vue 3 frontend with language toggle, quick questions, responsive chat UI, and chat history
-- Local development with Vite proxy to Spring Boot
-- Production setup with an Nginx container for the frontend and a Docker image for the backend
-- **OpenAPI / Swagger UI** on the backend (`http://localhost:8080/swagger-ui/index.html` when the API runs on 8080; OpenAPI JSON at `http://localhost:8080/v3/api-docs`). The Vue app can sync types and clients with [Orval](https://orval.dev/) — see [frontend/homepage/README.md](frontend/homepage/README.md) (`npm run api:pull`, `npm run api:generate`). With Nginx, the same UI is available under `/api/swagger-ui/index.html` on the site origin.
-
-## Available Pages
-
-The frontend provides access to the following pages:
-
-- **Home Page** (`/`) - Landing page with quick questions and language toggle
-- **Chat Page** (`/chat`) - Interactive AI chat interface for asking questions about Kevin
-- **Projects Page** (`/projects`) - Showcase of Kevin's projects and work
-- **Work Experience Page** (`/work-experience`) - Professional experience and career history
-- **Education Page** (`/education`) - Academic background and coursework
-- **Tech stack** (`/tech-stack`) - Technologies and tools used in the portfolio
-- **Chat history** (`/chat-history`) - History of past chat interactions
-- **Privacy policy** (`/privacy-policy`) - Privacy information for the site
-- **Admin — tools** (`/admin/tools`, admin only) - Document upload, collections, Chroma health, delete by `document_id`
-- **Admin — pipeline** (`/admin/pipeline`, admin only) - Batch uploads, ingest-by-path, reseed, and related pipeline actions
-- **Admin — chunks** (`/admin/chunks`, admin only) - Inspect stored chunks and previews per document
-- **Admin — prompts** (`/admin/prompts`, admin only) - Create, activate, diff, and manage versioned RAG prompt templates (backed by `/admin/tools/prompt-versions/*` APIs)
-
-## Tech Stack
-
-### Frontend
-
-- Vue 3 (Composition API) + TypeScript
-- Pinia 3 for state management
-- Vue Router
-- Vite 7 (dev/build)
-- Tailwind CSS 4 and Reka UI (shadcn-style components), Lucide icons
-- Vitest (unit tests) and Cypress (E2E)
-- Nginx (production serving in Docker)
-
-### Backend
-
-- Spring Boot 3.5.5 (Java 21)
-- Spring Web, Spring Data JPA, Spring Boot Actuator, Lombok
-- Springdoc OpenAPI 2.8.9 (Swagger UI + `/v3/api-docs`)
-- MySQL
-- Spring AI 1.0.1 (OpenAI chat + embeddings, optional Anthropic chat) and Tika document reader
-- ChromaDB (Spring AI vector store) for embeddings and metadata
-- Spring Boot OTLP tracing to an OTLP gRPC endpoint (local default: Phoenix on port 4317)
-- Bucket4j for rate limiting
-
-## Getting Started
-
-**Windows shortcut:** From the repo root, run `.\scripts\dev.ps1` (after [Prerequisites](#prerequisites) and a root `.env` from `.env.example`) to run `docker compose up -d db chromadb phoenix` (MySQL, ChromaDB, Phoenix only — leaves **8080** / **5173** free) and open the Spring Boot API and Vite dev server in separate windows; then open `http://localhost:5173`.
-
-### Prerequisites
-
-- Node.js — match [`engines` in `frontend/homepage/package.json`](frontend/homepage/package.json) (currently `^20.19.0` or `>=22.12.0`)
-- npm (bundled with Node)
-- JDK 21
-- Maven (optional if you use the Maven Wrapper in `backend/`: `./mvnw` / `mvnw.cmd`)
-- Docker and Docker Compose
-- **OpenAI API key** (required for embeddings/RAG and for OpenAI chat models)
-- Optional: **Anthropic API key** if you want Claude models in the chat UI
-
-### 1) Clone the repo
-
-```bash
-git clone https://github.com/kdm-kev-NTNU/AboutMe.git
-cd AboutMe
-```
-
-### 2) Start Docker services
-
-**Full stack in Docker** (API + SPA + data stores + observability):
+From the repo root (set `OPENAI_API_KEY` in the environment or in a root `.env` used by Compose):
 
 ```bash
 docker compose up -d --build
 ```
 
-(If you only have the legacy CLI, the same file works as `docker-compose up -d --build`.)
+Typical URLs:
 
-Set `OPENAI_API_KEY` in your shell (or use a root `.env` file and `docker compose --env-file .env up -d --build`) before starting so the **backend** container can call OpenAI.
+- App (Nginx): [http://localhost:5173](http://localhost:5173) — `/api` proxied to the backend
+- API: [http://localhost:8080](http://localhost:8080)
+- MySQL: host **3307** → container 3306, DB `aboutme`, user/password `root`/`root`
+- Chroma: host **8100**
+- Phoenix UI: [http://localhost:6006](http://localhost:6006), OTLP gRPC **4317**
 
-This starts:
+The backend image mounts `./backend/data` read-only; `file:./data/docs/` resolves to that path inside the container.
 
-- **MySQL** on host port **3307** (database `aboutme`, user `root/root`)
-- **ChromaDB** on host port **8100**
-- **Phoenix** (Arize Phoenix): UI on **6006** (`http://localhost:6006`), OTLP gRPC on **4317** (the `backend` service sets `PHOENIX_OTLP_ENDPOINT=http://phoenix:4317` so traces go to Phoenix)
-- **Backend** (Spring Boot) on **8080**
-- **Frontend** (Nginx + static build) on **5173** (proxies `/api/*` to the backend)
-
-**Hybrid development** (Spring Boot + Vite on the host, databases in Docker): use [`scripts/dev.ps1`](scripts/dev.ps1) or run only infra:
+### Option B — hybrid (DBs in Docker, app on the host)
 
 ```bash
 docker compose up -d db chromadb phoenix
 ```
 
-Then start the API and frontend locally (sections **4) Run the backend** and **5) Run the frontend** below). For OTLP from a local JVM, set `OTLP_EXPORT_ENABLED=true` and point `PHOENIX_OTLP_ENDPOINT` at `http://localhost:4317` (see [`.env.example`](.env.example)).
+Then:
 
-Chroma connectivity check (no auth): `GET http://localhost:8080/health/chroma`. Admin re-seed of seed documents: `POST http://localhost:8080/admin/tools/documents/reseed` (HTTP Basic, `ADMIN` user).
+- Backend: from `backend/`, `./mvnw spring-boot:run` (Windows: `.\mvnw.cmd spring-boot:run`)
+- Frontend: from `frontend/homepage/`, `npm install` and `npm run dev` → [http://localhost:5173](http://localhost:5173) (Vite proxies `/api` to port 8080)
 
-The backend image does not bundle seed documents. `docker-compose.yml` mounts `./backend/data` read-only into the container at `/app/data`, so `file:./data/docs/` resolves to `/app/data/docs/` (container `WORKDIR` is `/app`). Populate `backend/data/docs/` on the host before the first run if you want startup seeding in Docker.
+On Windows you can use **`.\scripts\dev.ps1`** after copying `.env.example` to `.env` — it starts the same infra and launches API + Vite.
 
-### 3) Set environment variables
+## Configuration
 
-The backend reads `application.yaml` and, via `spring.config.import`, optionally loads `.env` / `.env.properties` from the process working directory (typically the repo root when using `scripts/dev.ps1`), the current directory, or `backend/` — see the first lines of [backend/src/main/resources/application.yaml](backend/src/main/resources/application.yaml). Copy [`.env.example`](.env.example) to `.env` at the repo root (or under `backend/`). Do not commit secrets.
+Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `backend/` (Spring loads it via `spring.config.import` in `application.yaml`). Never commit secrets.
 
-Required for a typical local run:
+**Usually required:** `OPENAI_API_KEY`, MySQL user/password (defaults align with Compose: `root` / `root`), `PORT` for the API (default **8080**).
 
-- `OPENAI_API_KEY`: Required for **embeddings/RAG** and for **OpenAI** chat models
-- `PORT`: HTTP port for the API (defaults to **8080** in `application.yaml` if unset)
-- `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD`: MySQL credentials (with `docker compose` as written, use `root` / `root`; defaults in `application.yaml` are also `root` if unset)
+**Common optional:** `ANTHROPIC_API_KEY`, `CHROMA_*` / `CHROMA_ENABLED`, OTLP (`OTLP_EXPORT_ENABLED`, `PHOENIX_OTLP_ENDPOINT`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`. Details and comments live in `.env.example`.
 
-Optional:
+## Tests
 
-- `ANTHROPIC_API_KEY`: Enables **Anthropic** chat models in the UI; embeddings still use OpenAI
-- `SPRING_DATASOURCE_URL`: JDBC URL override (see [`.env.example`](.env.example); the `backend` service in Compose sets this to the `db` container)
-- `CHROMA_COLLECTION`: Active Chroma collection name (default `portfolio-documents`, see `application.yaml`)
-- `CHROMA_HTTP_HOST` / `CHROMA_PORT`: Overrides for the Chroma HTTP client (defaults in `application.yaml`: `http://localhost` and `8100`). The `backend` service in Compose sets `http://chromadb` and `8000`. On Railway, set these to your Chroma service private URL and port.
-- `CHROMA_ENABLED`: Set to `false` when Chroma is not deployed; chat can run without RAG and admin document APIs return **501** (see `portfolio.chroma.enabled` in [application.yaml](backend/src/main/resources/application.yaml))
-- `OTLP_EXPORT_ENABLED`: Set to `true` to export traces to OTLP (default `false`)
-- `PHOENIX_OTLP_ENDPOINT`: OTLP gRPC tracing endpoint (default in `application.yaml`: `http://localhost:4317`; in full-stack Compose the backend uses `http://phoenix:4317`)
-- `PHOENIX_API_KEY`: Optional Bearer token for OTLP export headers when your collector requires it
-- `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`: Default chat model when `POST /ask` omits `model` (Spring property `portfolio.chat.default-model-id`, default `gpt-5.4-mini`)
-- `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD`: If both are set and that username is not already in the `users` table, the backend creates an `ADMIN` user on startup (BCrypt). Clear the password variable after first login on shared hosts.
-- `OPENAPI_URL`: Used by the frontend’s `npm run api:pull` (default `http://localhost:8080/v3/api-docs` per [`.env.example`](.env.example))
+- **Backend** (from `backend/`): `./mvnw test` or `./mvnw verify` (includes JaCoCo gate; open `target/site/jacoco/index.html` after verify)
+- **Frontend** (from `frontend/homepage/`): `npm ci`, `npm run test:unit` or `npm run test:unit:coverage`
 
-Example (PowerShell):
+## API (short)
 
-```powershell
-$env:OPENAI_API_KEY = "sk-..."
-$env:PORT = "8080"
-$env:SPRING_DATASOURCE_USERNAME = "root"
-$env:SPRING_DATASOURCE_PASSWORD = "root"
-```
+- **`POST /ask`** — JSON `{ "question": "...", "model": "<optional>" }` → `{ "answer": "..." }`. Rate limited; max question length enforced server-side.
+- **`GET /chat/models`** — models available for configured providers
+- **`POST /auth/login`** — JSON credentials; admin UI uses HTTP Basic on protected routes
+- **`GET /health/chroma`** — Chroma health for ops
+- **Admin** — document upload, pipeline, chunks, prompts under `/admin/tools/**` (requires `ADMIN` role). Full contract: **Swagger UI** at `/swagger-ui/index.html` when the API runs (e.g. [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)).
 
-### Tests and coverage (backend)
+## Security and privacy (summary)
 
-From `backend/`, run unit and slice tests (no Docker required for the default suite):
+Spring Security protects admin routes; public **`POST /ask`** is rate-limited. Production should use **`SPRING_PROFILES_ACTIVE=prod`**. Use TLS-backed JDBC URLs in production; treat DB and Chroma backups as sensitive if documents are personal.
 
-```bash
-./mvnw test
-```
+**Privacy:** conversations may be stored for troubleshooting and improvement — do not send secrets. **RAG chunks and embeddings** live in Chroma; protect that data like any PII-bearing store. **AI output** can be wrong; verify anything important.
 
-After tests, generate a JaCoCo HTML report with:
+## Feedback
 
-```bash
-./mvnw verify
-```
-
-Open `backend/target/site/jacoco/index.html` in a browser. For a report without running `verify`, use `./mvnw test org.jacoco:jacoco-maven-plugin:report`.
-
-`./mvnw verify` also runs a JaCoCo **line coverage check** on the backend bundle (minimum **22%** as configured in [backend/pom.xml](backend/pom.xml)); the job fails if coverage drops below that threshold.
-
-### Frontend tests
-
-From `frontend/homepage/`:
-
-```bash
-npm ci
-npm run test:unit
-```
-
-Coverage report with Vitest thresholds (see [frontend/homepage/vitest.config.ts](frontend/homepage/vitest.config.ts)):
-
-```bash
-npm run test:unit:coverage
-```
-
-### 4) Run the backend
-
-From `backend/`:
-
-```bash
-./mvnw spring-boot:run
-```
-
-On Windows (same directory):
-
-```powershell
-.\mvnw.cmd spring-boot:run
-```
-
-- Serves on the port given by `PORT` (default **8080** if unset)
-- When the Chroma collection is **empty**, the app seeds documents from `sfg.aiapp.documentsToLoadDir` (default `file:./data/docs/`, i.e. `backend/data/docs/` when the process working directory is `backend/`). That directory is **gitignored**; copy your seed PDFs/DOCX/MD there locally. You can instead set `sfg.aiapp.documents-to-load` to a list of Spring `Resource` locations. With `sfg.aiapp.force-reindex: true`, startup seeding re-ingests seed files even when the collection already has embeddings (replacing chunks per content hash). Use **Admin → Internal tools** (`/admin/tools`) to upload additional files into ChromaDB.
-
-### 5) Run the frontend
-
-```bash
-cd ../frontend/homepage
-npm install
-npm run dev
-```
-
-- Dev server usually runs at `http://localhost:5173`
-- The proxy forwards requests from `/api/*` to `http://localhost:8080/*`
-
-### 6) Open the application
-
-Go to `http://localhost:5173` and try the quick questions or ask your own in the chat.
-
-## API
-
-- `POST /ask`
-  - Body: `{ "question": "...", "model": "<optional>" }` — if `model` is omitted, the server uses `portfolio.chat.default-model-id` (default `gpt-5.4-mini`)
-  - Allowed `model` values (must match exactly): `gpt-5.4-mini`, `gpt-5.4`, `claude-haiku-4-5-20251001`, `claude-sonnet-4-6`. Unknown ids or models whose provider has no API key configured return **400**.
-  - Response: `{ "answer": "..." }`
-  - Validation: Max 3000 characters in `question`
-  - Rate limit: 5 requests per 10 seconds per user/IP (HTTP 429 on violation)
-  - **503** when the LLM provider or Chroma is unavailable
-
-The frontend calls this as `/api/ask` in dev/prod, where `/api` is proxied to the backend.
-
-- `GET /chat/models` (public)
-  - Returns allow-listed chat models for providers that have API keys configured (drives the chat UI model picker).
-
-- `POST /auth/login` (public)
-  - Body: `{ "username": "...", "password": "..." }`
-  - Success: JSON including `username` and `role` (`ADMIN` or `USER`). The admin UI then stores a Base64-encoded HTTP Basic credential in `sessionStorage` for subsequent protected calls.
-
-- `GET /health/chroma` (public)
-  - JSON fields: `healthy` (boolean), `collectionName`, `embeddingCount` (nullable long), `message` (nullable string, e.g. error detail). Returns **501** when Chroma is disabled (`CHROMA_ENABLED=false` / `portfolio.chroma.enabled=false`), **503** when Chroma is unreachable, the `ChromaApi` bean is missing while Chroma is enabled, or the collection is missing.
-
-Admin document pipeline (HTTP Basic, `ROLE_ADMIN`). Multipart uploads are limited to **50 MB** per file and **55 MB** per request (`application.yaml`).
-
-- `POST /admin/tools/documents/upload` — multipart field `file`, optional `title`, optional `force=true`. Allowed extensions: `pdf`, `docx`, `doc`, `txt`, `md`, `png`, `jpg`, `jpeg`, `gif`, `bmp`, `tiff`, `webp`, `svg`.
-- `POST /admin/tools/documents/upload/batch` — multipart field `files` (array), optional `force=true`; returns per-file ingestion results
-- `POST /admin/tools/documents/ingest-by-path` — JSON body `{ "paths": ["..."], "force": <optional boolean> }`; each path is **relative to** `sfg.aiapp.documentsToLoadDir` (no `..` or absolute segments)
-- `GET /admin/tools/documents/files` — relative paths with supported extensions under `sfg.aiapp.documentsToLoadDir` (Spring `file:` URL base)
-- `GET /admin/tools/documents` — aggregated documents in the active collection
-- `GET /admin/tools/documents/chunks` — paginated chunk inspection (`documentId`, `limit` max 200, `offset` query params)
-- `DELETE /admin/tools/documents/{documentId}` — delete all chunks for a `document_id`
-- `GET /admin/tools/documents/collections` — collection list and embedding count
-- `POST /admin/tools/documents/reseed` — re-ingest using the **same seed resolution as startup** (`sfg.aiapp.documents-to-load` if set, otherwise glob under `sfg.aiapp.documentsToLoadDir`); replaces chunks per content hash; returns ingestion results
-
-Admin **prompt versions** (HTTP Basic, `ROLE_ADMIN`): REST under `/admin/tools/prompt-versions/*` (list names, history, create, activate, seed, delete variant, diff). Prefer [Swagger UI](http://localhost:8080/swagger-ui/index.html) for the full contract.
-
-## CI/CD
-
-GitHub Actions workflows in [`.github/workflows/`](.github/workflows/):
-
-- **[tests.yml](.github/workflows/tests.yml)** — on push to `main` or `master` and on all pull requests: runs `backend/./mvnw -B verify` (tests + JaCoCo report and line coverage gate) and, in `frontend/homepage`, `npm ci` plus `npm run test:unit:coverage` (Node 22).
-- **[semgrep.yml](.github/workflows/semgrep.yml)** — on push and pull requests targeting `main`, plus a weekly schedule: Semgrep scan and SARIF upload. Uses `SEMGREP_APP_TOKEN` and `SEMGREP_DEPLOYMENT_ID` when publishing to Semgrep Cloud.
-
-## Credits
-
-- Developed by Kevin Dennis Mazali (`kdm-kev-NTNU`)
-- Document base: CV, course and project documents (filesystem seed under `backend/data/docs/` and/or admin ingest into ChromaDB)
-
+Built as a personal project; edge cases may exist. Suggestions welcome: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)

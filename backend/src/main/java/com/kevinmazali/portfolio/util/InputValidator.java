@@ -12,8 +12,9 @@ public class InputValidator {
     private static final Pattern SAFE_STRING_PATTERN = Pattern.compile("^[\\p{L}\\p{N}\\p{P}\\p{Z}]*$");
     
     private static final int MAX_QUESTION_LENGTH = 3000;
+    private static final int MAX_FEEDBACK_LENGTH = 4000;
     private static final int MAX_REQUEST_ID_LENGTH = 100;
-    
+
     /**
      * Validates a question input.
      * 
@@ -59,6 +60,26 @@ public class InputValidator {
         return SAFE_STRING_PATTERN.matcher(requesterId).matches();
     }
     
+    /**
+     * Validates a feedback message (same safety rules as questions, different max length).
+     */
+    public static boolean isValidFeedbackMessage(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+        if (message.length() > MAX_FEEDBACK_LENGTH) {
+            return false;
+        }
+        String lower = message.toLowerCase();
+        if (lower.contains("<script") ||
+            lower.contains("javascript:") ||
+            lower.contains("data:text/html") ||
+            lower.contains("vbscript:")) {
+            return false;
+        }
+        return SAFE_STRING_PATTERN.matcher(message).matches();
+    }
+
     /**
      * Strips control characters (except common whitespace) and collapses runs of whitespace before persistence.
      * 

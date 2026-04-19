@@ -141,6 +141,15 @@ const sections = computed(() => {
             </p>
           </div>
         </section>
+
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 class="text-lg font-semibold text-gray-900">
+            {{ isNo ? 'Oversikt over informasjonskapsler' : 'Cookie Overview' }}
+          </h2>
+          <div class="mt-4 text-sm leading-relaxed text-gray-700">
+            <div id="consentify-privacy-policy"></div>
+          </div>
+        </section>
       </div>
     </div>
   </main>
