@@ -4,7 +4,7 @@ import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { Project, ProjectsData } from '../types/projects'
+import type { ProjectsData } from '../types/projects'
 
 // Import JSON data
 import projectsEn from '../types/projects.en.json'
@@ -68,7 +68,7 @@ const getStatusText = (status: string, language: 'en' | 'no') => {
 
 // Sort projects by start date (most recent first) and format for display
 const projects = computed(() => {
-  return projectsData.value
+  return [...projectsData.value]
     .sort((a, b) => {
       // Sort by start date descending (most recent first)
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()

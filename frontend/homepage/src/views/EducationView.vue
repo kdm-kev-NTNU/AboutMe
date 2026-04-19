@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import type { Education, EducationData } from '../types/education'
+import type { EducationData } from '../types/education'
 import type { Course, CourseData } from '../types/courses'
 
 // Import JSON data
@@ -100,17 +100,6 @@ const getCourseStatusText = (status: string, language: 'en' | 'no') => {
   return statusTexts[status as keyof typeof statusTexts]?.[language] || status
 }
 
-const extractSemesterSortKey = (semester: string): { year: number; seasonRank: number } => {
-  const yearMatch = semester.match(/(20\d{2})/)
-  const year = yearMatch ? Number.parseInt(yearMatch[1], 10) : 0
-
-  const normalized = semester.toLowerCase()
-  const isSpring = normalized.includes('spring') || normalized.includes('vår')
-  const seasonRank = isSpring ? 1 : 0 // Spring is later than autumn within the same year
-
-  return { year, seasonRank }
-}
-
 // Group courses by semester
 const coursesBySemester = computed(() => {
   const grouped: { [key: string]: Course[] } = {}
@@ -140,7 +129,7 @@ const coursesBySemester = computed(() => {
 
 // Sort education by start date (most recent first) and format for display
 const education = computed(() => {
-  return educationData.value
+  return [...educationData.value]
     .sort((a, b) => {
       // Sort by start date descending (most recent first)
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()

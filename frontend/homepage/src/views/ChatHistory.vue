@@ -5,8 +5,8 @@ import { useLangStore } from '../stores/lang'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Brain, UserRound, MessageSquare, Calendar, Eye } from 'lucide-vue-next'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { MessageSquare, Calendar, Eye } from 'lucide-vue-next'
 import MessagesArea from '@/views/MessagesArea.vue'
 
 type ChatMessage = {
@@ -54,11 +54,11 @@ const fetchChatHistory = async () => {
     if (!res.ok) {
       let msg = language.value === 'en' ? 'Something went wrong. Please try again.' : 'Noe gikk galt. Prøv igjen.'
       try {
-        const data = await res.json() as any
+        const data = (await res.json()) as { error?: unknown }
         if (data && typeof data.error === 'string') {
           msg = data.error
         }
-      } catch (_) {
+      } catch {
         // ignore parse errors
       }
       errorText.value = msg
@@ -69,7 +69,7 @@ const fetchChatHistory = async () => {
     chatSessions.value = data.sort((a, b) =>
       new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime()
     )
-  } catch (e: any) {
+  } catch {
     errorText.value = language.value === 'en' ? 'Network error. Please try again.' : 'Nettverksfeil. Prøv igjen.'
   } finally {
     isLoading.value = false
