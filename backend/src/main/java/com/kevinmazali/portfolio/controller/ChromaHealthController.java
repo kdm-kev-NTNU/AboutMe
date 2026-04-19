@@ -34,6 +34,9 @@ public class ChromaHealthController {
       @ApiResponse(responseCode = "503", description = "Chroma unreachable or collection missing",
           content = @Content(schema = @Schema(implementation = ChromaHealthResponse.class)))
   })
+  /**
+   * Resolves the configured collection id, then reads embedding count; any failure yields HTTP 503.
+   */
   @GetMapping("/chroma")
   public ResponseEntity<ChromaHealthResponse> chroma() {
     String tenant = chromaStoreProperties.getTenantName();

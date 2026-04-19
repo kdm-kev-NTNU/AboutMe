@@ -17,11 +17,8 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -39,16 +36,19 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final ObjectProvider<AnthropicChatModel> anthropicChatModel;
   private final VectorStore vectorStore;
   private final String defaultModelId;
+  private final PromptVersionService promptVersionService;
 
   public OpenAIServiceImpl(
       OpenAiChatModel openAiChatModel,
       ObjectProvider<AnthropicChatModel> anthropicChatModel,
       @Lazy VectorStore vectorStore,
-      @Value("${portfolio.chat.default-model-id}") String defaultModelId) {
+      @Value("${portfolio.chat.default-model-id}") String defaultModelId,
+      PromptVersionService promptVersionService) {
     this.openAiChatModel = openAiChatModel;
     this.anthropicChatModel = anthropicChatModel;
     this.vectorStore = vectorStore;
     this.defaultModelId = defaultModelId;
+    this.promptVersionService = promptVersionService;
   }
 
   @Override
@@ -58,6 +58,7 @@ public class OpenAIServiceImpl implements OpenAIService {
       throw new IllegalStateException("Anthropic chat is not available (missing API key or autoconfiguration).");
     }
 
+    // Cross-language retrieval: run similarity search once per expanded query, then dedupe and cap.
     List<String> queries = expandQueryToLanguages(question.question(), model);
     List<Document> documents = queries.stream()
         .flatMap(q -> vectorStore.similaritySearch(
@@ -70,18 +71,20 @@ public class OpenAIServiceImpl implements OpenAIService {
         .limit(40)
         .toList();
 
+    // Build RAG prompt from DB-managed template (per provider) plus flattened chunk text.
     List<String> contentList = documents.stream().map(Document::getText).toList();
-    String templatePath = switch (model.provider()) {
-      case OPENAI -> "templates/rag-prompt-template-openai.st";
-      case ANTHROPIC -> "templates/rag-prompt-template-anthropic.st";
+    String providerName = switch (model.provider()) {
+      case OPENAI -> "openai";
+      case ANTHROPIC -> "anthropic";
     };
-    String ragPromptTemplate = loadPromptTemplateFromClasspath(templatePath);
+    String ragPromptTemplate = promptVersionService.loadRagPrompt(providerName);
     PromptTemplate promptTemplate = new PromptTemplate(ragPromptTemplate);
     Prompt basePrompt = promptTemplate.create(Map.of(
         "input", question.question(),
         "documents", String.join("\n", contentList)
     ));
 
+    // Provider-specific chat options (model id, max tokens) are applied inside invokeChat.
     ChatResponse response = invokeChat(model, basePrompt);
     return new Answer(response.getResult().getOutput().getText());
   }
@@ -117,6 +120,10 @@ public class OpenAIServiceImpl implements OpenAIService {
     };
   }
 
+  /**
+   * Optional LLM step: asks the same model to emit EN/NO phrasing so vector search hits both languages.
+   * On any failure, returns a singleton list containing only the original query (graceful degradation).
+   */
   private List<String> expandQueryToLanguages(String original, SupportedChatModel model) {
     try {
       String sys = """
@@ -162,14 +169,4 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
   }
 
-  private String loadPromptTemplateFromClasspath(String resourceName) {
-    try {
-      ClassPathResource res = new ClassPathResource(resourceName);
-      try (InputStream in = res.getInputStream()) {
-        return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-      }
-    } catch (Exception e) {
-      throw new RuntimeException("Could not read " + resourceName + " from classpath", e);
-    }
-  }
 }

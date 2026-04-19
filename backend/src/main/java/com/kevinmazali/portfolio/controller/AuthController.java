@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * JSON login used by the Vue app to validate credentials without sending Basic auth on every page load.
+ * Successful responses inform the client role; admin routes still require HTTP Basic per request.
+ */
 @RestController
 @RequestMapping("/auth")
 @Tag(name = "Authentication", description = "Login for SPA; use returned credentials with HTTP Basic on admin routes")

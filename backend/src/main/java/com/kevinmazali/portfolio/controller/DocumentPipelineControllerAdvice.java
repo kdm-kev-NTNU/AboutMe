@@ -14,11 +14,13 @@ import org.springframework.web.client.RestClientException;
 @RestControllerAdvice(assignableTypes = DocumentPipelineController.class)
 public class DocumentPipelineControllerAdvice {
 
+  /** Chroma misconfiguration or unexpected empty state from the ingestion service. */
   @ExceptionHandler(IllegalStateException.class)
   public ResponseEntity<ApiError> illegalState(IllegalStateException ex) {
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiError(ex.getMessage()));
   }
 
+  /** Network or HTTP errors when calling the Chroma REST API from the admin pipeline. */
   @ExceptionHandler(RestClientException.class)
   public ResponseEntity<ApiError> restClient(RestClientException ex) {
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiError(ex.getMessage()));

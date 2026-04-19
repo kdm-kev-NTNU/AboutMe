@@ -22,6 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,16 +38,21 @@ class OpenAIServiceImplTest {
   @Mock
   private ObjectProvider<AnthropicChatModel> anthropicChatModelProvider;
 
+  @Mock
+  private PromptVersionService promptVersionService;
+
   private OpenAIServiceImpl openAIServiceImpl;
 
   @BeforeEach
   void setUp() {
-    when(anthropicChatModelProvider.getIfAvailable()).thenReturn(null);
+    when(promptVersionService.loadRagPrompt(anyString()))
+        .thenReturn("Input: {input}\nDocs:\n{documents}");
     openAIServiceImpl = new OpenAIServiceImpl(
         openAiChatModel,
         anthropicChatModelProvider,
         vectorStore,
-        "gpt-4o-mini");
+        "gpt-4o-mini",
+        promptVersionService);
   }
 
   @Test

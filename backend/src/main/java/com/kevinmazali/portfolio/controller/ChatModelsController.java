@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * Public read-only catalog for the chat UI; complements {@code POST /ask} on {@link QuestionController}.
+ */
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Chat", description = "RAG-backed question answering")

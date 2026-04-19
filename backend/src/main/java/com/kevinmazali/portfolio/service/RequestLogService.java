@@ -9,6 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Persists minimal request/response audit information for the public API.
+ * {@code requesterId} may be supplied by the client; otherwise a coarse label is derived from
+ * {@link org.springframework.security.core.context.SecurityContextHolder} (legacy display values
+ * remain in the DB for existing rows).
  */
 @Service
 public class RequestLogService {
@@ -33,6 +36,7 @@ public class RequestLogService {
         log.setPath(path);
         log.setMethod(method);
         log.setPayload(payload);
+        // Prefer explicit requester id from the API; fall back to username or a generic end-user label.
         String computedRequester;
         if (requesterId != null) {
             computedRequester = requesterId;

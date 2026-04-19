@@ -14,6 +14,12 @@ export default mergeConfig(
         reporter: ['text', 'html'],
         include: ['src/**/*.{ts,vue}'],
         exclude: ['src/main.ts', '**/*.d.ts', '**/types/**'],
+        thresholds: {
+          lines: 7,
+          statements: 7,
+          branches: 85,
+          functions: 54,
+        },
       },
     },
   }),

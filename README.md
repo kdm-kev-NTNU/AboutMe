@@ -18,8 +18,8 @@ Monorepo layout:
 
 - `backend/` — Spring Boot API (RAG, auth, document pipeline). Seed files for Chroma ingestion live in `backend/data/docs/` (directory is gitignored; create it locally with your PDFs/DOCX/MD).
 - `frontend/homepage/` — Vue 3 SPA (see [frontend/homepage/README.md](frontend/homepage/README.md) for IDE setup and npm scripts)
-- `scripts/` — Windows helper [`dev.ps1`](scripts/dev.ps1) (Docker services + backend/frontend in separate terminals)
-- `docker-compose.yml` — MySQL, ChromaDB, backend API, and frontend (Nginx) for local / full-stack runs
+- `scripts/` — Windows helper [`dev.ps1`](scripts/dev.ps1) (Docker infra: MySQL, ChromaDB, Phoenix; then backend and Vite in separate terminals)
+- `docker-compose.yml` — MySQL, ChromaDB, Arize Phoenix (OTLP + UI), backend API, and frontend (Nginx) for full-stack Docker runs
 - `.env.example` — template for root or `backend/` `.env` (never commit secrets)
 - `.github/workflows/` — CI (e.g. Semgrep on `main`)
 
@@ -46,7 +46,9 @@ This section summarizes the main security mechanisms in the project:
 - AI chat about Kevin with RAG (loads context from documents like CV, courses, projects)
 - Multilingual query understanding (NO/EN) with simple query expansion
 - Vector index in **ChromaDB** (Docker)
-- Internal **Admin tools** page (`/admin/tools`) to upload and manage indexed documents
+- Internal **admin** pages (`/admin/tools`, pipeline, chunks, prompts) for documents, ingestion pipeline, chunk inspection, and versioned RAG prompts
+- Optional **Anthropic Claude** chat models when `ANTHROPIC_API_KEY` is set (embeddings still use OpenAI)
+- Local **OTLP tracing** to Phoenix (`management.otlp` in Spring Boot) when Phoenix is running
 - API rate limiting (Bucket4j) to prevent abuse
 - Logs requests and answers to MySQL (for insights and troubleshooting)
 - Vue 3 frontend with language toggle, quick questions, responsive chat UI, and chat history
@@ -63,9 +65,13 @@ The frontend provides access to the following pages:
 - **Projects Page** (`/projects`) - Showcase of Kevin's projects and work
 - **Work Experience Page** (`/work-experience`) - Professional experience and career history
 - **Education Page** (`/education`) - Academic background and coursework
+- **Tech stack** (`/tech-stack`) - Technologies and tools used in the portfolio
 - **Chat history** (`/chat-history`) - History of past chat interactions
 - **Privacy policy** (`/privacy-policy`) - Privacy information for the site
-- **Internal tools** (`/admin/tools`, admin only) - Document ingest, ChromaDB status, delete by `document_id`
+- **Admin — tools** (`/admin/tools`, admin only) - Document upload, collections, Chroma health, delete by `document_id`
+- **Admin — pipeline** (`/admin/pipeline`, admin only) - Batch uploads, ingest-by-path, reseed, and related pipeline actions
+- **Admin — chunks** (`/admin/chunks`, admin only) - Inspect stored chunks and previews per document
+- **Admin — prompts** (`/admin/prompts`, admin only) - Create, activate, diff, and manage versioned RAG prompt templates (backed by `/admin/tools/prompt-versions/*` APIs)
 
 ## Tech Stack
 
@@ -85,13 +91,14 @@ The frontend provides access to the following pages:
 - Spring Web, Spring Data JPA, Lombok
 - Springdoc OpenAPI (Swagger UI + `/v3/api-docs`)
 - MySQL
-- Spring AI 1.0.1 (OpenAI Chat + Embeddings) and Tika document reader
+- Spring AI 1.0.1 (OpenAI chat + embeddings, optional Anthropic chat) and Tika document reader
 - ChromaDB (Spring AI vector store) for embeddings and metadata
+- Spring Boot OTLP tracing to an OTLP gRPC endpoint (local default: Phoenix on port 4317)
 - Bucket4j for rate limiting
 
 ## Getting Started
 
-**Windows shortcut:** From the repo root, run `.\scripts\dev.ps1` (after [Prerequisites](#prerequisites) and a root `.env` from `.env.example`) to run `docker compose up -d` and open the Spring Boot API and Vite dev server in separate windows; then open `http://localhost:5173`.
+**Windows shortcut:** From the repo root, run `.\scripts\dev.ps1` (after [Prerequisites](#prerequisites) and a root `.env` from `.env.example`) to run `docker compose up -d db chromadb phoenix` (MySQL, ChromaDB, Phoenix only — leaves **8080** / **5173** free) and open the Spring Boot API and Vite dev server in separate windows; then open `http://localhost:5173`.
 
 ### Prerequisites
 
@@ -100,7 +107,8 @@ The frontend provides access to the following pages:
 - JDK 21
 - Maven
 - Docker and Docker Compose
-- OpenAI API key
+- **OpenAI API key** (required for embeddings/RAG and for OpenAI chat models)
+- Optional: **Anthropic API key** if you want Claude models in the chat UI
 
 ### 1) Clone the repo
 
@@ -110,6 +118,8 @@ cd AboutMe
 ```
 
 ### 2) Start Docker services
+
+**Full stack in Docker** (API + SPA + data stores + observability):
 
 ```bash
 docker compose up -d --build
@@ -123,8 +133,17 @@ This starts:
 
 - **MySQL** on host port **3307** (database `aboutme`, user `root/root`)
 - **ChromaDB** on host port **8100**
+- **Phoenix** (Arize Phoenix): UI on **6006** (`http://localhost:6006`), OTLP gRPC on **4317** (the `backend` service sets `PHOENIX_OTLP_ENDPOINT=http://phoenix:4317` so traces go to Phoenix)
 - **Backend** (Spring Boot) on **8080**
 - **Frontend** (Nginx + static build) on **5173** (proxies `/api/*` to the backend)
+
+**Hybrid development** (Spring Boot + Vite on the host, databases in Docker): use [`scripts/dev.ps1`](scripts/dev.ps1) or run only infra:
+
+```bash
+docker compose up -d db chromadb phoenix
+```
+
+Then start the API and frontend locally (sections **4) Run the backend** and **5) Run the frontend** below). For OTLP from a local JVM, point `PHOENIX_OTLP_ENDPOINT` at `http://localhost:4317` (see [`.env.example`](.env.example)).
 
 Chroma connectivity check (no auth): `GET http://localhost:8080/health/chroma`. Admin re-seed of seed documents: `POST http://localhost:8080/admin/tools/documents/reseed` (HTTP Basic, `ADMIN` user).
 
@@ -136,15 +155,18 @@ The backend reads `application.yaml` and, via `spring.config.import`, optionally
 
 Required for a typical local run:
 
-- `OPENAI_API_KEY`: Required for Chat/Embeddings
-- `PORT`: HTTP port for the API (e.g. `8080`; there is no default in `application.yaml`)
+- `OPENAI_API_KEY`: Required for **embeddings/RAG** and for **OpenAI** chat models
+- `PORT`: HTTP port for the API (defaults to **8080** in `application.yaml` if unset)
 - `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD`: MySQL credentials (with `docker compose` as written, use `root` / `root`; defaults in `application.yaml` are also `root` if unset)
 
 Optional:
 
+- `ANTHROPIC_API_KEY`: Enables **Anthropic** chat models in the UI; embeddings still use OpenAI
 - `SPRING_DATASOURCE_URL`: JDBC URL override (see [`.env.example`](.env.example); the `backend` service in Compose sets this to the `db` container)
 - `CHROMA_COLLECTION`: Active Chroma collection name (default `portfolio-documents`, see `application.yaml`)
 - `CHROMA_HTTP_HOST` / `CHROMA_PORT`: Overrides for the Chroma HTTP client (defaults in `application.yaml`: `http://localhost` and `8100`). The `backend` service in Compose sets `http://chromadb` and `8000`. On Railway, set these to your Chroma service private URL and port.
+- `PHOENIX_OTLP_ENDPOINT`: OTLP gRPC tracing endpoint (default in `application.yaml`: `http://localhost:4317`; in full-stack Compose the backend uses `http://phoenix:4317`)
+- `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`: Default chat model when `POST /ask` omits `model` (Spring property `portfolio.chat.default-model-id`, default `gpt-4o-mini`)
 - `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD`: If both are set and that username is not already in the `users` table, the backend creates an `ADMIN` user on startup (BCrypt). Clear the password variable after first login on shared hosts.
 
 Example (PowerShell):
@@ -186,7 +208,7 @@ On Windows (same directory):
 .\mvnw.cmd spring-boot:run
 ```
 
-- Serves on the port given by `PORT` (e.g. 8080)
+- Serves on the port given by `PORT` (default **8080** if unset)
 - When the Chroma collection is **empty**, the app seeds documents from `sfg.aiapp.documentsToLoadDir` (default `file:./data/docs/`, i.e. `backend/data/docs/` when the process working directory is `backend/`). That directory is **gitignored**; copy your seed PDFs/DOCX/MD there locally. You can instead set `sfg.aiapp.documents-to-load` to a list of Spring `Resource` locations. With `sfg.aiapp.force-reindex: true`, startup seeding re-ingests seed files even when the collection already has embeddings (replacing chunks per content hash). Use **Admin → Internal tools** (`/admin/tools`) to upload additional files into ChromaDB.
 
 ### 5) Run the frontend
@@ -207,10 +229,12 @@ Go to `http://localhost:5173` and try the quick questions or ask your own in the
 ## API
 
 - `POST /ask`
-  - Body: `{ "question": "..." }`
+  - Body: `{ "question": "...", "model": "<optional>" }` — if `model` is omitted, the server uses `portfolio.chat.default-model-id` (default `gpt-4o-mini`)
+  - Allowed `model` values (must match exactly): `gpt-4o-mini`, `gpt-4o`, `claude-sonnet-4-20250514`, `claude-3-5-haiku-20241022`. Unknown ids or models whose provider has no API key configured return **400**.
   - Response: `{ "answer": "..." }`
   - Validation: Max 3000 characters in `question`
   - Rate limit: 5 requests per 10 seconds per user/IP (HTTP 429 on violation)
+  - **503** when the LLM provider or Chroma is unavailable
 
 The frontend calls this as `/api/ask` in dev/prod, where `/api` is proxied to the backend.
 
@@ -228,6 +252,8 @@ Admin document pipeline (HTTP Basic, `ROLE_ADMIN`). Multipart uploads are limite
 - `DELETE /admin/tools/documents/{documentId}` — delete all chunks for a `document_id`
 - `GET /admin/tools/documents/collections` — collection list and embedding count
 - `POST /admin/tools/documents/reseed` — re-ingest seed documents from `documentsToLoadDir` (same sources as startup seed); returns a list of ingestion results
+
+Admin **prompt versions** (HTTP Basic, `ROLE_ADMIN`): REST under `/admin/tools/prompt-versions/*` (list names, history, create, activate, seed, delete variant, diff). Prefer [Swagger UI](http://localhost:8080/swagger-ui/index.html) for the full contract.
 
 ## Credits
 

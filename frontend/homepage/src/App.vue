@@ -10,7 +10,8 @@ import { useLangStore } from './stores/lang'
 const langStore = useLangStore()
 const route = useRoute()
 
-const showPublicPageHeader = computed(() => route.name !== 'admin-tools')
+const adminRouteNames = new Set(['admin-tools', 'admin-pipeline', 'admin-chunks', 'admin-prompts'])
+const showPublicPageHeader = computed(() => !adminRouteNames.has(String(route.name ?? '')))
 
 const privacyLabel = computed(() => (langStore.language === 'no' ? 'Personvernerklæring' : 'Privacy Policy'))
 const cookieSettingsLabel = computed(() => (langStore.language === 'no' ? 'Informasjonskapsler' : 'Cookie Settings'))

@@ -27,3 +27,7 @@ logging:
   level:
     org.hibernate.SQL: "off"
     org.springframework.boot.context.config: "warn"
+
+management:
+  tracing:
+    enabled: false

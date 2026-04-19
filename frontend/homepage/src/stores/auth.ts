@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { authLogin } from '@/api/generated/portfolio'
 
+// Credentials: POST /auth/login validates the user; we keep username/role and a Base64 Basic secret for Orval fetch.
 interface AuthState {
   username: string | null
   role: 'USER' | 'ADMIN' | null
@@ -31,6 +32,7 @@ export const useAuthStore = defineStore('auth', {
       this.basicToken = null
       sessionStorage.removeItem('auth')
     },
+    /** Hydrates Pinia from sessionStorage on hard refresh or new tab (router guard calls this before admin routes). */
     restore() {
       const raw = sessionStorage.getItem('auth')
       if (raw) {

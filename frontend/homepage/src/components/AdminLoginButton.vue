@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+// Floating login + ADMIN tools link; credentials stored for Orval Basic auth on /admin/** APIs.
 const auth = useAuthStore()
 const showForm = ref(false)
 const username = ref('')

@@ -10,11 +10,16 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+/**
+ * OpenAPI / Swagger UI metadata: API title, server URLs (direct backend vs Vite {@code /api} proxy),
+ * and HTTP Basic scheme for admin-only operations.
+ */
 @Configuration
 public class OpenApiConfig {
 
     public static final String BASIC_AUTH_SCHEME = "basicAuth";
 
+    /** Swagger document shown at {@code /swagger-ui.html} and {@code /v3/api-docs}. */
     @Bean
     public OpenAPI portfolioOpenAPI() {
         return new OpenAPI()

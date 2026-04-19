@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 export type Language = 'en' | 'no'
 
+// Prefer explicit user choice in localStorage; otherwise infer from the browser locale (Norwegian variants → 'no').
 function detectInitialLanguage(): Language {
   try {
     const saved = localStorage.getItem('lang') as Language | null
