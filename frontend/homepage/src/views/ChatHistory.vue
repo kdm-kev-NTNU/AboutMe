@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Brain, UserRound, MessageSquare, Calendar, Eye } from 'lucide-vue-next'
-import VueMarkdown from 'vue-markdown-render'
 import MessagesArea from '@/views/MessagesArea.vue'
 
 type ChatMessage = {

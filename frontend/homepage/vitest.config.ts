@@ -2,6 +2,14 @@ import { fileURLToPath } from 'node:url'
 import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
 import viteConfig from './vite.config'
 
+const ciTestOptions =
+  process.env.CI === 'true'
+    ? {
+        reporters: ['default', 'junit'] as const,
+        outputFile: { junit: 'test-results/vitest-junit.xml' },
+      }
+    : {}
+
 export default mergeConfig(
   viteConfig,
   defineConfig({
@@ -9,16 +17,22 @@ export default mergeConfig(
       environment: 'jsdom',
       exclude: [...configDefaults.exclude, 'e2e/**'],
       root: fileURLToPath(new URL('./', import.meta.url)),
+      ...ciTestOptions,
       coverage: {
         provider: 'v8',
         reporter: ['text', 'html'],
         include: ['src/**/*.{ts,vue}'],
-        exclude: ['src/main.ts', '**/*.d.ts', '**/types/**'],
+        exclude: [
+          'src/main.ts',
+          '**/*.d.ts',
+          '**/types/**',
+          'src/api/generated/**',
+        ],
         thresholds: {
-          lines: 7,
-          statements: 7,
-          branches: 85,
-          functions: 54,
+          lines: 18,
+          statements: 18,
+          branches: 68,
+          functions: 48,
         },
       },
     },

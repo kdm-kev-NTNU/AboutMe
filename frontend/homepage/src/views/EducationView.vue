@@ -90,11 +90,6 @@ const getCourseStatusVariant = (status: string) => {
   }
 }
 
-// Convert \n characters to HTML line breaks
-const formatDescription = (text: string) => {
-  return text.replace(/\n/g, '<br>')
-}
-
 // Get course status text
 const getCourseStatusText = (status: string, language: 'en' | 'no') => {
   const statusTexts = {
@@ -208,7 +203,7 @@ const education = computed(() => {
             </div>
           </CardHeader>
           <CardContent>
-            <p class="text-gray-600 leading-relaxed" v-html="formatDescription(edu.description)"></p>
+            <p class="text-gray-600 leading-relaxed whitespace-pre-line">{{ edu.description }}</p>
           </CardContent>
         </Card>
       </div>
