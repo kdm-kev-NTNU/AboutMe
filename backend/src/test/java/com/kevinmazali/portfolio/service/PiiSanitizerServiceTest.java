@@ -1,13 +1,13 @@
 package com.kevinmazali.portfolio.service;
 
-import ai.philterd.phileas.model.configuration.PhileasConfiguration;
-import com.kevinmazali.portfolio.config.SanitizerProperties;
 import com.kevinmazali.portfolio.model.SanitizeResult;
+import opennlp.tools.namefind.TokenNameFinderModel;
+import opennlp.tools.tokenize.TokenizerModel;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-import java.util.Properties;
+import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -15,9 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests PiiSanitizerService with Phileas running in-process (no ph-eye NER).
- * Covers regex-based filters: email addresses and phone numbers.
- * Name detection (FirstName/Surname) depends on Phileas dictionary data.
+ * Tests PiiSanitizerService with regex patterns and OpenNLP NER (in-process).
+ * Covers email addresses, phone numbers, and person-name detection.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PiiSanitizerServiceTest {
@@ -26,14 +25,12 @@ class PiiSanitizerServiceTest {
 
     @BeforeAll
     void setup() throws Exception {
-        Properties props = new Properties();
-        PhileasConfiguration config = new PhileasConfiguration(props);
-
-        SanitizerProperties sanitizerProps = new SanitizerProperties();
-        sanitizerProps.setPhEyeUrl("");
-        sanitizerProps.setValkeyHost("");
-
-        service = new PiiSanitizerService(config, sanitizerProps);
+        try (InputStream nerStream = getClass().getResourceAsStream("/models/en-ner-person.bin");
+             InputStream tokStream = getClass().getResourceAsStream("/models/en-token.bin")) {
+            TokenNameFinderModel nameModel = new TokenNameFinderModel(nerStream);
+            TokenizerModel tokenizerModel = new TokenizerModel(tokStream);
+            service = new PiiSanitizerService(nameModel, tokenizerModel);
+        }
     }
 
     @Test
