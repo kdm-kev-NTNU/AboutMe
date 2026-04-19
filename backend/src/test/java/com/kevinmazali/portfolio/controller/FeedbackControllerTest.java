@@ -1,0 +1,108 @@
+package com.kevinmazali.portfolio.controller;
+
+import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
+import com.kevinmazali.portfolio.config.SecurityConfig;
+import com.kevinmazali.portfolio.config.WebConfig;
+import com.kevinmazali.portfolio.model.FeedbackSubmission;
+import com.kevinmazali.portfolio.repository.FeedbackRepository;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(controllers = FeedbackController.class)
+@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
+class FeedbackControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private FeedbackRepository feedbackRepository;
+
+    @Test
+    void submitFeedbackReturns204ForValidMessage() throws Exception {
+        mockMvc.perform(post("/feedback")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"Great site!\"}"))
+            .andExpect(status().isNoContent());
+
+        verify(feedbackRepository).save(any(FeedbackSubmission.class));
+    }
+
+    @Test
+    void submitFeedbackAcceptsOptionalEmail() throws Exception {
+        mockMvc.perform(post("/feedback")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"Nice chat feature\",\"replyEmail\":\"test@example.com\"}"))
+            .andExpect(status().isNoContent());
+
+        verify(feedbackRepository).save(any(FeedbackSubmission.class));
+    }
+
+    @Test
+    void submitFeedbackRejectsEmptyMessage() throws Exception {
+        mockMvc.perform(post("/feedback")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error").value("Invalid or empty feedback message"));
+
+        verify(feedbackRepository, never()).save(any());
+    }
+
+    @Test
+    void submitFeedbackRejectsNullMessage() throws Exception {
+        mockMvc.perform(post("/feedback")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"replyEmail\":\"test@example.com\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error").value("Invalid or empty feedback message"));
+
+        verify(feedbackRepository, never()).save(any());
+    }
+
+    @Test
+    void submitFeedbackRejectsScriptInjection() throws Exception {
+        mockMvc.perform(post("/feedback")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"<script>alert(1)</script>\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error").value("Invalid or empty feedback message"));
+
+        verify(feedbackRepository, never()).save(any());
+    }
+
+    @Test
+    void submitFeedbackRejectsInvalidEmail() throws Exception {
+        mockMvc.perform(post("/feedback")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"Good site\",\"replyEmail\":\"not-an-email\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error").value("Invalid e-mail format"));
+
+        verify(feedbackRepository, never()).save(any());
+    }
+
+    @Test
+    void submitFeedbackRejectsTooLongMessage() throws Exception {
+        String longMessage = "a".repeat(4001);
+        mockMvc.perform(post("/feedback")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"" + longMessage + "\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error").value("Invalid or empty feedback message"));
+
+        verify(feedbackRepository, never()).save(any());
+    }
+}
