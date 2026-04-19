@@ -45,7 +45,6 @@ class OpenAIServiceImplTest {
 
   @BeforeEach
   void setUp() {
-    when(anthropicChatModelProvider.getIfAvailable()).thenReturn(null);
     when(promptVersionService.loadRagPrompt(anyString()))
         .thenReturn("Input: {input}\nDocs:\n{documents}");
     openAIServiceImpl = new OpenAIServiceImpl(

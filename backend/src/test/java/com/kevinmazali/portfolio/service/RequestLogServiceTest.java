@@ -56,7 +56,6 @@ class RequestLogServiceTest {
 			"n/a",
 			List.of(new SimpleGrantedAuthority("ROLE_USER"))
 		);
-		auth.setAuthenticated(true);
 		SecurityContextHolder.getContext().setAuthentication(auth);
 
 		requestLogService.save("/ask", "POST", "payload", null);
@@ -71,7 +70,6 @@ class RequestLogServiceTest {
 			"n/a",
 			List.of(new SimpleGrantedAuthority("ROLE_USER"))
 		);
-		auth.setAuthenticated(true);
 		SecurityContextHolder.getContext().setAuthentication(auth);
 
 		requestLogService.save("/ask", "POST", "payload", null);
