@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
+import com.kevinmazali.portfolio.model.RagAnswer;
 import com.kevinmazali.portfolio.model.chat.ChatProvider;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
 import org.springframework.ai.anthropic.AnthropicChatModel;
@@ -53,6 +54,12 @@ public class OpenAIServiceImpl implements OpenAIService {
 
   @Override
   public Answer getAnswer(Question question) {
+    RagAnswer rag = getAnswerWithDocuments(question);
+    return new Answer(rag.answer());
+  }
+
+  @Override
+  public RagAnswer getAnswerWithDocuments(Question question) {
     SupportedChatModel model = resolveModel(question);
     if (model.provider() == ChatProvider.ANTHROPIC && anthropicChatModel.getIfAvailable() == null) {
       throw new IllegalStateException("Anthropic chat is not available (missing API key or autoconfiguration).");
@@ -86,7 +93,7 @@ public class OpenAIServiceImpl implements OpenAIService {
 
     // Provider-specific chat options (model id, max tokens) are applied inside invokeChat.
     ChatResponse response = invokeChat(model, basePrompt);
-    return new Answer(response.getResult().getOutput().getText());
+    return new RagAnswer(response.getResult().getOutput().getText(), contentList);
   }
 
   private SupportedChatModel resolveModel(Question question) {
