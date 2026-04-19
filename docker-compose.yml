@@ -45,34 +45,6 @@ services:
     environment:
       - PHOENIX_WORKING_DIR=/mnt/data
 
-  # ph-eye: NER service for Phileas PII detection (person names).
-  # Image is ~8.9 GB on first pull; cached after that.
-  ph-eye:
-    image: philterd/ph-eye:1.2.1
-    container_name: aboutme-ph-eye
-    ports:
-      - "18080:5000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:5000/api/health || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 90s
-
-  # Valkey (Redis-compatible) for Phileas caching.
-  valkey:
-    image: valkey/valkey:latest
-    container_name: aboutme-valkey
-    ports:
-      - "6379:6379"
-    command: valkey-server --save 60 1 --loglevel warning
-    healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   backend:
     build:
       context: ./backend
@@ -82,10 +54,6 @@ services:
       db:
         condition: service_healthy
       chromadb:
-        condition: service_healthy
-      ph-eye:
-        condition: service_healthy
-      valkey:
         condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/aboutme?useSSL=false&allowPublicKeyRetrieval=true
@@ -98,9 +66,6 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       PHOENIX_OTLP_ENDPOINT: http://phoenix:4317
       PHOENIX_BASE_URL: http://phoenix:6006
-      PH_EYE_URL: http://ph-eye:5000
-      VALKEY_HOST: valkey
-      VALKEY_PORT: "6379"
       SANITIZER_ENABLED: "true"
     ports:
       - "8080:8080"
