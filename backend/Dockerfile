@@ -16,6 +16,8 @@ RUN mvn clean package -DskipTests -Dmaven.test.skip=true -Dmaven.compiler.fork=t
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+RUN mkdir -p data/docs
+
 RUN touch .env
 
 # CHROMA_HTTP_HOST / CHROMA_PORT: set via docker-compose or Railway (no image defaults).
