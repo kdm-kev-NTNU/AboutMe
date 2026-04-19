@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { Brain, UserRound, MessageSquare } from 'lucide-vue-next'
 import TypewriterAnimation from '@/components/TypewriterAnimation.vue'
 import SafeMarkdown from '@/components/SafeMarkdown.vue'
