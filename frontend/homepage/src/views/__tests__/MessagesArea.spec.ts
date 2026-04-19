@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import MessagesArea from '../MessagesArea.vue'
 
 describe('MessagesArea', () => {
@@ -80,5 +81,26 @@ describe('MessagesArea', () => {
     })
     const box = wrapper.find('.border-gray-200\\/20')
     expect(box.exists()).toBe(true)
+  })
+
+  it('updates scroll position when messages change', async () => {
+    const wrapper = mount(MessagesArea, {
+      props: {
+        messages: [{ role: 'user', text: 'first' }],
+      },
+      global: { stubs: globalStubs },
+    })
+    const scrollEl = wrapper.find('.flex-1.overflow-y-auto').element as HTMLElement
+    Object.defineProperty(scrollEl, 'scrollHeight', { configurable: true, value: 400 })
+    scrollEl.scrollTop = 0
+    await wrapper.setProps({
+      messages: [
+        { role: 'user', text: 'first' },
+        { role: 'assistant', text: 'reply', isNew: false },
+      ],
+    })
+    await flushPromises()
+    await nextTick()
+    expect(scrollEl.scrollTop).toBe(400)
   })
 })
