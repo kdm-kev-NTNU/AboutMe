@@ -1,6 +1,6 @@
 # Homepage Frontend
 
-This is the frontend application for Kevin's AboutMe portfolio website, built with Vue 3 and modern web technologies.
+This is the frontend application for Kevin's AboutMe portfolio website, built with Vue 3 and modern web technologies. Admin-only routes (`/admin/tools`, `/admin/pipeline`, `/admin/chunks`, `/admin/prompts`) are summarized in the [repository root README](../../README.md#available-pages).
 
 ## Tech Stack & Libraries
 
