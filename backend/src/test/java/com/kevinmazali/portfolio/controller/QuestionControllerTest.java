@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-4o-mini")
+@WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-5.4-mini")
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class })
 class QuestionControllerTest {
 
@@ -88,7 +88,7 @@ class QuestionControllerTest {
 		verify(requestLogService).save(eq("/ask"), eq("POST"), eq("What is your name?"), isNull());
 		verify(requestLogService).save(eq("/ask:response"), eq("POST"), eq("ok"), isNull());
 		verify(openAIService, times(1)).getAnswer(argThat(q ->
-			"What is your name?".equals(q.question()) && "gpt-4o-mini".equals(q.model())));
+			"What is your name?".equals(q.question()) && "gpt-5.4-mini".equals(q.model())));
 	}
 
 	@Test
@@ -108,7 +108,7 @@ class QuestionControllerTest {
 
 		mockMvc.perform(post("/ask")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"question\":\"What is your name?\",\"model\":\"gpt-4o-mini\"}"))
+				.content("{\"question\":\"What is your name?\",\"model\":\"gpt-5.4-mini\"}"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error").exists());
 
