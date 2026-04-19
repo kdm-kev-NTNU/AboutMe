@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import type { Component } from 'vue'
 import AboutView from '../AboutView.vue'
 import TechStackView from '../TechStackView.vue'
 import PrivacyPolicyView from '../PrivacyPolicyView.vue'
 import ProjectsView from '../ProjectsView.vue'
 
 describe('portfolio views (smoke)', () => {
-	function mountView(component: Parameters<typeof mount>[0]) {
+	function mountView(component: Component) {
 		const pinia = createPinia()
 		setActivePinia(pinia)
 		return mount(component, {
