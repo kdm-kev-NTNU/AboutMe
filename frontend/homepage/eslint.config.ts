@@ -36,4 +36,13 @@ export default defineConfigWithVueTs(
     ],
   },
   skipFormatting,
+
+  // shadcn-style primitives use single-word filenames; Navbar predates the rule.
+  {
+    name: 'app/ui-primitives-single-word-names',
+    files: ['src/components/ui/**/*.vue', 'src/components/Navbar.vue'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+    },
+  },
 )
