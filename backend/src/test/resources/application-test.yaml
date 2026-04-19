@@ -31,3 +31,7 @@ logging:
 management:
   tracing:
     enabled: false
+  otlp:
+    tracing:
+      export:
+        enabled: false

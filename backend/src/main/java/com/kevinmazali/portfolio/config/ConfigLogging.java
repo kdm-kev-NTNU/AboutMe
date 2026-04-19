@@ -51,6 +51,14 @@ public class ConfigLogging implements ApplicationRunner {
             }
             log.info("Config: .env property source loaded = {}", hasDotEnv);
         }
+
+        log.info("Config: portfolio.chroma.enabled={}", environment.getProperty("portfolio.chroma.enabled", "true"));
+        log.info("Config: spring.ai.vectorstore.chroma.client.host={}",
+            environment.getProperty("spring.ai.vectorstore.chroma.client.host", "<unset>"));
+        log.info("Config: spring.ai.vectorstore.chroma.client.port={}",
+            environment.getProperty("spring.ai.vectorstore.chroma.client.port", "<unset>"));
+        log.info("Config: management.otlp.tracing.endpoint={}",
+            environment.getProperty("management.otlp.tracing.endpoint", "<unset>"));
     }
 }
 

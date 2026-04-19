@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio.controller;
 
+import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
 import com.kevinmazali.portfolio.model.ApiError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,12 @@ import org.springframework.web.client.RestClientException;
  */
 @RestControllerAdvice(assignableTypes = DocumentPipelineController.class)
 public class DocumentPipelineControllerAdvice {
+
+  /** Chroma disabled via {@code portfolio.chroma.enabled=false}. */
+  @ExceptionHandler(ChromaFeatureDisabledException.class)
+  public ResponseEntity<ApiError> chromaDisabled(ChromaFeatureDisabledException ex) {
+    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(new ApiError(ex.getMessage()));
+  }
 
   /** Chroma misconfiguration or unexpected empty state from the ingestion service. */
   @ExceptionHandler(IllegalStateException.class)
