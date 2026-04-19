@@ -286,7 +286,7 @@ describe('Admin CRUD views (integration-style)', () => {
       status: 401,
       data: { error: 'Unauthorized' },
       headers: headersJson,
-    })
+    } as unknown as Awaited<ReturnType<typeof adminDocumentsList>>)
     vi.mocked(adminDocumentsCollections).mockResolvedValue({
       status: 200,
       data: { activeCollectionName: 'x', collections: [], activeCollectionEmbeddingCount: 0 },
@@ -567,7 +567,7 @@ describe('Admin CRUD views (integration-style)', () => {
       expect(promptVersionsSeed).toHaveBeenCalled()
     })
     // successMsg is cleared again when loadNames() runs (clearMessages); API outcome is what we verify.
-    expect(promptVersionsNames.mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(vi.mocked(promptVersionsNames).mock.calls.length).toBeGreaterThanOrEqual(2)
   })
 
   it('AdminPromptsView deletes a variant when confirmed', async () => {
@@ -589,7 +589,7 @@ describe('Admin CRUD views (integration-style)', () => {
     await slett!.trigger('click')
     await flushPromises()
     expect(promptVersionsDeleteVariant).toHaveBeenCalled()
-    expect(promptVersionsNames.mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(vi.mocked(promptVersionsNames).mock.calls.length).toBeGreaterThanOrEqual(2)
   })
 
   it('AdminExperimentsView lists runs and opens detail with formatted scores', async () => {
