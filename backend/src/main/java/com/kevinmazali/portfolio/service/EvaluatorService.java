@@ -137,7 +137,7 @@ public class EvaluatorService {
         case OPENAI -> {
           OpenAiChatOptions opts = OpenAiChatOptions.builder()
               .model(model.modelId())
-              .maxTokens(JUDGE_MAX_TOKENS)
+              .maxCompletionTokens(JUDGE_MAX_TOKENS)
               .build();
           yield openAiChatModel.call(new Prompt(instructions, opts));
         }

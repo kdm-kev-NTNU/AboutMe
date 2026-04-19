@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.SecurityConfig;
+import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
 import com.kevinmazali.portfolio.service.DocumentIngestionService;
@@ -15,6 +16,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -116,6 +118,29 @@ class DocumentPipelineControllerTest {
 			.andExpect(status().isServiceUnavailable())
 			.andExpect(jsonPath("$.error").value(containsString("Connection refused")))
 			.andExpect(jsonPath("$.error").value(containsString("http://localhost:8100")));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void listReturns501WhenChromaFeatureDisabled() throws Exception {
+		when(documentIngestionService.listDocuments())
+			.thenThrow(new ChromaFeatureDisabledException("Chroma is disabled for this deployment."));
+
+		mockMvc.perform(get("/admin/tools/documents"))
+			.andExpect(status().isNotImplemented())
+			.andExpect(jsonPath("$.error").value("Chroma is disabled for this deployment."));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void listReturns503OnGenericRestClientException() throws Exception {
+		when(documentIngestionService.listDocuments())
+			.thenThrow(new RestClientException("Bad gateway from Chroma proxy"));
+
+		mockMvc.perform(get("/admin/tools/documents"))
+			.andExpect(status().isServiceUnavailable())
+			.andExpect(jsonPath("$.error").value(containsString("Bad gateway from Chroma proxy")))
+			.andExpect(jsonPath("$.error").value(containsString("Hint:")));
 	}
 
 	@Test
