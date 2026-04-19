@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+/** Read-side helpers for chat/request audit timelines (ordered by {@code createdAt}). */
 public interface RequestLogRepository extends JpaRepository<RequestLog, Long> {
 
     List<RequestLog> findAllByOrderByCreatedAtAsc();
