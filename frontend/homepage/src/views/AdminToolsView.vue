@@ -470,18 +470,18 @@ onMounted(() => {
         class="max-h-56 overflow-y-auto border border-gray-100 rounded-md divide-y divide-gray-100 mb-4"
       >
         <li
-          v-for="f in serverFileList"
+          v-for="(f, index) in serverFileList"
           :key="f"
           class="flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-50/80"
         >
           <input
-            :id="'srv-file-' + f"
+            :id="'srv-file-' + index"
             type="checkbox"
             class="rounded border-gray-300"
             :checked="selectedForIngest.has(f)"
             @change="onServerFileCheckboxChange(f, $event)"
           />
-          <label :for="'srv-file-' + f" class="cursor-pointer font-mono text-gray-800 flex-1 truncate">{{ f }}</label>
+          <label :for="'srv-file-' + index" class="cursor-pointer font-mono text-gray-800 flex-1 truncate">{{ f }}</label>
         </li>
       </ul>
       <label class="flex items-center gap-2 text-sm text-gray-700 mb-3">
