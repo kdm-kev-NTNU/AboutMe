@@ -17,11 +17,8 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -39,16 +36,19 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final ObjectProvider<AnthropicChatModel> anthropicChatModel;
   private final VectorStore vectorStore;
   private final String defaultModelId;
+  private final PromptVersionService promptVersionService;
 
   public OpenAIServiceImpl(
       OpenAiChatModel openAiChatModel,
       ObjectProvider<AnthropicChatModel> anthropicChatModel,
       @Lazy VectorStore vectorStore,
-      @Value("${portfolio.chat.default-model-id}") String defaultModelId) {
+      @Value("${portfolio.chat.default-model-id}") String defaultModelId,
+      PromptVersionService promptVersionService) {
     this.openAiChatModel = openAiChatModel;
     this.anthropicChatModel = anthropicChatModel;
     this.vectorStore = vectorStore;
     this.defaultModelId = defaultModelId;
+    this.promptVersionService = promptVersionService;
   }
 
   @Override
@@ -71,11 +71,11 @@ public class OpenAIServiceImpl implements OpenAIService {
         .toList();
 
     List<String> contentList = documents.stream().map(Document::getText).toList();
-    String templatePath = switch (model.provider()) {
-      case OPENAI -> "templates/rag-prompt-template-openai.st";
-      case ANTHROPIC -> "templates/rag-prompt-template-anthropic.st";
+    String providerName = switch (model.provider()) {
+      case OPENAI -> "openai";
+      case ANTHROPIC -> "anthropic";
     };
-    String ragPromptTemplate = loadPromptTemplateFromClasspath(templatePath);
+    String ragPromptTemplate = promptVersionService.loadRagPrompt(providerName);
     PromptTemplate promptTemplate = new PromptTemplate(ragPromptTemplate);
     Prompt basePrompt = promptTemplate.create(Map.of(
         "input", question.question(),
@@ -162,14 +162,4 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
   }
 
-  private String loadPromptTemplateFromClasspath(String resourceName) {
-    try {
-      ClassPathResource res = new ClassPathResource(resourceName);
-      try (InputStream in = res.getInputStream()) {
-        return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-      }
-    } catch (Exception e) {
-      throw new RuntimeException("Could not read " + resourceName + " from classpath", e);
-    }
-  }
 }
