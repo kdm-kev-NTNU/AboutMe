@@ -431,6 +431,28 @@
         }
       }
     },
+    "/admin/tools/documents/files": {
+      "get": {
+        "tags": ["Admin documents"],
+        "summary": "List files under documentsToLoadDir",
+        "description": "Relative paths with supported extensions under sfg.aiapp.documentsToLoadDir (file: URLs only).",
+        "operationId": "adminDocumentsFiles",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/tools/documents": {
       "get": {
         "tags": ["Admin documents"],
