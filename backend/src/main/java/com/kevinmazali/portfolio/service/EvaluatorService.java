@@ -14,6 +14,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -125,8 +126,11 @@ public class EvaluatorService {
   }
 
   private EvaluationScore invokeJudge(String evaluatorModelId, String userContent) {
-    SupportedChatModel model = SupportedChatModel.fromModelId(evaluatorModelId)
-        .orElseThrow(() -> new IllegalArgumentException("Unknown evaluator model: " + evaluatorModelId));
+    Optional<SupportedChatModel> resolved = SupportedChatModel.fromModelId(evaluatorModelId);
+    if (resolved.isEmpty()) {
+      return EvaluationScore.failed("Unknown evaluator model: " + evaluatorModelId);
+    }
+    SupportedChatModel model = resolved.get();
     try {
       String instructions = "You output only valid JSON. No markdown fences.\n\n" + userContent;
       ChatResponse chatResponse = switch (model.provider()) {
