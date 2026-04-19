@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { MessageCircle } from 'lucide-vue-next'
 
+// Shortcut back to /chat when the tab still has a non-empty transcript in sessionStorage.
 const router = useRouter()
 const route = useRoute()
 

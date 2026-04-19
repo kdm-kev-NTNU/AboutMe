@@ -2,6 +2,7 @@
 import { useRoute } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 
+// Pill nav + sliding indicator; button width follows the longest label for the active language.
 const route = useRoute()
 const langStore = useLangStore()
 
