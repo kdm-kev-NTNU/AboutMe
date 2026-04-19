@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -83,7 +84,9 @@ class ChromaHealthControllerTest {
 
 		mockMvc.perform(get("/health/chroma"))
 			.andExpect(status().isServiceUnavailable())
-			.andExpect(jsonPath("$.healthy").value(false));
+			.andExpect(jsonPath("$.healthy").value(false))
+			.andExpect(jsonPath("$.message").value(ChromaHealthController.PUBLIC_VECTOR_STORE_DOWN))
+			.andExpect(jsonPath("$.message").value(not(containsString("boom"))));
 	}
 
 	@Test
