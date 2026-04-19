@@ -8,6 +8,7 @@ import com.kevinmazali.portfolio.service.ChatModelCatalog;
 import com.kevinmazali.portfolio.service.OpenAIService;
 import com.kevinmazali.portfolio.service.RequestLogService;
 import com.kevinmazali.portfolio.util.InputValidator;
+import com.kevinmazali.portfolio.util.LlmClientDiagnostics;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -90,7 +91,10 @@ public class QuestionController {
             requestLogService.save("/ask:response", "POST", answer.answer(), null);
             return ResponseEntity.ok(answer);
         } catch (Exception e) {
-            log.warn("/ask failed (e.g. ChromaDB or OpenAI unavailable): {}", e.getMessage());
+            log.warn("/ask failed (e.g. ChromaDB or OpenAI unavailable): {}: {}",
+                e.getClass().getSimpleName(), e.getMessage());
+            log.debug("/ask failure diagnostics: {}", LlmClientDiagnostics.describeAskFailure(e));
+            log.debug("/ask failure stack trace", e);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ApiError("The AI service is temporarily unavailable. Please try again later."));
         }

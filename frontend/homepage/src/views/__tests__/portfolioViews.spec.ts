@@ -5,6 +5,7 @@ import type { Component } from 'vue'
 import AboutView from '../AboutView.vue'
 import TechStackView from '../TechStackView.vue'
 import PrivacyPolicyView from '../PrivacyPolicyView.vue'
+import { useLangStore } from '@/stores/lang'
 import ProjectsView from '../ProjectsView.vue'
 import WorkExperienceView from '../WorkExperienceView.vue'
 import EducationView from '../EducationView.vue'
@@ -13,6 +14,8 @@ describe('portfolio views (smoke)', () => {
 	function mountView(component: Component) {
 		const pinia = createPinia()
 		setActivePinia(pinia)
+		// Reset persisted language so tests do not inherit 'no' from earlier cases in this file.
+		useLangStore().setLanguage('en')
 		return mount(component, {
 			global: { plugins: [pinia] },
 		})
@@ -30,11 +33,31 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapper.text()).toMatch(/Spring AI|Backend/i)
 	})
 
+	it('renders TechStackView in Norwegian when language is no', async () => {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('no')
+		const wrapper = mount(TechStackView, { global: { plugins: [pinia] } })
+		await flushPromises()
+		expect(wrapper.text()).toContain('Teknologistakk')
+		expect(wrapper.text()).toMatch(/Spring AI|Backend/i)
+	})
+
 	it('renders PrivacyPolicyView in English by default', async () => {
 		const wrapper = mountView(PrivacyPolicyView)
 		await flushPromises()
 		expect(wrapper.text()).toContain('Privacy Policy')
 		expect(wrapper.text()).toMatch(/cookies|Chat/i)
+	})
+
+	it('renders PrivacyPolicyView in Norwegian when language is no', async () => {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('no')
+		const wrapper = mount(PrivacyPolicyView, { global: { plugins: [pinia] } })
+		await flushPromises()
+		expect(wrapper.text()).toContain('Personvernerklæring')
+		expect(wrapper.text()).toMatch(/informasjonskapsler|Chat/i)
 	})
 
 	it('renders ProjectsView with project grid', async () => {
