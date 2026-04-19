@@ -50,8 +50,6 @@ export interface FeedbackRequest {
    * @maxLength 4000
    */
   message: string;
-  /** Optional e-mail if the visitor wants a reply */
-  replyEmail?: string;
 }
 
 export interface ChatModelOption {

@@ -67,22 +67,8 @@ describe('FeedbackView', () => {
 
     expect(submitFeedback).toHaveBeenCalledWith({
       message: 'Great site!',
-      replyEmail: undefined,
     })
     expect(wrapper.text()).toContain('Thank you!')
-  })
-
-  it('includes optional email when provided', async () => {
-    const { wrapper } = await mountFeedback()
-    await wrapper.find('textarea').setValue('Nice feature')
-    await wrapper.find('input[type="email"]').setValue('test@example.com')
-    await wrapper.find('form').trigger('submit.prevent')
-    await flushPromises()
-
-    expect(submitFeedback).toHaveBeenCalledWith({
-      message: 'Nice feature',
-      replyEmail: 'test@example.com',
-    })
   })
 
   it('shows rate limit error on 429', async () => {
