@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.config;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.Filter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -48,6 +49,7 @@ public class WebConfig {
      * Rate limiter for /ask endpoint (5 requests per 10 seconds).
      */
     @Bean
+    @ConditionalOnProperty(name = "portfolio.ask-rate-limit.enabled", havingValue = "true", matchIfMissing = true)
     public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> askRateLimitFilter() {
         var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<Filter>();
         registration.setFilter(new OncePerRequestFilter() {
