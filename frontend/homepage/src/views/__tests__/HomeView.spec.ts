@@ -56,6 +56,7 @@ describe('HomeView', () => {
 					Github: true,
 					Linkedin: true,
 					MessageSquare: true,
+					ChevronRight: true,
 				},
 			},
 		})
@@ -94,6 +95,7 @@ describe('HomeView', () => {
 					Github: true,
 					Linkedin: true,
 					MessageSquare: true,
+					ChevronRight: true,
 				},
 			},
 		})
@@ -122,6 +124,7 @@ describe('HomeView', () => {
 					Github: true,
 					Linkedin: true,
 					MessageSquare: true,
+					ChevronRight: true,
 				},
 			},
 		})
