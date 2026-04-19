@@ -13,12 +13,8 @@ public class InputValidator {
     
     private static final int MAX_QUESTION_LENGTH = 3000;
     private static final int MAX_FEEDBACK_LENGTH = 4000;
-    private static final int MAX_EMAIL_LENGTH = 320;
     private static final int MAX_REQUEST_ID_LENGTH = 100;
 
-    private static final Pattern EMAIL_PATTERN =
-        Pattern.compile("^[\\w.+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
-    
     /**
      * Validates a question input.
      * 
@@ -82,19 +78,6 @@ public class InputValidator {
             return false;
         }
         return SAFE_STRING_PATTERN.matcher(message).matches();
-    }
-
-    /**
-     * Validates an optional reply e-mail address. Blank/null is considered valid (field is optional).
-     */
-    public static boolean isValidOptionalEmail(String email) {
-        if (email == null || email.isBlank()) {
-            return true;
-        }
-        if (email.length() > MAX_EMAIL_LENGTH) {
-            return false;
-        }
-        return EMAIL_PATTERN.matcher(email).matches();
     }
 
     /**

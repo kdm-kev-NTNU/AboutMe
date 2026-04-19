@@ -44,15 +44,8 @@ public class FeedbackController {
             return ResponseEntity.badRequest().body(new ApiError("Invalid or empty feedback message"));
         }
 
-        if (!InputValidator.isValidOptionalEmail(request.replyEmail())) {
-            return ResponseEntity.badRequest().body(new ApiError("Invalid e-mail format"));
-        }
-
         FeedbackSubmission submission = new FeedbackSubmission();
         submission.setMessage(InputValidator.sanitizeString(request.message()));
-        if (request.replyEmail() != null && !request.replyEmail().isBlank()) {
-            submission.setReplyEmail(request.replyEmail().trim());
-        }
 
         feedbackRepository.save(submission);
         log.info("Feedback submitted (id={})", submission.getId());
