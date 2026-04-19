@@ -24,6 +24,7 @@ describe('HomeView', () => {
 
 	beforeEach(() => {
 		sessionStorage.clear()
+		localStorage.clear()
 		vi.clearAllMocks()
 		vi.mocked(listChatModels).mockResolvedValue({
 			status: 200,
