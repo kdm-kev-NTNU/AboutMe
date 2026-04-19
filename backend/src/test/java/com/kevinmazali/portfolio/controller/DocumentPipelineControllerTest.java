@@ -12,22 +12,28 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.ResourceAccessException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -124,5 +130,88 @@ class DocumentPipelineControllerTest {
 			.andExpect(status().isBadRequest());
 
 		verify(documentIngestionService, never()).deleteByDocumentId(anyString());
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void uploadBatchReturnsPerFileResults() throws Exception {
+		when(documentIngestionService.ingestMultipart(any(), eq(null), eq(false)))
+			.thenReturn(new IngestionResult("a", "a.pdf", 1, false, "OK"))
+			.thenReturn(new IngestionResult("b", "b.pdf", 2, false, "OK"));
+
+		mockMvc.perform(multipart("/admin/tools/documents/upload/batch")
+				.file(new MockMultipartFile("files", "a.pdf", "application/pdf", "x".getBytes(StandardCharsets.UTF_8)))
+				.file(new MockMultipartFile("files", "b.pdf", "application/pdf", "y".getBytes(StandardCharsets.UTF_8))))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$", hasSize(2)))
+			.andExpect(jsonPath("$[0].documentId").value("a"))
+			.andExpect(jsonPath("$[1].chunksIngested").value(2));
+
+		verify(documentIngestionService, times(2)).ingestMultipart(any(), eq(null), eq(false));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void uploadBatchSkipsInvalidExtensionPerFile() throws Exception {
+		when(documentIngestionService.ingestMultipart(any(), eq(null), eq(false)))
+			.thenReturn(new IngestionResult("a", "a.pdf", 1, false, "OK"));
+
+		mockMvc.perform(multipart("/admin/tools/documents/upload/batch")
+				.file(new MockMultipartFile("files", "a.pdf", "application/pdf", "x".getBytes(StandardCharsets.UTF_8)))
+				.file(new MockMultipartFile("files", "bad.exe", "application/octet-stream", new byte[] { 1 })))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$", hasSize(2)))
+			.andExpect(jsonPath("$[0].documentId").value("a"))
+			.andExpect(jsonPath("$[1].message").value(containsString("Unsupported")));
+
+		verify(documentIngestionService).ingestMultipart(any(), eq(null), eq(false));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void uploadBatchNoFilesReturns400() throws Exception {
+		mockMvc.perform(multipart("/admin/tools/documents/upload/batch"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$[0].message").value("No files provided"));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void ingestByPathDelegatesToService() throws Exception {
+		when(documentIngestionService.ingestFromPaths(anyList(), eq(false)))
+			.thenReturn(List.of(new IngestionResult("h", "doc.pdf", 3, false, "OK")));
+
+		mockMvc.perform(post("/admin/tools/documents/ingest-by-path")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"paths\":[\"doc.pdf\"],\"force\":false}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].chunksIngested").value(3))
+			.andExpect(jsonPath("$[0].filename").value("doc.pdf"));
+
+		verify(documentIngestionService).ingestFromPaths(List.of("doc.pdf"), false);
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void ingestByPathEmptyPathsReturns400() throws Exception {
+		mockMvc.perform(post("/admin/tools/documents/ingest-by-path")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"paths\":[]}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$[0].message").value("No paths provided"));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void reseedClasspathDelegatesToService() throws Exception {
+		when(documentIngestionService.reseedClasspathDocuments())
+			.thenReturn(List.of(new IngestionResult("x", "seed.md", 1, false, "OK")));
+
+		mockMvc.perform(post("/admin/tools/documents/reseed"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$", hasSize(1)))
+			.andExpect(jsonPath("$[0].filename").value("seed.md"));
+
+		verify(documentIngestionService).reseedClasspathDocuments();
 	}
 }

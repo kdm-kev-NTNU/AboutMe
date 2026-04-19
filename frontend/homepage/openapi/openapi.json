@@ -65,8 +65,21 @@
         "type": "object",
         "required": ["question"],
         "properties": {
-          "question": { "type": "string", "maxLength": 3000 }
+          "question": { "type": "string", "maxLength": 3000 },
+          "model": { "type": "string", "description": "Allow-listed chat model id; omit for server default" }
         }
+      },
+      "ChatModelOption": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "provider": { "$ref": "#/components/schemas/ChatModelOptionProvider" },
+          "label": { "type": "string" }
+        }
+      },
+      "ChatModelOptionProvider": {
+        "type": "string",
+        "enum": ["OPENAI", "ANTHROPIC"]
       },
       "Answer": {
         "type": "object",
@@ -119,6 +132,41 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/ChromaCollectionSummary" }
           }
+        }
+      },
+      "ChunkItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "documentTitle": { "type": "string" },
+          "chunkIndex": { "type": "integer", "format": "int32", "nullable": true },
+          "text": { "type": "string" },
+          "metadata": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "ChunkListResponse": {
+        "type": "object",
+        "properties": {
+          "collectionName": { "type": "string" },
+          "total": { "type": "integer", "format": "int64" },
+          "totalMatching": { "type": "integer", "format": "int64" },
+          "limit": { "type": "integer", "format": "int32" },
+          "offset": { "type": "integer", "format": "int32" },
+          "chunks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChunkItem" }
+          }
+        }
+      },
+      "PathIngestRequest": {
+        "type": "object",
+        "required": ["paths"],
+        "properties": {
+          "paths": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "force": { "type": "boolean", "default": false }
         }
       }
     }
@@ -206,6 +254,26 @@
         }
       }
     },
+    "/chat/models": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "List chat models",
+        "operationId": "listChatModels",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ChatModelOption" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/chroma": {
       "get": {
         "tags": ["Health"],
@@ -273,6 +341,96 @@
         }
       }
     },
+    "/admin/tools/documents/upload/batch": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Upload and ingest multiple documents",
+        "operationId": "adminDocumentsUploadBatch",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["files"],
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  },
+                  "force": { "type": "boolean", "default": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/ingest-by-path": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Ingest documents by path relative to documentsToLoadDir",
+        "operationId": "adminDocumentsIngestByPath",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PathIngestRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/tools/documents": {
       "get": {
         "tags": ["Admin documents"],
@@ -288,6 +446,44 @@
                   "type": "array",
                   "items": { "$ref": "#/components/schemas/DocumentListEntry" }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/chunks": {
+      "get": {
+        "tags": ["Admin documents"],
+        "summary": "List chunks in the active collection",
+        "operationId": "adminDocumentsChunks",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 25 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChunkListResponse" }
               }
             }
           }
