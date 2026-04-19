@@ -18,7 +18,7 @@ import {
 const langStore = useLangStore()
 const isNo = computed(() => langStore.language === 'no')
 
-const title = computed(() => (isNo.value ? 'Teknologistakk' : 'Tech Stack'))
+const title = computed(() => (isNo.value ? 'Teknologistakk' : 'Tech stack'))
 const lastUpdated = computed(() =>
   isNo.value ? 'Sist oppdatert: april 2026' : 'Last updated: April 2026',
 )
