@@ -2,11 +2,12 @@
 import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
+import { useChatModelStore } from '../stores/model'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import MessagesArea from '@/views/MessagesArea.vue'
-import { askQuestion, listChatModels } from '@/api/generated/portfolio'
+import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
 
 
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
@@ -19,40 +20,29 @@ const errorText = ref('')
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
 const langStore = useLangStore()
+const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
 
-const MODEL_STORAGE_KEY = 'chatSelectedModel'
-const chatModels = ref<Array<{ id: string; provider: string; label: string }>>([])
-const selectedModelId = ref('')
+const providerLabels = computed(() =>
+  language.value === 'no'
+    ? { heading: 'AI-leverandør', openai: 'OpenAI', anthropic: 'Anthropic' }
+    : { heading: 'AI provider', openai: 'OpenAI', anthropic: 'Anthropic' },
+)
 
-async function loadChatModels() {
-  try {
-    const r = await listChatModels()
-    if (r.status !== 200) {
-      return
-    }
-    chatModels.value = r.data
-    const stored = sessionStorage.getItem(MODEL_STORAGE_KEY)
-    if (stored && chatModels.value.some((m) => m.id === stored)) {
-      selectedModelId.value = stored
-    } else if (chatModels.value.length > 0) {
-      selectedModelId.value = chatModels.value[0].id
-    }
-  } catch {
-    // non-fatal: backend will apply default model
-  }
-}
-
-watch(selectedModelId, (id) => {
-  if (!id) {
-    return
-  }
-  try {
-    sessionStorage.setItem(MODEL_STORAGE_KEY, id)
-  } catch {
-    // ignore
-  }
+const modelsForActiveProvider = computed(() => {
+  const p = chatModelStore.activeProvider
+  if (!p) return chatModelStore.models
+  return chatModelStore.modelsForProvider(p)
 })
+
+const selectedModelId = computed({
+  get: () => chatModelStore.selectedModelId,
+  set: (id: string) => chatModelStore.setSelectedModelId(id),
+})
+
+const showProviderToggle = computed(
+  () => chatModelStore.hasOpenAI && chatModelStore.hasAnthropic,
+)
 
 // Session storage functions
 const saveMessagesToStorage = () => {
@@ -111,8 +101,8 @@ async function send(text: string) {
     const auth = (await import('@/stores/auth')).useAuthStore()
     auth.restore()
     const payload: { question: string; model?: string } = { question: text }
-    if (selectedModelId.value) {
-      payload.model = selectedModelId.value
+    if (chatModelStore.selectedModelId) {
+      payload.model = chatModelStore.selectedModelId
     }
     const r = await askQuestion(payload)
     if (r.status === 200) {
@@ -159,7 +149,7 @@ const loadConversation = async (conversationId: string) => {
 }
 
 onMounted(async () => {
-  await loadChatModels()
+  await chatModelStore.ensureModelsLoaded()
 
   const conversationId = route.query.conversationId as string
 
@@ -218,22 +208,69 @@ onMounted(async () => {
       <!-- Form at Bottom -->
       <div class="pb-8 flex-shrink-0 space-y-2">
         <div
-          v-if="chatModels.length > 0"
-          class="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-slate-700 px-1"
+          v-if="chatModelStore.models.length > 0"
+          class="flex flex-col gap-3 text-sm text-slate-700 px-1"
         >
-          <label for="chat-model-select" class="font-medium shrink-0">
-            {{ language === 'en' ? 'Model' : 'Modell' }}
-          </label>
-          <select
-            id="chat-model-select"
-            v-model="selectedModelId"
-            :disabled="isLoading"
-            class="w-full sm:max-w-md rounded-lg border-2 border-blue-200/40 bg-white/90 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none disabled:opacity-50"
-          >
-            <option v-for="m in chatModels" :key="m.id" :value="m.id">
-              {{ m.label }} ({{ m.provider }})
-            </option>
-          </select>
+          <div v-if="showProviderToggle" class="flex flex-col gap-2">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+              {{ providerLabels.heading }}
+            </p>
+            <div class="flex justify-center">
+              <div
+                class="relative rounded-full p-1 flex bg-gradient-to-r from-slate-200 to-slate-300 shadow-md border-2 border-transparent bg-clip-padding"
+              >
+                <div
+                  class="absolute top-1 bottom-1 w-28 rounded-full shadow-lg transition-transform duration-300 ease-in-out bg-gradient-to-r from-white to-slate-50 border border-blue-200"
+                  :class="
+                    chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
+                      ? 'translate-x-0'
+                      : 'translate-x-28'
+                  "
+                ></div>
+                <button
+                  type="button"
+                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden disabled:opacity-40"
+                  :class="
+                    chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
+                      ? 'text-blue-700 font-semibold'
+                      : 'text-gray-500'
+                  "
+                  :disabled="isLoading || !chatModelStore.hasOpenAI"
+                  @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.OPENAI)"
+                >
+                  {{ providerLabels.openai }}
+                </button>
+                <button
+                  type="button"
+                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden disabled:opacity-40"
+                  :class="
+                    chatModelStore.activeProvider === ChatModelOptionProvider.ANTHROPIC
+                      ? 'text-blue-700 font-semibold'
+                      : 'text-gray-500'
+                  "
+                  :disabled="isLoading || !chatModelStore.hasAnthropic"
+                  @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.ANTHROPIC)"
+                >
+                  {{ providerLabels.anthropic }}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+            <label for="chat-model-select" class="font-medium shrink-0">
+              {{ language === 'en' ? 'Model' : 'Modell' }}
+            </label>
+            <select
+              id="chat-model-select"
+              v-model="selectedModelId"
+              :disabled="isLoading"
+              class="w-full sm:max-w-md rounded-lg border-2 border-blue-200/40 bg-white/90 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none disabled:opacity-50"
+            >
+              <option v-for="m in modelsForActiveProvider" :key="m.id" :value="m.id">
+                {{ m.label }} ({{ m.provider }})
+              </option>
+            </select>
+          </div>
         </div>
         <form class="flex gap-3 relative bg-white/90 backdrop-blur-sm border-2 border-blue-200/20 rounded-xl p-2 transition-all duration-300 hover:border-blue-300/40 hover:bg-white/95 hover:shadow-lg hover:shadow-blue-500/15 focus-within:border-blue-300/60 focus-within:bg-white/98 focus-within:shadow-lg focus-within:shadow-blue-500/25" @submit.prevent="send(input)">
           <Input
