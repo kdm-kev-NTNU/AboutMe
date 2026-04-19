@@ -35,6 +35,7 @@ public class ChromaHealthController {
           content = @Content(schema = @Schema(implementation = ChromaHealthResponse.class)))
   })
   @GetMapping("/chroma")
+  /** Resolves the configured collection id, then reads embedding count; any failure yields HTTP 503. */
   public ResponseEntity<ChromaHealthResponse> chroma() {
     String tenant = chromaStoreProperties.getTenantName();
     String database = chromaStoreProperties.getDatabaseName();
