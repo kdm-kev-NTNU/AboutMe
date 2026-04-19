@@ -12,7 +12,12 @@ public class InputValidator {
     private static final Pattern SAFE_STRING_PATTERN = Pattern.compile("^[\\p{L}\\p{N}\\p{P}\\p{Z}]*$");
     
     private static final int MAX_QUESTION_LENGTH = 3000;
+    private static final int MAX_FEEDBACK_LENGTH = 4000;
+    private static final int MAX_EMAIL_LENGTH = 320;
     private static final int MAX_REQUEST_ID_LENGTH = 100;
+
+    private static final Pattern EMAIL_PATTERN =
+        Pattern.compile("^[\\w.+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
     
     /**
      * Validates a question input.
@@ -59,6 +64,39 @@ public class InputValidator {
         return SAFE_STRING_PATTERN.matcher(requesterId).matches();
     }
     
+    /**
+     * Validates a feedback message (same safety rules as questions, different max length).
+     */
+    public static boolean isValidFeedbackMessage(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+        if (message.length() > MAX_FEEDBACK_LENGTH) {
+            return false;
+        }
+        String lower = message.toLowerCase();
+        if (lower.contains("<script") ||
+            lower.contains("javascript:") ||
+            lower.contains("data:text/html") ||
+            lower.contains("vbscript:")) {
+            return false;
+        }
+        return SAFE_STRING_PATTERN.matcher(message).matches();
+    }
+
+    /**
+     * Validates an optional reply e-mail address. Blank/null is considered valid (field is optional).
+     */
+    public static boolean isValidOptionalEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return true;
+        }
+        if (email.length() > MAX_EMAIL_LENGTH) {
+            return false;
+        }
+        return EMAIL_PATTERN.matcher(email).matches();
+    }
+
     /**
      * Strips control characters (except common whitespace) and collapses runs of whitespace before persistence.
      * 
