@@ -3,7 +3,8 @@ package com.kevinmazali.portfolio.util;
 import java.util.regex.Pattern;
 
 /**
- * Utility class for input validation and sanitization.
+ * Shared rules for {@link com.kevinmazali.portfolio.controller.QuestionController}: max length, XSS-ish
+ * substring blocklist, and a Unicode-safe character class so prompts stay printable text without control chars.
  */
 public class InputValidator {
     
@@ -12,12 +13,11 @@ public class InputValidator {
         Pattern.CASE_INSENSITIVE
     );
     
+    /** Letters, numbers, punctuation, and spaces only (no raw control characters). */
     private static final Pattern SAFE_STRING_PATTERN = Pattern.compile("^[\\p{L}\\p{N}\\p{P}\\p{Z}]*$");
     
     private static final int MAX_QUESTION_LENGTH = 3000;
     private static final int MAX_REQUEST_ID_LENGTH = 100;
-    
-    // chatId validation removed
     
     /**
      * Validates a question input.
@@ -65,7 +65,7 @@ public class InputValidator {
     }
     
     /**
-     * Sanitizes a string by removing potentially dangerous characters.
+     * Strips control characters (except common whitespace) and collapses runs of whitespace before persistence.
      * 
      * @param input the input to sanitize
      * @return sanitized string
@@ -80,6 +80,4 @@ public class InputValidator {
                    .replaceAll("\\s+", " ")
                    .trim();
     }
-    
-    // conversation path parameter validation removed
 }
