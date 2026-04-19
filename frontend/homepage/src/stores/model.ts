@@ -5,6 +5,7 @@ import {
   ChatModelOptionProvider,
 } from '@/api/generated/portfolio'
 
+// Mirrors backend allow-list: only models returned by GET /chat/models are selectable in the UI.
 const MODEL_STORAGE_KEY = 'chatSelectedModel'
 
 export type ChatProvider = (typeof ChatModelOptionProvider)[keyof typeof ChatModelOptionProvider]
@@ -86,6 +87,7 @@ export const useChatModelStore = defineStore('chatModel', {
       }
     },
 
+    /** Fetches catalog once; coalesces parallel callers via loadInFlight. Safe to call from ChatView on mount. */
     async ensureModelsLoaded(): Promise<void> {
       if (this.models.length > 0) {
         if (!this.selectedModelId) {
