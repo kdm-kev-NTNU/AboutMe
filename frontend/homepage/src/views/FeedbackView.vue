@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { MessageSquare, Send, CheckCircle, Info } from 'lucide-vue-next'
 import { submitFeedback } from '@/api/generated/portfolio'
@@ -17,15 +16,13 @@ const t = computed(() => {
       intro: 'Har du tanker om nettsiden, chat-funksjonen eller noe annet? Alle tilbakemeldinger hjelper meg å forbedre opplevelsen.',
       messageLabel: 'Din tilbakemelding',
       messagePlaceholder: 'Skriv tilbakemeldingen din her ...',
-      emailLabel: 'E-post (valgfritt)',
-      emailPlaceholder: 'din@epost.no — kun hvis du ønsker svar',
       submit: 'Send tilbakemelding',
       sending: 'Sender ...',
       successTitle: 'Takk!',
       successBody: 'Tilbakemeldingen din er mottatt. Den hjelper meg å gjøre siden bedre.',
       errorGeneric: 'Noe gikk galt. Prøv igjen senere.',
       errorRateLimit: 'For mange innsendinger. Vent litt før du prøver igjen.',
-      privacyNote: 'Tilbakemeldingen lagres kun for å forbedre nettsiden. E-post deles ikke med tredjepart.',
+      privacyNote: 'Tilbakemeldingen lagres kun for å forbedre nettsiden.',
     }
   }
   return {
@@ -33,20 +30,17 @@ const t = computed(() => {
     intro: 'Have thoughts on the site, the chat feature, or anything else? Every piece of feedback helps me improve the experience.',
     messageLabel: 'Your feedback',
     messagePlaceholder: 'Write your feedback here ...',
-    emailLabel: 'E-mail (optional)',
-    emailPlaceholder: 'you@example.com — only if you want a reply',
     submit: 'Send feedback',
     sending: 'Sending ...',
     successTitle: 'Thank you!',
     successBody: 'Your feedback has been received. It helps me make the site better.',
     errorGeneric: 'Something went wrong. Please try again later.',
     errorRateLimit: 'Too many submissions. Please wait a moment before trying again.',
-    privacyNote: 'Feedback is stored solely to improve the site. E-mail is never shared with third parties.',
+    privacyNote: 'Feedback is stored solely to improve the site.',
   }
 })
 
 const message = ref('')
-const replyEmail = ref('')
 const loading = ref(false)
 const success = ref(false)
 const error = ref('')
@@ -57,11 +51,10 @@ async function handleSubmit() {
 
   loading.value = true
   try {
-    const res = await submitFeedback({ message: message.value.trim(), replyEmail: replyEmail.value.trim() || undefined })
+    const res = await submitFeedback({ message: message.value.trim() })
     if (res.status === 204) {
       success.value = true
       message.value = ''
-      replyEmail.value = ''
     } else if (res.status === 429) {
       error.value = t.value.errorRateLimit
     } else {
@@ -112,16 +105,6 @@ async function handleSubmit() {
                 class="w-full rounded-lg border-2 border-blue-200/20 bg-white/80 px-4 py-3 text-sm transition-all duration-300 focus:border-blue-300/50 focus:bg-white/95 focus:shadow-sm focus:shadow-blue-500/10 focus:outline-none placeholder:text-blue-600/40 resize-y"
                 required
               ></textarea>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ t.emailLabel }}</label>
-              <Input
-                v-model="replyEmail"
-                type="email"
-                :placeholder="t.emailPlaceholder"
-                class="bg-white/80 border-2 border-blue-200/20 transition-all duration-300 focus:bg-white/95 focus:border-blue-300/50 focus:shadow-sm focus:shadow-blue-500/10 focus:outline-none placeholder:text-blue-600/40"
-              />
             </div>
 
             <Alert v-if="error" class="border-red-200 bg-red-50">
