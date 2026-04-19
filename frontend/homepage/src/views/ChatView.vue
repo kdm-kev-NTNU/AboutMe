@@ -9,9 +9,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import MessagesArea from '@/views/MessagesArea.vue'
 import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
 
-
+/**
+ * RAG chat surface: messages live in sessionStorage for the current tab (see FloatingChatButton),
+ * optional `conversationId` loads history from REST, and `askQuestion` hits POST /ask with optional model id.
+ */
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
+// --- Route + local UI state ---
 const route = useRoute()
 const router = useRouter()
 const input = ref('')
@@ -44,7 +48,7 @@ const showProviderToggle = computed(
   () => chatModelStore.hasOpenAI && chatModelStore.hasAnthropic,
 )
 
-// Session storage functions
+// --- Ephemeral transcript (same-tab only; not a substitute for server-side conversation storage) ---
 const saveMessagesToStorage = () => {
   try {
     sessionStorage.setItem('chatMessages', JSON.stringify(state.messages))
@@ -70,10 +74,9 @@ const loadMessagesFromStorage = () => {
   }
 }
 
-// Watch for changes in messages and save to storage
 watch(() => state.messages, saveMessagesToStorage, { deep: true })
 
-// Clear chat function - redirects to home page
+// Drops the in-memory transcript and returns to the marketing shell.
 const clearChat = () => {
   // Clear session storage first
   sessionStorage.removeItem('chatMessages')
@@ -83,6 +86,7 @@ const clearChat = () => {
   router.push({ name: 'home' })
 }
 
+// Calls the portfolio backend; auth store is restored so optional future authenticated /ask works the same way.
 async function send(text: string) {
   if (!text.trim() || isLoading.value) return
   // client-side validation to mirror backend
@@ -125,7 +129,7 @@ async function send(text: string) {
   }
 }
 
-// Load conversation from backend
+/** When deep-linking with ?conversationId=, hydrate the thread from the API instead of sessionStorage. */
 const loadConversation = async (conversationId: string) => {
   try {
     const res = await fetch(`/api/conversations/${conversationId}`, {
@@ -154,18 +158,15 @@ onMounted(async () => {
   const conversationId = route.query.conversationId as string
 
   if (conversationId) {
-    // Load specific conversation from backend
     loadConversation(conversationId)
   } else {
-    // Load messages from session storage for new conversations
     loadMessagesFromStorage()
   }
 
   const q = (route.query.q as string) || ''
   if (q && !conversationId) {
     input.value = q
-    // Always auto-send the question from home page, even if there are existing messages
-    // This ensures users don't have to click send twice when coming from home
+    // Home page passes ?q=: auto-send once so the user does not need a second click on /chat.
     send(q)
   }
 })
