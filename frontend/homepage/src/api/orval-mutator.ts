@@ -12,10 +12,12 @@ function readBasicToken(): string | null {
   }
 }
 
+// Vite dev proxy forwards /api/* to the Spring Boot port; production builds use the same prefix behind the host.
 const API_PREFIX = '/api'
 
 /**
  * Orval fetch mutator: prefixes `/api`, merges Basic auth from sessionStorage, returns `{ data, status, headers }`.
+ * Generated clients in `api/generated/` import this instead of raw `fetch` so admin routes receive Authorization.
  */
 export const customFetch = async <T>(url: string, init?: RequestInit): Promise<T> => {
   const path = url.startsWith('http') ? url : `${API_PREFIX}${url}`
