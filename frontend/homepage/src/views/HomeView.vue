@@ -107,7 +107,7 @@ function submitQuick() {
 </script>
 
 <template>
-  <main class="flex flex-col h-screen pt-20 relative min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+  <main class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 pt-20">
     <!-- Gradient Background Overlay -->
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 50%);"></div>
@@ -124,10 +124,10 @@ function submitQuick() {
     </div>
 
     <!-- Main Content - Centered -->
-    <div class="flex-1 flex flex-col items-center justify-center py-8 overflow-y-auto relative z-10">
+    <div class="relative z-10 flex min-h-full flex-col items-center justify-center px-4 py-8">
       <div class="flex flex-col items-center space-y-8">
         <section class="brand">
-          <h1 class="text-7xl font-bold text-center mb-4">
+          <h1 class="mb-4 px-1 text-center text-4xl font-bold sm:text-5xl md:text-6xl lg:text-7xl">
             Kevin's <span class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x">AI</span>.
           </h1>
           <div class="flex justify-center">
@@ -222,11 +222,11 @@ function submitQuick() {
         </section>
 
         <section class="quick">
-          <div class="grid grid-cols-2 gap-4 max-w-2xl">
+          <div class="grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
             <button
               v-for="q in visibleQuestions"
               :key="q"
-              class="relative overflow-hidden bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-blue-300 hover:shadow-xl transition-all duration-300 group hover:bg-gradient-to-br hover:from-white/90 hover:to-slate-50/90 hover:backdrop-blur-sm"
+              class="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-4 text-left transition-all duration-300 hover:border-blue-300 hover:shadow-xl group hover:bg-gradient-to-br hover:from-white/90 hover:to-slate-50/90 hover:backdrop-blur-sm sm:p-6"
               @click="ask(q)"
             >
               <div class="text-gray-800 font-medium text-sm leading-relaxed group-hover:text-gray-900 transition-colors duration-300 cursor-pointer">
@@ -282,19 +282,19 @@ function submitQuick() {
       </form>
     </div>
 
-    <!-- Prominent feedback entry: bottom-left, larger icon + invite copy -->
+    <!-- Mobile: compact FAB-style feedback; sm+: card with copy -->
     <RouterLink
       to="/feedback"
-      class="feedback-corner group fixed bottom-4 left-3 z-[60] flex max-w-[min(20.5rem,calc(100vw-1.5rem))] items-start gap-3 rounded-2xl border-2 border-blue-300/70 bg-white/95 p-3.5 shadow-lg shadow-blue-900/10 ring-1 ring-blue-500/15 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-white hover:shadow-xl hover:shadow-blue-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:bottom-6 sm:left-5 sm:gap-4 sm:p-4"
+      class="feedback-corner group fixed bottom-4 left-3 z-[60] flex items-center justify-center rounded-full border-2 border-blue-300/70 bg-white/95 p-3 shadow-lg shadow-blue-900/10 ring-1 ring-blue-500/15 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-white hover:shadow-xl hover:shadow-blue-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:bottom-6 sm:left-5 sm:max-w-[min(20.5rem,calc(100vw-1.5rem))] sm:items-start sm:justify-start sm:gap-4 sm:rounded-2xl sm:p-4"
       :aria-label="feedbackInvite.ariaLabel"
     >
       <div
-        class="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md sm:size-16"
+        class="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md sm:size-16 sm:rounded-xl"
         aria-hidden="true"
       >
-        <MessageSquare class="size-8 sm:size-9" stroke-width="2" />
+        <MessageSquare class="size-7 sm:size-9" stroke-width="2" />
       </div>
-      <div class="min-w-0 flex-1 pt-0.5 text-left">
+      <div class="hidden min-w-0 flex-1 pt-0.5 text-left sm:block">
         <p class="text-sm font-medium leading-snug text-slate-800 sm:text-[0.95rem] sm:leading-snug">
           {{ feedbackInvite.body }}
         </p>
@@ -418,26 +418,21 @@ function submitQuick() {
   animation-duration: 6s;
 }
 
-/* Responsive adjustments */
+/* Decorative blobs — smaller blur/size on narrow viewports */
 @media (max-width: 768px) {
-  .text-7xl {
-    font-size: 3rem;
-  }
-
-  .p-6 {
-    padding: 1rem;
-  }
-
   .blob {
     filter: blur(30px);
   }
 
-  .blob-1, .blob-3 {
+  .blob-1,
+  .blob-3 {
     width: 200px;
     height: 200px;
   }
 
-  .blob-2, .blob-4, .blob-5 {
+  .blob-2,
+  .blob-4,
+  .blob-5 {
     width: 150px;
     height: 150px;
   }

@@ -75,4 +75,29 @@ describe('Navbar', () => {
 		const educationLink = links.find((a) => a.text().includes('Education'))
 		expect(educationLink?.classes().join(' ')).toContain('font-semibold')
 	})
+
+	it('opens mobile drawer from hamburger and lists all nav links', async () => {
+		const router = makeRouter()
+		await router.push('/')
+		await router.isReady()
+		const wrapper = mount(Navbar, {
+			global: {
+				plugins: [createPinia(), router],
+				stubs: { RouterLink: { template: '<a><slot /></a>', props: ['to'] } },
+			},
+		})
+		await flushPromises()
+		expect(wrapper.find('#mobile-nav-drawer').exists()).toBe(false)
+
+		const menuBtn = wrapper.find('button[aria-controls="mobile-nav-drawer"]')
+		expect(menuBtn.exists()).toBe(true)
+		await menuBtn.trigger('click')
+		await flushPromises()
+
+		const drawer = wrapper.find('#mobile-nav-drawer')
+		expect(drawer.exists()).toBe(true)
+		expect(drawer.findAll('a').length).toBe(5)
+		expect(drawer.text()).toContain('Home')
+		expect(drawer.text()).toContain('Projects')
+	})
 })
