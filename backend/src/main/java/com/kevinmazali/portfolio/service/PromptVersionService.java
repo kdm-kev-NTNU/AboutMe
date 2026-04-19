@@ -143,6 +143,7 @@ public class PromptVersionService {
         PromptVersion target = repo.findById(versionId)
             .orElseThrow(() -> new IllegalArgumentException("Prompt version id=" + versionId + " not found"));
 
+        // Exactly one active row per (name, language, provider): flip flags for the whole variant group.
         List<PromptVersion> siblings = repo.findAllForVariant(
             target.getName(), target.getLanguage(), target.getProvider());
         for (PromptVersion sib : siblings) {
