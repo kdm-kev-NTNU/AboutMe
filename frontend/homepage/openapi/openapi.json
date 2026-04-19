@@ -1,0 +1,838 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AboutMe Portfolio API",
+    "description": "REST API for the portfolio (RAG chat, auth, health, admin documents). SPA uses /api prefix via Vite or Nginx.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://localhost:8080", "description": "Direct backend" },
+    { "url": "http://localhost:5173/api", "description": "Vite dev proxy" }
+  ],
+  "tags": [
+    { "name": "Authentication", "description": "Login for SPA" },
+    { "name": "Chat", "description": "RAG chat" },
+    { "name": "Health", "description": "Ops health" },
+    { "name": "Admin documents", "description": "ADMIN + HTTP Basic" },
+    { "name": "Admin prompt versions", "description": "Versioned prompt management (ADMIN + HTTP Basic)" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Admin endpoints require ROLE_ADMIN"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string", "format": "password" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": ["username", "role"],
+        "properties": {
+          "username": { "type": "string" },
+          "role": { "type": "string", "enum": ["USER", "ADMIN"] }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
+      "ServiceUnavailableError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
+      "TooManyRequestsError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
+      "Question": {
+        "type": "object",
+        "required": ["question"],
+        "properties": {
+          "question": { "type": "string", "maxLength": 3000 },
+          "model": { "type": "string", "description": "Allow-listed chat model id; omit for server default" }
+        }
+      },
+      "ChatModelOption": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "provider": { "$ref": "#/components/schemas/ChatModelOptionProvider" },
+          "label": { "type": "string" }
+        }
+      },
+      "ChatModelOptionProvider": {
+        "type": "string",
+        "enum": ["OPENAI", "ANTHROPIC"]
+      },
+      "Answer": {
+        "type": "object",
+        "required": ["answer"],
+        "properties": {
+          "answer": { "type": "string" }
+        }
+      },
+      "ChromaHealthResponse": {
+        "type": "object",
+        "properties": {
+          "healthy": { "type": "boolean" },
+          "collectionName": { "type": "string", "nullable": true },
+          "embeddingCount": { "type": "integer", "format": "int64", "nullable": true },
+          "message": { "type": "string", "nullable": true }
+        }
+      },
+      "IngestionResult": {
+        "type": "object",
+        "properties": {
+          "documentId": { "type": "string" },
+          "filename": { "type": "string" },
+          "chunksIngested": { "type": "integer", "format": "int32" },
+          "skipped": { "type": "boolean" },
+          "message": { "type": "string" }
+        }
+      },
+      "DocumentListEntry": {
+        "type": "object",
+        "properties": {
+          "documentId": { "type": "string" },
+          "filename": { "type": "string" },
+          "chunkCount": { "type": "integer", "format": "int32" },
+          "lastIngestedAt": { "type": "string" }
+        }
+      },
+      "ChromaCollectionSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" }
+        }
+      },
+      "ChromaCollectionsResponse": {
+        "type": "object",
+        "properties": {
+          "activeCollectionName": { "type": "string" },
+          "activeCollectionEmbeddingCount": { "type": "integer", "format": "int64", "nullable": true },
+          "collections": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChromaCollectionSummary" }
+          }
+        }
+      },
+      "ChunkItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "documentTitle": { "type": "string" },
+          "chunkIndex": { "type": "integer", "format": "int32", "nullable": true },
+          "text": { "type": "string" },
+          "metadata": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "ChunkListResponse": {
+        "type": "object",
+        "properties": {
+          "collectionName": { "type": "string" },
+          "total": { "type": "integer", "format": "int64" },
+          "totalMatching": { "type": "integer", "format": "int64" },
+          "limit": { "type": "integer", "format": "int32" },
+          "offset": { "type": "integer", "format": "int32" },
+          "chunks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChunkItem" }
+          }
+        }
+      },
+      "PathIngestRequest": {
+        "type": "object",
+        "required": ["paths"],
+        "properties": {
+          "paths": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "force": { "type": "boolean", "default": false }
+        }
+      },
+      "PromptNameEntry": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "language": { "type": "string", "nullable": true },
+          "provider": { "type": "string", "nullable": true },
+          "activeVersion": { "type": "integer", "format": "int32" },
+          "activeId": { "type": "integer", "format": "int64" },
+          "createdAt": { "type": "string", "nullable": true }
+        }
+      },
+      "PromptVersionResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" },
+          "version": { "type": "integer", "format": "int32" },
+          "language": { "type": "string", "nullable": true },
+          "provider": { "type": "string", "nullable": true },
+          "content": { "type": "string" },
+          "contentHash": { "type": "string" },
+          "isActive": { "type": "boolean" },
+          "description": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "nullable": true }
+        }
+      },
+      "CreateVersionRequest": {
+        "type": "object",
+        "required": ["name", "content"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 128 },
+          "content": { "type": "string" },
+          "language": { "type": "string", "maxLength": 8, "nullable": true },
+          "provider": { "type": "string", "maxLength": 32, "nullable": true },
+          "description": { "type": "string", "nullable": true }
+        }
+      },
+      "ActivateRequest": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "integer", "format": "int64", "minimum": 1 }
+        }
+      },
+      "DeleteVariantRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 128 },
+          "language": { "type": "string", "maxLength": 8, "nullable": true },
+          "provider": { "type": "string", "maxLength": 32, "nullable": true }
+        }
+      },
+      "PromptDiffResponse": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "language": { "type": "string", "nullable": true },
+          "provider": { "type": "string", "nullable": true },
+          "hasDbActive": { "type": "boolean" },
+          "hasCodeFallback": { "type": "boolean" },
+          "isEqual": { "type": "boolean" },
+          "dbContent": { "type": "string", "nullable": true },
+          "fallbackContent": { "type": "string", "nullable": true }
+        }
+      },
+      "SeedResult": {
+        "type": "object",
+        "properties": {
+          "created": { "type": "integer", "format": "int32" },
+          "skipped": { "type": "integer", "format": "int32" },
+          "total_fallbacks": { "type": "integer", "format": "int32" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login",
+        "operationId": "authLogin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ask": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Ask a question",
+        "operationId": "askQuestion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Question" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Answer" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TooManyRequestsError" }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceUnavailableError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chat/models": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "List chat models",
+        "operationId": "listChatModels",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ChatModelOption" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/chroma": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "ChromaDB health",
+        "operationId": "healthChroma",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChromaHealthResponse" }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChromaHealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/upload": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Upload and ingest",
+        "operationId": "adminDocumentsUpload",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "title": { "type": "string" },
+                  "force": { "type": "boolean", "default": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IngestionResult" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IngestionResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/upload/batch": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Upload and ingest multiple documents",
+        "operationId": "adminDocumentsUploadBatch",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["files"],
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  },
+                  "force": { "type": "boolean", "default": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/ingest-by-path": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Ingest documents by path relative to documentsToLoadDir",
+        "operationId": "adminDocumentsIngestByPath",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PathIngestRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/files": {
+      "get": {
+        "tags": ["Admin documents"],
+        "summary": "List files under documentsToLoadDir",
+        "description": "Relative paths with supported extensions under sfg.aiapp.documentsToLoadDir (file: URLs only).",
+        "operationId": "adminDocumentsFiles",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents": {
+      "get": {
+        "tags": ["Admin documents"],
+        "summary": "List documents",
+        "operationId": "adminDocumentsList",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/DocumentListEntry" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/chunks": {
+      "get": {
+        "tags": ["Admin documents"],
+        "summary": "List chunks in the active collection",
+        "operationId": "adminDocumentsChunks",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 25 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChunkListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/collections": {
+      "get": {
+        "tags": ["Admin documents"],
+        "summary": "List Chroma collections",
+        "operationId": "adminDocumentsCollections",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChromaCollectionsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/reseed": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Re-seed classpath documents",
+        "operationId": "adminDocumentsReseed",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/IngestionResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/{documentId}": {
+      "delete": {
+        "tags": ["Admin documents"],
+        "summary": "Delete document",
+        "operationId": "adminDocumentsDelete",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": { "description": "Bad Request" }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/names": {
+      "get": {
+        "tags": ["Admin prompt versions"],
+        "summary": "List active prompt variants",
+        "operationId": "promptVersionsNames",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PromptNameEntry" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/history": {
+      "get": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Version history for a prompt variant",
+        "operationId": "promptVersionsHistory",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          { "name": "name", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "language", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "provider", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PromptVersionResponse" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/create": {
+      "post": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Create a new prompt version",
+        "operationId": "promptVersionsCreate",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateVersionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PromptVersionResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/activate": {
+      "post": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Activate a prompt version by id",
+        "operationId": "promptVersionsActivate",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ActivateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PromptVersionResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Version id not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/seed": {
+      "post": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Seed prompt versions from classpath templates",
+        "operationId": "promptVersionsSeed",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SeedResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/variant": {
+      "delete": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Delete all versions of a prompt variant",
+        "operationId": "promptVersionsDeleteVariant",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeleteVariantRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "deleted": { "type": "integer", "format": "int32" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/diff": {
+      "get": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Diff active DB version vs classpath fallback",
+        "operationId": "promptVersionsDiff",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          { "name": "name", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "language", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "provider", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PromptDiffResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

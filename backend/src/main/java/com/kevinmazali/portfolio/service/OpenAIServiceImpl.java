@@ -1,121 +1,178 @@
 package com.kevinmazali.portfolio.service;
 
-import com.kevinmazali.portfolio.crypto.CryptoService;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
-import lombok.RequiredArgsConstructor;
-import org.springframework.ai.chat.model.ChatModel;
+import com.kevinmazali.portfolio.model.RagAnswer;
+import com.kevinmazali.portfolio.model.chat.ChatProvider;
+import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.anthropic.AnthropicChatModel;
+import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.SimpleVectorStore;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Default implementation of {@link OpenAIService} that performs RAG:
- * - expands the query to multiple languages,
- * - retrieves similar documents from the vector store,
- * - optionally decrypts content,
- * - builds a prompt and invokes the chat model.
+ * expands the query, retrieves similar documents, builds a prompt, and invokes
+ * an OpenAI or Anthropic chat model depending on the selected allow-listed model.
  */
+@Slf4j
 @Service
-@RequiredArgsConstructor
 public class OpenAIServiceImpl implements OpenAIService {
 
-  private final ChatModel chatModel;
-  private final SimpleVectorStore vectorStore;
+  private static final int CHAT_MAX_TOKENS = 400;
 
-  /**
-   * Executes a Retrieval-Augmented Generation flow:
-   * 1) expand the query to English and Norwegian,
-   * 2) retrieve and de-duplicate the most similar documents,
-   * 3) decrypt chunks when encryption metadata is present,
-   * 4) compose the prompt and call the chat model.
-   *
-   * @param question the user question
-   * @return the generated {@link Answer}
-   */
+  private final OpenAiChatModel openAiChatModel;
+  private final ObjectProvider<AnthropicChatModel> anthropicChatModel;
+  private final VectorStore vectorStore;
+  private final String defaultModelId;
+  private final PromptVersionService promptVersionService;
+
+  public OpenAIServiceImpl(
+      OpenAiChatModel openAiChatModel,
+      ObjectProvider<AnthropicChatModel> anthropicChatModel,
+      @Lazy VectorStore vectorStore,
+      @Value("${portfolio.chat.default-model-id}") String defaultModelId,
+      PromptVersionService promptVersionService) {
+    this.openAiChatModel = openAiChatModel;
+    this.anthropicChatModel = anthropicChatModel;
+    this.vectorStore = vectorStore;
+    this.defaultModelId = defaultModelId;
+    this.promptVersionService = promptVersionService;
+  }
+
   @Override
   public Answer getAnswer(Question question) {
-    // 1) Expand the query: original + translated to EN and NO
-    List<String> queries = expandQueryToLanguages(question.question());
+    RagAnswer rag = getAnswerWithDocuments(question);
+    return new Answer(rag.answer());
+  }
 
-    // 2) Fetch top documents for each variant and merge
+  @Override
+  public RagAnswer getAnswerWithDocuments(Question question) {
+    SupportedChatModel model = resolveModel(question);
+    if (model.provider() == ChatProvider.ANTHROPIC && anthropicChatModel.getIfAvailable() == null) {
+      throw new IllegalStateException("Anthropic chat is not available (missing API key or autoconfiguration).");
+    }
+
+    // #region agent log
+    log.info("[DEBUG-b64a63] vectorStore class={}, question={}", vectorStore.getClass().getName(), question.question());
+    // #endregion
+
+    // Cross-language retrieval: run similarity search once per expanded query, then dedupe and cap.
+    List<String> queries = expandQueryToLanguages(question.question(), model);
+
+    // #region agent log
+    log.info("[DEBUG-b64a63] expanded queries={}", queries);
+    // #endregion
+
     List<Document> documents = queries.stream()
-        .flatMap(q -> vectorStore.similaritySearch(
-            SearchRequest.builder()
-                .query(q)
-                .topK(40)
-                .build()
-        ).stream())
-        // Deduplicate on text content to avoid duplicates across query variants
+        .flatMap(q -> {
+          log.info("[DEBUG-b64a63] searching query='{}' topK=40", q);
+          try {
+            List<Document> results = vectorStore.similaritySearch(
+                SearchRequest.builder()
+                    .query(q)
+                    .topK(40)
+                    .build()
+            );
+            log.info("[DEBUG-b64a63] query='{}' returned {} docs", q, results.size());
+            return results.stream();
+          } catch (Exception ex) {
+            log.error("[DEBUG-b64a63] similaritySearch FAILED for query='{}': {}", q, ex.getMessage(), ex);
+            return java.util.stream.Stream.<Document>empty();
+          }
+        })
         .distinct()
         .limit(40)
         .toList();
 
-    // 2) Decrypt content when needed
-    CryptoService crypto = cryptoFromEnv();
-    List<String> contentList = documents.stream()
-        .map(d -> {
-          Object enc = d.getMetadata().get("enc");
-          if ("aesgcm".equals(enc) && crypto != null) {
-            String iv = String.valueOf(d.getMetadata().get("enc_iv"));
-            String ct = d.getText();
-            try {
-              return crypto.decrypt(iv, ct);
-            } catch (RuntimeException ex) {
-              Object src = d.getMetadata().getOrDefault("source", "(unknown source)");
-              return "[Could not decrypt chunk – source: " + src + "]";
-            }
-          } else {
-            return d.getText();
-          }
-        })
-        .toList();
+    // #region agent log
+    log.info("[DEBUG-b64a63] total retrieved docs={}", documents.size());
+    if (!documents.isEmpty()) {
+      documents.stream().limit(3).forEach(d ->
+          log.info("[DEBUG-b64a63] doc snippet: {}", d.getText().substring(0, Math.min(150, d.getText().length()))));
+    }
+    // #endregion
 
-    // 3) Read prompt template from classpath (also works when packaged as a JAR)
-    String ragPromptTemplate = loadPromptTemplateFromClasspath("templates/rag-prompt-template.st");
-
+    // Build RAG prompt from DB-managed template (per provider) plus flattened chunk text.
+    List<String> contentList = documents.stream().map(Document::getText).toList();
+    String providerName = switch (model.provider()) {
+      case OPENAI -> "openai";
+      case ANTHROPIC -> "anthropic";
+    };
+    String ragPromptTemplate = promptVersionService.loadRagPrompt(providerName);
     PromptTemplate promptTemplate = new PromptTemplate(ragPromptTemplate);
-    Prompt prompt = promptTemplate.create(Map.of(
+    Prompt basePrompt = promptTemplate.create(Map.of(
         "input", question.question(),
         "documents", String.join("\n", contentList)
     ));
 
-    // 4) Call the model. Max token limit is set via application.yaml
-    ChatResponse response = chatModel.call(prompt);
-    return new Answer(response.getResult().getOutput().getText());
+    // Provider-specific chat options (model id, max tokens) are applied inside invokeChat.
+    ChatResponse response = invokeChat(model, basePrompt);
+    return new RagAnswer(response.getResult().getOutput().getText(), contentList);
+  }
+
+  private SupportedChatModel resolveModel(Question question) {
+    String id = (question.model() == null || question.model().isBlank())
+        ? defaultModelId
+        : question.model().trim();
+    return SupportedChatModel.fromModelId(id)
+        .orElseThrow(() -> new IllegalArgumentException("Unknown or unsupported model id: " + id));
+  }
+
+  private ChatResponse invokeChat(SupportedChatModel model, Prompt basePrompt) {
+    return switch (model.provider()) {
+      case OPENAI -> {
+        OpenAiChatOptions opts = OpenAiChatOptions.builder()
+            .model(model.modelId())
+            .maxCompletionTokens(CHAT_MAX_TOKENS)
+            .build();
+        yield openAiChatModel.call(new Prompt(basePrompt.getInstructions(), opts));
+      }
+      case ANTHROPIC -> {
+        AnthropicChatModel anthropic = anthropicChatModel.getIfAvailable();
+        if (anthropic == null) {
+          throw new IllegalStateException("Anthropic chat is not available (missing API key or autoconfiguration).");
+        }
+        AnthropicChatOptions opts = AnthropicChatOptions.builder()
+            .model(model.modelId())
+            .maxTokens(CHAT_MAX_TOKENS)
+            .build();
+        yield anthropic.call(new Prompt(basePrompt.getInstructions(), opts));
+      }
+    };
   }
 
   /**
-   * Creates query variants in the original language, English, and Norwegian.
-   * Falls back to the original only upon errors.
+   * Optional LLM step: asks the same model to emit EN/NO phrasing so vector search hits both languages.
+   * On any failure, returns a singleton list containing only the original query (graceful degradation).
    */
-  private List<String> expandQueryToLanguages(String original) {
+  private List<String> expandQueryToLanguages(String original, SupportedChatModel model) {
     try {
-      // Simple prompt for quick translation without explanations
       String sys = """
       Translate the user query into both English and Norwegian.
       Return ONLY this exact JSON object with double quotes and no extra text:
       {"en": "<english>", "no": "<norwegian>"}
       """.strip();
 
-      Prompt p = new PromptTemplate("{sys}\nUser: {q}")
+      Prompt base = new PromptTemplate("{sys}\nUser: {q}")
           .create(Map.of("sys", sys, "q", original));
-
-      ChatResponse r = chatModel.call(p);
+      ChatResponse r = invokeChat(model, base);
       String json = r.getResult().getOutput().getText();
 
-      // Very simple parsing to avoid extra dependencies
       String en = extractJsonValue(json, "en");
       String no = extractJsonValue(json, "no");
 
@@ -127,53 +184,25 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
   }
 
-  /**
-   * Extracts a simple string value from a flat JSON object without using a parser.
-   */
   private String extractJsonValue(String json, String key) {
     try {
       String marker = "\"" + key + "\"" + ":";
       int i = json.indexOf(marker);
-      if (i < 0) return null;
+      if (i < 0) {
+        return null;
+      }
       int start = json.indexOf('"', i + marker.length());
-      if (start < 0) return null;
+      if (start < 0) {
+        return null;
+      }
       int end = json.indexOf('"', start + 1);
-      if (end < 0) return null;
+      if (end < 0) {
+        return null;
+      }
       return json.substring(start + 1, end);
     } catch (Exception ex) {
       return null;
     }
   }
 
-  /**
-   * Creates a {@link CryptoService} from the VECTORSTORE_ENC_KEY environment variable,
-   * or returns {@code null} when the key is not present or invalid.
-   */
-  private CryptoService cryptoFromEnv() {
-    String b64 = System.getenv("VECTORSTORE_ENC_KEY");
-    if (b64 == null || b64.isBlank()) return null;
-    byte[] key = Base64.getDecoder().decode(b64);
-    try {
-      return new CryptoService(key);
-    } catch (IllegalArgumentException e) {
-      return null; // wrong length -> disable decryption
-    }
-  }
-
-  /**
-   * Loads a prompt template from the classpath; works when packaged as a JAR as well.
-   *
-   * @param resourceName the classpath resource name (e.g. "templates/rag-prompt-template.st")
-   * @return the template text
-   */
-  private String loadPromptTemplateFromClasspath(String resourceName) {
-    try {
-      ClassPathResource res = new ClassPathResource(resourceName);
-      try (InputStream in = res.getInputStream()) {
-        return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-      }
-    } catch (Exception e) {
-      throw new RuntimeException("Could not read " + resourceName + " from classpath", e);
-    }
-  }
 }

@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio;
 
+import org.springframework.ai.vectorstore.chroma.autoconfigure.ChromaVectorStoreAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -7,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Spring Boot entry point for the portfolio backend application.
  * Boots the web context and exposes REST APIs.
  */
-@SpringBootApplication
+@SpringBootApplication(exclude = { ChromaVectorStoreAutoConfiguration.class })
 public class PortfolioApplication {
 
 	/**

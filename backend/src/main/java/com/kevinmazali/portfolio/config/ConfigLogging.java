@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio.config;
 
+import com.kevinmazali.portfolio.util.ChromaClientDiagnostics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -9,6 +10,10 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.PropertySource;
 
+/**
+ * Startup diagnostics: logs non-secret config hints (ports, datasource URL, presence of {@code .env})
+ * to speed up environment troubleshooting in dev and deployed environments.
+ */
 @Configuration
 public class ConfigLogging implements ApplicationRunner {
 
@@ -20,6 +25,7 @@ public class ConfigLogging implements ApplicationRunner {
         this.environment = environment;
     }
 
+    /** Emits one-time INFO lines after the application context is ready. */
     @Override
     public void run(ApplicationArguments args) {
         log.info("Config: user.dir={} (working directory)", System.getProperty("user.dir"));
@@ -46,6 +52,19 @@ public class ConfigLogging implements ApplicationRunner {
             }
             log.info("Config: .env property source loaded = {}", hasDotEnv);
         }
+
+        log.info("Config: portfolio.chroma.enabled={}", environment.getProperty("portfolio.chroma.enabled", "true"));
+        log.info("Config: spring.ai.vectorstore.chroma.client.host={}",
+            environment.getProperty("spring.ai.vectorstore.chroma.client.host", "<unset>"));
+        log.info("Config: spring.ai.vectorstore.chroma.client.port={}",
+            environment.getProperty("spring.ai.vectorstore.chroma.client.port", "<unset>"));
+        int chromaPort = environment.getProperty("spring.ai.vectorstore.chroma.client.port", Integer.class, 8100);
+        log.info("Config: Chroma REST client base URL (host:port, same as ChromaApi)={}",
+            ChromaClientDiagnostics.baseUrl(
+                environment.getProperty("spring.ai.vectorstore.chroma.client.host"),
+                chromaPort));
+        log.info("Config: management.otlp.tracing.endpoint={}",
+            environment.getProperty("management.otlp.tracing.endpoint", "<unset>"));
     }
 }
 

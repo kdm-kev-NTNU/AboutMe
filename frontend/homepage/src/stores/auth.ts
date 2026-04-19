@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
+import { authLogin } from '@/api/generated/portfolio'
 
+// Credentials: POST /auth/login validates the user; we keep username/role and a Base64 Basic secret for Orval fetch.
 interface AuthState {
   username: string | null
   role: 'USER' | 'ADMIN' | null
@@ -14,15 +16,11 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     async login(username: string, password: string) {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      })
-      if (!res.ok) {
+      const r = await authLogin({ username, password })
+      if (r.status !== 200) {
         throw new Error('Invalid credentials')
       }
-      const data = await res.json() as { username: string; role: 'USER' | 'ADMIN' }
+      const data = r.data
       this.username = data.username
       this.role = data.role
       this.basicToken = btoa(`${username}:${password}`)
@@ -34,6 +32,7 @@ export const useAuthStore = defineStore('auth', {
       this.basicToken = null
       sessionStorage.removeItem('auth')
     },
+    /** Hydrates Pinia from sessionStorage on hard refresh or new tab (router guard calls this before admin routes). */
     restore() {
       const raw = sessionStorage.getItem('auth')
       if (raw) {
@@ -47,5 +46,3 @@ export const useAuthStore = defineStore('auth', {
     }
   }
 })
-
-

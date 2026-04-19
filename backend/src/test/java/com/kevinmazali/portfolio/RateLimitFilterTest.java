@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio;
 
+import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.controller.QuestionController;
 import com.kevinmazali.portfolio.model.Answer;
@@ -11,16 +12,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.mockito.Mockito;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = QuestionController.class)
-@Import({WebConfig.class, MockConfig.class})
+@WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-5.4-mini")
+@TestPropertySource(properties = "portfolio.ask-rate-limit.enabled=true")
+@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class })
 class RateLimitFilterTest {
 
     @Autowired
@@ -53,7 +55,3 @@ class RateLimitFilterTest {
             .andExpect(status().isTooManyRequests());
     }
 }
-
-    // Test beans are provided by MockConfig
-
-

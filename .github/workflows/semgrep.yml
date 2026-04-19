@@ -1,0 +1,56 @@
+# Semgrep — SAST + SARIF upload (separate from Tests workflow; no deploy here).
+#
+# Triggers: push/PR to main or master; weekly schedule. Requires SEMGREP_APP_TOKEN and
+# SEMGREP_DEPLOYMENT_ID for App publish; skipped on fork PRs when secrets are unavailable.
+# PR merge gate for unit/integration checks: .github/workflows/tests.yml.
+#
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# This workflow file requires a free account on Semgrep.dev to
+# manage rules, file ignores, notifications, and more.
+#
+# See https://semgrep.dev/docs
+
+name: Semgrep
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '22 17 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+    name: Scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      # Checkout project source
+      - uses: actions/checkout@v4
+
+      # Scan code using project's configuration on https://semgrep.dev/manage
+      - uses: returntocorp/semgrep-action@fcd5ab7459e8d91cb1777481980d1b18b4fc6735
+        with:
+          publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
+          publishDeployment: ${{ secrets.SEMGREP_DEPLOYMENT_ID }}
+          generateSarif: "1"
+
+      # Upload SARIF file generated in previous step
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+        if: always()

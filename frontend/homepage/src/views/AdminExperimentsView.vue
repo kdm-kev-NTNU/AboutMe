@@ -1,0 +1,449 @@
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+
+type PhoenixDataset = { id: string; name: string; exampleCount: number }
+type ChatModelOption = { id: string; label: string; provider: string }
+type RunSummary = {
+  id: number
+  name: string
+  datasetName: string
+  generatorModel: string
+  evaluatorModel: string
+  status: string
+  totalExamples: number
+  meanFaithfulness: number | null
+  meanRelevance: number | null
+  meanCorrectness: number | null
+  meanConciseness: number | null
+  errorMessage: string | null
+  createdAt: string
+  completedAt: string | null
+}
+type ExperimentResultRow = {
+  id: number
+  question: string
+  referenceAnswer: string
+  ragResponse: string
+  documentsPreview: string | null
+  faithfulness: number | null
+  relevance: number | null
+  correctness: number | null
+  conciseness: number | null
+  faithfulnessExplanation: string | null
+  relevanceExplanation: string | null
+  correctnessExplanation: string | null
+  concisenessExplanation: string | null
+}
+type RunDetail = RunSummary & {
+  phoenixDatasetId: string | null
+  phoenixBaseUrl: string | null
+  results: ExperimentResultRow[]
+}
+
+const API = '/api/admin/tools/experiments'
+
+function authHeaders(): HeadersInit {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (auth.basicToken) h.Authorization = `Basic ${auth.basicToken}`
+  return h
+}
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: T }> {
+  const r = await fetch(url, { ...init, headers: { ...authHeaders(), ...(init?.headers as Record<string, string>) } })
+  const data = (await r.json().catch(() => ({}))) as T
+  return { ok: r.ok, status: r.status, data }
+}
+
+const phoenixConfigured = ref(false)
+const phoenixBaseUrl = ref('')
+const datasets = ref<PhoenixDataset[]>([])
+const datasetsLoading = ref(false)
+const datasetsError = ref('')
+
+const models = ref<ChatModelOption[]>([])
+const modelsLoading = ref(false)
+
+const selectedDatasetId = ref('')
+const generatorModel = ref('')
+const evaluatorModel = ref('')
+/** Optional cap; empty string = use full dataset */
+const maxExamplesInput = ref('')
+
+const runBusy = ref(false)
+const runMessage = ref('')
+const runError = ref('')
+const lastRunId = ref<number | null>(null)
+const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
+
+const runs = ref<RunSummary[]>([])
+const runsLoading = ref(false)
+const selectedRunDetail = ref<RunDetail | null>(null)
+const detailLoading = ref(false)
+
+const baselineLabel = computed(() => {
+  const d = datasets.value.find((x) => x.id === selectedDatasetId.value)
+  return d ? `${d.name} (${d.exampleCount})` : '— velg datasett —'
+})
+
+function phoenixDatasetLink(datasetId: string) {
+  const base = (phoenixBaseUrl.value || '').replace(/\/$/, '')
+  if (!base || !datasetId) return ''
+  return `${base}/datasets/${encodeURIComponent(datasetId)}/experiments`
+}
+
+function formatScore(v: number | null | undefined) {
+  if (v == null || Number.isNaN(v)) return '—'
+  return v.toFixed(3)
+}
+
+async function loadConfig() {
+  const { ok, data } = await fetchJson<{ phoenixConfigured: boolean; phoenixBaseUrl: string }>(`${API}/config`)
+  if (ok && data) {
+    phoenixConfigured.value = !!data.phoenixConfigured
+    phoenixBaseUrl.value = data.phoenixBaseUrl || ''
+  }
+}
+
+async function loadDatasets() {
+  datasetsLoading.value = true
+  datasetsError.value = ''
+  try {
+    const { ok, status, data } = await fetchJson<PhoenixDataset[] | { error?: string }>(`${API}/datasets`)
+    if (!ok) {
+      datasetsError.value =
+        typeof (data as { error?: string }).error === 'string'
+          ? (data as { error: string }).error
+          : `Kunne ikke hente datasett (${status})`
+      datasets.value = []
+      return
+    }
+    datasets.value = Array.isArray(data) ? data : []
+  } finally {
+    datasetsLoading.value = false
+  }
+}
+
+async function loadModels() {
+  modelsLoading.value = true
+  try {
+    const { ok, data } = await fetchJson<ChatModelOption[]>(`${API}/models`)
+    if (ok && Array.isArray(data)) {
+      models.value = data
+      if (!generatorModel.value && data.length) generatorModel.value = data[0].id
+      if (!evaluatorModel.value && data.length) {
+        const prefer =
+          data.find((m) => m.id.includes('gpt-5.4') && !m.id.includes('mini')) ||
+          data.find((m) => m.id.includes('gpt') && !m.id.toLowerCase().includes('mini')) ||
+          data[0]
+        evaluatorModel.value = prefer.id
+      }
+    }
+  } finally {
+    modelsLoading.value = false
+  }
+}
+
+async function loadRuns() {
+  runsLoading.value = true
+  try {
+    const { ok, data } = await fetchJson<RunSummary[]>(`${API}/runs`)
+    if (ok && Array.isArray(data)) runs.value = data
+  } finally {
+    runsLoading.value = false
+  }
+}
+
+async function deleteDataset() {
+  if (!selectedDatasetId.value) return
+  if (!confirm('Slette datasettet fra Phoenix? Kan ikke angres.')) return
+  const { ok, status, data } = await fetchJson<{ error?: string }>(`${API}/datasets/${encodeURIComponent(selectedDatasetId.value)}`, {
+    method: 'DELETE',
+  })
+  if (!ok) {
+    runError.value = (data as { error?: string })?.error || `Sletting feilet (${status})`
+    return
+  }
+  selectedDatasetId.value = ''
+  await loadDatasets()
+}
+
+async function startRun() {
+  runError.value = ''
+  runMessage.value = ''
+  if (!selectedDatasetId.value) {
+    runError.value = 'Velg et datasett.'
+    return
+  }
+  if (!generatorModel.value || !evaluatorModel.value) {
+    runError.value = 'Velg generator- og evaluator-modell.'
+    return
+  }
+  const d = datasets.value.find((x) => x.id === selectedDatasetId.value)
+  const body = {
+    datasetId: selectedDatasetId.value,
+    datasetName: d?.name ?? '',
+    generatorModel: generatorModel.value,
+    evaluatorModel: evaluatorModel.value,
+    maxExamples:
+      maxExamplesInput.value.trim() === '' ? null : Number.parseInt(maxExamplesInput.value.trim(), 10) || null,
+  }
+  runBusy.value = true
+  try {
+    const { ok, status, data } = await fetchJson<{ runId?: number; error?: string }>(`${API}/run`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+    if (!ok) {
+      runError.value = (data as { error?: string })?.error || `Start feilet (${status})`
+      return
+    }
+    const id = (data as { runId: number }).runId
+    lastRunId.value = id
+    runMessage.value = `Kjøring startet (run id ${id}). Poller status…`
+    startPoll(id)
+    await loadRuns()
+  } finally {
+    runBusy.value = false
+  }
+}
+
+function startPoll(runId: number) {
+  if (pollTimer.value) clearInterval(pollTimer.value)
+  pollTimer.value = setInterval(async () => {
+    const { ok, data } = await fetchJson<RunSummary>(`${API}/runs/${runId}/status`)
+    if (!ok || !data) return
+    if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+      if (pollTimer.value) clearInterval(pollTimer.value)
+      pollTimer.value = null
+      runMessage.value =
+        data.status === 'COMPLETED' ? 'Ferdig. Se resultater under eller åpne Phoenix.' : `Feilet: ${data.errorMessage || ''}`
+      await loadRuns()
+      await openRunDetail(runId)
+    }
+  }, 2000)
+}
+
+async function openRunDetail(id: number) {
+  detailLoading.value = true
+  selectedRunDetail.value = null
+  try {
+    const { ok, data } = await fetchJson<RunDetail>(`${API}/runs/${id}`)
+    if (ok) selectedRunDetail.value = data as RunDetail
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+onMounted(() => {
+  auth.restore()
+  loadConfig()
+  loadDatasets()
+  loadModels()
+  loadRuns()
+})
+</script>
+
+<template>
+  <div class="min-h-screen bg-[hsl(220_20%_97%)] text-[hsl(220_25%_10%)] font-sans antialiased pb-12">
+    <nav
+      class="border-b border-gray-200/80 bg-white/90 backdrop-blur-sm px-4 py-3 text-sm flex flex-wrap gap-x-4 gap-y-1 items-center max-w-5xl mx-auto"
+    >
+      <RouterLink to="/" class="text-blue-600 hover:underline">Hjem</RouterLink>
+      <span class="text-gray-500">/</span>
+      <RouterLink to="/admin/tools" class="text-blue-600 hover:underline">Internal tools</RouterLink>
+      <span class="text-gray-500">/</span>
+      <strong class="text-gray-900">Experiments</strong>
+    </nav>
+
+    <main class="mx-auto max-w-5xl px-4 pt-8 space-y-8">
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">RAG-experiments (Phoenix + dommer)</h1>
+        <p class="text-sm text-gray-600 leading-relaxed max-w-3xl">
+          Velg et eval-datasett fra Phoenix (Railway eller lokal), kjør AboutMe-RAG per spørsmål med valgt modell, og få
+          LLM-as-judge-scorer (faithfulness, relevance, correctness, conciseness) lagret i MySQL. Spor finner du i
+          Phoenix via lenke under.
+        </p>
+      </div>
+
+      <section
+        class="rounded-xl border border-gray-200 bg-white p-4 shadow-[0_1px_3px_rgb(0_0_0/0.06)]"
+        v-if="!phoenixConfigured && !datasetsLoading"
+      >
+        <p class="text-sm text-amber-800">
+          Phoenix REST er ikke konfigurert. Sett <code class="text-xs bg-gray-100 px-1 rounded">PHOENIX_BASE_URL</code>
+          (f.eks. <code class="text-xs">http://localhost:6006</code> eller Railway-URL) og eventuelt
+          <code class="text-xs">PHOENIX_API_KEY</code> i miljøet for backend.
+        </p>
+      </section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)]">
+        <h2 class="text-lg font-semibold text-gray-900 mb-3">1. Datasett (Phoenix)</h2>
+        <div class="flex flex-wrap gap-2 items-center mb-2">
+          <select
+            v-model="selectedDatasetId"
+            class="border border-gray-300 rounded-md px-2 py-1.5 text-sm min-w-[14rem] bg-white"
+            :disabled="datasetsLoading || !phoenixConfigured"
+          >
+            <option value="">— Velg datasett —</option>
+            <option v-for="d in datasets" :key="d.id" :value="d.id">{{ d.name }} ({{ d.exampleCount }})</option>
+          </select>
+          <button
+            type="button"
+            class="text-sm px-3 py-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+            @click="loadDatasets"
+            :disabled="datasetsLoading || !phoenixConfigured"
+          >
+            Oppdater liste
+          </button>
+          <button
+            type="button"
+            class="text-sm px-3 py-1.5 rounded-md border border-red-200 text-red-800 hover:bg-red-50"
+            @click="deleteDataset"
+            :disabled="!selectedDatasetId || !phoenixConfigured"
+          >
+            Slett valgt
+          </button>
+        </div>
+        <p v-if="datasetsLoading" class="text-sm text-gray-500">Laster datasett…</p>
+        <p v-if="datasetsError" class="text-sm text-red-700">{{ datasetsError }}</p>
+        <p class="text-sm text-gray-600 mt-2">
+          <span class="font-medium">Baseline:</span> {{ baselineLabel }}
+        </p>
+        <p v-if="selectedDatasetId && phoenixBaseUrl" class="text-sm mt-2">
+          <a
+            :href="phoenixDatasetLink(selectedDatasetId)"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-blue-600 hover:underline"
+            >Åpne datasett / experiments i Phoenix</a
+          >
+        </p>
+      </section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)]">
+        <h2 class="text-lg font-semibold text-gray-900 mb-3">2. Kjør experiment</h2>
+        <div class="grid gap-4 sm:grid-cols-2 max-w-xl">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Generator (RAG)</label>
+            <select
+              v-model="generatorModel"
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white"
+              :disabled="modelsLoading"
+            >
+              <option v-for="m in models" :key="'g-' + m.id" :value="m.id">{{ m.label }} ({{ m.id }})</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Evaluator (dommer)</label>
+            <select
+              v-model="evaluatorModel"
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white"
+              :disabled="modelsLoading"
+            >
+              <option v-for="m in models" :key="'e-' + m.id" :value="m.id">{{ m.label }} ({{ m.id }})</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-700 mb-1">Maks antall eksempler (valgfritt)</label>
+            <input
+              v-model="maxExamplesInput"
+              type="number"
+              min="1"
+              placeholder="Alle i datasettet"
+              class="w-full max-w-xs border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          class="mt-4 text-sm font-medium px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          @click="startRun"
+          :disabled="runBusy || !phoenixConfigured"
+        >
+          Start experiment
+        </button>
+        <p v-if="runMessage" class="text-sm text-green-800 mt-3">{{ runMessage }}</p>
+        <p v-if="runError" class="text-sm text-red-700 mt-3">{{ runError }}</p>
+      </section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)]">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-semibold text-gray-900">Tidligere kjøringer</h2>
+          <button
+            type="button"
+            class="text-sm text-blue-600 hover:underline"
+            @click="loadRuns"
+            :disabled="runsLoading"
+          >
+            Oppdater
+          </button>
+        </div>
+        <p v-if="runsLoading" class="text-sm text-gray-500">Laster…</p>
+        <ul v-else class="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden">
+          <li v-for="r in runs" :key="r.id" class="px-3 py-2 hover:bg-gray-50 flex flex-wrap gap-2 justify-between">
+            <button type="button" class="text-left text-sm text-blue-700 hover:underline font-mono" @click="openRunDetail(r.id)">
+              #{{ r.id }} — {{ r.name }} — {{ r.status }}
+            </button>
+            <span class="text-xs text-gray-500"
+              >F: {{ formatScore(r.meanFaithfulness) }} · R: {{ formatScore(r.meanRelevance) }} · C:
+              {{ formatScore(r.meanCorrectness) }} · K: {{ formatScore(r.meanConciseness) }}</span
+            >
+          </li>
+          <li v-if="!runs.length" class="px-3 py-4 text-sm text-gray-500">Ingen kjøringer ennå.</li>
+        </ul>
+      </section>
+
+      <section
+        v-if="selectedRunDetail || detailLoading"
+        class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)]"
+      >
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Resultatdetalj</h2>
+        <p v-if="detailLoading" class="text-sm text-gray-500">Laster…</p>
+        <template v-else-if="selectedRunDetail">
+          <p class="text-sm text-gray-600 mb-2">
+            Status: <strong>{{ selectedRunDetail.status }}</strong> · modeller: {{ selectedRunDetail.generatorModel }} /
+            {{ selectedRunDetail.evaluatorModel }}
+          </p>
+          <p v-if="selectedRunDetail.errorMessage" class="text-sm text-red-700 mb-2">{{ selectedRunDetail.errorMessage }}</p>
+          <p v-if="selectedRunDetail.phoenixDatasetId && selectedRunDetail.phoenixBaseUrl" class="text-sm mb-4">
+            <a
+              :href="phoenixDatasetLink(selectedRunDetail.phoenixDatasetId)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-blue-600 hover:underline"
+              >Phoenix (datasett)</a
+            >
+          </p>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-xs border-collapse">
+              <thead>
+                <tr class="bg-gray-50 text-left">
+                  <th class="p-2 border border-gray-200">#</th>
+                  <th class="p-2 border border-gray-200">Spørsmål</th>
+                  <th class="p-2 border border-gray-200">F</th>
+                  <th class="p-2 border border-gray-200">R</th>
+                  <th class="p-2 border border-gray-200">C</th>
+                  <th class="p-2 border border-gray-200">K</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in selectedRunDetail.results" :key="row.id">
+                  <td class="p-2 border border-gray-100 font-mono">{{ row.id }}</td>
+                  <td class="p-2 border border-gray-100 max-w-xs truncate" :title="row.question">{{ row.question }}</td>
+                  <td class="p-2 border border-gray-100">{{ formatScore(row.faithfulness) }}</td>
+                  <td class="p-2 border border-gray-100">{{ formatScore(row.relevance) }}</td>
+                  <td class="p-2 border border-gray-100">{{ formatScore(row.correctness) }}</td>
+                  <td class="p-2 border border-gray-100">{{ formatScore(row.conciseness) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </section>
+    </main>
+  </div>
+</template>

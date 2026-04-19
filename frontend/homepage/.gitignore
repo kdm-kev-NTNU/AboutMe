@@ -8,19 +8,16 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-.DS_Store
 dist
 dist-ssr
 coverage
+test-results
 *.local
 
 /cypress/videos/
 /cypress/screenshots/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Editor / IDE (shared patterns live in repo root .gitignore)
 *.suo
 *.ntvs*
 *.njsproj
