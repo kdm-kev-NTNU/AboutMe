@@ -71,7 +71,11 @@ public class OpenAIServiceImpl implements OpenAIService {
         .toList();
 
     List<String> contentList = documents.stream().map(Document::getText).toList();
-    String ragPromptTemplate = loadPromptTemplateFromClasspath("templates/rag-prompt-template.st");
+    String templatePath = switch (model.provider()) {
+      case OPENAI -> "templates/rag-prompt-template-openai.st";
+      case ANTHROPIC -> "templates/rag-prompt-template-anthropic.st";
+    };
+    String ragPromptTemplate = loadPromptTemplateFromClasspath(templatePath);
     PromptTemplate promptTemplate = new PromptTemplate(ragPromptTemplate);
     Prompt basePrompt = promptTemplate.create(Map.of(
         "input", question.question(),
