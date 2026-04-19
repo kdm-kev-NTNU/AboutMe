@@ -28,7 +28,10 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -42,6 +45,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Phased document pipeline (read → split → ChromaDB), inspired by
@@ -198,6 +202,49 @@ public class DocumentIngestionService implements ApplicationRunner {
       }
     }
     return results;
+  }
+
+  /**
+   * Lists relative file paths under {@link VectorStoreProperties#getDocumentsToLoadDir()} that have a
+   * supported extension. Only {@code file:} base URLs are supported (typical local {@code ./data/docs/}).
+   */
+  public List<String> listAvailableFiles() throws IOException {
+    String baseDir = vectorStoreProperties.getDocumentsToLoadDir();
+    if (baseDir == null || baseDir.isBlank()) {
+      return List.of();
+    }
+    if (!baseDir.toLowerCase(Locale.ROOT).startsWith("file:")) {
+      log.debug("listAvailableFiles: skipping non-file base: {}", baseDir);
+      return List.of();
+    }
+    PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+    Resource base = resolver.getResource(baseDir);
+    if (!base.exists() || !base.isReadable()) {
+      return List.of();
+    }
+    File root;
+    try {
+      root = base.getFile();
+    } catch (IOException e) {
+      log.warn("listAvailableFiles: cannot resolve directory for {}: {}", baseDir, e.getMessage());
+      return List.of();
+    }
+    if (!root.isDirectory()) {
+      return List.of();
+    }
+    Path rootPath = root.toPath();
+    List<String> out = new ArrayList<>();
+    try (Stream<Path> walk = Files.walk(rootPath)) {
+      walk.filter(Files::isRegularFile).forEach(p -> {
+        String name = p.getFileName().toString();
+        String ext = extensionFromFilename(name);
+        if (!ext.isEmpty() && SUPPORTED_EXTENSIONS.contains(ext)) {
+          out.add(rootPath.relativize(p).toString().replace('\\', '/'));
+        }
+      });
+    }
+    out.sort(String.CASE_INSENSITIVE_ORDER);
+    return out;
   }
 
   /**
