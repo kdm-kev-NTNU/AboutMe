@@ -136,6 +136,15 @@ public class DocumentPipelineController {
     return ResponseEntity.ok(results);
   }
 
+  @Operation(summary = "List files under documentsToLoadDir",
+      description = "Relative paths with supported extensions under sfg.aiapp.documentsToLoadDir (file: URLs only).")
+  @ApiResponse(responseCode = "200",
+      content = @Content(array = @ArraySchema(schema = @Schema(type = "string"))))
+  @GetMapping("/files")
+  public List<String> listSeedFiles() throws IOException {
+    return documentIngestionService.listAvailableFiles();
+  }
+
   @Operation(summary = "List ingested documents")
   @ApiResponse(responseCode = "200",
       content = @Content(array = @ArraySchema(schema = @Schema(implementation = DocumentListEntry.class))))

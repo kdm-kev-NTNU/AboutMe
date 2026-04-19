@@ -15,4 +15,7 @@ Thumbs.db
 backend/vectordatabase/
 
 # Source documents for Chroma ingestion (personal data)
-backend/data/
+backend/data/*
+!backend/data/docs/
+backend/data/docs/*
+!backend/data/docs/.gitkeep
