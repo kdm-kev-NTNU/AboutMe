@@ -66,6 +66,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       PHOENIX_OTLP_ENDPOINT: http://phoenix:4317
       PHOENIX_BASE_URL: http://phoenix:6006
+      SANITIZER_ENABLED: "true"
     ports:
       - "8080:8080"
     volumes:
