@@ -58,6 +58,7 @@ public class OpenAIServiceImpl implements OpenAIService {
       throw new IllegalStateException("Anthropic chat is not available (missing API key or autoconfiguration).");
     }
 
+    // Cross-language retrieval: run similarity search once per expanded query, then dedupe and cap.
     List<String> queries = expandQueryToLanguages(question.question(), model);
     List<Document> documents = queries.stream()
         .flatMap(q -> vectorStore.similaritySearch(
@@ -70,6 +71,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         .limit(40)
         .toList();
 
+    // Build RAG prompt from DB-managed template (per provider) plus flattened chunk text.
     List<String> contentList = documents.stream().map(Document::getText).toList();
     String providerName = switch (model.provider()) {
       case OPENAI -> "openai";
@@ -82,6 +84,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         "documents", String.join("\n", contentList)
     ));
 
+    // Provider-specific chat options (model id, max tokens) are applied inside invokeChat.
     ChatResponse response = invokeChat(model, basePrompt);
     return new Answer(response.getResult().getOutput().getText());
   }
@@ -117,6 +120,10 @@ public class OpenAIServiceImpl implements OpenAIService {
     };
   }
 
+  /**
+   * Optional LLM step: asks the same model to emit EN/NO phrasing so vector search hits both languages.
+   * On any failure, returns a singleton list containing only the original query (graceful degradation).
+   */
   private List<String> expandQueryToLanguages(String original, SupportedChatModel model) {
     try {
       String sys = """
