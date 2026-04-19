@@ -1,6 +1,8 @@
 package com.kevinmazali.portfolio.service;
 
+import com.kevinmazali.portfolio.config.PortfolioChromaProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
+import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
 import com.kevinmazali.portfolio.model.ChromaCollectionSummary;
 import com.kevinmazali.portfolio.model.ChunkItem;
 import com.kevinmazali.portfolio.model.ChunkListResponse;
@@ -16,6 +18,7 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.ai.vectorstore.chroma.autoconfigure.ChromaVectorStoreProperties;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Lazy;
@@ -63,23 +66,44 @@ public class DocumentIngestionService implements ApplicationRunner {
       "pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
 
   private final VectorStore vectorStore;
-  private final ChromaApi chromaApi;
+  private final ObjectProvider<ChromaApi> chromaApiProvider;
   private final ChromaVectorStoreProperties chromaStoreProperties;
   private final VectorStoreProperties vectorStoreProperties;
+  private final PortfolioChromaProperties portfolioChromaProperties;
 
   public DocumentIngestionService(
       @Lazy VectorStore vectorStore,
-      ChromaApi chromaApi,
+      ObjectProvider<ChromaApi> chromaApiProvider,
       ChromaVectorStoreProperties chromaStoreProperties,
-      VectorStoreProperties vectorStoreProperties) {
+      VectorStoreProperties vectorStoreProperties,
+      PortfolioChromaProperties portfolioChromaProperties) {
     this.vectorStore = vectorStore;
-    this.chromaApi = chromaApi;
+    this.chromaApiProvider = chromaApiProvider;
     this.chromaStoreProperties = chromaStoreProperties;
     this.vectorStoreProperties = vectorStoreProperties;
+    this.portfolioChromaProperties = portfolioChromaProperties;
+  }
+
+  private ChromaApi chromaApi() {
+    if (!portfolioChromaProperties.isEnabled()) {
+      throw new ChromaFeatureDisabledException(
+          "Chroma vector features are disabled (portfolio.chroma.enabled=false / CHROMA_ENABLED=false). "
+              + "Deploy Chroma in the same Railway project and set CHROMA_HTTP_HOST, or keep Chroma disabled to run chat without document indexing.");
+    }
+    ChromaApi api = chromaApiProvider.getIfAvailable();
+    if (api == null) {
+      throw new IllegalStateException(
+          "ChromaApi bean is missing while portfolio.chroma.enabled=true; check Chroma autoconfiguration.");
+    }
+    return api;
   }
 
   @Override
   public void run(ApplicationArguments args) {
+    if (!portfolioChromaProperties.isEnabled()) {
+      log.info("Chroma is disabled (portfolio.chroma.enabled=false); skipping classpath vector seed.");
+      return;
+    }
     try {
       seedFromClasspathIfCollectionEmpty();
     } catch (Exception e) {
@@ -93,7 +117,7 @@ public class DocumentIngestionService implements ApplicationRunner {
    */
   public void seedFromClasspathIfCollectionEmpty() throws IOException {
     String collectionId = requireCollectionId();
-    Long count = chromaApi.countEmbeddings(
+    Long count = chromaApi().countEmbeddings(
         chromaStoreProperties.getTenantName(),
         chromaStoreProperties.getDatabaseName(),
         collectionId);
@@ -382,7 +406,7 @@ public class DocumentIngestionService implements ApplicationRunner {
     int offset = 0;
     final int page = 500;
     while (true) {
-      ChromaApi.GetEmbeddingResponse pageResp = chromaApi.getEmbeddings(
+      ChromaApi.GetEmbeddingResponse pageResp = chromaApi().getEmbeddings(
           chromaStoreProperties.getTenantName(),
           chromaStoreProperties.getDatabaseName(),
           collectionId,
@@ -450,7 +474,7 @@ public class DocumentIngestionService implements ApplicationRunner {
     int lim = Math.min(Math.max(limit, 1), CHUNK_LIST_MAX_LIMIT);
     int off = Math.max(offset, 0);
 
-    Long totalEmbeddings = chromaApi.countEmbeddings(tenant, database, collectionId);
+    Long totalEmbeddings = chromaApi().countEmbeddings(tenant, database, collectionId);
     long total = totalEmbeddings == null ? 0L : totalEmbeddings;
 
     String trimmedDocId = documentId == null ? "" : documentId.trim();
@@ -473,7 +497,7 @@ public class DocumentIngestionService implements ApplicationRunner {
       return new ChunkListResponse(collectionName, total, totalMatching, lim, off, page);
     }
 
-    ChromaApi.GetEmbeddingResponse resp = chromaApi.getEmbeddings(
+    ChromaApi.GetEmbeddingResponse resp = chromaApi().getEmbeddings(
         tenant,
         database,
         collectionId,
@@ -491,7 +515,7 @@ public class DocumentIngestionService implements ApplicationRunner {
     List<ChunkItem> all = new ArrayList<>();
     int chromaOffset = 0;
     while (true) {
-      ChromaApi.GetEmbeddingResponse resp = chromaApi.getEmbeddings(
+      ChromaApi.GetEmbeddingResponse resp = chromaApi().getEmbeddings(
           tenant,
           database,
           collectionId,
@@ -573,7 +597,7 @@ public class DocumentIngestionService implements ApplicationRunner {
   public ChromaCollectionsResponse describeCollections() {
     String tenant = chromaStoreProperties.getTenantName();
     String database = chromaStoreProperties.getDatabaseName();
-    List<?> raw = chromaApi.listCollections(tenant, database);
+    List<?> raw = chromaApi().listCollections(tenant, database);
     List<ChromaCollectionSummary> summaries = new ArrayList<>();
     if (raw != null) {
       for (Object o : raw) {
@@ -583,7 +607,7 @@ public class DocumentIngestionService implements ApplicationRunner {
       }
     }
     String collectionId = requireCollectionId();
-    Long count = chromaApi.countEmbeddings(tenant, database, collectionId);
+    Long count = chromaApi().countEmbeddings(tenant, database, collectionId);
     return new ChromaCollectionsResponse(
         chromaStoreProperties.getCollectionName(),
         count == null ? 0L : count,
@@ -593,7 +617,7 @@ public class DocumentIngestionService implements ApplicationRunner {
   private boolean documentChunksExist(String documentId) {
     String collectionId = requireCollectionId();
     Map<String, Object> where = Map.of("document_id", documentId);
-    ChromaApi.GetEmbeddingResponse resp = chromaApi.getEmbeddings(
+    ChromaApi.GetEmbeddingResponse resp = chromaApi().getEmbeddings(
         chromaStoreProperties.getTenantName(),
         chromaStoreProperties.getDatabaseName(),
         collectionId,
@@ -602,7 +626,7 @@ public class DocumentIngestionService implements ApplicationRunner {
   }
 
   private String requireCollectionId() {
-    ChromaApi.Collection col = chromaApi.getCollection(
+    ChromaApi.Collection col = chromaApi().getCollection(
         chromaStoreProperties.getTenantName(),
         chromaStoreProperties.getDatabaseName(),
         chromaStoreProperties.getCollectionName());

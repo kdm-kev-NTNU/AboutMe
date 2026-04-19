@@ -16,7 +16,7 @@ import org.springframework.ai.vectorstore.chroma.autoconfigure.ChromaVectorStore
 import org.springframework.ai.vectorstore.observation.VectorStoreObservationConvention;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -29,7 +29,7 @@ import org.springframework.web.client.RestClient;
  * avoids crash loops when ChromaDB is temporarily unreachable (e.g. Railway startup ordering).
  */
 @Configuration
-@EnableConfigurationProperties({ ChromaApiProperties.class, ChromaVectorStoreProperties.class })
+@ConditionalOnProperty(name = "portfolio.chroma.enabled", havingValue = "true", matchIfMissing = true)
 public class ChromaConfig {
 
   /** Host/port/token wiring from {@code spring.ai.vectorstore.chroma.*} when no custom connection bean exists. */
