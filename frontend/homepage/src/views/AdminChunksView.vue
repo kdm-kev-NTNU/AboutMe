@@ -11,6 +11,7 @@ import {
   type DocumentListEntry,
 } from '@/api/generated/portfolio'
 
+// Chunk browser: paginated embeddings with optional documentId (content hash) filter.
 const auth = useAuthStore()
 const error = ref('')
 const documents = ref<DocumentListEntry[]>([])

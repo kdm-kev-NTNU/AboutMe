@@ -16,6 +16,7 @@ import {
   type IngestionResult,
 } from '@/api/generated/portfolio'
 
+// Document ingestion: uploads, path ingest, reseed, delete; Orval + customFetch attach HTTP Basic when logged in.
 const auth = useAuthStore()
 const title = ref('')
 const force = ref(false)

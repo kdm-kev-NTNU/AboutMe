@@ -15,6 +15,7 @@ import {
   type PromptDiffResponse,
 } from '@/api/generated/portfolio'
 
+// Versioned RAG prompts: list, history, create, activate, diff vs classpath, seed, delete variant.
 const auth = useAuthStore()
 const error = ref('')
 const busy = ref(false)
