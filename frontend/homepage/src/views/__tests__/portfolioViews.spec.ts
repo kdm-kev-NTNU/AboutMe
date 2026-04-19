@@ -1,0 +1,47 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import AboutView from '../AboutView.vue'
+import TechStackView from '../TechStackView.vue'
+import PrivacyPolicyView from '../PrivacyPolicyView.vue'
+import ProjectsView from '../ProjectsView.vue'
+
+describe('portfolio views (smoke)', () => {
+	beforeEach(() => {
+		setActivePinia(createPinia())
+	})
+
+	function mountView(component: Parameters<typeof mount>[0]) {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		return mount(component, {
+			global: { plugins: [pinia] },
+		})
+	}
+
+	it('renders AboutView', () => {
+		const wrapper = mountView(AboutView)
+		expect(wrapper.text()).toContain('about page')
+	})
+
+	it('renders TechStackView in English by default', async () => {
+		const wrapper = mountView(TechStackView)
+		await flushPromises()
+		expect(wrapper.text()).toContain('Tech stack')
+		expect(wrapper.text()).toMatch(/Spring AI|Backend/i)
+	})
+
+	it('renders PrivacyPolicyView in English by default', async () => {
+		const wrapper = mountView(PrivacyPolicyView)
+		await flushPromises()
+		expect(wrapper.text()).toContain('Privacy Policy')
+		expect(wrapper.text()).toMatch(/cookies|Chat/i)
+	})
+
+	it('renders ProjectsView with project grid', async () => {
+		const wrapper = mountView(ProjectsView)
+		await flushPromises()
+		expect(wrapper.text()).toContain('Projects')
+		expect(wrapper.find('h1').exists()).toBe(true)
+	})
+})

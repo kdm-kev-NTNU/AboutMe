@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { Brain, UserRound, MessageSquare } from 'lucide-vue-next'
-import VueMarkdown from 'vue-markdown-render'
 import TypewriterAnimation from '@/components/TypewriterAnimation.vue'
+import SafeMarkdown from '@/components/SafeMarkdown.vue'
 
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
@@ -79,7 +79,7 @@ watch(() => props.messages, () => {
                      : 'bg-white/95 border-2 border-blue-100/20 hover:border-blue-200/30 hover:bg-white hover:shadow-lg hover:shadow-blue-500/10'">
                 <p v-if="m.role === 'user'" class="text-sm leading-relaxed whitespace-pre-wrap text-white">{{ m.text }}</p>
                 <TypewriterAnimation v-else-if="m.isNew && !isReadOnly" :text="m.text" :text-class="'text-gray-700'" :speed="25" @finished="m.isNew = false" @scroll="scrollToBottom"/>
-                <vue-markdown v-else class="text-sm leading-relaxed whitespace-pre-wrap text-gray-700" :source="m.text"/>
+                <SafeMarkdown v-else :source="m.text" />
               </div>
             </div>
           </div>
