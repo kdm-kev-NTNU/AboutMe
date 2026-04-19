@@ -32,12 +32,14 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties({ ChromaApiProperties.class, ChromaVectorStoreProperties.class })
 public class ChromaConfig {
 
+  /** Host/port/token wiring from {@code spring.ai.vectorstore.chroma.*} when no custom connection bean exists. */
   @Bean
   @ConditionalOnMissingBean(ChromaConnectionDetails.class)
   PropertiesChromaConnectionDetails chromaConnectionDetails(ChromaApiProperties properties) {
     return new PropertiesChromaConnectionDetails(properties);
   }
 
+  /** Low-level REST client to Chroma; supports API key or basic auth from properties. */
   @Bean
   @ConditionalOnMissingBean
   public ChromaApi chromaApi(ChromaApiProperties apiProperties,
@@ -63,6 +65,7 @@ public class ChromaConfig {
     return chromaApi;
   }
 
+  /** Caps embedding batch size by token count before writes to Chroma. */
   @Bean
   @ConditionalOnMissingBean(BatchingStrategy.class)
   BatchingStrategy chromaBatchingStrategy() {
