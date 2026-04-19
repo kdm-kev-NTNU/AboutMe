@@ -1,17 +1,18 @@
 import { fileURLToPath } from 'node:url'
+import type { UserConfig } from 'vite'
 import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
 import viteConfig from './vite.config'
 
 const ciTestOptions =
   process.env.CI === 'true'
     ? {
-        reporters: ['default', 'junit'] as const,
+        reporters: ['default', 'junit'],
         outputFile: { junit: 'test-results/vitest-junit.xml' },
       }
     : {}
 
 export default mergeConfig(
-  viteConfig,
+  viteConfig as UserConfig,
   defineConfig({
     test: {
       environment: 'jsdom',
