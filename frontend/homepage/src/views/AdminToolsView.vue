@@ -5,6 +5,7 @@ import {
   adminDocumentsChunks,
   adminDocumentsCollections,
   adminDocumentsDelete,
+  adminDocumentsFiles,
   adminDocumentsIngestByPath,
   adminDocumentsList,
   adminDocumentsReseed,
@@ -28,7 +29,11 @@ const chromaInfo = ref<ChromaCollectionsResponse | null>(null)
 const uploadProgress = ref('')
 const batchResults = ref<IngestionResult[]>([])
 
-const pathIngestText = ref('')
+const serverFileList = ref<string[]>([])
+const serverFilesLoading = ref(false)
+const serverFilesLoadError = ref('')
+const selectedForIngest = ref<Set<string>>(new Set())
+
 const pathIngestForce = ref(false)
 const pathIngestBusy = ref(false)
 const pathIngestError = ref('')
@@ -152,13 +157,50 @@ async function upload() {
   }
 }
 
+async function loadServerFiles() {
+  serverFilesLoading.value = true
+  serverFilesLoadError.value = ''
+  try {
+    const r = await adminDocumentsFiles()
+    if (r.status !== 200) {
+      throw new Error(formatHttpError(r.status, r.data))
+    }
+    const list = Array.isArray(r.data) ? r.data : []
+    serverFileList.value = list
+    selectedForIngest.value = new Set()
+  } catch (e: unknown) {
+    serverFilesLoadError.value = e instanceof Error ? e.message : 'Ukjent feil'
+    serverFileList.value = []
+  } finally {
+    serverFilesLoading.value = false
+  }
+}
+
+function toggleServerFile(path: string, checked: boolean) {
+  const next = new Set(selectedForIngest.value)
+  if (checked) next.add(path)
+  else next.delete(path)
+  selectedForIngest.value = next
+}
+
+function onServerFileCheckboxChange(path: string, ev: Event) {
+  const t = ev.target as HTMLInputElement | null
+  if (t) toggleServerFile(path, t.checked)
+}
+
+function selectAllServerFiles() {
+  selectedForIngest.value = new Set(serverFileList.value)
+}
+
+function clearServerSelection() {
+  selectedForIngest.value = new Set()
+}
+
 async function runPathIngest() {
-  const lines = pathIngestText.value
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-  if (lines.length === 0) {
-    pathIngestError.value = 'Skriv minst én sti (én per linje), relativ til documentsToLoadDir (f.eks. data/docs/).'
+  const paths = Array.from(selectedForIngest.value)
+  if (paths.length === 0) {
+    pathIngestError.value =
+      'Velg minst én fil i listen, eller klikk «Oppdater filliste» hvis listen er tom.'
     return
   }
   pathIngestBusy.value = true
@@ -166,7 +208,7 @@ async function runPathIngest() {
   pathIngestResults.value = []
   try {
     const r = await adminDocumentsIngestByPath({
-      paths: lines,
+      paths,
       force: pathIngestForce.value,
     })
     const pathRes = r as { status: number; data: unknown }
@@ -178,6 +220,7 @@ async function runPathIngest() {
       pathIngestError.value = pathIngestResults.value[0]?.message ?? 'Ugyldig forespørsel'
     }
     await loadData()
+    await loadServerFiles()
   } catch (e: unknown) {
     pathIngestError.value = e instanceof Error ? e.message : 'Ukjent feil'
   } finally {
@@ -266,7 +309,8 @@ function resultRowClass(row: IngestionResult): string {
 
 onMounted(() => {
   auth.restore()
-  loadData()
+  void loadData()
+  void loadServerFiles()
 })
 </script>
 
@@ -381,29 +425,76 @@ onMounted(() => {
     </section>
 
     <section class="mb-10 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 class="text-lg font-semibold mb-2">Ingest etter sti på server</h2>
+      <h2 class="text-lg font-semibold mb-2">Batch-ingest fra data-mappe</h2>
       <p class="text-sm text-gray-600 mb-4">
-        Én relativ sti per linje under konfigurert <code class="text-xs bg-gray-100 px-1 rounded">sfg.aiapp.documentsToLoadDir</code>
-        (typisk <code class="text-xs bg-gray-100 px-1 rounded">file:./data/docs/</code>). Eksempel: <code class="text-xs">rapport.pdf</code> eller
-        <code class="text-xs">undermappe/doc.pdf</code>
+        Filer under konfigurert <code class="text-xs bg-gray-100 px-1 rounded">sfg.aiapp.documentsToLoadDir</code>
+        (typisk <code class="text-xs bg-gray-100 px-1 rounded">file:./data/docs/</code> →
+        <code class="text-xs bg-gray-100 px-1 rounded">backend/data/docs/</code> ved kjøring fra
+        <code class="text-xs">backend/</code>). Legg dokumenter i mappen, klikk «Oppdater filliste», velg filer og kjør batch-ingest.
       </p>
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button
+          type="button"
+          class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 cursor-pointer disabled:opacity-50"
+          :disabled="serverFilesLoading"
+          @click="loadServerFiles"
+        >
+          {{ serverFilesLoading ? 'Laster liste…' : 'Oppdater filliste' }}
+        </button>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 cursor-pointer disabled:opacity-50"
+          :disabled="serverFileList.length === 0"
+          @click="selectAllServerFiles"
+        >
+          Velg alle
+        </button>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 cursor-pointer disabled:opacity-50"
+          :disabled="selectedForIngest.size === 0"
+          @click="clearServerSelection"
+        >
+          Fjern alle valg
+        </button>
+      </div>
+      <p v-if="serverFilesLoadError" class="text-sm text-red-600 mb-3">{{ serverFilesLoadError }}</p>
+      <div
+        v-else-if="!serverFilesLoading && serverFileList.length === 0"
+        class="text-sm text-gray-500 mb-4 border border-dashed border-gray-200 rounded-md p-4 bg-gray-50/50"
+      >
+        Ingen filer funnet i data/docs/. Legg filer i <code class="text-xs">backend/data/docs/</code> og klikk Oppdater.
+      </div>
+      <ul
+        v-else-if="serverFileList.length > 0"
+        class="max-h-56 overflow-y-auto border border-gray-100 rounded-md divide-y divide-gray-100 mb-4"
+      >
+        <li
+          v-for="f in serverFileList"
+          :key="f"
+          class="flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-50/80"
+        >
+          <input
+            :id="'srv-file-' + f"
+            type="checkbox"
+            class="rounded border-gray-300"
+            :checked="selectedForIngest.has(f)"
+            @change="onServerFileCheckboxChange(f, $event)"
+          />
+          <label :for="'srv-file-' + f" class="cursor-pointer font-mono text-gray-800 flex-1 truncate">{{ f }}</label>
+        </li>
+      </ul>
       <label class="flex items-center gap-2 text-sm text-gray-700 mb-3">
         <input v-model="pathIngestForce" type="checkbox" />
-        Tving re-indeks for disse stiene
+        Tving re-indeks for valgte filer
       </label>
-      <textarea
-        v-model="pathIngestText"
-        rows="6"
-        class="w-full border rounded px-3 py-2 text-sm font-mono"
-        placeholder="fil1.pdf&#10;mapper/fil2.pdf"
-      />
       <button
         type="button"
-        class="mt-3 px-4 py-2 rounded-md text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-sm cursor-pointer"
-        :disabled="pathIngestBusy"
+        class="mt-1 px-4 py-2 rounded-md text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-sm cursor-pointer"
+        :disabled="pathIngestBusy || selectedForIngest.size === 0"
         @click="runPathIngest"
       >
-        {{ pathIngestBusy ? 'Jobber…' : 'Kjør batch-ingest fra stier' }}
+        {{ pathIngestBusy ? 'Jobber…' : 'Kjør batch-ingest (valgte filer)' }}
       </button>
       <p v-if="pathIngestError" class="mt-2 text-sm text-red-600">{{ pathIngestError }}</p>
       <div v-if="pathIngestResults.length > 0" class="mt-4 overflow-x-auto">

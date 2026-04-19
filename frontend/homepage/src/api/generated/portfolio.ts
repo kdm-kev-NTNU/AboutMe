@@ -446,6 +446,42 @@ export const adminDocumentsIngestByPath = async (pathIngestRequest: PathIngestRe
 
 
 /**
+ * Relative paths with supported extensions under sfg.aiapp.documentsToLoadDir (file: URLs only).
+ * @summary List files under documentsToLoadDir
+ */
+export type adminDocumentsFilesResponse200 = {
+  data: string[]
+  status: 200
+}
+    
+export type adminDocumentsFilesResponseComposite = adminDocumentsFilesResponse200;
+    
+export type adminDocumentsFilesResponse = adminDocumentsFilesResponseComposite & {
+  headers: Headers;
+}
+
+export const getAdminDocumentsFilesUrl = () => {
+
+
+  
+
+  return `/admin/tools/documents/files`
+}
+
+export const adminDocumentsFiles = async ( options?: RequestInit): Promise<adminDocumentsFilesResponse> => {
+  
+  return customFetch<adminDocumentsFilesResponse>(getAdminDocumentsFilesUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
  * @summary List documents
  */
 export type adminDocumentsListResponse200 = {
