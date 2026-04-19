@@ -125,6 +125,94 @@ export interface PathIngestRequest {
   force?: boolean;
 }
 
+export interface PromptNameEntry {
+  name?: string;
+  /** @nullable */
+  language?: string | null;
+  /** @nullable */
+  provider?: string | null;
+  activeVersion?: number;
+  activeId?: number;
+  /** @nullable */
+  createdAt?: string | null;
+}
+
+export interface PromptVersionResponse {
+  id?: number;
+  name?: string;
+  version?: number;
+  /** @nullable */
+  language?: string | null;
+  /** @nullable */
+  provider?: string | null;
+  content?: string;
+  contentHash?: string;
+  isActive?: boolean;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  createdAt?: string | null;
+}
+
+export interface CreateVersionRequest {
+  /** @maxLength 128 */
+  name: string;
+  content: string;
+  /**
+   * @maxLength 8
+   * @nullable
+   */
+  language?: string | null;
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  provider?: string | null;
+  /** @nullable */
+  description?: string | null;
+}
+
+export interface ActivateRequest {
+  /** @minimum 1 */
+  id: number;
+}
+
+export interface DeleteVariantRequest {
+  /** @maxLength 128 */
+  name: string;
+  /**
+   * @maxLength 8
+   * @nullable
+   */
+  language?: string | null;
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  provider?: string | null;
+}
+
+export interface PromptDiffResponse {
+  name?: string;
+  /** @nullable */
+  language?: string | null;
+  /** @nullable */
+  provider?: string | null;
+  hasDbActive?: boolean;
+  hasCodeFallback?: boolean;
+  isEqual?: boolean;
+  /** @nullable */
+  dbContent?: string | null;
+  /** @nullable */
+  fallbackContent?: string | null;
+}
+
+export interface SeedResult {
+  created?: number;
+  skipped?: number;
+  total_fallbacks?: number;
+}
+
 export type AdminDocumentsUploadBody = {
   file: Blob;
   title?: string;
@@ -140,6 +228,23 @@ export type AdminDocumentsChunksParams = {
 documentId?: string;
 limit?: number;
 offset?: number;
+};
+
+export type PromptVersionsHistoryParams = {
+name: string;
+language?: string;
+provider?: string;
+};
+
+export type PromptVersionsDeleteVariant200 = {
+  success?: boolean;
+  deleted?: number;
+};
+
+export type PromptVersionsDiffParams = {
+name: string;
+language?: string;
+provider?: string;
 };
 
 /**
@@ -661,6 +766,278 @@ export const adminDocumentsDelete = async (documentId: string, options?: Request
   {      
     ...options,
     method: 'DELETE'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List active prompt variants
+ */
+export type promptVersionsNamesResponse200 = {
+  data: PromptNameEntry[]
+  status: 200
+}
+    
+export type promptVersionsNamesResponseComposite = promptVersionsNamesResponse200;
+    
+export type promptVersionsNamesResponse = promptVersionsNamesResponseComposite & {
+  headers: Headers;
+}
+
+export const getPromptVersionsNamesUrl = () => {
+
+
+  
+
+  return `/admin/tools/prompt-versions/names`
+}
+
+export const promptVersionsNames = async ( options?: RequestInit): Promise<promptVersionsNamesResponse> => {
+  
+  return customFetch<promptVersionsNamesResponse>(getPromptVersionsNamesUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Version history for a prompt variant
+ */
+export type promptVersionsHistoryResponse200 = {
+  data: PromptVersionResponse[]
+  status: 200
+}
+    
+export type promptVersionsHistoryResponseComposite = promptVersionsHistoryResponse200;
+    
+export type promptVersionsHistoryResponse = promptVersionsHistoryResponseComposite & {
+  headers: Headers;
+}
+
+export const getPromptVersionsHistoryUrl = (params: PromptVersionsHistoryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/admin/tools/prompt-versions/history?${stringifiedParams}` : `/admin/tools/prompt-versions/history`
+}
+
+export const promptVersionsHistory = async (params: PromptVersionsHistoryParams, options?: RequestInit): Promise<promptVersionsHistoryResponse> => {
+  
+  return customFetch<promptVersionsHistoryResponse>(getPromptVersionsHistoryUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create a new prompt version
+ */
+export type promptVersionsCreateResponse200 = {
+  data: PromptVersionResponse
+  status: 200
+}
+
+export type promptVersionsCreateResponse400 = {
+  data: ApiError
+  status: 400
+}
+    
+export type promptVersionsCreateResponseComposite = promptVersionsCreateResponse200 | promptVersionsCreateResponse400;
+    
+export type promptVersionsCreateResponse = promptVersionsCreateResponseComposite & {
+  headers: Headers;
+}
+
+export const getPromptVersionsCreateUrl = () => {
+
+
+  
+
+  return `/admin/tools/prompt-versions/create`
+}
+
+export const promptVersionsCreate = async (createVersionRequest: CreateVersionRequest, options?: RequestInit): Promise<promptVersionsCreateResponse> => {
+  
+  return customFetch<promptVersionsCreateResponse>(getPromptVersionsCreateUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createVersionRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Activate a prompt version by id
+ */
+export type promptVersionsActivateResponse200 = {
+  data: PromptVersionResponse
+  status: 200
+}
+
+export type promptVersionsActivateResponse400 = {
+  data: ApiError
+  status: 400
+}
+    
+export type promptVersionsActivateResponseComposite = promptVersionsActivateResponse200 | promptVersionsActivateResponse400;
+    
+export type promptVersionsActivateResponse = promptVersionsActivateResponseComposite & {
+  headers: Headers;
+}
+
+export const getPromptVersionsActivateUrl = () => {
+
+
+  
+
+  return `/admin/tools/prompt-versions/activate`
+}
+
+export const promptVersionsActivate = async (activateRequest: ActivateRequest, options?: RequestInit): Promise<promptVersionsActivateResponse> => {
+  
+  return customFetch<promptVersionsActivateResponse>(getPromptVersionsActivateUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      activateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Seed prompt versions from classpath templates
+ */
+export type promptVersionsSeedResponse200 = {
+  data: SeedResult
+  status: 200
+}
+    
+export type promptVersionsSeedResponseComposite = promptVersionsSeedResponse200;
+    
+export type promptVersionsSeedResponse = promptVersionsSeedResponseComposite & {
+  headers: Headers;
+}
+
+export const getPromptVersionsSeedUrl = () => {
+
+
+  
+
+  return `/admin/tools/prompt-versions/seed`
+}
+
+export const promptVersionsSeed = async ( options?: RequestInit): Promise<promptVersionsSeedResponse> => {
+  
+  return customFetch<promptVersionsSeedResponse>(getPromptVersionsSeedUrl(),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Delete all versions of a prompt variant
+ */
+export type promptVersionsDeleteVariantResponse200 = {
+  data: PromptVersionsDeleteVariant200
+  status: 200
+}
+    
+export type promptVersionsDeleteVariantResponseComposite = promptVersionsDeleteVariantResponse200;
+    
+export type promptVersionsDeleteVariantResponse = promptVersionsDeleteVariantResponseComposite & {
+  headers: Headers;
+}
+
+export const getPromptVersionsDeleteVariantUrl = () => {
+
+
+  
+
+  return `/admin/tools/prompt-versions/variant`
+}
+
+export const promptVersionsDeleteVariant = async (deleteVariantRequest: DeleteVariantRequest, options?: RequestInit): Promise<promptVersionsDeleteVariantResponse> => {
+  
+  return customFetch<promptVersionsDeleteVariantResponse>(getPromptVersionsDeleteVariantUrl(),
+  {      
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deleteVariantRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Diff active DB version vs classpath fallback
+ */
+export type promptVersionsDiffResponse200 = {
+  data: PromptDiffResponse
+  status: 200
+}
+    
+export type promptVersionsDiffResponseComposite = promptVersionsDiffResponse200;
+    
+export type promptVersionsDiffResponse = promptVersionsDiffResponseComposite & {
+  headers: Headers;
+}
+
+export const getPromptVersionsDiffUrl = (params: PromptVersionsDiffParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/admin/tools/prompt-versions/diff?${stringifiedParams}` : `/admin/tools/prompt-versions/diff`
+}
+
+export const promptVersionsDiff = async (params: PromptVersionsDiffParams, options?: RequestInit): Promise<promptVersionsDiffResponse> => {
+  
+  return customFetch<promptVersionsDiffResponse>(getPromptVersionsDiffUrl(params),
+  {      
+    ...options,
+    method: 'GET'
     
     
   }

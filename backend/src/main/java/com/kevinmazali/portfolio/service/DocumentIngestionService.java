@@ -173,6 +173,7 @@ public class DocumentIngestionService implements ApplicationRunner {
     }
     PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
     for (String raw : relativePaths) {
+      // Each path is validated, resolved under documentsToLoadDir, then ingested like an upload.
       String sanitized = sanitizeRelativePath(raw);
       if (sanitized == null) {
         results.add(new IngestionResult("", raw == null ? "" : raw.trim(), 0, false,
@@ -323,6 +324,7 @@ public class DocumentIngestionService implements ApplicationRunner {
       throws IOException {
     requireCollectionId();
 
+    // Idempotency: same bytes (hash) map to one logical document_id unless force replace is requested.
     if (!force && documentChunksExist(contentHash)) {
       return new IngestionResult(contentHash, displayFilename, 0, true,
           "Same content already indexed (document_id = content hash). Use force to replace.");
@@ -331,6 +333,7 @@ public class DocumentIngestionService implements ApplicationRunner {
       deleteByDocumentId(contentHash);
     }
 
+    // Extract text (PDF, Office, images with OCR where Tika supports it), then split for embedding.
     TikaDocumentReader reader = new TikaDocumentReader(resource);
     List<Document> docs = reader.get();
     if (docs == null || docs.isEmpty()) {
@@ -344,6 +347,7 @@ public class DocumentIngestionService implements ApplicationRunner {
       return new IngestionResult(contentHash, displayFilename, 0, false, "No chunks after splitting");
     }
 
+    // Stable chunk ids and metadata enable list/delete/replace in Chroma and the admin UI.
     String ingestedAt = Instant.now().toString();
     List<Document> toAdd = new ArrayList<>();
     for (int i = 0; i < splitDocs.size(); i++) {
@@ -366,6 +370,7 @@ public class DocumentIngestionService implements ApplicationRunner {
           .build());
     }
 
+    // Spring AI vector store writes embeddings to the configured Chroma collection in batches.
     vectorStore.add(toAdd);
     log.info("Ingested {} chunks for document_id={} ({})", toAdd.size(), contentHash, displayFilename);
     return new IngestionResult(contentHash, displayFilename, toAdd.size(), false, "OK");

@@ -3,33 +3,31 @@ package com.kevinmazali.portfolio.config;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.Filter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpServletRequestWrapper;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.lang.NonNull;
-import java.util.Collections;
 
 /**
- * Web configuration including CORS and a lightweight rate limiter for the /ask endpoint.
+ * Registers a servlet filter that rate-limits {@code POST /ask} (token bucket per user or IP).
+ * CORS is configured in {@link SecurityConfig}.
  */
 @Configuration
 public class WebConfig {
 
-    // CORS and headers are handled by Spring Security
+    // CORS and security headers: see SecurityConfig (this class only registers the /ask rate limit filter).
 
-
+    /** One token bucket per client key (authenticated username, else client IP). */
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
     private Bucket newBucket() {
@@ -40,18 +38,18 @@ public class WebConfig {
         return Bucket.builder().addLimit(limit).build();
     }
 
+    /** Rate-limit bucket key: prefer principal name when present so logged-in users are not pooled with anonymous IPs. */
     private String key(HttpServletRequest req) {
         String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : null;
         String ip = req.getRemoteAddr();
         return "ask:" + (user != null ? "u:" + user : "ip:" + ip);
     }
 
-    // Security headers are handled by Spring Security
-
     /**
      * Rate limiter for /ask endpoint (5 requests per 10 seconds).
      */
     @Bean
+    @ConditionalOnProperty(name = "portfolio.ask-rate-limit.enabled", havingValue = "true", matchIfMissing = true)
     public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> askRateLimitFilter() {
         var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<Filter>();
         registration.setFilter(new OncePerRequestFilter() {

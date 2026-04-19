@@ -9,6 +9,10 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.PropertySource;
 
+/**
+ * Startup diagnostics: logs non-secret config hints (ports, datasource URL, presence of {@code .env})
+ * to speed up environment troubleshooting in dev and deployed environments.
+ */
 @Configuration
 public class ConfigLogging implements ApplicationRunner {
 
@@ -20,6 +24,7 @@ public class ConfigLogging implements ApplicationRunner {
         this.environment = environment;
     }
 
+    /** Emits one-time INFO lines after the application context is ready. */
     @Override
     public void run(ApplicationArguments args) {
         log.info("Config: user.dir={} (working directory)", System.getProperty("user.dir"));

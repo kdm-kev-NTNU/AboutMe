@@ -90,7 +90,7 @@ public class DocumentPipelineController {
   @PostMapping(value = "/upload/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<List<IngestionResult>> uploadBatch(
       @Parameter(description = "Document files", required = true)
-      @RequestParam("files") MultipartFile[] files,
+      @RequestParam(value = "files", required = false) MultipartFile[] files,
       @Parameter(description = "When true, re-ingest even if content hash exists")
       @RequestParam(value = "force", defaultValue = "false") boolean force
   ) throws IOException {

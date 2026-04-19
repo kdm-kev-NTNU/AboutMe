@@ -40,6 +40,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /** No-op when bootstrap env vars are unset; otherwise creates one ADMIN user if the username is new. */
     @Override
     public void run(ApplicationArguments args) {
         String username = environment.getProperty(PROP_USER);

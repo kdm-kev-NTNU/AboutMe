@@ -49,7 +49,7 @@ class QuestionControllerTest {
 
 	@BeforeEach
 	void resetCatalogStub() {
-		reset(chatModelCatalog);
+		reset(openAIService, chatModelCatalog);
 		when(chatModelCatalog.isModelConfigured(any(SupportedChatModel.class))).thenReturn(true);
 	}
 
