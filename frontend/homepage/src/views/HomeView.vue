@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useLangStore } from '../stores/lang'
+import { useChatModelStore } from '../stores/model'
+import { ChatModelOptionProvider } from '@/api/generated/portfolio'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -10,6 +12,7 @@ import { Info, Github, Linkedin } from 'lucide-vue-next'
 const router = useRouter()
 
 const langStore = useLangStore()
+const chatModelStore = useChatModelStore()
 
 const language = computed({
   get: () => langStore.language,
@@ -49,6 +52,33 @@ const chatDisclaimer = computed(() => {
 })
 
 const quickQuestion = ref('')
+
+const providerLabels = computed(() =>
+  language.value === 'no'
+    ? { heading: 'AI-leverandør', openai: 'OpenAI', anthropic: 'Anthropic' }
+    : { heading: 'AI provider', openai: 'OpenAI', anthropic: 'Anthropic' },
+)
+
+const modelLabel = computed(() => (language.value === 'no' ? 'Modell' : 'Model'))
+
+const modelsForActiveProvider = computed(() => {
+  const p = chatModelStore.activeProvider
+  if (!p) return chatModelStore.models
+  return chatModelStore.modelsForProvider(p)
+})
+
+const selectedModelId = computed({
+  get: () => chatModelStore.selectedModelId,
+  set: (id: string) => chatModelStore.setSelectedModelId(id),
+})
+
+const showProviderToggle = computed(
+  () => chatModelStore.hasOpenAI && chatModelStore.hasAnthropic,
+)
+
+onMounted(() => {
+  void chatModelStore.ensureModelsLoaded()
+})
 
 function ask(q: string) {
   router.push({ name: 'chat', query: { q } })
@@ -105,6 +135,73 @@ function submitQuick() {
               >
                 NO
               </button>
+            </div>
+          </div>
+
+          <!-- Provider + model (same session keys as chat page) -->
+          <div
+            v-if="chatModelStore.models.length > 0"
+            class="mt-6 flex flex-col items-center gap-4 w-full max-w-md px-2"
+          >
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+              {{ providerLabels.heading }}
+            </p>
+            <div v-if="showProviderToggle" class="flex justify-center w-full">
+              <div
+                class="relative rounded-full p-1 flex bg-gradient-to-r from-slate-200 to-slate-300 shadow-md border-2 border-transparent bg-clip-padding"
+              >
+                <div
+                  class="absolute top-1 bottom-1 w-28 rounded-full shadow-lg transition-transform duration-300 ease-in-out bg-gradient-to-r from-white to-slate-50 border border-blue-200"
+                  :class="
+                    chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
+                      ? 'translate-x-0'
+                      : 'translate-x-28'
+                  "
+                ></div>
+                <button
+                  type="button"
+                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden"
+                  :class="
+                    chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
+                      ? 'text-blue-700 font-semibold'
+                      : 'text-gray-500'
+                  "
+                  :disabled="!chatModelStore.hasOpenAI"
+                  @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.OPENAI)"
+                >
+                  {{ providerLabels.openai }}
+                </button>
+                <button
+                  type="button"
+                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden"
+                  :class="
+                    chatModelStore.activeProvider === ChatModelOptionProvider.ANTHROPIC
+                      ? 'text-blue-700 font-semibold'
+                      : 'text-gray-500'
+                  "
+                  :disabled="!chatModelStore.hasAnthropic"
+                  @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.ANTHROPIC)"
+                >
+                  {{ providerLabels.anthropic }}
+                </button>
+              </div>
+            </div>
+            <div class="flex flex-col gap-2 w-full">
+              <label
+                for="home-model-select"
+                class="text-center text-xs font-medium uppercase tracking-wide text-slate-500"
+              >
+                {{ modelLabel }}
+              </label>
+              <select
+                id="home-model-select"
+                v-model="selectedModelId"
+                class="w-full rounded-lg border-2 border-blue-200/40 bg-white/90 px-3 py-2 text-sm text-slate-800 focus:border-blue-400 focus:outline-none"
+              >
+                <option v-for="m in modelsForActiveProvider" :key="m.id" :value="m.id">
+                  {{ m.label }} ({{ m.provider }})
+                </option>
+              </select>
             </div>
           </div>
         </section>
