@@ -11,7 +11,8 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Resolves allow-listed models and filters the catalog by configured API keys.
+ * Exposes {@link com.kevinmazali.portfolio.model.chat.SupportedChatModel} entries to the SPA,
+ * hiding providers whose API keys are missing so the UI never offers unusable models.
  */
 @Service
 public class ChatModelCatalog {
@@ -22,6 +23,7 @@ public class ChatModelCatalog {
     this.environment = environment;
   }
 
+  /** One row per configured provider/model pair (OpenAI and/or Anthropic). */
   public List<ChatModelOption> listAvailableModels() {
     boolean openai = hasApiKey("spring.ai.openai.api-key");
     boolean anthropic = hasApiKey("spring.ai.anthropic.api-key");
@@ -31,6 +33,7 @@ public class ChatModelCatalog {
         .toList();
   }
 
+  /** Used by {@link com.kevinmazali.portfolio.controller.QuestionController} before calling the LLM. */
   public boolean isModelConfigured(SupportedChatModel model) {
     return switch (model.provider()) {
       case OPENAI -> hasApiKey("spring.ai.openai.api-key");
@@ -38,6 +41,7 @@ public class ChatModelCatalog {
     };
   }
 
+  /** Non-blank Spring property means the corresponding SDK can be constructed. */
   private boolean hasApiKey(String propertyName) {
     String v = environment.getProperty(propertyName);
     return StringUtils.hasText(v);
