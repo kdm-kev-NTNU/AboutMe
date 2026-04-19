@@ -8,11 +8,6 @@ import java.util.regex.Pattern;
  */
 public class InputValidator {
     
-    private static final Pattern UUID_PATTERN = Pattern.compile(
-        "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", 
-        Pattern.CASE_INSENSITIVE
-    );
-    
     /** Letters, numbers, punctuation, and spaces only (no raw control characters). */
     private static final Pattern SAFE_STRING_PATTERN = Pattern.compile("^[\\p{L}\\p{N}\\p{P}\\p{Z}]*$");
     
