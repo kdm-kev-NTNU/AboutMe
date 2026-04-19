@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.config.PortfolioChromaProperties;
 import com.kevinmazali.portfolio.model.ChromaHealthResponse;
+import com.kevinmazali.portfolio.util.ChromaClientDiagnostics;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chroma.vectorstore.ChromaApi;
 import org.springframework.ai.vectorstore.chroma.autoconfigure.ChromaVectorStoreProperties;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChromaHealthController {
 
   private final ObjectProvider<ChromaApi> chromaApiProvider;
+  private final Environment environment;
   private final ChromaVectorStoreProperties chromaStoreProperties;
   private final PortfolioChromaProperties portfolioChromaProperties;
 
@@ -73,8 +76,16 @@ public class ChromaHealthController {
       long safeCount = count == null ? 0L : count;
       return ResponseEntity.ok(new ChromaHealthResponse(true, collectionName, safeCount, null));
     } catch (Exception e) {
+      String base = chromaClientBaseUrl();
+      String message = ChromaClientDiagnostics.healthFailureMessage(e, base);
       return ResponseEntity.status(503).body(new ChromaHealthResponse(
-          false, collectionName, null, e.getMessage()));
+          false, collectionName, null, message));
     }
+  }
+
+  private String chromaClientBaseUrl() {
+    String host = environment.getProperty("spring.ai.vectorstore.chroma.client.host", "");
+    int port = environment.getProperty("spring.ai.vectorstore.chroma.client.port", Integer.class, 8100);
+    return ChromaClientDiagnostics.baseUrl(host, port);
   }
 }
