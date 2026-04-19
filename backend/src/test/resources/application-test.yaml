@@ -21,7 +21,10 @@ server:
 
 portfolio:
   chat:
-    default-model-id: gpt-4o-mini
+    default-model-id: gpt-5.4-mini
+  phoenix:
+    base-url: ""
+    api-key: ""
 
 logging:
   level:
