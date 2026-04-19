@@ -93,7 +93,7 @@ const projects = computed(() => {
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);"></div>
     </div>
-    <div class="max-w-6xl mx-auto px-8 py-8 relative z-10">
+    <div class="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 class="text-3xl font-bold mb-12 text-center bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x">{{ pageTitle }}</h1>
       
       <!-- Projects Grid -->
