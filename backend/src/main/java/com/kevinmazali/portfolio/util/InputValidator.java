@@ -70,8 +70,8 @@ public class InputValidator {
             return null;
         }
         
-        // Remove control characters and normalize whitespace
-        return input.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "")
+        // Replace other control characters with a space, then normalize whitespace (keeps words separated).
+        return input.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", " ")
                    .replaceAll("\\s+", " ")
                    .trim();
     }
