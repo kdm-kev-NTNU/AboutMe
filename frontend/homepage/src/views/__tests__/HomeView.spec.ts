@@ -18,6 +18,7 @@ describe('HomeView', () => {
 			routes: [
 				{ path: '/', name: 'home', component: HomeView },
 				{ path: '/chat', name: 'chat', component: { template: '<div>chat</div>' } },
+				{ path: '/feedback', name: 'feedback', component: { template: '<div>feedback</div>' } },
 			],
 		})
 	}
@@ -54,6 +55,8 @@ describe('HomeView', () => {
 					Info: true,
 					Github: true,
 					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
 				},
 			},
 		})
@@ -91,6 +94,8 @@ describe('HomeView', () => {
 					Info: true,
 					Github: true,
 					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
 				},
 			},
 		})
@@ -118,6 +123,8 @@ describe('HomeView', () => {
 					Info: true,
 					Github: true,
 					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
 				},
 			},
 		})
