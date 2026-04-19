@@ -28,7 +28,6 @@ import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -144,11 +143,11 @@ class ExperimentControllerTest {
   }
 
   @Test
-  void startRunAcceptsHttpBasicAdmin() throws Exception {
+  @WithMockUser(username = "admin", roles = "ADMIN")
+  void startRunReturnsAcceptedForAdmin() throws Exception {
     when(experimentService.startRun(any(RunExperimentRequest.class))).thenReturn(7L);
 
     mockMvc.perform(post("/admin/tools/experiments/run")
-            .with(httpBasic("admin", "pass"))
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(new RunExperimentRequest(
                 "ds-1", "n", null, "gpt-5.4-mini", "gpt-5.4-mini", null))))
