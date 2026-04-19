@@ -645,6 +645,194 @@
           "400": { "description": "Bad Request" }
         }
       }
+    },
+    "/admin/tools/prompt-versions/names": {
+      "get": {
+        "tags": ["Admin prompt versions"],
+        "summary": "List active prompt variants",
+        "operationId": "promptVersionsNames",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PromptNameEntry" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/history": {
+      "get": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Version history for a prompt variant",
+        "operationId": "promptVersionsHistory",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          { "name": "name", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "language", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "provider", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PromptVersionResponse" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/create": {
+      "post": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Create a new prompt version",
+        "operationId": "promptVersionsCreate",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateVersionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PromptVersionResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/activate": {
+      "post": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Activate a prompt version by id",
+        "operationId": "promptVersionsActivate",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ActivateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PromptVersionResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Version id not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/seed": {
+      "post": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Seed prompt versions from classpath templates",
+        "operationId": "promptVersionsSeed",
+        "security": [{ "basicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SeedResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/variant": {
+      "delete": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Delete all versions of a prompt variant",
+        "operationId": "promptVersionsDeleteVariant",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeleteVariantRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "deleted": { "type": "integer", "format": "int32" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/prompt-versions/diff": {
+      "get": {
+        "tags": ["Admin prompt versions"],
+        "summary": "Diff active DB version vs classpath fallback",
+        "operationId": "promptVersionsDiff",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          { "name": "name", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "language", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "provider", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PromptDiffResponse" }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
