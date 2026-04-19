@@ -15,6 +15,9 @@ services:
       timeout: 5s
       retries: 20
 
+  # Chroma listens on 8000 in-container; host maps 8100 for local dev.
+  # Railway private networking is often IPv6-only: if the backend cannot connect to Chroma over
+  # *.railway.internal, set CHROMA_HOST_ADDR=:: (or equivalent) on the Chroma service so uvicorn binds IPv6.
   chromadb:
     image: chromadb/chroma:1.0.13
     container_name: aboutme-chromadb
