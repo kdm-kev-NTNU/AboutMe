@@ -62,6 +62,18 @@ const router = createRouter({
       meta: { requiresAdmin: true },
       component: () => import('../views/AdminToolsView.vue'),
     },
+    {
+      path: '/admin/pipeline',
+      name: 'admin-pipeline',
+      meta: { requiresAdmin: true },
+      component: () => import('../views/AdminPipelineView.vue'),
+    },
+    {
+      path: '/admin/chunks',
+      name: 'admin-chunks',
+      meta: { requiresAdmin: true },
+      component: () => import('../views/AdminChunksView.vue'),
+    },
   ],
 })
 
