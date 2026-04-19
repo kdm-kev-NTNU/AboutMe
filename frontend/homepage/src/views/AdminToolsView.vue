@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { healthChroma, type ChromaHealthResponse } from '@/api/generated/portfolio'
 
+/** Admin hub: links to pipeline / chunks / prompts plus GET /health/chroma (no Basic auth required). */
 const auth = useAuthStore()
 const chromaHealth = ref<ChromaHealthResponse | null>(null)
 const chromaHealthLoading = ref(false)
