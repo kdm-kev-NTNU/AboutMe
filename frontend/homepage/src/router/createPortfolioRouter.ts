@@ -66,6 +66,11 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				component: () => import('../views/PrivacyPolicyView.vue'),
 			},
 			{
+				path: '/future-work',
+				name: 'future-work',
+				component: () => import('../views/FutureWorkView.vue'),
+			},
+			{
 				path: '/admin/tools',
 				name: 'admin-tools',
 				meta: { requiresAdmin: true },
