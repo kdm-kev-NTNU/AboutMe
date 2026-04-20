@@ -34,6 +34,7 @@ const getButtonText = (key: string) => {
     work: { en: 'Work', no: 'Arbeid' },
     education: { en: 'Education', no: 'Utdanning' },
     techStack: { en: 'Tech stack', no: 'Teknologistakk' },
+    futureWork: { en: 'Future work', no: 'Videre arbeid' },
   }
   return texts[key][langStore.language]
 }
@@ -46,6 +47,7 @@ const getButtonWidth = () => {
     getButtonText('work'),
     getButtonText('education'),
     getButtonText('techStack'),
+    getButtonText('futureWork'),
   ]
 
   // Estimate width based on character count (roughly 8px per character for this font size)
@@ -61,6 +63,7 @@ const getIndicatorPosition = () => {
   if (isActive('work-experience')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
   if (isActive('education')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
   if (isActive('tech-stack')) return { transform: `translateX(${buttonWidth * 4}px)`, opacity: '1' }
+  if (isActive('future-work')) return { transform: `translateX(${buttonWidth * 5}px)`, opacity: '1' }
   return { transform: 'translateX(0px)', opacity: '0' }
 }
 
@@ -171,6 +174,14 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
           >
             {{ getButtonText('techStack') }}
           </RouterLink>
+          <RouterLink
+            to="/future-work"
+            role="menuitem"
+            :class="[mobileLinkBase, isActive('future-work') ? mobileLinkActive : mobileLinkInactive]"
+            @click="closeMenu"
+          >
+            {{ getButtonText('futureWork') }}
+          </RouterLink>
         </div>
       </Transition>
     </div>
@@ -215,6 +226,13 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
           :style="{ width: getButtonWidth() + 'px' }"
         >
           {{ getButtonText('techStack') }}
+        </RouterLink>
+        <RouterLink
+          to="/future-work"
+          :class="getButtonClasses('future-work')"
+          :style="{ width: getButtonWidth() + 'px' }"
+        >
+          {{ getButtonText('futureWork') }}
         </RouterLink>
       </div>
     </div>

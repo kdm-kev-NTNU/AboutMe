@@ -19,6 +19,7 @@ describe('Navbar', () => {
 				{ path: '/work-experience', name: 'work-experience', component: { template: '<div />' } },
 				{ path: '/education', name: 'education', component: { template: '<div />' } },
 				{ path: '/tech-stack', name: 'tech-stack', component: { template: '<div />' } },
+				{ path: '/future-work', name: 'future-work', component: { template: '<div />' } },
 			],
 		})
 	}
@@ -37,6 +38,7 @@ describe('Navbar', () => {
 		expect(wrapper.text()).toContain('Home')
 		expect(wrapper.text()).toContain('Projects')
 		expect(wrapper.text()).toContain('Tech stack')
+		expect(wrapper.text()).toContain('Future work')
 	})
 
 	it('shows Norwegian labels when language is no', async () => {
@@ -58,6 +60,7 @@ describe('Navbar', () => {
 		expect(wrapper.text()).toContain('Hjem')
 		expect(wrapper.text()).toContain('Prosjekter')
 		expect(wrapper.text()).toContain('Teknologistakk')
+		expect(wrapper.text()).toContain('Videre arbeid')
 	})
 
 	it('marks active route with stronger button styling', async () => {
@@ -96,7 +99,7 @@ describe('Navbar', () => {
 
 		const drawer = wrapper.find('#mobile-nav-drawer')
 		expect(drawer.exists()).toBe(true)
-		expect(drawer.findAll('a').length).toBe(5)
+		expect(drawer.findAll('a').length).toBe(6)
 		expect(drawer.text()).toContain('Home')
 		expect(drawer.text()).toContain('Projects')
 	})
