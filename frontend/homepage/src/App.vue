@@ -21,7 +21,7 @@ const cookieSettingsLabel = computed(() => (langStore.language === 'no' ? 'Infor
   <div class="flex min-h-dvh flex-col bg-gray-50">
     <Navbar v-if="showPublicPageHeader" />
     <AdminLoginButton />
-    <div class="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col">
+    <div class="flex min-h-0 w-full flex-1 flex-col">
       <RouterView />
     </div>
     <footer class="relative z-20 shrink-0 border-t border-gray-100 bg-gray-50/80 py-3 text-center text-xs text-gray-400 backdrop-blur-sm">
