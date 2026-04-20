@@ -27,7 +27,7 @@ const t = computed(() => {
   }
   return {
     pageTitle: 'Feedback',
-    intro: 'Have thoughts on the site, the chat feature, or anything else? Every piece of feedback helps me improve the experience.',
+    intro: 'Have thoughts on the site, the chat feature, or anything else? Every piece of feedback helps me improve the website.',
     messageLabel: 'Your feedback',
     messagePlaceholder: 'Write your feedback here ...',
     submit: 'Send feedback',
