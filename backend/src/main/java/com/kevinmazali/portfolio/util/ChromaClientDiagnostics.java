@@ -75,6 +75,6 @@ public final class ChromaClientDiagnostics {
       cursor = cursor.getCause();
     }
     return throwable.getClass().getSimpleName()
-        + " (no detail message — often connection refused, timeout, or DNS failure).";
+        + " (no detail message; often connection refused, timeout, or DNS failure).";
   }
 }
