@@ -14,6 +14,7 @@ describe('application router (index)', () => {
 		expect(names.has('home')).toBe(true)
 		expect(names.has('chat')).toBe(true)
 		expect(names.has('privacy-policy')).toBe(true)
+		expect(names.has('future-work')).toBe(true)
 		expect(names.has('admin-tools')).toBe(true)
 		expect(names.has('admin-experiments')).toBe(true)
 	})
@@ -28,5 +29,11 @@ describe('application router (index)', () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/tech-stack')
 		expect(router.currentRoute.value.name).toBe('tech-stack')
+	})
+
+	it('navigates to lazy-loaded future-work route', async () => {
+		const router = createPortfolioRouter({ useMemoryHistory: true })
+		await router.push('/future-work')
+		expect(router.currentRoute.value.name).toBe('future-work')
 	})
 })
