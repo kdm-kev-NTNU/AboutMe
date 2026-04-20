@@ -1,4 +1,4 @@
-# Semgrep — SAST + SARIF upload (separate from Tests workflow; no deploy here).
+# Semgrep: SAST + SARIF upload (separate from Tests workflow; no deploy here).
 #
 # Triggers: push/PR to main or master; weekly schedule. Requires SEMGREP_APP_TOKEN and
 # SEMGREP_DEPLOYMENT_ID for App publish; skipped on fork PRs when secrets are unavailable.
