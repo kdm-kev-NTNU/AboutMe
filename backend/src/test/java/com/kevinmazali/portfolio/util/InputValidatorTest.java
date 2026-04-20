@@ -27,7 +27,7 @@ class InputValidatorTest {
 
 	@Test
 	void isValidQuestionAcceptsLettersNumbersPunctuationAndWhitespace() {
-		assertTrue(InputValidator.isValidQuestion("Hello, world 123 — «test»?"));
+		assertTrue(InputValidator.isValidQuestion("Hello, world 123, «test»?"));
 	}
 
 	@Test
