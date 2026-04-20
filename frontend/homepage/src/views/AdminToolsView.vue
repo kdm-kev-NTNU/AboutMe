@@ -40,7 +40,7 @@ onMounted(() => {
     <main class="mx-auto max-w-3xl px-4 pt-8">
       <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Internal tools</h1>
       <p class="text-sm text-gray-600 mb-8 leading-relaxed">
-        Verktøy for dokumentpipeline og ChromaDB. Krever admin-innlogging. Velg en side under — samme idé som
+        Verktøy for dokumentpipeline og ChromaDB. Krever admin-innlogging. Velg en side under. Samme idé som
         Piscada tools-hub.
       </p>
 
@@ -54,7 +54,7 @@ onMounted(() => {
           <p class="text-sm" :class="chromaHealth.healthy ? 'text-green-700' : 'text-amber-800'">
             <span class="font-medium">{{ chromaHealth.healthy ? 'Tilgjengelig' : 'Problem' }}</span>
             <span v-if="chromaHealth.collectionName" class="text-gray-700">
-              — collection <code class="font-mono text-xs bg-gray-100 px-1 rounded">{{
+              : collection <code class="font-mono text-xs bg-gray-100 px-1 rounded">{{
                 chromaHealth.collectionName
               }}</code>
             </span>
@@ -87,7 +87,7 @@ onMounted(() => {
               <span class="text-base font-semibold text-blue-600 group-hover:underline">Chunk viewer</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">
                 Se chunks i aktiv collection: tabell med dokument, chunk #, content hash, tekst (forkortet), utvidbar
-                rad med full tekst og metadata — inspirert av Piscada Chroma-siden.
+                rad med full tekst og metadata, inspirert av Piscada Chroma-siden.
               </p>
             </RouterLink>
           </li>
@@ -98,7 +98,7 @@ onMounted(() => {
               <span class="text-base font-semibold text-blue-600 group-hover:underline">Prompt versions</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">
                 Administrer versjonerte prompt-maler: opprett, aktiver, sammenlign mot classpath, og seed fra
-                .st-filer — inspirert av Piscadas prompt_versions-arkitektur.
+                .st-filer, inspirert av Piscadas prompt_versions-arkitektur.
               </p>
             </RouterLink>
           </li>
@@ -109,7 +109,7 @@ onMounted(() => {
               <span class="text-base font-semibold text-blue-600 group-hover:underline">Experiments (Phoenix)</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">
                 Kjør RAG-eval mot datasett i Arize Phoenix (Railway/lokal), LLM-as-judge (faithfulness, relevance,
-                correctness, conciseness), og se aggregerte scorer lagret i MySQL — inspirert av Piscada eval-steg 2.
+                correctness, conciseness), og se aggregerte scorer lagret i MySQL, inspirert av Piscada eval-steg 2.
               </p>
             </RouterLink>
           </li>

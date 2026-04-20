@@ -19,14 +19,14 @@ type SectionCopy = {
 const sectionsEn: SectionCopy[] = [
 	{
 		category: 'Personal',
-		title: 'A local-first “about me” grounded in years of notes',
+		title: 'Local model and Obsidian journal',
 		intro:
-			'I want to host a language model locally and ground it in my Obsidian journal—years of notes—not as a public dump, but as structured context so drafts read closer to how I actually think and work.',
+			'I want a local model with my Obsidian journal as context, similar to a small journal-focused bot in the vault. The idea is to generate plain .txt drafts about me, not to publish the whole journal raw online.',
 		points: [
-			'Choose a local inference stack that fits my hardware and privacy goals, without locking the idea to a single vendor.',
-			'Curate and summarize journal entries into safe, reusable context the model can work from (themes, timelines, decisions—not raw exports by default).',
-			'Manually review anything before it leaves my machine; this supplements the public corpus rather than replacing it.',
-			'Use that loop to draft concise “who I am” documents I can later run through the same quality bar as other portfolio sources.',
+			'Pick a local setup that fits my hardware and what I am comfortable sharing.',
+			'Feed the model curated journal context (themes, timelines, decisions) so it can write useful .txt drafts.',
+			'Read and trim each .txt while it still lives in that private loop.',
+			'This is extra material on top of what is already public, not a replacement for it.',
 		],
 		refs: [],
 	},
@@ -34,19 +34,19 @@ const sectionsEn: SectionCopy[] = [
 		category: 'Pipeline',
 		title: 'From curated drafts to Kevin’s AI',
 		intro:
-			'Those drafts should enter the same ingestion, chunking, and vector flows the site already uses, so Kevin’s AI can retrieve them alongside the rest of the knowledge base.',
+			'After review, those .txt files should be curated and sanitized, then ingested into the same document corpus the portfolio RAG stack already searches, so Kevin’s AI can ground answers in them.',
 		points: [
-			'Export from the drafting loop as Markdown (or equivalent) compatible with the existing document pipeline and admin tooling.',
-			'Apply the same hygiene mindset as the rest of the app—PII redaction, tone, and versioning—before any re-ingest.',
-			'Re-ingest with clear provenance, then evaluate retrieval against the new chunks before they power live answers in chat.',
+			'Keep the hand-off as simple .txt files (or convert to whatever shape ingestion expects) and upload through the existing document pipeline and admin tools.',
+			'Apply the same hygiene as the rest of the app: PII redaction, tone, and versioning before anything lands in the corpus.',
+			'Re-ingest with clear provenance, then sanity-check retrieval on the new chunks before they power live chat.',
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 			{
-				label: 'Gao et al. (2024) — Retrieval-Augmented Generation for Large Language Models: A Survey',
+				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 		],
@@ -55,14 +55,14 @@ const sectionsEn: SectionCopy[] = [
 		category: 'Retrieval',
 		title: 'Retrieval pipeline improvements',
 		intro:
-			'The current RAG stack already embeds documents, stores vectors, and runs similarity search before generation. The next incremental gains typically come from ranking quality and embedding alignment—not from replacing the whole architecture.',
+			'The current RAG stack already embeds documents, stores vectors, and runs similarity search before generation. The next incremental gains typically come from ranking quality and embedding alignment, not from replacing the whole architecture.',
 		points: [
 			'Add a reranking stage (e.g. monoT5-style cross-encoders) on top of vector search results to reorder chunks by semantic relevance and reduce noise in the context window.',
 			'Experiment with domain-adapted or fine-tuned embeddings so user questions match chunk representations more reliably, especially when terminology is specialized.',
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 		],
@@ -79,11 +79,11 @@ const sectionsEn: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Renze & Guven (2024) — The Effect of Sampling Temperature on Problem Solving in Large Language Models',
+				label: 'Renze & Guven (2024): The Effect of Sampling Temperature on Problem Solving in Large Language Models',
 				href: 'https://arxiv.org/abs/2402.05201',
 			},
 			{
-				label: 'Willard & Louf (2023) — Efficient Guided Generation for Large Language Models',
+				label: 'Willard & Louf (2023): Efficient Guided Generation for Large Language Models',
 				href: 'https://arxiv.org/abs/2307.09702',
 			},
 		],
@@ -94,11 +94,11 @@ const sectionsEn: SectionCopy[] = [
 		intro:
 			'Today the assistant always retrieves a fixed slice of the corpus. Selective retrieval can cut latency when the model already knows the answer and improve focus when extra evidence is required.',
 		points: [
-			'Let the system decide when to retrieve, skip retrieval, or retrieve again after a first draft—patterns inspired by self-reflective RAG that critique their own need for evidence.',
+			'Let the system decide when to retrieve, skip retrieval, or retrieve again after a first draft, using patterns inspired by self-reflective RAG that critique their own need for evidence.',
 		],
 		refs: [
 			{
-				label: 'Asai et al. (2023) — Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
+				label: 'Asai et al. (2023): Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
 				href: 'https://arxiv.org/abs/2310.11511',
 			},
 		],
@@ -114,7 +114,7 @@ const sectionsEn: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 		],
@@ -131,7 +131,7 @@ const sectionsEn: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Gao et al. (2024) — Retrieval-Augmented Generation for Large Language Models: A Survey',
+				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 		],
@@ -141,14 +141,14 @@ const sectionsEn: SectionCopy[] = [
 const sectionsNo: SectionCopy[] = [
 	{
 		category: 'Personlig',
-		title: 'Lokal modell og Obsidian-journal for en mer ekte «meg»',
+		title: 'Lokal modell og Obsidian-journal',
 		intro:
-			'Jeg vil kjøre en språkmodell lokalt og gi den kontekst fra Obsidian-journalen min over flere år—ikke som rå eksport offentlig, men som strukturert bakgrunn slik at utkast beskriver meg mer virkelighetsnært.',
+			'Jeg vil bruke en lokal modell med Obsidian-journalen som kontekst, omtrent som en enkel «journal-bot» i vaulten. Målet er å lage .txt-filer om meg selv, uten å legge ut hele journalen rått på nett.',
 		points: [
-			'Velge en lokal inferens-stack som passer maskinvare og personvern, uten å låse konseptet til én leverandør.',
-			'Kuratere og sammenfatte notater til trygg, gjenbrukbar kontekst modellen kan jobbe fra (tema, tidslinjer, valg—ikke «dump alt» som standard).',
-			'Manuelt gjennomgå alt før det forlater maskinen; dette er et supplement til det offentlige korpuset, ikke en erstatning.',
-			'Bruke løkka til å skrive konsise «hvem er jeg»-dokumenter som senere kan gå gjennom samme kvalitetskrav som andre porteføljekilder.',
+			'Finne en lokal løsning som passer maskinen og personvernbehovet mitt.',
+			'Gi modellen kuratert journalinnhold (tema, tidslinjer, valg) så den kan skrive nyttige .txt-utkast.',
+			'Lese gjennom og trimme hver .txt mens den fortsatt bare lever i det private løpet mitt.',
+			'Dette er et tillegg til det som allerede er offentlig, ikke en erstatning.',
 		],
 		refs: [],
 	},
@@ -156,19 +156,19 @@ const sectionsNo: SectionCopy[] = [
 		category: 'Pipeline',
 		title: 'Fra kuraterte utkast til Kevin sin AI',
 		intro:
-			'Utkastene skal inn i samme ingest-, chunking- og vektorflyt som resten av nettsiden, slik at Kevin sin AI kan hente dem sammen med øvrig kunnskapsbase.',
+			'Etter gjennomgang skal .txt-filene kurateres og saniteres, og deretter inn i dokumentkorpuset som RAG-løsningen allerede henter fra, slik at Kevin sin AI kan bruke dem som kontekst.',
 		points: [
-			'Eksport fra skriveløkka som Markdown (eller tilsvarende) som matcher dagens dokumentpipeline og admin-verktøy.',
-			'Samme hygiene som ellers i appen—PII, tone og versjonering—før re-ingest.',
-			'Re-ingest med tydelig proveniens, deretter vurdering av retrieval mot nye chunks før de brukes i live chat.',
+			'Beholde overleveringen som enkle .txt-filer (eller konvertere til formatet ingest forventer) og laste opp via dokumentpipelinen og admin som finnes i dag.',
+			'Samme hygiene som ellers i appen: PII, tone og versjonering før noe havner i korpuset.',
+			'Re-ingest med tydelig proveniens, deretter en rask sjekk av retrieval mot nye chunks før de brukes i live chat.',
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 			{
-				label: 'Gao et al. (2024) — Retrieval-Augmented Generation for Large Language Models: A Survey',
+				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 		],
@@ -184,7 +184,7 @@ const sectionsNo: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 		],
@@ -201,11 +201,11 @@ const sectionsNo: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Renze & Guven (2024) — The Effect of Sampling Temperature on Problem Solving in Large Language Models',
+				label: 'Renze & Guven (2024): The Effect of Sampling Temperature on Problem Solving in Large Language Models',
 				href: 'https://arxiv.org/abs/2402.05201',
 			},
 			{
-				label: 'Willard & Louf (2023) — Efficient Guided Generation for Large Language Models',
+				label: 'Willard & Louf (2023): Efficient Guided Generation for Large Language Models',
 				href: 'https://arxiv.org/abs/2307.09702',
 			},
 		],
@@ -216,11 +216,11 @@ const sectionsNo: SectionCopy[] = [
 		intro:
 			'I dag hentes alltid et fast utsnitt av korpuset. Selektiv retrieval kan kutte latency når modellen allerede kan svare, og skjerpe fokus når ekstra evidens trengs.',
 		points: [
-			'La systemet avgjøre når det skal hente, hoppe over retrieval, eller hente på nytt etter et første utkast—inspirert av selvreflekterende RAG som vurderer eget behov for evidens.',
+			'La systemet avgjøre når det skal hente, hoppe over retrieval, eller hente på nytt etter et første utkast, inspirert av selvreflekterende RAG som vurderer eget behov for evidens.',
 		],
 		refs: [
 			{
-				label: 'Asai et al. (2023) — Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
+				label: 'Asai et al. (2023): Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
 				href: 'https://arxiv.org/abs/2310.11511',
 			},
 		],
@@ -236,7 +236,7 @@ const sectionsNo: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 		],
@@ -253,12 +253,14 @@ const sectionsNo: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Gao et al. (2024) — Retrieval-Augmented Generation for Large Language Models: A Survey',
+				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 		],
 	},
 ]
+
+const foresightAiProductUrl = 'https://piscada.com/foresight-ai'
 
 const hero = computed(() =>
 	langStore.language === 'no'
@@ -266,15 +268,21 @@ const hero = computed(() =>
 				title: 'Videre arbeid og forbedringer',
 				lead:
 					'Dette er en kort, forskningsforankret roadmap for funksjoner som allerede finnes i porteføljen: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, samt promptversjoner.',
-				context:
-					'Roadmapen er formet av det jeg lærer gjennom bacheloroppgaven (2026) hos Piscada AS i Trondheim, og av arbeid med deres Foresight AI-system—som jeg og en annen jobber med for tiden.',
+				contextBefore:
+					'Roadmapen er formet av det jeg lærer gjennom bacheloroppgaven (2026) hos Piscada AS i Trondheim, og av arbeid med deres ',
+				contextLinkText: 'Foresight AI',
+				contextAfter: '-system, som jeg og en annen jobber med for tiden.',
+				contextLinkHref: foresightAiProductUrl,
 			}
 		: {
 				title: 'Future work and improvements',
 				lead:
 					'A concise, research-backed roadmap focused on capabilities already shipped in this portfolio: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning.',
-				context:
-					"This roadmap is informed by what I'm learning through my bachelor's thesis (2026) at Piscada AS in Trondheim, and by work on their Foresight AI system—currently alongside another teammate.",
+				contextBefore:
+					"This roadmap is informed by what I'm learning through my bachelor's thesis (2026) at Piscada AS in Trondheim, and by work on their ",
+				contextLinkText: 'Foresight AI',
+				contextAfter: ' system together with another teammate.',
+				contextLinkHref: foresightAiProductUrl,
 			},
 )
 
@@ -308,7 +316,17 @@ const referencesHeading = computed(() =>
 				{{ hero.lead }}
 			</p>
 			<p class="text-center text-sm text-slate-600 max-w-3xl mx-auto mb-12 leading-relaxed">
-				{{ hero.context }}
+				{{ hero.contextBefore }}<a
+					:href="hero.contextLinkHref"
+					class="font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900"
+					target="_blank"
+					rel="noopener noreferrer"
+					:aria-label="
+						langStore.language === 'no'
+							? 'Foresight AI på piscada.com (åpner i ny fane)'
+							: 'Foresight AI on piscada.com (opens in a new tab)'
+					"
+					>{{ hero.contextLinkText }}</a>{{ hero.contextAfter }}
 			</p>
 
 			<div class="space-y-8">

@@ -86,7 +86,7 @@ const detailLoading = ref(false)
 
 const baselineLabel = computed(() => {
   const d = datasets.value.find((x) => x.id === selectedDatasetId.value)
-  return d ? `${d.name} (${d.exampleCount})` : '— velg datasett —'
+  return d ? `${d.name} (${d.exampleCount})` : '– Velg datasett –'
 })
 
 function phoenixDatasetLink(datasetId: string) {
@@ -96,7 +96,7 @@ function phoenixDatasetLink(datasetId: string) {
 }
 
 function formatScore(v: number | null | undefined) {
-  if (v == null || Number.isNaN(v)) return '—'
+  if (v == null || Number.isNaN(v)) return '–'
   return v.toFixed(3)
 }
 
@@ -288,7 +288,7 @@ onMounted(() => {
             class="border border-gray-300 rounded-md px-2 py-1.5 text-sm min-w-[14rem] bg-white"
             :disabled="datasetsLoading || !phoenixConfigured"
           >
-            <option value="">— Velg datasett —</option>
+            <option value="">– Velg datasett –</option>
             <option v-for="d in datasets" :key="d.id" :value="d.id">{{ d.name }} ({{ d.exampleCount }})</option>
           </select>
           <button
@@ -386,7 +386,7 @@ onMounted(() => {
         <ul v-else class="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden">
           <li v-for="r in runs" :key="r.id" class="px-3 py-2 hover:bg-gray-50 flex flex-wrap gap-2 justify-between">
             <button type="button" class="text-left text-sm text-blue-700 hover:underline font-mono" @click="openRunDetail(r.id)">
-              #{{ r.id }} — {{ r.name }} — {{ r.status }}
+              #{{ r.id }} – {{ r.name }} – {{ r.status }}
             </button>
             <span class="text-xs text-gray-500"
               >F: {{ formatScore(r.meanFaithfulness) }} · R: {{ formatScore(r.meanRelevance) }} · C:

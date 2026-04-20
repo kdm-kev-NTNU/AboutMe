@@ -443,7 +443,7 @@ function submitQuick() {
   animation-duration: 6s;
 }
 
-/* Decorative blobs — smaller blur/size on narrow viewports */
+/* Decorative blobs: smaller blur/size on narrow viewports */
 @media (max-width: 768px) {
   .blob {
     filter: blur(30px);
