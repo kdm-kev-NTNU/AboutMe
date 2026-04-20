@@ -22,10 +22,10 @@ E2E against a production build: `npm run build` then `npm run test:e2e`.
 
 ## OpenAPI client (Orval)
 
-Generated client lives under `src/api/generated/` — do not edit by hand.
+Generated client lives under `src/api/generated/`. Do not edit by hand.
 
 1. Run the backend on **8080** (see root README).
-2. `npm run api:pull` — optional env `OPENAPI_URL` (default `http://localhost:8080/v3/api-docs`, see root `.env.example`).
+2. `npm run api:pull`: optional env `OPENAPI_URL` (default `http://localhost:8080/v3/api-docs`, see root `.env.example`).
 3. `npm run api:generate`.
 
 HTTP calls use [`src/api/orval-mutator.ts`](src/api/orval-mutator.ts): `/api` prefix and `Authorization: Basic` when the auth store has credentials after login.

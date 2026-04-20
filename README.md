@@ -7,7 +7,7 @@ Personal portfolio with an AI chat that answers from your own documents (RAG). N
 | Path | What |
 |------|------|
 | `backend/` | Spring Boot API (RAG, auth, admin document pipeline) |
-| `frontend/homepage/` | Vue 3 SPA — [frontend/homepage/README.md](frontend/homepage/README.md) for npm scripts and Orval |
+| `frontend/homepage/` | Vue 3 SPA: [frontend/homepage/README.md](frontend/homepage/README.md) for npm scripts and Orval |
 | `scripts/dev.ps1` | Windows: Docker for infra, then opens API + Vite in separate terminals |
 | `docker-compose.yml` | MySQL, ChromaDB, Phoenix, backend, Nginx frontend |
 | `.github/workflows/` | `tests.yml` (Maven verify + frontend unit coverage), `semgrep.yml` |
@@ -16,7 +16,7 @@ Seed documents for Chroma go in **`backend/data/docs/`** (gitignored). With hybr
 
 ## Prerequisites
 
-- **Node** — see `engines` in [frontend/homepage/package.json](frontend/homepage/package.json)
+- **Node**: see `engines` in [frontend/homepage/package.json](frontend/homepage/package.json)
 - **JDK 21** and the Maven wrapper in `backend/` (`./mvnw` / `mvnw.cmd`)
 - **Docker** + Compose
 - **OpenAI API key** (embeddings + RAG; required for a normal setup)
@@ -24,7 +24,7 @@ Seed documents for Chroma go in **`backend/data/docs/`** (gitignored). With hybr
 
 ## Run locally
 
-### Option A — full stack in Docker
+### Option A: full stack in Docker
 
 From the repo root (set `OPENAI_API_KEY` in the environment or in a root `.env` used by Compose):
 
@@ -34,7 +34,7 @@ docker compose up -d --build
 
 Typical URLs:
 
-- App (Nginx): [http://localhost:5173](http://localhost:5173) — `/api` proxied to the backend
+- App (Nginx): [http://localhost:5173](http://localhost:5173). `/api` proxied to the backend
 - API: [http://localhost:8080](http://localhost:8080)
 - MySQL: host **3307** → container 3306, DB `aboutme`, user/password `root`/`root`
 - Chroma: host **8100**
@@ -42,7 +42,7 @@ Typical URLs:
 
 The backend image mounts `./backend/data` read-only; `file:./data/docs/` resolves to that path inside the container.
 
-### Option B — hybrid (DBs in Docker, app on the host)
+### Option B: hybrid (DBs in Docker, app on the host)
 
 ```bash
 docker compose up -d db chromadb phoenix
@@ -53,7 +53,7 @@ Then:
 - Backend: from `backend/`, `./mvnw spring-boot:run` (Windows: `.\mvnw.cmd spring-boot:run`)
 - Frontend: from `frontend/homepage/`, `npm install` and `npm run dev` → [http://localhost:5173](http://localhost:5173) (Vite proxies `/api` to port 8080)
 
-On Windows you can use **`.\scripts\dev.ps1`** after copying `.env.example` to `.env` — it starts the same infra and launches API + Vite.
+On Windows you can use **`.\scripts\dev.ps1`** after copying `.env.example` to `.env`. It starts the same infra and launches API + Vite.
 
 ## Configuration
 
@@ -70,17 +70,17 @@ Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `bac
 
 ## API (short)
 
-- **`POST /ask`** — JSON `{ "question": "...", "model": "<optional>" }` → `{ "answer": "..." }`. Rate limited; max question length enforced server-side.
-- **`GET /chat/models`** — models available for configured providers
-- **`POST /auth/login`** — JSON credentials; admin UI uses HTTP Basic on protected routes
-- **`GET /health/chroma`** — Chroma health for ops
-- **Admin** — document upload, pipeline, chunks, prompts under `/admin/tools/**` (requires `ADMIN` role). Full contract: **Swagger UI** at `/swagger-ui/index.html` when the API runs (e.g. [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)).
+- **`POST /ask`**: JSON `{ "question": "...", "model": "<optional>" }` → `{ "answer": "..." }`. Rate limited; max question length enforced server-side.
+- **`GET /chat/models`**: models available for configured providers
+- **`POST /auth/login`**: JSON credentials; admin UI uses HTTP Basic on protected routes
+- **`GET /health/chroma`**: Chroma health for ops
+- **Admin**: document upload, pipeline, chunks, prompts under `/admin/tools/**` (requires `ADMIN` role). Full contract: **Swagger UI** at `/swagger-ui/index.html` when the API runs (e.g. [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)).
 
 ## Security and privacy (summary)
 
 Spring Security protects admin routes; public **`POST /ask`** is rate-limited. Production should use **`SPRING_PROFILES_ACTIVE=prod`**. Use TLS-backed JDBC URLs in production; treat DB and Chroma backups as sensitive if documents are personal.
 
-**Privacy:** conversations may be stored for troubleshooting and improvement — do not send secrets. **RAG chunks and embeddings** live in Chroma; protect that data like any PII-bearing store. **AI output** can be wrong; verify anything important.
+**Privacy:** conversations may be stored for troubleshooting and improvement. Do not send secrets. **RAG chunks and embeddings** live in Chroma; protect that data like any PII-bearing store. **AI output** can be wrong; verify anything important.
 
 ## Feedback
 
