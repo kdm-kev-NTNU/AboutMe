@@ -404,14 +404,14 @@ onMounted(() => {
                   class="bg-white"
                   :class="resultRowClass(row)"
                 >
-                  <td class="border border-gray-200 px-2 py-2 align-top">{{ row.filename || '—' }}</td>
+                  <td class="border border-gray-200 px-2 py-2 align-top">{{ row.filename || '–' }}</td>
                   <td class="border border-gray-200 px-2 py-2 align-top">{{ row.chunksIngested ?? 0 }}</td>
                   <td class="border border-gray-200 px-2 py-2 align-top">
                     <span v-if="row.skipped">Hoppet over</span>
                     <span v-else-if="(row.chunksIngested ?? 0) > 0">OK</span>
-                    <span v-else>—</span>
+                    <span v-else>–</span>
                   </td>
-                  <td class="border border-gray-200 px-2 py-2 align-top text-xs">{{ row.message || '—' }}</td>
+                  <td class="border border-gray-200 px-2 py-2 align-top text-xs">{{ row.message || '–' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -523,9 +523,9 @@ onMounted(() => {
                   class="bg-white"
                   :class="resultRowClass(row)"
                 >
-                  <td class="border border-gray-200 px-2 py-2 align-top">{{ row.filename || '—' }}</td>
+                  <td class="border border-gray-200 px-2 py-2 align-top">{{ row.filename || '–' }}</td>
                   <td class="border border-gray-200 px-2 py-2 align-top">{{ row.chunksIngested ?? 0 }}</td>
-                  <td class="border border-gray-200 px-2 py-2 align-top text-xs">{{ row.message || '—' }}</td>
+                  <td class="border border-gray-200 px-2 py-2 align-top text-xs">{{ row.message || '–' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -556,7 +556,7 @@ onMounted(() => {
                 </td>
                 <td class="border border-gray-200 px-2 py-2 align-top">{{ d.chunkCount }}</td>
                 <td class="border border-gray-200 px-2 py-2 align-top text-gray-600">
-                  {{ d.lastIngestedAt || '—' }}
+                  {{ d.lastIngestedAt || '–' }}
                 </td>
                 <td class="border border-gray-200 px-2 py-2 align-top">
                   <button

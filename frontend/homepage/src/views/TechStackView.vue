@@ -84,7 +84,7 @@ const sections = computed<Section[]>(() => {
         heading: 'Hvorfor denne stakken?',
         paragraphs: [
           'Jeg prøver gjennomgående i prosjektet å finne en balanse mellom lettvinthet og funksjonalitet: løsninger som er enkle å jobbe med dag til dag, men som fortsatt gir nok struktur og kraft til å bygge noe som tåler litt vekst og endring.',
-          'Valgene under speiler det — modne rammeverk der det gir mening, og pragmatiske byggeklosser der det sparer tid uten å ofre det viktigste.',
+          'Valgene under speiler det: modne rammeverk der det gir mening, og pragmatiske byggeklosser der det sparer tid uten å ofre det viktigste.',
         ],
         icon: Layers,
         category: 'all',
@@ -98,7 +98,7 @@ const sections = computed<Section[]>(() => {
         heading: 'Spring AI',
         paragraphs: [
           'Spring og Java brukes mye i enterprise-løsninger. Spring AI bygger videre på det økosystemet og gjør det naturlig å koble språkmodeller, dokumentflyt og vektorlagring inn i en Spring Boot-tjeneste.',
-          'Spring AI er et relativt nytt prosjekt, og jeg valgte det fordi jeg ønsket å følge med på hvordan integrasjonen mellom JVM-verdenen og AI utvikler seg — og for å lære det som sannsynligvis blir en vanlig sti for AI i Spring-baserte applikasjoner.',
+          'Spring AI er et relativt nytt prosjekt, og jeg valgte det fordi jeg ønsket å følge med på hvordan integrasjonen mellom JVM-verdenen og AI utvikler seg, og for å lære det som sannsynligvis blir en vanlig sti for AI i Spring-baserte applikasjoner.',
           'Chat går mot OpenAI eller Anthropic (Anthropic er tilgjengelig når API-nøkkel er konfigurert). Embeddings til Chroma kommer fra OpenAI; standard chat-modell og modellvalg styres i konfigurasjon og kan velges fra klienten innenfor et trygt sett støttede modeller.',
         ],
         icon: BrainCircuit,
@@ -201,7 +201,7 @@ const sections = computed<Section[]>(() => {
       heading: 'Why this stack?',
       paragraphs: [
         'Across this project I try to balance ease of use with functionality: choices that stay pleasant to work with day to day, while still providing enough structure and power to build something that can grow and evolve.',
-        'The items below reflect that — mature frameworks where they earn their place, and pragmatic building blocks where they save time without giving up what matters most.',
+        'The items below reflect that: mature frameworks where they earn their place, and pragmatic building blocks where they save time without giving up what matters most.',
       ],
       icon: Layers,
       category: 'all',
@@ -215,7 +215,7 @@ const sections = computed<Section[]>(() => {
       heading: 'Spring AI',
       paragraphs: [
         'Spring and Java are widely used in enterprise systems. Spring AI extends that ecosystem and makes it natural to wire language models, document flows, and vector storage into a Spring Boot service.',
-        'Spring AI is a relatively new project, and I chose it because I want to follow how AI integration on the JVM evolves — and to learn what is likely to become a common path for AI in Spring-based applications.',
+        'Spring AI is a relatively new project, and I chose it because I want to follow how AI integration on the JVM evolves, and to learn what is likely to become a common path for AI in Spring-based applications.',
         'Chat targets OpenAI or Anthropic (Anthropic is available when an API key is configured). Embeddings for Chroma come from OpenAI; the default chat model and model selection are configuration-driven, with the client choosing from a small allow-listed set of supported models.',
       ],
       icon: BrainCircuit,

@@ -63,7 +63,7 @@ function contentHashFromMetadata(meta: Record<string, unknown> | undefined): str
 }
 
 function hashShort(hash: string): string {
-  if (!hash) return '—'
+  if (!hash) return '–'
   return hash.length > 12 ? hash.slice(0, 12) + '…' : hash
 }
 
@@ -178,11 +178,11 @@ onMounted(() => {
         <div class="flex flex-wrap gap-x-8 gap-y-3 items-center text-sm">
           <div>
             <strong class="text-gray-900">Aktiv collection:</strong>
-            <span class="text-gray-700 ml-1">{{ chromaInfo?.activeCollectionName ?? '—' }}</span>
+            <span class="text-gray-700 ml-1">{{ chromaInfo?.activeCollectionName ?? '–' }}</span>
           </div>
           <div>
             <strong class="text-gray-900">Embeddings:</strong>
-            <span class="text-gray-700 ml-1">{{ chromaInfo?.activeCollectionEmbeddingCount ?? '—' }}</span>
+            <span class="text-gray-700 ml-1">{{ chromaInfo?.activeCollectionEmbeddingCount ?? '–' }}</span>
           </div>
           <div>
             <strong class="text-gray-900">Dokumenter (liste):</strong>
@@ -295,9 +295,9 @@ onMounted(() => {
                 <td class="border border-gray-200 px-2 py-2 text-gray-400">
                   {{ expandedChunkId === c.id ? '▼' : '▶' }}
                 </td>
-                <td class="border border-gray-200 px-2 py-2">{{ c.documentTitle || '—' }}</td>
+                <td class="border border-gray-200 px-2 py-2">{{ c.documentTitle || '–' }}</td>
                 <td class="border border-gray-200 px-2 py-2 font-mono text-xs">
-                  {{ c.chunkIndex ?? '—' }}
+                  {{ c.chunkIndex ?? '–' }}
                 </td>
                 <td
                   class="border border-gray-200 px-2 py-2 font-mono text-[11px]"
