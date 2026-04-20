@@ -18,6 +18,40 @@ type SectionCopy = {
 
 const sectionsEn: SectionCopy[] = [
 	{
+		category: 'Personal',
+		title: 'A local-first “about me” grounded in years of notes',
+		intro:
+			'I want to host a language model locally and ground it in my Obsidian journal—years of notes—not as a public dump, but as structured context so drafts read closer to how I actually think and work.',
+		points: [
+			'Choose a local inference stack that fits my hardware and privacy goals, without locking the idea to a single vendor.',
+			'Curate and summarize journal entries into safe, reusable context the model can work from (themes, timelines, decisions—not raw exports by default).',
+			'Manually review anything before it leaves my machine; this supplements the public corpus rather than replacing it.',
+			'Use that loop to draft concise “who I am” documents I can later run through the same quality bar as other portfolio sources.',
+		],
+		refs: [],
+	},
+	{
+		category: 'Pipeline',
+		title: 'From curated drafts to Kevin’s AI',
+		intro:
+			'Those drafts should enter the same ingestion, chunking, and vector flows the site already uses, so Kevin’s AI can retrieve them alongside the rest of the knowledge base.',
+		points: [
+			'Export from the drafting loop as Markdown (or equivalent) compatible with the existing document pipeline and admin tooling.',
+			'Apply the same hygiene mindset as the rest of the app—PII redaction, tone, and versioning—before any re-ingest.',
+			'Re-ingest with clear provenance, then evaluate retrieval against the new chunks before they power live answers in chat.',
+		],
+		refs: [
+			{
+				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				href: 'https://arxiv.org/abs/2407.01219',
+			},
+			{
+				label: 'Gao et al. (2024) — Retrieval-Augmented Generation for Large Language Models: A Survey',
+				href: 'https://arxiv.org/abs/2312.10997',
+			},
+		],
+	},
+	{
 		category: 'Retrieval',
 		title: 'Retrieval pipeline improvements',
 		intro:
@@ -105,6 +139,40 @@ const sectionsEn: SectionCopy[] = [
 ]
 
 const sectionsNo: SectionCopy[] = [
+	{
+		category: 'Personlig',
+		title: 'Lokal modell og Obsidian-journal for en mer ekte «meg»',
+		intro:
+			'Jeg vil kjøre en språkmodell lokalt og gi den kontekst fra Obsidian-journalen min over flere år—ikke som rå eksport offentlig, men som strukturert bakgrunn slik at utkast beskriver meg mer virkelighetsnært.',
+		points: [
+			'Velge en lokal inferens-stack som passer maskinvare og personvern, uten å låse konseptet til én leverandør.',
+			'Kuratere og sammenfatte notater til trygg, gjenbrukbar kontekst modellen kan jobbe fra (tema, tidslinjer, valg—ikke «dump alt» som standard).',
+			'Manuelt gjennomgå alt før det forlater maskinen; dette er et supplement til det offentlige korpuset, ikke en erstatning.',
+			'Bruke løkka til å skrive konsise «hvem er jeg»-dokumenter som senere kan gå gjennom samme kvalitetskrav som andre porteføljekilder.',
+		],
+		refs: [],
+	},
+	{
+		category: 'Pipeline',
+		title: 'Fra kuraterte utkast til Kevin sin AI',
+		intro:
+			'Utkastene skal inn i samme ingest-, chunking- og vektorflyt som resten av nettsiden, slik at Kevin sin AI kan hente dem sammen med øvrig kunnskapsbase.',
+		points: [
+			'Eksport fra skriveløkka som Markdown (eller tilsvarende) som matcher dagens dokumentpipeline og admin-verktøy.',
+			'Samme hygiene som ellers i appen—PII, tone og versjonering—før re-ingest.',
+			'Re-ingest med tydelig proveniens, deretter vurdering av retrieval mot nye chunks før de brukes i live chat.',
+		],
+		refs: [
+			{
+				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				href: 'https://arxiv.org/abs/2407.01219',
+			},
+			{
+				label: 'Gao et al. (2024) — Retrieval-Augmented Generation for Large Language Models: A Survey',
+				href: 'https://arxiv.org/abs/2312.10997',
+			},
+		],
+	},
 	{
 		category: 'Retrieval',
 		title: 'Forbedringer i retrieval-pipelinen',
@@ -198,11 +266,15 @@ const hero = computed(() =>
 				title: 'Videre arbeid og forbedringer',
 				lead:
 					'Dette er en kort, forskningsforankret roadmap for funksjoner som allerede finnes i porteføljen: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, samt promptversjoner.',
+				context:
+					'Roadmapen er formet av det jeg lærer gjennom bacheloroppgaven (2026) hos Piscada AS i Trondheim, og av arbeid med deres Foresight AI-system—som jeg og en annen jobber med for tiden.',
 			}
 		: {
 				title: 'Future work and improvements',
 				lead:
 					'A concise, research-backed roadmap focused on capabilities already shipped in this portfolio: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning.',
+				context:
+					"This roadmap is informed by what I'm learning through my bachelor's thesis (2026) at Piscada AS in Trondheim, and by work on their Foresight AI system—currently alongside another teammate.",
 			},
 )
 
@@ -232,8 +304,11 @@ const referencesHeading = computed(() =>
 			>
 				{{ hero.title }}
 			</h1>
-			<p class="text-center text-gray-600 max-w-3xl mx-auto mb-12 leading-relaxed">
+			<p class="text-center text-gray-600 max-w-3xl mx-auto mb-4 leading-relaxed">
 				{{ hero.lead }}
+			</p>
+			<p class="text-center text-sm text-slate-600 max-w-3xl mx-auto mb-12 leading-relaxed">
+				{{ hero.context }}
 			</p>
 
 			<div class="space-y-8">
@@ -258,7 +333,10 @@ const referencesHeading = computed(() =>
 						<ul class="list-disc pl-5 space-y-2 text-gray-700 text-sm leading-relaxed">
 							<li v-for="(point, pIndex) in section.points" :key="pIndex">{{ point }}</li>
 						</ul>
-						<div class="rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+						<div
+							v-if="section.refs.length > 0"
+							class="rounded-lg border border-blue-100 bg-blue-50/40 p-4"
+						>
 							<p class="text-xs font-semibold uppercase tracking-wide text-blue-800 mb-2">
 								{{ referencesHeading }}
 							</p>
