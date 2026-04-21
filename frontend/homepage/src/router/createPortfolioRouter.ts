@@ -36,14 +36,17 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				component: () => import('../views/ProjectsView.vue'),
 			},
 			{
+				path: '/career',
+				name: 'career',
+				component: () => import('../views/CareerView.vue'),
+			},
+			{
 				path: '/work-experience',
-				name: 'work-experience',
-				component: () => import('../views/WorkExperienceView.vue'),
+				redirect: '/career',
 			},
 			{
 				path: '/education',
-				name: 'education',
-				component: () => import('../views/EducationView.vue'),
+				redirect: '/career',
 			},
 			{
 				path: '/tech-stack',
