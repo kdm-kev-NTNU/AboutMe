@@ -90,4 +90,10 @@ describe('application router (index)', () => {
 		await router.push('/admin/experiments')
 		expect(router.currentRoute.value.name).toBe('admin-experiments')
 	})
+
+	it('creates a router with default web-history option path', () => {
+		const router = createPortfolioRouter()
+		expect(router).toBeTruthy()
+		expect(router.currentRoute.value.path).toBe('/')
+	})
 })

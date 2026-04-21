@@ -9,6 +9,10 @@ describe('MessagesArea', () => {
       props: ['text'],
       template: '<span class="typewriter-stub">{{ text }}</span>',
     },
+    SafeMarkdown: {
+      props: ['source'],
+      template: '<div class="safe-markdown-stub">{{ source }}</div>',
+    },
     Brain: { template: '<span class="icon-brain" />' },
     UserRound: { template: '<span class="icon-user" />' },
     MessageSquare: { template: '<span class="icon-msq" />' },
@@ -71,6 +75,18 @@ describe('MessagesArea', () => {
     expect(wrapper.find('.typewriter-stub').text()).toBe('Typed')
   })
 
+  it('falls back to markdown renderer for new assistant message in read-only mode', () => {
+    const wrapper = mount(MessagesArea, {
+      props: {
+        messages: [{ role: 'assistant', text: 'Read only text', isNew: true }],
+        isReadOnly: true,
+      },
+      global: { stubs: globalStubs },
+    })
+    expect(wrapper.find('.typewriter-stub').exists()).toBe(false)
+    expect(wrapper.find('.safe-markdown-stub').text()).toBe('Read only text')
+  })
+
   it('applies read-only border class on message container', () => {
     const wrapper = mount(MessagesArea, {
       props: {
@@ -79,7 +95,7 @@ describe('MessagesArea', () => {
       },
       global: { stubs: globalStubs },
     })
-    const box = wrapper.find('.border-gray-200\\/20')
+    const box = wrapper.find('.border-gray-200\\/50')
     expect(box.exists()).toBe(true)
   })
 
