@@ -126,7 +126,7 @@ describe('ChatView', () => {
 
     const clearBtn = wrapper
       .findAll('button')
-      .find((b) => b.text().includes('Clear Chat'))
+      .find((b) => /clear chat/i.test(b.text()))
     expect(clearBtn).toBeDefined()
     await clearBtn!.trigger('click')
 
