@@ -1,24 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { GraduationCap, Sparkles, Link2, Play } from 'lucide-vue-next'
-import { buildCloudinaryImageUrl, buildCloudinarySrcSet } from '@/utils/cloudinary'
+import { GraduationCap, Sparkles, Link2 } from 'lucide-vue-next'
 
 const langStore = useLangStore()
 const isNo = computed(() => langStore.language === 'no')
 
 const YOUTUBE_EMBED_ID = 'YHdEJhM-J2o'
 const YOUTUBE_WATCH_URL = `https://www.youtube.com/watch?v=${YOUTUBE_EMBED_ID}`
-const videoLoaded = ref(false)
-const videoPosterId = `portfolio/bachelor/${YOUTUBE_EMBED_ID}-poster`
-const videoPosterSrc = computed(() =>
-  buildCloudinaryImageUrl(videoPosterId, ['f_auto', 'q_auto', 'c_fill', 'g_auto', 'ar_16:9', 'w_1280']),
-)
-const videoPosterSrcSet = computed(() =>
-  buildCloudinarySrcSet(videoPosterId, [480, 768, 1024, 1280], ['c_fill', 'g_auto', 'ar_16:9']),
-)
 
 type NarrativeCard = {
 	category: string
@@ -49,18 +40,16 @@ const videoSection = computed(() =>
 				description:
 					'I videoen under forklarer jeg og samarbeidspartneren min kort hva vi har jobbet med de siste månedene i forbindelse med bacheloroppgaven og det tilhørende prosjektet.',
 				badge: 'Demo',
-				iframeTitle: 'YouTube-video om bachelorprosjektet',
+        iframeTitle: 'YouTube-video om bachelorprosjektet',
 				watchLabel: 'Åpne på YouTube (ny fane)',
-        playLabel: 'Spill av video',
 			}
 		: {
 				heading: 'What we have been working on',
 				description:
 					'In the video below, my collaboration partner and I explain what we have been working on over the past few months as part of the bachelor thesis and related project.',
 				badge: 'Demo',
-				iframeTitle: "YouTube video about the bachelor's thesis project",
+        iframeTitle: "YouTube video about the bachelor's thesis project",
 				watchLabel: 'Watch on YouTube (opens in a new tab)',
-        playLabel: 'Play video',
 			},
 )
 
@@ -187,39 +176,14 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 						<div
 							class="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-900 aspect-video shadow-inner"
 						>
-              <template v-if="videoLoaded">
-                <iframe
-                  class="absolute inset-0 h-full w-full"
-                  :src="`https://www.youtube.com/embed/${YOUTUBE_EMBED_ID}?autoplay=1`"
-                  :title="videoSection.iframeTitle"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowfullscreen
-                  referrerpolicy="strict-origin-when-cross-origin"
-                ></iframe>
-              </template>
-              <template v-else>
-                <img
-                  :src="videoPosterSrc"
-                  :srcset="videoPosterSrcSet || undefined"
-                  sizes="(max-width: 768px) 100vw, 896px"
-                  :alt="videoSection.iframeTitle"
-                  class="absolute inset-0 h-full w-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <button
-                  type="button"
-                  class="absolute inset-0 flex items-center justify-center bg-slate-900/30 transition-colors duration-300 hover:bg-slate-900/45"
-                  @click="videoLoaded = true"
-                >
-                  <span
-                    class="inline-flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-blue-700 shadow-lg"
-                  >
-                    <Play class="h-4 w-4 fill-current" aria-hidden="true" />
-                    {{ videoSection.playLabel }}
-                  </span>
-                </button>
-              </template>
+							<iframe
+								class="absolute inset-0 h-full w-full"
+								:src="`https://www.youtube.com/embed/${YOUTUBE_EMBED_ID}`"
+								:title="videoSection.iframeTitle"
+								allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+								allowfullscreen
+								referrerpolicy="strict-origin-when-cross-origin"
+							></iframe>
 						</div>
 						<p class="text-center">
 							<a
