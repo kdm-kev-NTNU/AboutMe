@@ -49,6 +49,11 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				redirect: '/career',
 			},
 			{
+				path: '/bachelor',
+				name: 'bachelor',
+				component: () => import('../views/BachelorView.vue'),
+			},
+			{
 				path: '/tech-stack',
 				name: 'tech-stack',
 				component: () => import('../views/TechStackView.vue'),

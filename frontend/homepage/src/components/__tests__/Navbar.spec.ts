@@ -17,6 +17,7 @@ describe('Navbar', () => {
 				{ path: '/', name: 'home', component: { template: '<div />' } },
 				{ path: '/projects', name: 'projects', component: { template: '<div />' } },
 				{ path: '/career', name: 'career', component: { template: '<div />' } },
+				{ path: '/bachelor', name: 'bachelor', component: { template: '<div />' } },
 				{ path: '/tech-stack', name: 'tech-stack', component: { template: '<div />' } },
 				{ path: '/future-work', name: 'future-work', component: { template: '<div />' } },
 			],
@@ -38,6 +39,7 @@ describe('Navbar', () => {
 		expect(wrapper.text()).toContain('Projects')
 		expect(wrapper.text()).toContain('Tech stack')
 		expect(wrapper.text()).toContain('Career')
+		expect(wrapper.text()).toContain('Bachelor')
 		expect(wrapper.text()).toContain('Future work')
 	})
 
@@ -61,6 +63,7 @@ describe('Navbar', () => {
 		expect(wrapper.text()).toContain('Prosjekter')
 		expect(wrapper.text()).toContain('Teknologistakk')
 		expect(wrapper.text()).toContain('Karriere')
+		expect(wrapper.text()).toContain('Bachelor')
 		expect(wrapper.text()).toContain('Videre arbeid')
 	})
 
@@ -100,7 +103,7 @@ describe('Navbar', () => {
 
 		const drawer = wrapper.find('#mobile-nav-drawer')
 		expect(drawer.exists()).toBe(true)
-		expect(drawer.findAll('a').length).toBe(5)
+		expect(drawer.findAll('a').length).toBe(6)
 		expect(drawer.text()).toContain('Home')
 		expect(drawer.text()).toContain('Projects')
 	})
