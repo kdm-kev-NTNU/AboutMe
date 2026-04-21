@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import MessagesArea from '@/views/MessagesArea.vue'
 import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
 
@@ -18,8 +26,10 @@ const router = useRouter()
 const input = ref('')
 const isLoading = ref(false)
 const errorText = ref('')
+const showInfoPopup = ref(false)
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
+const CHAT_INFO_DISMISSED_KEY = 'chatInfoPopupDismissed'
 const langStore = useLangStore()
 const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
@@ -43,6 +53,24 @@ const selectedModelId = computed({
 
 const showProviderToggle = computed(
   () => chatModelStore.hasOpenAI && chatModelStore.hasAnthropic,
+)
+
+const popupCopy = computed(() =>
+  language.value === 'no'
+    ? {
+        title: 'Chat i kontinuerlig forbedring',
+        body: 'Denne chat-funksjonen forbedres kontinuerlig. Jeg legger stadig til mer kontekst om meg selv for å gi bedre og mer presise svar.',
+        recommendation: 'For mer innblikk i arbeidet mitt, anbefaler jeg at du sjekker bachelor-siden.',
+        bachelorCta: 'Gå til bachelor-siden',
+        dismiss: 'Forstått',
+      }
+    : {
+        title: 'Chat is continuously improving',
+        body: "This chat feature is continuously improving. I'm constantly adding more context about myself to provide better and more accurate answers.",
+        recommendation: 'For deeper insight into my work, I recommend checking out the bachelor page.',
+        bachelorCta: 'Go to bachelor page',
+        dismiss: 'Got it',
+      },
 )
 
 // --- Ephemeral transcript (same-tab only; not a substitute for server-side conversation storage) ---
@@ -82,6 +110,31 @@ const clearChat = () => {
   // Redirect to home page
   router.push({ name: 'home' })
 }
+
+const shouldShowInfoPopup = () => {
+  try {
+    return !localStorage.getItem(CHAT_INFO_DISMISSED_KEY)
+  } catch {
+    return true
+  }
+}
+
+const markInfoPopupDismissed = () => {
+  try {
+    localStorage.setItem(CHAT_INFO_DISMISSED_KEY, 'true')
+  } catch {}
+}
+
+const dismissInfoPopup = () => {
+  showInfoPopup.value = false
+  markInfoPopupDismissed()
+}
+
+watch(showInfoPopup, (isOpen, wasOpen) => {
+  if (wasOpen && !isOpen) {
+    markInfoPopupDismissed()
+  }
+})
 
 // Calls the portfolio backend; auth store is restored so optional future authenticated /ask works the same way.
 async function send(text: string) {
@@ -151,6 +204,9 @@ const loadConversation = async (conversationId: string) => {
 
 onMounted(async () => {
   await chatModelStore.ensureModelsLoaded()
+  if (shouldShowInfoPopup()) {
+    showInfoPopup.value = true
+  }
 
   const conversationId = route.query.conversationId as string
 
@@ -171,6 +227,23 @@ onMounted(async () => {
 
 <template>
   <main class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 pt-20">
+    <Dialog v-model:open="showInfoPopup">
+      <DialogContent class="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{{ popupCopy.title }}</DialogTitle>
+          <DialogDescription>{{ popupCopy.body }}</DialogDescription>
+        </DialogHeader>
+        <p class="text-sm text-slate-700">
+          {{ popupCopy.recommendation }}
+        </p>
+        <DialogFooter class="flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button as-child variant="outline">
+            <RouterLink :to="{ name: 'bachelor' }">{{ popupCopy.bachelorCta }}</RouterLink>
+          </Button>
+          <Button type="button" @click="dismissInfoPopup">{{ popupCopy.dismiss }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     <!-- Background overlay -->
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);"></div>
