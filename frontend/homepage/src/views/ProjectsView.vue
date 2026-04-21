@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { ProjectsData } from '../types/projects'
-import { buildCloudinaryImageUrl, buildCloudinarySrcSet } from '@/utils/cloudinary'
 
 // Import JSON data
 import projectsEn from '../types/projects.en.json'
@@ -67,21 +66,6 @@ const getStatusText = (status: string, language: 'en' | 'no') => {
   return statusTexts[status as keyof typeof statusTexts]?.[language] || status
 }
 
-const projectImageAlt = (projectName: string) =>
-  langStore.language === 'no'
-    ? `Prosjektbilde for ${projectName}`
-    : `Project image for ${projectName}`
-
-const projectImageSrc = (imageId?: string) =>
-  imageId
-    ? buildCloudinaryImageUrl(imageId, ['f_auto', 'q_auto', 'c_fill', 'g_auto', 'ar_16:9', 'w_960'])
-    : ''
-
-const projectImageSrcSet = (imageId?: string) =>
-  imageId
-    ? buildCloudinarySrcSet(imageId, [320, 480, 640, 960], ['c_fill', 'g_auto', 'ar_16:9'])
-    : ''
-
 // Sort projects by start date (most recent first) and format for display
 const projects = computed(() => {
   return [...projectsData.value]
@@ -99,7 +83,6 @@ const projects = computed(() => {
       status: project.status,
       githubUrl: project.githubUrl,
       liveUrl: project.liveUrl,
-      imageId: project.imageId,
     }))
 })
 </script>
@@ -120,17 +103,6 @@ const projects = computed(() => {
           :key="project.id"
           class="relative border-2 border-transparent transition-all duration-300 bg-white/90 backdrop-blur-sm hover:border-blue-300/30 hover:bg-white/95 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/15 group"
         >
-          <div v-if="project.imageId" class="aspect-video w-full overflow-hidden border-b border-blue-100/60 bg-slate-100">
-            <img
-              :src="projectImageSrc(project.imageId)"
-              :srcset="projectImageSrcSet(project.imageId) || undefined"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              :alt="projectImageAlt(project.projectName)"
-              class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
           <CardHeader>
             <div class="flex items-start justify-between mb-3">
               <div class="flex-1">
