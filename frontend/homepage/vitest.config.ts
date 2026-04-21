@@ -37,10 +37,10 @@ export default mergeConfig(
         ],
         // Line/function gates match product code; global branch % stays lower on template-heavy Vue (many ternaries).
         thresholds: {
-          lines: 80,
-          statements: 80,
-          branches: 73,
-          functions: 80,
+          lines: 85,
+          statements: 85,
+          branches: 76,
+          functions: 84,
         },
       },
     },

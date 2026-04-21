@@ -9,6 +9,7 @@ import PrivacyPolicyView from '../PrivacyPolicyView.vue'
 import { useLangStore } from '@/stores/lang'
 import ProjectsView from '../ProjectsView.vue'
 import CareerView from '../CareerView.vue'
+import FutureWorkView from '../FutureWorkView.vue'
 
 describe('portfolio views (smoke)', () => {
 	function mountView(component: Component) {
@@ -76,4 +77,37 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapper.text()).toContain('Education')
 		expect(wrapper.text()).toMatch(/Courses|Emner/)
 	})
+
+  it('renders CareerView in Norwegian with translated section labels', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useLangStore().setLanguage('no')
+    const wrapper = mount(CareerView, { global: { plugins: [pinia, MotionPlugin] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Erfaring og utdanning')
+    expect(wrapper.text()).toContain('Arbeidserfaring')
+    expect(wrapper.text()).toContain('Utdanning')
+    expect(wrapper.text()).toContain('Emner')
+    expect(wrapper.text()).toMatch(/studiepoeng|Karakter/)
+  })
+
+  it('renders FutureWorkView in English with references', async () => {
+    const wrapper = mountView(FutureWorkView)
+    await flushPromises()
+    expect(wrapper.text()).toContain('Future work and improvements')
+    expect(wrapper.text()).toContain('References (arXiv)')
+    const links = wrapper.findAll('a[href^="https://arxiv.org/abs/"]')
+    expect(links.length).toBeGreaterThan(0)
+  })
+
+  it('renders FutureWorkView in Norwegian with translated copy', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useLangStore().setLanguage('no')
+    const wrapper = mount(FutureWorkView, { global: { plugins: [pinia, MotionPlugin] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Videre arbeid og forbedringer')
+    expect(wrapper.text()).toContain('Referanser (arXiv)')
+    expect(wrapper.text()).toContain('Lokal modell og Obsidian-journal')
+  })
 })

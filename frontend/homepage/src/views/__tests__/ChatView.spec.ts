@@ -24,6 +24,7 @@ describe('ChatView', () => {
       history: createMemoryHistory(),
       routes: [
         { path: '/', name: 'home', component: HomeStub },
+        { path: '/bachelor', name: 'bachelor', component: HomeStub },
         { path: '/chat', name: 'chat', component: ChatView },
       ],
     })

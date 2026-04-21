@@ -55,4 +55,39 @@ describe('application router (index)', () => {
 		expect(router.currentRoute.value.path).toBe('/career')
 		expect(router.currentRoute.value.name).toBe('career')
 	})
+
+	it('navigates to additional lazy-loaded public routes', async () => {
+		const router = createPortfolioRouter({ useMemoryHistory: true })
+		await router.push('/projects')
+		expect(router.currentRoute.value.name).toBe('projects')
+
+		await router.push('/career')
+		expect(router.currentRoute.value.name).toBe('career')
+
+		await router.push('/feedback')
+		expect(router.currentRoute.value.name).toBe('feedback')
+	})
+
+	it('allows admin routes when ADMIN session is restored', async () => {
+		sessionStorage.setItem(
+			'auth',
+			JSON.stringify({ username: 'admin', role: 'ADMIN', basicToken: 'dGVzdDp0ZXN0' }),
+		)
+		const router = createPortfolioRouter({ useMemoryHistory: true })
+
+		await router.push('/admin/tools')
+		expect(router.currentRoute.value.name).toBe('admin-tools')
+
+		await router.push('/admin/pipeline')
+		expect(router.currentRoute.value.name).toBe('admin-pipeline')
+
+		await router.push('/admin/chunks')
+		expect(router.currentRoute.value.name).toBe('admin-chunks')
+
+		await router.push('/admin/prompts')
+		expect(router.currentRoute.value.name).toBe('admin-prompts')
+
+		await router.push('/admin/experiments')
+		expect(router.currentRoute.value.name).toBe('admin-experiments')
+	})
 })
