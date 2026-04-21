@@ -16,8 +16,8 @@ describe('Navbar', () => {
 			routes: [
 				{ path: '/', name: 'home', component: { template: '<div />' } },
 				{ path: '/projects', name: 'projects', component: { template: '<div />' } },
-				{ path: '/work-experience', name: 'work-experience', component: { template: '<div />' } },
-				{ path: '/education', name: 'education', component: { template: '<div />' } },
+				{ path: '/career', name: 'career', component: { template: '<div />' } },
+				{ path: '/bachelor', name: 'bachelor', component: { template: '<div />' } },
 				{ path: '/tech-stack', name: 'tech-stack', component: { template: '<div />' } },
 				{ path: '/future-work', name: 'future-work', component: { template: '<div />' } },
 			],
@@ -38,6 +38,8 @@ describe('Navbar', () => {
 		expect(wrapper.text()).toContain('Home')
 		expect(wrapper.text()).toContain('Projects')
 		expect(wrapper.text()).toContain('Tech stack')
+		expect(wrapper.text()).toContain('Career')
+		expect(wrapper.text()).toContain('Bachelor')
 		expect(wrapper.text()).toContain('Future work')
 	})
 
@@ -60,12 +62,14 @@ describe('Navbar', () => {
 		expect(wrapper.text()).toContain('Hjem')
 		expect(wrapper.text()).toContain('Prosjekter')
 		expect(wrapper.text()).toContain('Teknologistakk')
+		expect(wrapper.text()).toContain('Karriere')
+		expect(wrapper.text()).toContain('Bachelor')
 		expect(wrapper.text()).toContain('Videre arbeid')
 	})
 
 	it('marks active route with stronger button styling', async () => {
 		const router = makeRouter()
-		await router.push('/education')
+		await router.push('/career')
 		await router.isReady()
 		const wrapper = mount(Navbar, {
 			global: {
@@ -75,8 +79,8 @@ describe('Navbar', () => {
 		})
 		await flushPromises()
 		const links = wrapper.findAll('a')
-		const educationLink = links.find((a) => a.text().includes('Education'))
-		expect(educationLink?.classes().join(' ')).toContain('font-semibold')
+		const careerLink = links.find((a) => a.text().includes('Career'))
+		expect(careerLink?.classes().join(' ')).toContain('font-semibold')
 	})
 
 	it('opens mobile drawer from hamburger and lists all nav links', async () => {
