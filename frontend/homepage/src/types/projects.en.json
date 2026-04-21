@@ -8,7 +8,6 @@
       "endDate": null,
       "technologies": ["Vue.js", "TypeScript", "Spring AI", "RAG", "OpenAI API"],
       "status": "ongoing",
-      "imageId": "portfolio/projects/portfolio-project-2025",
       "githubUrl": "https://github.com/kdm-kev-NTNU/AboutMe",
       "liveUrl": "https://kevindmazali.me"
     },
@@ -21,7 +20,6 @@
       "endDate": "2025-05-31",
       "technologies": ["Web Development", "Agile", "Deployment", "Crisis Management"],
       "status": "completed",
-      "imageId": "portfolio/projects/krisefikser-2025",
       "githubUrl": "https://github.com/idatt2106-v25-02/krisefikser",
       "liveUrl": "https://krisefikser.app"
     },
@@ -34,7 +32,6 @@
       "endDate": "2024-11-30",
       "technologies": ["Python", "Machine Learning", "Data Analysis", "Statistics", "Regression", "Classification", "Clustering"],
       "status": "completed",
-      "imageId": "portfolio/projects/lego-analysis-2024",
       "githubUrl": "https://github.com/kdm-kev-NTNU/ISST1003_GR15"
     },
     {
@@ -46,7 +43,6 @@
       "endDate": "2024-11-30",
       "technologies": ["Java", "Algorithms", "Dijkstra", "ALT Search", "Graph Theory", "Data Structures"],
       "status": "completed",
-      "imageId": "portfolio/projects/roadmap-2024",
       "githubUrl": "https://github.com/kdm-kev-NTNU/kortestevei"
     }
   ]

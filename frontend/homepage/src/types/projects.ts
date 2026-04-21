@@ -9,7 +9,6 @@ export interface Project {
   status: 'completed' | 'ongoing' | 'planned'
   githubUrl?: string
   liveUrl?: string
-  imageId?: string
 }
 
 export interface ProjectsData {
