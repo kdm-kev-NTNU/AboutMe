@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import CookieConsentBanner from '../CookieConsentBanner.vue'
 import { useLangStore } from '@/stores/lang'
 import posthog from 'posthog-js'
@@ -20,24 +21,26 @@ describe('CookieConsentBanner', () => {
     setActivePinia(createPinia())
   })
 
-  it('shows banner when explicit consent is pending', () => {
+  it('shows banner when explicit consent is pending', async () => {
     vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('pending')
 
     const wrapper = mount(CookieConsentBanner, {
       global: { plugins: [createPinia()] },
     })
+    await nextTick()
 
     expect(wrapper.text()).toContain('Cookies and analytics')
     expect(wrapper.text()).toContain('Accept')
     expect(wrapper.text()).toContain('Decline')
   })
 
-  it('hides banner when consent is not pending', () => {
+  it('hides banner when consent is not pending', async () => {
     vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('granted')
 
     const wrapper = mount(CookieConsentBanner, {
       global: { plugins: [createPinia()] },
     })
+    await nextTick()
 
     expect(wrapper.text()).toBe('')
   })
@@ -48,6 +51,7 @@ describe('CookieConsentBanner', () => {
     const wrapper = mount(CookieConsentBanner, {
       global: { plugins: [createPinia()] },
     })
+    await nextTick()
 
     await wrapper.get('button').trigger('click')
     expect(posthog.opt_in_capturing).toHaveBeenCalledTimes(1)
@@ -60,6 +64,7 @@ describe('CookieConsentBanner', () => {
     const wrapper = mount(CookieConsentBanner, {
       global: { plugins: [createPinia()] },
     })
+    await nextTick()
 
     await wrapper.findAll('button')[1].trigger('click')
     expect(posthog.opt_out_capturing).toHaveBeenCalledTimes(1)
@@ -83,7 +88,7 @@ describe('CookieConsentBanner', () => {
     expect(wrapper.text()).toContain('Cookies and analytics')
   })
 
-  it('renders norwegian text when language is no', () => {
+  it('renders norwegian text when language is no', async () => {
     vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('pending')
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -92,6 +97,7 @@ describe('CookieConsentBanner', () => {
     const wrapper = mount(CookieConsentBanner, {
       global: { plugins: [pinia] },
     })
+    await nextTick()
 
     expect(wrapper.text()).toContain('Informasjonskapsler og analyse')
     expect(wrapper.text()).toContain('Godta')
