@@ -7,7 +7,6 @@ import { MapPin } from 'lucide-vue-next'
 import type { WorkExperienceData } from '../types/workExperience'
 import type { EducationData } from '../types/education'
 import type { Course, CourseData } from '../types/courses'
-import { buildCloudinaryImageUrl } from '@/utils/cloudinary'
 
 import workExperienceEn from '../types/workExperience.en.json'
 import workExperienceNo from '../types/workExperience.no.json'
@@ -28,15 +27,6 @@ const educationSectionTitle = computed(() =>
   langStore.language === 'no' ? 'Utdanning' : 'Education',
 )
 const coursesTitle = computed(() => (langStore.language === 'no' ? 'Emner' : 'Courses'))
-const organizationLogoIds: Record<string, string> = {
-  'SpareBank 1 Utvikling': 'portfolio/logos/sparebank1',
-  NTNU: 'portfolio/logos/ntnu',
-  'Engage Resource Hub': 'portfolio/logos/engage-resource-hub',
-  'Oslo Municipality': 'portfolio/logos/oslo-municipality',
-  'Oslo Kommune': 'portfolio/logos/oslo-municipality',
-  Deichman: 'portfolio/logos/deichman',
-  'Yummy Heaven': 'portfolio/logos/yummy-heaven',
-}
 
 const workExperienceData = computed(() => {
   const rawData = langStore.language === 'no' ? workExperienceNo : workExperienceEn
@@ -174,7 +164,6 @@ const experiences = computed(() => {
       period: formatPeriod(exp.startDate, exp.endDate, langStore.language),
       title: exp.position,
       company: exp.company,
-      companyLogoId: organizationLogoIds[exp.company],
       description: exp.description,
       location: exp.location,
       type: exp.type,
@@ -192,7 +181,6 @@ const education = computed(() => {
       degree: edu.degree,
       field: edu.field,
       institution: edu.institution,
-      institutionLogoId: organizationLogoIds[edu.institution],
       description: edu.description,
       location: edu.location,
       grade: edu.grade,
@@ -200,9 +188,6 @@ const education = computed(() => {
       status: edu.status,
     }))
 })
-
-const organizationLogoSrc = (logoId?: string) =>
-  logoId ? buildCloudinaryImageUrl(logoId, ['f_auto', 'q_auto', 'w_96', 'h_96', 'c_fit', 'g_auto']) : ''
 </script>
 
 <template>
@@ -274,14 +259,6 @@ const organizationLogoSrc = (logoId?: string) =>
                     </div>
                     <CardTitle class="text-xl font-bold text-gray-800 mb-3">{{ experience.title }}</CardTitle>
                     <div class="flex flex-wrap gap-3 mt-2">
-                      <img
-                        v-if="experience.companyLogoId"
-                        :src="organizationLogoSrc(experience.companyLogoId)"
-                        :alt="`${experience.company} logo`"
-                        class="h-8 w-8 rounded bg-white p-1 object-contain border border-slate-200"
-                        loading="lazy"
-                        decoding="async"
-                      />
                       <span class="text-sm text-gray-600 font-semibold bg-gray-50 px-3 py-1 rounded-full">{{
                         experience.company
                       }}</span>
@@ -341,14 +318,6 @@ const organizationLogoSrc = (logoId?: string) =>
                 <div>
                   <CardTitle class="text-xl mb-2">{{ edu.degree }} in {{ edu.field }}</CardTitle>
                   <div class="flex flex-wrap gap-2 text-sm text-gray-500">
-                    <img
-                      v-if="edu.institutionLogoId"
-                      :src="organizationLogoSrc(edu.institutionLogoId)"
-                      :alt="`${edu.institution} logo`"
-                      class="h-8 w-8 rounded bg-white p-1 object-contain border border-slate-200"
-                      loading="lazy"
-                      decoding="async"
-                    />
                     <span class="font-medium">{{ edu.institution }}</span>
                     <span v-if="edu.location">• {{ edu.location }}</span>
                   </div>
