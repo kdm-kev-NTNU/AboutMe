@@ -8,8 +8,7 @@ import TechStackView from '../TechStackView.vue'
 import PrivacyPolicyView from '../PrivacyPolicyView.vue'
 import { useLangStore } from '@/stores/lang'
 import ProjectsView from '../ProjectsView.vue'
-import WorkExperienceView from '../WorkExperienceView.vue'
-import EducationView from '../EducationView.vue'
+import CareerView from '../CareerView.vue'
 
 describe('portfolio views (smoke)', () => {
 	function mountView(component: Component) {
@@ -68,16 +67,12 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapper.find('h1').exists()).toBe(true)
 	})
 
-	it('renders WorkExperienceView with timeline content', async () => {
-		const wrapper = mountView(WorkExperienceView)
+	it('renders CareerView with work, education, and courses', async () => {
+		const wrapper = mountView(CareerView)
 		await flushPromises()
+		expect(wrapper.text()).toContain('Experience & education')
 		expect(wrapper.text()).toContain('Work Experience')
 		expect(wrapper.text()).toMatch(/NTNU|Oslo Municipality/i)
-	})
-
-	it('renders EducationView with courses section', async () => {
-		const wrapper = mountView(EducationView)
-		await flushPromises()
 		expect(wrapper.text()).toContain('Education')
 		expect(wrapper.text()).toMatch(/Courses|Emner/)
 	})
