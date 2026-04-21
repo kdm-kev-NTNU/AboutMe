@@ -15,6 +15,7 @@ describe('application router (index)', () => {
 		expect(names.has('chat')).toBe(true)
 		expect(names.has('privacy-policy')).toBe(true)
 		expect(names.has('future-work')).toBe(true)
+		expect(names.has('career')).toBe(true)
 		expect(names.has('admin-tools')).toBe(true)
 		expect(names.has('admin-experiments')).toBe(true)
 	})
@@ -35,5 +36,16 @@ describe('application router (index)', () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/future-work')
 		expect(router.currentRoute.value.name).toBe('future-work')
+	})
+
+	it('redirects legacy work-experience and education paths to career', async () => {
+		const router = createPortfolioRouter({ useMemoryHistory: true })
+		await router.push('/work-experience')
+		expect(router.currentRoute.value.path).toBe('/career')
+		expect(router.currentRoute.value.name).toBe('career')
+
+		await router.push('/education')
+		expect(router.currentRoute.value.path).toBe('/career')
+		expect(router.currentRoute.value.name).toBe('career')
 	})
 })

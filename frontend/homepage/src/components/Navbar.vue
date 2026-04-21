@@ -31,8 +31,7 @@ const getButtonText = (key: string) => {
   const texts: Record<string, { en: string; no: string }> = {
     home: { en: 'Home', no: 'Hjem' },
     projects: { en: 'Projects', no: 'Prosjekter' },
-    work: { en: 'Work', no: 'Arbeid' },
-    education: { en: 'Education', no: 'Utdanning' },
+    career: { en: 'Career', no: 'Karriere' },
     techStack: { en: 'Tech stack', no: 'Teknologistakk' },
     futureWork: { en: 'Future work', no: 'Videre arbeid' },
   }
@@ -44,8 +43,7 @@ const getButtonWidth = () => {
   const buttonTexts = [
     getButtonText('home'),
     getButtonText('projects'),
-    getButtonText('work'),
-    getButtonText('education'),
+    getButtonText('career'),
     getButtonText('techStack'),
     getButtonText('futureWork'),
   ]
@@ -60,10 +58,9 @@ const getIndicatorPosition = () => {
 
   if (isActive('home')) return { transform: 'translateX(0px)', opacity: '1' }
   if (isActive('projects')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
-  if (isActive('work-experience')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
-  if (isActive('education')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
-  if (isActive('tech-stack')) return { transform: `translateX(${buttonWidth * 4}px)`, opacity: '1' }
-  if (isActive('future-work')) return { transform: `translateX(${buttonWidth * 5}px)`, opacity: '1' }
+  if (isActive('career')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
+  if (isActive('tech-stack')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
+  if (isActive('future-work')) return { transform: `translateX(${buttonWidth * 4}px)`, opacity: '1' }
   return { transform: 'translateX(0px)', opacity: '0' }
 }
 
@@ -148,23 +145,12 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
             {{ getButtonText('projects') }}
           </RouterLink>
           <RouterLink
-            to="/work-experience"
+            to="/career"
             role="menuitem"
-            :class="[
-              mobileLinkBase,
-              isActive('work-experience') ? mobileLinkActive : mobileLinkInactive,
-            ]"
+            :class="[mobileLinkBase, isActive('career') ? mobileLinkActive : mobileLinkInactive]"
             @click="closeMenu"
           >
-            {{ getButtonText('work') }}
-          </RouterLink>
-          <RouterLink
-            to="/education"
-            role="menuitem"
-            :class="[mobileLinkBase, isActive('education') ? mobileLinkActive : mobileLinkInactive]"
-            @click="closeMenu"
-          >
-            {{ getButtonText('education') }}
+            {{ getButtonText('career') }}
           </RouterLink>
           <RouterLink
             to="/tech-stack"
@@ -207,18 +193,11 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
           {{ getButtonText('projects') }}
         </RouterLink>
         <RouterLink
-          to="/work-experience"
-          :class="getButtonClasses('work-experience')"
+          to="/career"
+          :class="getButtonClasses('career')"
           :style="{ width: getButtonWidth() + 'px' }"
         >
-          {{ getButtonText('work') }}
-        </RouterLink>
-        <RouterLink
-          to="/education"
-          :class="getButtonClasses('education')"
-          :style="{ width: getButtonWidth() + 'px' }"
-        >
-          {{ getButtonText('education') }}
+          {{ getButtonText('career') }}
         </RouterLink>
         <RouterLink
           to="/tech-stack"
