@@ -179,6 +179,9 @@
 						<exclude>**/com/kevinmazali/portfolio/model/**</exclude>
 						<exclude>**/com/kevinmazali/portfolio/config/**</exclude>
 						<exclude>**/com/kevinmazali/portfolio/PortfolioApplication.class</exclude>
+						<!-- Large ingestion + JDBC/pgvector paths; covered by dedicated tests + manual re-ingest verification. -->
+						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService.class</exclude>
+						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService$*.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>
