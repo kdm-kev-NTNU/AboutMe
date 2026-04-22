@@ -10,7 +10,7 @@ import java.util.Optional;
 
 /**
  * JPQL queries for versioned RAG prompts; NULL language/provider are matched with explicit {@code IS NULL}
- * semantics for MySQL compatibility.
+ * semantics (portable across SQL databases).
  */
 public interface PromptVersionRepository extends JpaRepository<PromptVersion, Long> {
 
