@@ -49,7 +49,10 @@ class EvaluatorServiceTest {
   @BeforeEach
   void setUp() {
     lenient().doNothing().when(aiCircuitBreaker).assertClosed();
-    lenient().doNothing().when(aiBudgetService).recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean());
+    lenient()
+        .doNothing()
+        .when(aiBudgetService)
+        .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), any(), any());
     AiLimitsProperties limits = new AiLimitsProperties();
     evaluatorService = new EvaluatorService(
         openAiChatModel,

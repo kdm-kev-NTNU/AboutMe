@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -89,6 +89,41 @@ const baselineLabel = computed(() => {
   return d ? `${d.name} (${d.exampleCount})` : '– Velg datasett –'
 })
 
+/** Evaluator must be from a different LLM vendor than the generator (avoid model-family bias). */
+const evaluatorModels = computed(() => {
+  const gen = models.value.find((m) => m.id === generatorModel.value)
+  if (!gen) return models.value
+  return models.value.filter((m) => m.provider !== gen.provider)
+})
+
+const crossFamilyPairAvailable = computed(() => {
+  if (!models.value.length) return true
+  return evaluatorModels.value.length > 0
+})
+
+function pickCrossFamilyEvaluatorId(all: ChatModelOption[], genId: string): string | null {
+  const gen = all.find((m) => m.id === genId) ?? all[0]
+  if (!gen) return null
+  const other = all.find((m) => m.provider !== gen.provider)
+  return other?.id ?? null
+}
+
+function syncEvaluatorToCrossFamily() {
+  const all = models.value
+  if (!all.length) return
+  const gen = all.find((m) => m.id === generatorModel.value)
+  const ev = all.find((m) => m.id === evaluatorModel.value)
+  if (!gen || !ev || gen.provider === ev.provider) {
+    const nextId = pickCrossFamilyEvaluatorId(all, generatorModel.value)
+    if (nextId) evaluatorModel.value = nextId
+    else evaluatorModel.value = ''
+  }
+}
+
+watch(generatorModel, () => {
+  syncEvaluatorToCrossFamily()
+})
+
 function phoenixDatasetLink(datasetId: string) {
   const base = (phoenixBaseUrl.value || '').replace(/\/$/, '')
   if (!base || !datasetId) return ''
@@ -134,13 +169,7 @@ async function loadModels() {
     if (ok && Array.isArray(data)) {
       models.value = data
       if (!generatorModel.value && data.length) generatorModel.value = data[0].id
-      if (!evaluatorModel.value && data.length) {
-        const prefer =
-          data.find((m) => m.id.includes('gpt-5.4') && !m.id.includes('mini')) ||
-          data.find((m) => m.id.includes('gpt') && !m.id.toLowerCase().includes('mini')) ||
-          data[0]
-        evaluatorModel.value = prefer.id
-      }
+      syncEvaluatorToCrossFamily()
     }
   } finally {
     modelsLoading.value = false
@@ -180,6 +209,18 @@ async function startRun() {
   }
   if (!generatorModel.value || !evaluatorModel.value) {
     runError.value = 'Velg generator- og evaluator-modell.'
+    return
+  }
+  const genOpt = models.value.find((m) => m.id === generatorModel.value)
+  const evOpt = models.value.find((m) => m.id === evaluatorModel.value)
+  if (genOpt && evOpt && genOpt.provider === evOpt.provider) {
+    runError.value =
+      'Generator og evaluator må være fra ulike leverandører (OpenAI vs Anthropic) for å unngå modellfamilie-bias.'
+    return
+  }
+  if (!crossFamilyPairAvailable.value) {
+    runError.value =
+      'Krever minst én modell fra hver leverandør (OpenAI og Anthropic). Sjekk at begge API-nøkler er satt i backend.'
     return
   }
   const d = datasets.value.find((x) => x.id === selectedDatasetId.value)
@@ -342,11 +383,23 @@ onMounted(() => {
             <select
               v-model="evaluatorModel"
               class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white"
-              :disabled="modelsLoading"
+              :disabled="modelsLoading || !evaluatorModels.length"
             >
-              <option v-for="m in models" :key="'e-' + m.id" :value="m.id">{{ m.label }} ({{ m.id }})</option>
+              <option v-for="m in evaluatorModels" :key="'e-' + m.id" :value="m.id">{{ m.label }} ({{ m.id }})</option>
             </select>
           </div>
+          <p class="sm:col-span-2 text-xs text-gray-600 leading-relaxed">
+            For å unngå modellfamilie-bias må evaluator være fra en annen leverandør enn generator (OpenAI ↔
+            Anthropic).
+          </p>
+          <p
+            v-if="models.length && !crossFamilyPairAvailable"
+            class="sm:col-span-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5"
+          >
+            Krever minst én konfigurert modell fra hver leverandør. Sett både
+            <code class="text-[11px] bg-white px-0.5 rounded">OPENAI_API_KEY</code> og
+            <code class="text-[11px] bg-white px-0.5 rounded">ANTHROPIC_API_KEY</code> for backend.
+          </p>
           <div class="sm:col-span-2">
             <label class="block text-xs font-medium text-gray-700 mb-1">Maks antall eksempler (valgfritt)</label>
             <input
@@ -362,7 +415,7 @@ onMounted(() => {
           type="button"
           class="mt-4 text-sm font-medium px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           @click="startRun"
-          :disabled="runBusy || !phoenixConfigured"
+          :disabled="runBusy || !phoenixConfigured || !crossFamilyPairAvailable || !evaluatorModel"
         >
           Start experiment
         </button>

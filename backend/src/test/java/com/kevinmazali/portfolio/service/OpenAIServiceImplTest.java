@@ -62,7 +62,10 @@ class OpenAIServiceImplTest {
         .thenReturn("Input: {input}\nDocs:\n{documents}");
     lenient().doNothing().when(aiCircuitBreaker).assertClosed();
     lenient().doNothing().when(aiBudgetService).assertWithinBudget(anyString(), anyBoolean());
-    lenient().doNothing().when(aiBudgetService).recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean());
+    lenient()
+        .doNothing()
+        .when(aiBudgetService)
+        .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), any(), any());
 
     AiLimitsProperties limits = new AiLimitsProperties();
     AiBudgetProperties budgetProps = new AiBudgetProperties();

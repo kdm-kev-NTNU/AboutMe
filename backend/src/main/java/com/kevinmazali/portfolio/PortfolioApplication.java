@@ -5,6 +5,7 @@ import com.kevinmazali.portfolio.config.AiKillSwitchProperties;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
+import com.kevinmazali.portfolio.config.PostHogProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -21,7 +22,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     AiBudgetProperties.class,
     AiKillSwitchProperties.class,
     AskRateLimitProperties.class,
-    ExperimentRunRateLimitProperties.class
+    ExperimentRunRateLimitProperties.class,
+    PostHogProperties.class
 })
 public class PortfolioApplication {
 

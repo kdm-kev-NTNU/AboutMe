@@ -60,7 +60,7 @@ Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `bac
 
 **Usually required:** `OPENAI_API_KEY`, PostgreSQL user/password (defaults align with Compose: `postgres` / `postgres`), `PORT` for the API (default **8080**).
 
-**Common optional:** `ANTHROPIC_API_KEY`, OTLP (`OTLP_EXPORT_ENABLED`, `PHOENIX_OTLP_ENDPOINT`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`. Details and comments live in `.env.example`.
+**Common optional:** `ANTHROPIC_API_KEY`, OTLP (`OTLP_EXPORT_ENABLED`, `PHOENIX_OTLP_ENDPOINT`), PostHog backend LLM capture (`POSTHOG_ENABLED`, `POSTHOG_API_KEY`, `POSTHOG_HOST`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`. Details and comments live in `.env.example`.
 
 ## Tests
 
