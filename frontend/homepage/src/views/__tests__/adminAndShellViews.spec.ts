@@ -88,7 +88,13 @@ function setupFetchForExperimentsAndHistory() {
         return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
       }
       if (url.includes('/api/admin/tools/experiments/models')) {
-        return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        return new Response(
+          JSON.stringify([
+            { id: 'gpt-smoke', label: 'G', provider: 'OPENAI' },
+            { id: 'claude-smoke', label: 'C', provider: 'ANTHROPIC' },
+          ]),
+          { status: 200, headers: headersJson },
+        )
       }
       if (url.includes('/api/admin/tools/experiments/runs')) {
         return new Response(JSON.stringify([]), { status: 200, headers: headersJson })

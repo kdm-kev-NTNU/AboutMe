@@ -161,7 +161,7 @@ class ExperimentControllerTest {
     mockMvc.perform(post("/admin/tools/experiments/run")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(new RunExperimentRequest(
-                "ds-1", "n", null, "gpt-5.4-mini", "gpt-5.4-mini", null))))
+                "ds-1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null))))
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.runId").value(7));
   }
