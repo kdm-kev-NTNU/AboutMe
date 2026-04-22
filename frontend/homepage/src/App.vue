@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { RouterView, RouterLink, useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
 import FloatingChatButton from './components/FloatingChatButton.vue'
 import AdminLoginButton from './components/AdminLoginButton.vue'
 import CookieConsentBanner from './components/CookieConsentBanner.vue'
+import CookieConsentSettingsModal from './components/CookieConsentSettingsModal.vue'
 import { useLangStore } from './stores/lang'
+import { openCookieSettings } from './lib/cookie-settings-state'
 
 // Initialize the language store early so detection runs on app boot
 const langStore = useLangStore()
@@ -16,11 +18,6 @@ const showPublicPageHeader = computed(() => !adminRouteNames.has(String(route.na
 
 const privacyLabel = computed(() => (langStore.language === 'no' ? 'Personvernerklæring' : 'Privacy Policy'))
 const cookieSettingsLabel = computed(() => (langStore.language === 'no' ? 'Informasjonskapsler' : 'Cookie Settings'))
-const cookieConsentBannerRef = ref<InstanceType<typeof CookieConsentBanner> | null>(null)
-
-function openCookieSettings() {
-  cookieConsentBannerRef.value?.openConsentSettings()
-}
 </script>
 
 <template>
@@ -46,7 +43,8 @@ function openCookieSettings() {
         {{ cookieSettingsLabel }}
       </button>
     </footer>
-    <CookieConsentBanner ref="cookieConsentBannerRef" />
+    <CookieConsentSettingsModal />
+    <CookieConsentBanner />
     <FloatingChatButton class="cursor-pointer" />
   </div>
 </template>
