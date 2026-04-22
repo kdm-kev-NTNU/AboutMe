@@ -29,10 +29,10 @@ class LlmClientDiagnosticsTest {
 
   @Test
   void describeAskFailureFallsBackToRootCauseMessage() {
-    IllegalStateException root = new IllegalStateException("Chroma timeout");
+    IllegalStateException root = new IllegalStateException("Upstream timeout");
     RuntimeException outer = new RuntimeException("wrapper", root);
 
     assertThat(LlmClientDiagnostics.describeAskFailure(outer))
-        .isEqualTo("IllegalStateException: Chroma timeout");
+        .isEqualTo("IllegalStateException: Upstream timeout");
   }
 }
