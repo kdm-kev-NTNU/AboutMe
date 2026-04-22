@@ -2,7 +2,7 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.config.OpenApiConfig;
 import com.kevinmazali.portfolio.model.ChunkListResponse;
-import com.kevinmazali.portfolio.model.ChromaCollectionsResponse;
+import com.kevinmazali.portfolio.model.VectorStoreInfoResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
 import com.kevinmazali.portfolio.model.PathIngestRequest;
@@ -36,7 +36,7 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Admin-only HTTP API for document ingestion and ChromaDB inspection.
+ * Admin-only HTTP API for document ingestion and pgvector inspection.
  */
 @RestController
 @RequestMapping("/admin/tools/documents")
@@ -185,11 +185,11 @@ public class DocumentPipelineController {
     return ResponseEntity.noContent().build();
   }
 
-  @Operation(summary = "Describe Chroma collections")
+  @Operation(summary = "Describe vector store (pgvector table)")
   @ApiResponse(responseCode = "200",
-      content = @Content(schema = @Schema(implementation = ChromaCollectionsResponse.class)))
+      content = @Content(schema = @Schema(implementation = VectorStoreInfoResponse.class)))
   @GetMapping("/collections")
-  public ChromaCollectionsResponse collections() {
+  public VectorStoreInfoResponse collections() {
     return documentIngestionService.describeCollections();
   }
 
