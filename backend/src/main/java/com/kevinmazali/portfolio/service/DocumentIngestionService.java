@@ -44,7 +44,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -460,12 +459,9 @@ public class DocumentIngestionService implements ApplicationRunner {
           FROM %s
           WHERE metadata->>'document_id' = ?
           ORDER BY (NULLIF(trim(metadata->>'chunk_index'), ''))::int NULLS LAST, id
+          LIMIT ? OFFSET ?
           """.formatted(table);
-      List<ChunkItem> all = jdbcTemplate.query(listSql, (rs, rowNum) -> mapRowToChunkItem(rs), trimmedDocId);
-      all.sort(Comparator.comparing(ChunkItem::chunkIndex, Comparator.nullsLast(Comparator.naturalOrder())));
-      int from = Math.min(off, all.size());
-      int to = Math.min(off + lim, all.size());
-      List<ChunkItem> page = all.subList(from, to);
+      List<ChunkItem> page = jdbcTemplate.query(listSql, (rs, rowNum) -> mapRowToChunkItem(rs), trimmedDocId, lim, off);
       return new ChunkListResponse(tableLabel, total, totalMatching, lim, off, page);
     }
 
