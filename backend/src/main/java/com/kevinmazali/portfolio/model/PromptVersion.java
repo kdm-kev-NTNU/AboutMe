@@ -52,7 +52,7 @@ public class PromptVersion {
     @Column(length = 32)
     private String provider;
 
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(nullable = false, length = 64)
@@ -66,7 +66,6 @@ public class PromptVersion {
     private String description;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "JSON")
     private Map<String, Object> metadataJson;
 
     @Column(nullable = false)
