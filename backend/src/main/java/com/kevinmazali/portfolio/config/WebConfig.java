@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.config;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
+import io.github.bucket4j.ConsumptionProbe;
 import jakarta.servlet.Filter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -16,37 +17,51 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import org.springframework.lang.NonNull;
 
 /**
- * Registers servlet filters that rate-limit {@code POST /ask}, {@code POST /auth/login}, and
- * {@code POST /feedback} (token buckets per client key or IP).
+ * Registers servlet filters that rate-limit {@code POST /ask}, {@code POST /auth/login},
+ * {@code POST /feedback}, and {@code POST /admin/tools/experiments/run} (token buckets per client key or IP).
  * CORS is configured in {@link SecurityConfig}.
  */
 @Configuration
 public class WebConfig {
 
-    // CORS and security headers: see SecurityConfig (this class only registers rate limit filters).
+    private final AskRateLimitProperties askRateLimitProperties;
+    private final ExperimentRunRateLimitProperties experimentRunRateLimitProperties;
 
-    /** One token bucket per client key (authenticated username, else client IP) for /ask. */
+    public WebConfig(
+        AskRateLimitProperties askRateLimitProperties,
+        ExperimentRunRateLimitProperties experimentRunRateLimitProperties) {
+        this.askRateLimitProperties = askRateLimitProperties;
+        this.experimentRunRateLimitProperties = experimentRunRateLimitProperties;
+    }
+
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
-
-    /** One token bucket per client IP for /auth/login (credential stuffing mitigation). */
     private final Map<String, Bucket> loginBuckets = new ConcurrentHashMap<>();
-
-    /** One token bucket per client IP for /feedback (spam mitigation). */
     private final Map<String, Bucket> feedbackBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> experimentRunBuckets = new ConcurrentHashMap<>();
 
-    private Bucket newBucket() {
+    private Bucket newAskBucketAuthenticated() {
+        AskRateLimitProperties p = askRateLimitProperties;
         Bandwidth limit = Bandwidth.builder()
-            .capacity(5)
-            .refillGreedy(5, Duration.ofSeconds(10))
+            .capacity(p.getAuthenticatedCapacity())
+            .refillGreedy(p.getAuthenticatedCapacity(), Duration.ofSeconds(p.getAuthenticatedWindowSeconds()))
             .build();
         return Bucket.builder().addLimit(limit).build();
     }
 
-    /** Rate-limit bucket key: prefer principal name when present so logged-in users are not pooled with anonymous IPs. */
-    private String key(HttpServletRequest req) {
+    private Bucket newAskBucketAnonymous() {
+        AskRateLimitProperties p = askRateLimitProperties;
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(p.getAnonymousCapacity())
+            .refillGreedy(p.getAnonymousCapacity(), Duration.ofSeconds(p.getAnonymousWindowSeconds()))
+            .build();
+        return Bucket.builder().addLimit(limit).build();
+    }
+
+    private String askKey(HttpServletRequest req) {
         String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : null;
         String ip = req.getRemoteAddr();
         return "ask:" + (user != null ? "u:" + user : "ip:" + ip);
@@ -76,9 +91,28 @@ public class WebConfig {
         return "feedback:ip:" + req.getRemoteAddr();
     }
 
-    /**
-     * Rate limiter for /ask endpoint (5 requests per 10 seconds).
-     */
+    private Bucket newExperimentRunBucket() {
+        ExperimentRunRateLimitProperties p = experimentRunRateLimitProperties;
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(p.getCapacity())
+            .refillGreedy(p.getCapacity(), Duration.ofSeconds(p.getWindowSeconds()))
+            .build();
+        return Bucket.builder().addLimit(limit).build();
+    }
+
+    private String experimentRunKey(HttpServletRequest req) {
+        String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : "unknown";
+        return "exp-run:" + user;
+    }
+
+    private static void write429(HttpServletResponse response, ConsumptionProbe probe) throws IOException {
+        response.setStatus(429);
+        response.setContentType("application/json");
+        long seconds = TimeUnit.NANOSECONDS.toSeconds(probe.getNanosToWaitForRefill()) + 1;
+        response.setHeader("Retry-After", String.valueOf(Math.max(1, seconds)));
+        response.getWriter().write("{\"error\":\"Too Many Requests\"}");
+    }
+
     @Bean
     @ConditionalOnProperty(name = "portfolio.ask-rate-limit.enabled", havingValue = "true", matchIfMissing = true)
     public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> askRateLimitFilter() {
@@ -87,13 +121,17 @@ public class WebConfig {
             @Override
             protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
                 throws ServletException, IOException {
-                Bucket bucket = buckets.computeIfAbsent(key(request), k -> newBucket());
-                if (bucket.tryConsume(1)) {
+                if (!"POST".equalsIgnoreCase(request.getMethod())) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                String k = askKey(request);
+                Bucket bucket = buckets.computeIfAbsent(k, key -> key.contains(":ip:") ? newAskBucketAnonymous() : newAskBucketAuthenticated());
+                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+                if (probe.isConsumed()) {
                     filterChain.doFilter(request, response);
                 } else {
-                    response.setStatus(429);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"error\":\"Too Many Requests\"}");
+                    write429(response, probe);
                 }
             }
         });
@@ -103,9 +141,6 @@ public class WebConfig {
         return registration;
     }
 
-    /**
-     * Rate limiter for {@code POST /auth/login} (5 attempts per 60 seconds per client IP).
-     */
     @Bean
     @ConditionalOnProperty(name = "portfolio.login-rate-limit.enabled", havingValue = "true", matchIfMissing = true)
     public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> loginRateLimitFilter() {
@@ -114,13 +149,16 @@ public class WebConfig {
             @Override
             protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
                 throws ServletException, IOException {
+                if (!"POST".equalsIgnoreCase(request.getMethod())) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 Bucket bucket = loginBuckets.computeIfAbsent(loginKey(request), k -> newLoginBucket());
-                if (bucket.tryConsume(1)) {
+                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+                if (probe.isConsumed()) {
                     filterChain.doFilter(request, response);
                 } else {
-                    response.setStatus(429);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"error\":\"Too Many Requests\"}");
+                    write429(response, probe);
                 }
             }
         });
@@ -130,9 +168,6 @@ public class WebConfig {
         return registration;
     }
 
-    /**
-     * Rate limiter for {@code POST /feedback} (3 submissions per 60 seconds per client IP).
-     */
     @Bean
     @ConditionalOnProperty(name = "portfolio.feedback-rate-limit.enabled", havingValue = "true", matchIfMissing = true)
     public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> feedbackRateLimitFilter() {
@@ -141,13 +176,16 @@ public class WebConfig {
             @Override
             protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
                 throws ServletException, IOException {
+                if (!"POST".equalsIgnoreCase(request.getMethod())) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 Bucket bucket = feedbackBuckets.computeIfAbsent(feedbackKey(request), k -> newFeedbackBucket());
-                if (bucket.tryConsume(1)) {
+                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+                if (probe.isConsumed()) {
                     filterChain.doFilter(request, response);
                 } else {
-                    response.setStatus(429);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"error\":\"Too Many Requests\"}");
+                    write429(response, probe);
                 }
             }
         });
@@ -156,6 +194,34 @@ public class WebConfig {
         registration.setOrder(2);
         return registration;
     }
+
+    @Bean
+    @ConditionalOnProperty(name = "portfolio.experiments.run-rate-limit.enabled", havingValue = "true", matchIfMissing = true)
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> experimentRunRateLimitFilter() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<Filter>();
+        registration.setFilter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+                throws ServletException, IOException {
+                String uri = request.getRequestURI();
+                if (!"POST".equalsIgnoreCase(request.getMethod())
+                    || uri == null
+                    || !uri.endsWith("/admin/tools/experiments/run")) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                Bucket bucket = experimentRunBuckets.computeIfAbsent(experimentRunKey(request), k -> newExperimentRunBucket());
+                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+                if (probe.isConsumed()) {
+                    filterChain.doFilter(request, response);
+                } else {
+                    write429(response, probe);
+                }
+            }
+        });
+        registration.addUrlPatterns("/admin/tools/experiments/run");
+        registration.setName("experimentRunRateLimitFilter");
+        registration.setOrder(3);
+        return registration;
+    }
 }
-
-
