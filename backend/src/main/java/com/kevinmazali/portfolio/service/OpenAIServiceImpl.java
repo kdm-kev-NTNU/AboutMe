@@ -132,7 +132,7 @@ public class OpenAIServiceImpl implements OpenAIService {
         "documents", String.join("\n", contentList)
     ));
 
-    ChatResponse response = invokeManagedChat(model, basePrompt, budgetUserId, anonymous);
+    ChatResponse response = invokeManagedChat(model, basePrompt, budgetUserId, anonymous, "rag_completion");
     String answerText = response.getResult().getOutput().getText();
     answerText = truncateOutput(answerText, aiLimitsProperties.getMaxOutputChars());
     return new RagAnswer(answerText, contentList);
@@ -155,12 +155,22 @@ public class OpenAIServiceImpl implements OpenAIService {
       SupportedChatModel model,
       Prompt basePrompt,
       String budgetUserId,
-      boolean anonymous) {
+      boolean anonymous,
+      String generationSpanName) {
     aiCircuitBreaker.assertClosed();
     aiBudgetService.assertWithinBudget(budgetUserId, anonymous);
+    long startNs = System.nanoTime();
     ChatResponse response = invokeChat(model, basePrompt);
+    double latencySec = (System.nanoTime() - startNs) / 1_000_000_000.0;
     UsageTokens usage = extractUsage(response);
-    aiBudgetService.recordUsage(budgetUserId, model.modelId(), usage.promptTokens(), usage.completionTokens(), anonymous);
+    aiBudgetService.recordUsage(
+        budgetUserId,
+        model.modelId(),
+        usage.promptTokens(),
+        usage.completionTokens(),
+        anonymous,
+        latencySec,
+        generationSpanName);
     return response;
   }
 
@@ -202,7 +212,7 @@ public class OpenAIServiceImpl implements OpenAIService {
 
       Prompt base = new PromptTemplate("{sys}\nUser: {q}")
           .create(Map.of("sys", sys, "q", original));
-      ChatResponse r = invokeManagedChat(model, base, budgetUserId, anonymous);
+      ChatResponse r = invokeManagedChat(model, base, budgetUserId, anonymous, "query_expansion");
       String json = r.getResult().getOutput().getText();
 
       String en = extractJsonValue(json, "en");
