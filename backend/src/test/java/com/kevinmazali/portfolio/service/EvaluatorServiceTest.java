@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.model.experiment.EvaluationScore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,11 +38,26 @@ class EvaluatorServiceTest {
   @Mock
   private ObjectProvider<AnthropicChatModel> anthropicChatModelProvider;
 
+  @Mock
+  private AiCircuitBreaker aiCircuitBreaker;
+
+  @Mock
+  private AiBudgetService aiBudgetService;
+
   private EvaluatorService evaluatorService;
 
   @BeforeEach
   void setUp() {
-    evaluatorService = new EvaluatorService(openAiChatModel, anthropicChatModelProvider, new ObjectMapper());
+    lenient().doNothing().when(aiCircuitBreaker).assertClosed();
+    lenient().doNothing().when(aiBudgetService).recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean());
+    AiLimitsProperties limits = new AiLimitsProperties();
+    evaluatorService = new EvaluatorService(
+        openAiChatModel,
+        anthropicChatModelProvider,
+        new ObjectMapper(),
+        limits,
+        aiCircuitBreaker,
+        aiBudgetService);
   }
 
   @Test
