@@ -1,39 +1,37 @@
 package com.kevinmazali.portfolio.service;
 
-import com.kevinmazali.portfolio.config.PortfolioChromaProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.SanitizerProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
-import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
-import com.kevinmazali.portfolio.util.ChromaClientDiagnostics;
-import com.kevinmazali.portfolio.model.ChromaCollectionSummary;
 import com.kevinmazali.portfolio.model.ChunkItem;
 import com.kevinmazali.portfolio.model.ChunkListResponse;
-import com.kevinmazali.portfolio.model.ChromaCollectionsResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
 import com.kevinmazali.portfolio.model.SanitizeResult;
+import com.kevinmazali.portfolio.model.VectorStoreCollectionEntry;
+import com.kevinmazali.portfolio.model.VectorStoreInfoResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chroma.vectorstore.ChromaApi;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.ai.vectorstore.chroma.autoconfigure.ChromaVectorStoreProperties;
+import org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.env.Environment;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -48,7 +46,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -57,77 +54,64 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Phased document pipeline (read → split → ChromaDB), inspired by
- * Piscada-style ingestion, adapted for Spring AI {@link VectorStore}.
+ * Phased document pipeline (read → split → pgvector), inspired by Piscada-style ingestion,
+ * adapted for Spring AI {@link VectorStore}.
  */
 @Slf4j
 @Service
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class DocumentIngestionService implements ApplicationRunner {
 
-  /** Max paths per {@link #ingestFromPaths} request to avoid abuse. */
   private static final int MAX_PATH_INGEST_BATCH = 100;
 
   private static final List<String> SUPPORTED_EXTENSIONS = List.of(
       "pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
 
   private final VectorStore vectorStore;
-  private final ObjectProvider<ChromaApi> chromaApiProvider;
-  private final Environment environment;
-  private final ChromaVectorStoreProperties chromaStoreProperties;
+  private final JdbcTemplate jdbcTemplate;
+  private final ObjectMapper objectMapper;
+  private final PgVectorStoreProperties pgVectorStoreProperties;
   private final VectorStoreProperties vectorStoreProperties;
-  private final PortfolioChromaProperties portfolioChromaProperties;
   private final NoiseCleaner noiseCleaner;
   private final PiiSanitizerService piiSanitizerService;
   private final boolean sanitizerEnabled;
 
   public DocumentIngestionService(
       @Lazy VectorStore vectorStore,
-      ObjectProvider<ChromaApi> chromaApiProvider,
-      Environment environment,
-      ChromaVectorStoreProperties chromaStoreProperties,
+      JdbcTemplate jdbcTemplate,
+      ObjectMapper objectMapper,
+      PgVectorStoreProperties pgVectorStoreProperties,
       VectorStoreProperties vectorStoreProperties,
-      PortfolioChromaProperties portfolioChromaProperties,
       NoiseCleaner noiseCleaner,
       ObjectProvider<PiiSanitizerService> piiSanitizerProvider,
       SanitizerProperties sanitizerProperties) {
     this.vectorStore = vectorStore;
-    this.chromaApiProvider = chromaApiProvider;
-    this.environment = environment;
-    this.chromaStoreProperties = chromaStoreProperties;
+    this.jdbcTemplate = jdbcTemplate;
+    this.objectMapper = objectMapper;
+    this.pgVectorStoreProperties = pgVectorStoreProperties;
     this.vectorStoreProperties = vectorStoreProperties;
-    this.portfolioChromaProperties = portfolioChromaProperties;
     this.noiseCleaner = noiseCleaner;
     this.piiSanitizerService = piiSanitizerProvider.getIfAvailable();
     this.sanitizerEnabled = sanitizerProperties.isEnabled();
   }
 
-  private ChromaApi chromaApi() {
-    if (!portfolioChromaProperties.isEnabled()) {
-      throw new ChromaFeatureDisabledException(
-          "Chroma vector features are disabled (portfolio.chroma.enabled=false / CHROMA_ENABLED=false). "
-              + "Deploy Chroma in the same Railway project and set CHROMA_HTTP_HOST, or keep Chroma disabled to run chat without document indexing.");
-    }
-    ChromaApi api = chromaApiProvider.getIfAvailable();
-    if (api == null) {
-      String chromaUrl = chromaClientBaseUrl();
-      throw new IllegalStateException(
-          "ChromaApi bean is missing while portfolio.chroma.enabled=true; check Chroma autoconfiguration. "
-              + "Configured Chroma client URL (host:port): " + chromaUrl);
-    }
-    return api;
+  private String qualifiedVectorTable() {
+    return pgVectorStoreProperties.getSchemaName() + "." + pgVectorStoreProperties.getTableName();
+  }
+
+  private long countRows() {
+    Long c = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + qualifiedVectorTable(), Long.class);
+    return c == null ? 0L : c;
+  }
+
+  private void touchVectorStoreBean() {
+    vectorStore.add(Collections.emptyList());
   }
 
   @Override
   public void run(ApplicationArguments args) {
-    if (!portfolioChromaProperties.isEnabled()) {
-      log.info("Chroma is disabled (portfolio.chroma.enabled=false); skipping classpath vector seed.");
-      return;
-    }
     try {
-      // VectorStore bean is @Lazy: ChromaVectorStore.initializeSchema runs on first proxy use.
-      // Seed logic calls ChromaApi#getCollection first; materialize the store so the collection exists.
-      vectorStore.add(Collections.<Document>emptyList());
+      touchVectorStoreBean();
       seedFromClasspathIfCollectionEmpty();
     } catch (Exception e) {
       log.warn("Startup vector seed skipped or failed: {}", e.getMessage(), e);
@@ -135,32 +119,29 @@ public class DocumentIngestionService implements ApplicationRunner {
   }
 
   /**
-   * When the configured Chroma collection has no embeddings yet, ingest documents from
+   * When the vector table has no rows yet, ingest documents from
    * {@link VectorStoreProperties#getDocumentsToLoad()} or {@code documentsToLoadDir}.
    */
   public void seedFromClasspathIfCollectionEmpty() throws IOException {
-    String collectionId = requireCollectionId();
-    Long count = chromaApi().countEmbeddings(
-        chromaStoreProperties.getTenantName(),
-        chromaStoreProperties.getDatabaseName(),
-        collectionId);
+    ensureVectorTableAccessible();
+    long count = countRows();
     boolean forceReindex = vectorStoreProperties.isForceReindex();
-    if (count != null && count > 0 && !forceReindex) {
-      log.info("Chroma collection '{}' already has {} embeddings; skipping classpath seed.",
-          chromaStoreProperties.getCollectionName(), count);
+    if (count > 0 && !forceReindex) {
+      log.info("Vector table '{}' already has {} rows; skipping classpath seed.",
+          qualifiedVectorTable(), count);
       return;
     }
-    if (forceReindex && count != null && count > 0) {
+    if (forceReindex && count > 0) {
       log.warn(
-          "forceReindex=true: re-ingesting classpath seed documents (existing {} embeddings in '{}').",
-          count, chromaStoreProperties.getCollectionName());
+          "forceReindex=true: re-ingesting classpath seed documents (existing {} rows in '{}').",
+          count, qualifiedVectorTable());
     }
     List<Resource> resources = resolveClasspathResources();
     if (resources.isEmpty()) {
-      log.info("No classpath/file seed documents found for initial Chroma ingest.");
+      log.info("No classpath/file seed documents found for initial vector ingest.");
       return;
     }
-    log.info("Seeding Chroma from {} resource(s) (force replace={}).", resources.size(), forceReindex);
+    log.info("Seeding pgvector from {} resource(s) (force replace={}).", resources.size(), forceReindex);
     for (Resource res : resources) {
       try {
         ingestFromResource(res, forceReindex);
@@ -170,12 +151,8 @@ public class DocumentIngestionService implements ApplicationRunner {
     }
   }
 
-  /**
-   * Re-ingests all classpath seed documents ({@code documentsToLoad} or {@code documentsToLoadDir}),
-   * replacing existing chunks per {@code document_id} (content hash). Admin-only at the HTTP layer.
-   */
   public List<IngestionResult> reseedClasspathDocuments() throws IOException {
-    requireCollectionId();
+    ensureVectorTableAccessible();
     List<Resource> resources = resolveClasspathResources();
     if (resources.isEmpty()) {
       log.warn("reseedClasspathDocuments: no seed resources resolved.");
@@ -195,10 +172,6 @@ public class DocumentIngestionService implements ApplicationRunner {
     return results;
   }
 
-  /**
-   * Ingest files resolved from paths relative to {@link VectorStoreProperties#getDocumentsToLoadDir()}.
-   * Paths must not contain {@code ..} or absolute segments. One {@link IngestionResult} per input path.
-   */
   public List<IngestionResult> ingestFromPaths(List<String> relativePaths, boolean force) throws IOException {
     List<IngestionResult> results = new ArrayList<>();
     if (relativePaths == null || relativePaths.isEmpty()) {
@@ -220,7 +193,6 @@ public class DocumentIngestionService implements ApplicationRunner {
     }
     PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
     for (String raw : relativePaths) {
-      // Each path is validated, resolved under documentsToLoadDir, then ingested like an upload.
       String sanitized = sanitizeRelativePath(raw);
       if (sanitized == null) {
         results.add(new IngestionResult("", raw == null ? "" : raw.trim(), 0, false,
@@ -252,10 +224,6 @@ public class DocumentIngestionService implements ApplicationRunner {
     return results;
   }
 
-  /**
-   * Lists relative file paths under {@link VectorStoreProperties#getDocumentsToLoadDir()} that have a
-   * supported extension. Only {@code file:} base URLs are supported (typical local {@code ./data/docs/}).
-   */
   public List<String> listAvailableFiles() throws IOException {
     String baseDir = vectorStoreProperties.getDocumentsToLoadDir();
     if (baseDir == null || baseDir.isBlank()) {
@@ -295,9 +263,6 @@ public class DocumentIngestionService implements ApplicationRunner {
     return out;
   }
 
-  /**
-   * Returns a relative path using forward slashes, or {@code null} if empty, absolute, or contains {@code ..}.
-   */
   @Nullable
   static String sanitizeRelativePath(@Nullable String raw) {
     if (raw == null) {
@@ -369,9 +334,8 @@ public class DocumentIngestionService implements ApplicationRunner {
 
   private IngestionResult ingestFromResource(Resource resource, String contentHash, String displayFilename, boolean force)
       throws IOException {
-    requireCollectionId();
+    ensureVectorTableAccessible();
 
-    // Idempotency: same bytes (hash) map to one logical document_id unless force replace is requested.
     if (!force && documentChunksExist(contentHash)) {
       return new IngestionResult(contentHash, displayFilename, 0, true,
           "Same content already indexed (document_id = content hash). Use force to replace.");
@@ -380,7 +344,6 @@ public class DocumentIngestionService implements ApplicationRunner {
       deleteByDocumentId(contentHash);
     }
 
-    // Extract text (PDF, Office, images with OCR where Tika supports it), then split for embedding.
     TikaDocumentReader reader = new TikaDocumentReader(resource);
     List<Document> docs = reader.get();
     if (docs == null || docs.isEmpty()) {
@@ -395,7 +358,6 @@ public class DocumentIngestionService implements ApplicationRunner {
       return new IngestionResult(contentHash, displayFilename, 0, false, "No chunks after splitting");
     }
 
-    // Stable chunk ids and metadata enable list/delete/replace in Chroma and the admin UI.
     String ingestedAt = Instant.now().toString();
     List<Document> toAdd = new ArrayList<>();
     for (int i = 0; i < splitDocs.size(); i++) {
@@ -418,7 +380,6 @@ public class DocumentIngestionService implements ApplicationRunner {
           .build());
     }
 
-    // Spring AI vector store writes embeddings to the configured Chroma collection in batches.
     vectorStore.add(toAdd);
     log.info("Ingested {} chunks for document_id={} ({})", toAdd.size(), contentHash, displayFilename);
     return new IngestionResult(contentHash, displayFilename, toAdd.size(), false, "OK");
@@ -458,177 +419,89 @@ public class DocumentIngestionService implements ApplicationRunner {
   }
 
   public List<DocumentListEntry> listDocuments() {
-    String collectionId = requireCollectionId();
-    Map<String, Agg> grouped = new LinkedHashMap<>();
-    int offset = 0;
-    final int page = 500;
-    while (true) {
-      ChromaApi.GetEmbeddingResponse pageResp = chromaApi().getEmbeddings(
-          chromaStoreProperties.getTenantName(),
-          chromaStoreProperties.getDatabaseName(),
-          collectionId,
-          new ChromaApi.GetEmbeddingsRequest(
-              null,
-              null,
-              page,
-              offset,
-              List.of(ChromaApi.QueryRequest.Include.METADATAS)));
-      if (pageResp == null || pageResp.metadata() == null || pageResp.metadata().isEmpty()) {
-        break;
-      }
-      List<Map<String, Object>> metas = flattenMetadata(pageResp.metadata());
-      for (Map<String, Object> meta : metas) {
-        if (meta == null) {
-          continue;
-        }
-        Object docIdObj = meta.get("document_id");
-        if (docIdObj == null) {
-          continue;
-        }
-        String docId = String.valueOf(docIdObj);
-        Agg agg = grouped.computeIfAbsent(docId, Agg::new);
-        agg.chunkCount++;
-        Object fn = meta.get("filename");
-        if (fn != null && (agg.filename == null || agg.filename.isBlank())) {
-          agg.filename = String.valueOf(fn);
-        }
-        Object ing = meta.get("ingested_at");
-        if (ing != null) {
-          String ingStr = String.valueOf(ing);
-          if (agg.lastIngestedAt == null || ingStr.compareTo(agg.lastIngestedAt) > 0) {
-            agg.lastIngestedAt = ingStr;
-          }
-        }
-      }
-      if (metas.size() < page) {
-        break;
-      }
-      offset += page;
-    }
-
-    return grouped.values().stream()
-        .map(a -> new DocumentListEntry(
-            a.documentId,
-            Optional.ofNullable(a.filename).orElse("(unknown)"),
-            a.chunkCount,
-            Optional.ofNullable(a.lastIngestedAt).orElse("")))
-        .sorted(Comparator.comparing(DocumentListEntry::filename))
-        .collect(Collectors.toList());
+    ensureVectorTableAccessible();
+    String sql = """
+        SELECT metadata->>'document_id' AS doc_id,
+               MAX(metadata->>'filename') AS filename,
+               COUNT(*)::int AS cnt,
+               MAX(metadata->>'ingested_at') AS last_ingested
+        FROM %s
+        WHERE COALESCE(metadata->>'document_id', '') <> ''
+        GROUP BY metadata->>'document_id'
+        ORDER BY MAX(metadata->>'filename')
+        """.formatted(qualifiedVectorTable());
+    return jdbcTemplate.query(sql, (rs, rowNum) -> new DocumentListEntry(
+        rs.getString("doc_id"),
+        Optional.ofNullable(rs.getString("filename")).filter(s -> !s.isBlank()).orElse("(unknown)"),
+        rs.getInt("cnt"),
+        Optional.ofNullable(rs.getString("last_ingested")).orElse("")));
   }
 
   private static final int CHUNK_LIST_MAX_LIMIT = 200;
-  private static final int CHUNK_FETCH_PAGE = 500;
 
-  /**
-   * Paginated chunk bodies + metadata from the active Chroma collection.
-   * When {@code documentId} is set, all matching chunks are loaded, sorted by {@code chunk_index},
-   * then windowed by {@code offset}/{@code limit} (for stable ordering in the UI).
-   */
   public ChunkListResponse getChunks(@Nullable String documentId, int limit, int offset) {
-    String collectionId = requireCollectionId();
-    String tenant = chromaStoreProperties.getTenantName();
-    String database = chromaStoreProperties.getDatabaseName();
+    ensureVectorTableAccessible();
+    String table = qualifiedVectorTable();
+    String tableLabel = pgVectorStoreProperties.getTableName();
     int lim = Math.min(Math.max(limit, 1), CHUNK_LIST_MAX_LIMIT);
     int off = Math.max(offset, 0);
 
-    Long totalEmbeddings = chromaApi().countEmbeddings(tenant, database, collectionId);
-    long total = totalEmbeddings == null ? 0L : totalEmbeddings;
+    long total = countRows();
 
     String trimmedDocId = documentId == null ? "" : documentId.trim();
-    Map<String, Object> where =
-        trimmedDocId.isEmpty() ? null : Map.of("document_id", trimmedDocId);
-
-    List<ChromaApi.QueryRequest.Include> includes = List.of(
-        ChromaApi.QueryRequest.Include.METADATAS,
-        ChromaApi.QueryRequest.Include.DOCUMENTS);
-
-    String collectionName = chromaStoreProperties.getCollectionName();
-
-    if (where != null) {
-      List<ChunkItem> all = fetchAllChunksMatching(collectionId, where, includes, tenant, database);
+    if (!trimmedDocId.isEmpty()) {
+      Long matching = jdbcTemplate.queryForObject(
+          "SELECT COUNT(*) FROM " + table + " WHERE metadata->>'document_id' = ?",
+          Long.class,
+          trimmedDocId);
+      long totalMatching = matching == null ? 0L : matching;
+      String listSql = """
+          SELECT id, content, metadata::text AS metadata
+          FROM %s
+          WHERE metadata->>'document_id' = ?
+          ORDER BY (NULLIF(trim(metadata->>'chunk_index'), ''))::int NULLS LAST, id
+          """.formatted(table);
+      List<ChunkItem> all = jdbcTemplate.query(listSql, (rs, rowNum) -> mapRowToChunkItem(rs), trimmedDocId);
       all.sort(Comparator.comparing(ChunkItem::chunkIndex, Comparator.nullsLast(Comparator.naturalOrder())));
-      long totalMatching = all.size();
       int from = Math.min(off, all.size());
       int to = Math.min(off + lim, all.size());
       List<ChunkItem> page = all.subList(from, to);
-      return new ChunkListResponse(collectionName, total, totalMatching, lim, off, page);
+      return new ChunkListResponse(tableLabel, total, totalMatching, lim, off, page);
     }
 
-    ChromaApi.GetEmbeddingResponse resp = chromaApi().getEmbeddings(
-        tenant,
-        database,
-        collectionId,
-        new ChromaApi.GetEmbeddingsRequest(null, null, lim, off, includes));
-    List<ChunkItem> page = mapResponseToChunkItems(resp);
-    return new ChunkListResponse(collectionName, total, total, lim, off, page);
+    String pageSql = """
+        SELECT id, content, metadata::text AS metadata
+        FROM %s
+        ORDER BY id
+        LIMIT ? OFFSET ?
+        """.formatted(table);
+    List<ChunkItem> page = jdbcTemplate.query(pageSql, (rs, rowNum) -> mapRowToChunkItem(rs), lim, off);
+    return new ChunkListResponse(tableLabel, total, total, lim, off, page);
   }
 
-  private List<ChunkItem> fetchAllChunksMatching(
-      String collectionId,
-      Map<String, Object> where,
-      List<ChromaApi.QueryRequest.Include> includes,
-      String tenant,
-      String database) {
-    List<ChunkItem> all = new ArrayList<>();
-    int chromaOffset = 0;
-    while (true) {
-      ChromaApi.GetEmbeddingResponse resp = chromaApi().getEmbeddings(
-          tenant,
-          database,
-          collectionId,
-          new ChromaApi.GetEmbeddingsRequest(null, where, CHUNK_FETCH_PAGE, chromaOffset, includes));
-      List<ChunkItem> batch = mapResponseToChunkItems(resp);
-      if (batch.isEmpty()) {
-        break;
-      }
-      all.addAll(batch);
-      if (batch.size() < CHUNK_FETCH_PAGE) {
-        break;
-      }
-      chromaOffset += CHUNK_FETCH_PAGE;
-    }
-    return all;
+  private ChunkItem mapRowToChunkItem(java.sql.ResultSet rs) throws java.sql.SQLException {
+    String id = rs.getString("id");
+    String text = Optional.ofNullable(rs.getString("content")).orElse("");
+    Map<String, Object> meta = parseMetadataJson(rs.getString("metadata"));
+    String title = Optional.ofNullable(meta.get("filename"))
+        .map(String::valueOf)
+        .filter(s -> !s.isBlank())
+        .orElse("");
+    Integer chunkIndex = parseChunkIndex(meta.get("chunk_index"));
+    return new ChunkItem(id, title, chunkIndex, text, meta);
   }
 
-  private List<ChunkItem> mapResponseToChunkItems(ChromaApi.GetEmbeddingResponse resp) {
-    if (resp == null) {
-      return List.of();
+  private Map<String, Object> parseMetadataJson(@Nullable String json) {
+    if (json == null || json.isBlank()) {
+      return new HashMap<>();
     }
-    List<String> ids = flattenStringCells(resp.ids());
-    List<String> documents = flattenStringCells(resp.documents());
-    List<Map<String, Object>> metas = flattenMetadata(resp.metadata());
-    int n = Math.max(Math.max(ids.size(), documents.size()), metas.size());
-    List<ChunkItem> out = new ArrayList<>(n);
-    for (int i = 0; i < n; i++) {
-      String id = i < ids.size() ? ids.get(i) : "";
-      String text = i < documents.size() ? documents.get(i) : "";
-      Map<String, Object> row = i < metas.size() ? metas.get(i) : null;
-      Map<String, Object> meta = row == null ? new HashMap<>() : new HashMap<>(row);
-      String title = Optional.ofNullable(meta.get("filename"))
-          .map(String::valueOf)
-          .filter(s -> !s.isBlank())
-          .orElse("");
-      Integer chunkIndex = parseChunkIndex(meta.get("chunk_index"));
-      out.add(new ChunkItem(id, title, chunkIndex, text == null ? "" : text, meta));
+    try {
+      Map<String, Object> m = objectMapper.readValue(json, new TypeReference<>() {});
+      return m == null ? new HashMap<>() : new HashMap<>(m);
+    } catch (Exception e) {
+      log.debug("Failed to parse metadata json: {}", e.getMessage());
+      return new HashMap<>();
     }
-    return out;
-  }
-
-  private static List<String> flattenStringCells(@Nullable List<?> raw) {
-    List<String> out = new ArrayList<>();
-    if (raw == null) {
-      return out;
-    }
-    for (Object row : raw) {
-      if (row instanceof List<?> inner) {
-        for (Object cell : inner) {
-          out.add(cell == null ? "" : String.valueOf(cell));
-        }
-      } else if (row != null) {
-        out.add(String.valueOf(row));
-      }
-    }
-    return out;
   }
 
   private static Integer parseChunkIndex(@Nullable Object o) {
@@ -651,57 +524,30 @@ public class DocumentIngestionService implements ApplicationRunner {
     log.info("Deleted chunks for document_id={}", documentId);
   }
 
-  public ChromaCollectionsResponse describeCollections() {
-    String tenant = chromaStoreProperties.getTenantName();
-    String database = chromaStoreProperties.getDatabaseName();
-    List<?> raw = chromaApi().listCollections(tenant, database);
-    List<ChromaCollectionSummary> summaries = new ArrayList<>();
-    if (raw != null) {
-      for (Object o : raw) {
-        if (o instanceof ChromaApi.Collection c) {
-          summaries.add(new ChromaCollectionSummary(c.id(), c.name()));
-        }
-      }
-    }
-    String collectionId = requireCollectionId();
-    Long count = chromaApi().countEmbeddings(tenant, database, collectionId);
-    return new ChromaCollectionsResponse(
-        chromaStoreProperties.getCollectionName(),
-        count == null ? 0L : count,
-        summaries);
+  public VectorStoreInfoResponse describeCollections() {
+    ensureVectorTableAccessible();
+    String name = pgVectorStoreProperties.getTableName();
+    long count = countRows();
+    return new VectorStoreInfoResponse(
+        name,
+        count,
+        List.of(new VectorStoreCollectionEntry("", name)));
   }
 
   private boolean documentChunksExist(String documentId) {
-    String collectionId = requireCollectionId();
-    Map<String, Object> where = Map.of("document_id", documentId);
-    ChromaApi.GetEmbeddingResponse resp = chromaApi().getEmbeddings(
-        chromaStoreProperties.getTenantName(),
-        chromaStoreProperties.getDatabaseName(),
-        collectionId,
-        new ChromaApi.GetEmbeddingsRequest(null, where, 1, 0, List.of(ChromaApi.QueryRequest.Include.METADATAS)));
-    return resp != null && resp.ids() != null && !resp.ids().isEmpty();
+    Long n = jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM " + qualifiedVectorTable() + " WHERE metadata->>'document_id' = ?",
+        Long.class,
+        documentId);
+    return n != null && n > 0;
   }
 
-  private String chromaClientBaseUrl() {
-    String host = environment.getProperty("spring.ai.vectorstore.chroma.client.host", "");
-    int port = environment.getProperty("spring.ai.vectorstore.chroma.client.port", Integer.class, 8100);
-    return ChromaClientDiagnostics.baseUrl(host, port);
-  }
-
-  private String requireCollectionId() {
-    String base = chromaClientBaseUrl();
+  private void ensureVectorTableAccessible() {
     try {
-      ChromaApi.Collection col = chromaApi().getCollection(
-          chromaStoreProperties.getTenantName(),
-          chromaStoreProperties.getDatabaseName(),
-          chromaStoreProperties.getCollectionName());
-      if (col == null) {
-        throw new IllegalStateException("Chroma collection not found: " + chromaStoreProperties.getCollectionName()
-            + " (Chroma URL: " + base + ")");
-      }
-      return col.id();
-    } catch (RestClientException e) {
-      throw new IllegalStateException(ChromaClientDiagnostics.describeChromaFailure(e, base), e);
+      jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + qualifiedVectorTable(), Long.class);
+    } catch (DataAccessException e) {
+      throw new IllegalStateException(
+          "Cannot access vector table " + qualifiedVectorTable() + ": " + e.getMessage(), e);
     }
   }
 
@@ -781,26 +627,6 @@ public class DocumentIngestionService implements ApplicationRunner {
     return processedDocs;
   }
 
-  @SuppressWarnings("unchecked")
-  private static List<Map<String, Object>> flattenMetadata(List<?> raw) {
-    List<Map<String, Object>> out = new ArrayList<>();
-    if (raw == null) {
-      return out;
-    }
-    for (Object row : raw) {
-      if (row instanceof List<?> inner) {
-        for (Object m : inner) {
-          if (m instanceof Map<?, ?> map) {
-            out.add((Map<String, Object>) map);
-          }
-        }
-      } else if (row instanceof Map<?, ?> map) {
-        out.add((Map<String, Object>) map);
-      }
-    }
-    return out;
-  }
-
   private static String sha256Hex(byte[] data) {
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -812,17 +638,6 @@ public class DocumentIngestionService implements ApplicationRunner {
       return sb.toString();
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException(e);
-    }
-  }
-
-  private static final class Agg {
-    final String documentId;
-    int chunkCount;
-    String filename;
-    String lastIngestedAt;
-
-    Agg(String documentId) {
-      this.documentId = documentId;
     }
   }
 }
