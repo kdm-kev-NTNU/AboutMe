@@ -60,6 +60,15 @@ describe('ChatView', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
+          Dialog: {
+            props: ['open'],
+            template: '<div v-if="open"><slot /></div>',
+          },
+          DialogContent: { template: '<div><slot /></div>' },
+          DialogHeader: { template: '<div><slot /></div>' },
+          DialogTitle: { template: '<h2><slot /></h2>' },
+          DialogDescription: { template: '<p><slot /></p>' },
+          DialogFooter: { template: '<div><slot /></div>' },
           MessagesArea: {
             props: ['messages', 'isLoading', 'isReadOnly'],
             template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
