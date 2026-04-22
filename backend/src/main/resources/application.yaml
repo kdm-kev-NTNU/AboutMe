@@ -9,19 +9,24 @@ spring:
       max-request-size: 55MB
   ai:
     vectorstore:
-      chroma:
-        client:
-          host: ${CHROMA_HTTP_HOST:http://localhost}
-          port: ${CHROMA_PORT:8100}
-        collection-name: ${CHROMA_COLLECTION:portfolio-documents}
+      pgvector:
+        # HNSW/IVFFlat index max dimension is ~2000 in pgvector; embeddings are 3072 → exact search (no ANN index).
+        index-type: NONE
+        distance-type: COSINE_DISTANCE
+        dimensions: 3072
         initialize-schema: true
+        schema-validation: true
+        schema-name: public
+        table-name: vector_store
+        # Chunk ids are content-hash based strings (not UUIDs).
+        id-type: TEXT
     openai:
       api-key: ${OPENAI_API_KEY}
       chat:
         options:
           model: gpt-5.4-mini
           # Limit completion tokens per response
-          max-completion-tokens: 400
+          max-completion-tokens: ${portfolio.ai.limits.chat-max-completion-tokens:400}
       embedding:
         options:
           model: text-embedding-3-large
@@ -31,16 +36,16 @@ spring:
       chat:
         options:
           model: claude-sonnet-4-6
-          max-tokens: 400
+          max-tokens: ${portfolio.ai.limits.chat-max-completion-tokens:400}
     chat:
       observations:
         log-prompt: true
         log-completion: true
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/aboutme?useSSL=false&allowPublicKeyRetrieval=true}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:root}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/aboutme}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
     hibernate:
@@ -52,12 +57,54 @@ spring:
 server:
   port: ${PORT:8080}
 portfolio:
+  ai:
+    limits:
+      chat-max-completion-tokens: 400
+      judge-max-tokens: 512
+      max-question-chars: 3000
+      max-feedback-chars: 4000
+      max-output-chars: 4000
+    budget:
+      enabled: true
+      daily-limit-usd: 2.00
+      monthly-limit-usd: 20.00
+      anonymous-daily-limit-usd: 0.50
+      anonymous-monthly-limit-usd: 5.00
+      spike-hourly-multiplier: 5.0
+      anon-identity-salt: ${AI_BUDGET_ANON_SALT:portfolio-ai-budget}
+      models:
+        gpt-5.4-mini:
+          input-per-million-usd: 0.15
+          output-per-million-usd: 0.60
+        gpt-5.4:
+          input-per-million-usd: 2.50
+          output-per-million-usd: 10.00
+        claude-haiku-4-5-20251001:
+          input-per-million-usd: 0.80
+          output-per-million-usd: 4.00
+        claude-sonnet-4-6:
+          input-per-million-usd: 3.00
+          output-per-million-usd: 15.00
+    kill-switch:
+      enabled: true
+      monthly-limit-usd: 50.00
+      warn-fraction: 0.80
+      # Every minute (UTC); aligns with default check cadence for global spend
+      check-cron: "0 * * * * *"
+  ask-rate-limit:
+    enabled: true
+    authenticated-capacity: 5
+    authenticated-window-seconds: 10
+    anonymous-capacity: 3
+    anonymous-window-seconds: 10
+  experiments:
+    run-rate-limit:
+      enabled: true
+      capacity: 10
+      window-seconds: 60
   chat:
     # Used when the client omits "model" on POST /ask
     default-model-id: gpt-5.4-mini
-  chroma:
-    # Set CHROMA_ENABLED=false when Chroma is not deployed (chat works without RAG; admin pipeline returns 501).
-    enabled: ${CHROMA_ENABLED:true}
   phoenix:
     base-url: ${PHOENIX_BASE_URL:}
     api-key: ${PHOENIX_API_KEY:}
@@ -86,9 +133,17 @@ springdoc:
     try-it-out-enabled: true
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
   tracing:
     sampling:
       probability: 1.0
+  metrics:
+    tags:
+      # Correlate Micrometer metrics (including ai.*) with traces in Phoenix/Arize
+      application: ${spring.application.name}
   otlp:
     tracing:
       # Opt-in OTLP: set OTLP_EXPORT_ENABLED=true plus PHOENIX_OTLP_ENDPOINT and PHOENIX_API_KEY (Bearer) for Phoenix/Arize.
@@ -98,4 +153,13 @@ management:
       transport: grpc
       headers:
         authorization: Bearer ${PHOENIX_API_KEY:}
+    metrics:
+      export:
+        # Opt-in OTLP metrics (HTTP/protobuf) to Phoenix or an OTel collector; traces above use gRPC on 4317 by default.
+        # Self-hosted collector often exposes metrics on 4318. Arize Cloud may use a different ingest URL — set PHOENIX_OTLP_METRICS_URL.
+        enabled: ${OTLP_METRICS_EXPORT_ENABLED:false}
+        url: ${PHOENIX_OTLP_METRICS_URL:http://localhost:4318/v1/metrics}
+        step: 1m
+        headers:
+          authorization: Bearer ${PHOENIX_API_KEY:}
 
