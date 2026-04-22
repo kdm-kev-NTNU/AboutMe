@@ -188,7 +188,7 @@ const stackFront = computed(() =>
         'Tailwind CSS 4, Reka UI (shadcn-stil), Lucide',
         'VueUse (Core, Motion), markdown-it, DOMPurify',
         'Orval, OpenAPI-generert fetch-klient',
-        'PostHog (samtykkestyrt)',
+        'PostHog (analyse + LLM-observabilitet, samtykkestyrt på nettsiden)',
       ] as const)
     : ([
         'Vue 3, TypeScript, Vite 7',
@@ -196,7 +196,7 @@ const stackFront = computed(() =>
         'Tailwind CSS 4, Reka UI (shadcn-style), Lucide',
         'VueUse (Core, Motion), markdown-it, DOMPurify',
         'Orval, OpenAPI-generated fetch client',
-        'PostHog (consent-gated)',
+        'PostHog (analytics + LLM observability, consent-gated in the browser)',
       ] as const),
 )
 
@@ -206,7 +206,7 @@ const stackBack = computed(() =>
         'Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA',
         'PostgreSQL 17 med pgvector, Spring AI, Tika-dokumentlesing',
         'Apache OpenNLP (NER m.m. i saniterings-/tekstflyt)',
-        'Actuator (helse, metrics, Prometheus-scrape), Micrometer, OpenTelemetry → Phoenix (valgfritt)',
+        'Actuator (helse, metrics, Prometheus-scrape), Micrometer, OTel → Phoenix (spor), PostHog (LLM-genereringer)',
         'Docker Compose, nginx (produksjonsbygg)',
         'Bucket4j (rate limiting)',
       ] as const)
@@ -214,7 +214,7 @@ const stackBack = computed(() =>
         'Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA',
         'PostgreSQL 17 with pgvector, Spring AI, Tika document reading',
         'Apache OpenNLP (NER etc. in sanitization / text flow)',
-        'Actuator (health, metrics, Prometheus scrape), Micrometer, OpenTelemetry → Phoenix (optional)',
+        'Actuator (health, metrics, Prometheus scrape), Micrometer, OTel → Phoenix (traces), PostHog (LLM generations)',
         'Docker Compose, nginx (production build)',
         'Bucket4j (rate limiting)',
       ] as const),
@@ -318,12 +318,13 @@ const sections = computed<Section[]>(() => {
         id: 'observability',
         heading: 'Observabilitet',
         paragraphs: [
-          'Backend eksponerer Spring Boot Actuator med blant annet health, info og Prometheus-scrape for metrics. Micrometer med OpenTelemetry kan sende spor til Arize Phoenix over OTLP (gRPC) når eksport er slått på — typisk mot Phoenix-containeren i Compose.',
-          'Det gir ett grep om feil, trafikk og latens uten å spre sporingslogikk overalt i koden.',
+          'Backend eksponerer Spring Boot Actuator med blant annet health, info og Prometheus-scrape for metrics. Micrometer med OpenTelemetry kan sende spor til Arize Phoenix over OTLP (gRPC) når eksport er slått på — typisk mot Phoenix-containeren i Compose — for detaljerte spor og feilsøking.',
+          'LLM-kall (tokens, estimert kostnad, latens) sendes også som PostHog $ai_generation-hendelser fra serveren når det er slått på, slik at produktanalyse og modellbruk kan sees i samme verktøy som samtykkestyrt frontend-analyse.',
+          'RAG-evaluering med datasett i Phoenix og LLM-as-judge i egen kode beholdes der: PostHogs innebygde LLM-eval og datasett-flyt er mindre modne for denne typen batch-pipeline enn dagens Phoenix-integrasjon, så det er en bevisst to-fase-arkitektur (spor + eval i Phoenix, aggregert LLM- og bruksdata i PostHog).',
         ],
         icon: Eye,
         category: 'devops',
-        badges: ['Actuator', 'Prometheus', 'Micrometer', 'OpenTelemetry', 'Phoenix'],
+        badges: ['Actuator', 'Prometheus', 'Micrometer', 'OpenTelemetry', 'Phoenix', 'PostHog'],
       },
       {
         id: 'runtime',
@@ -412,12 +413,13 @@ const sections = computed<Section[]>(() => {
       id: 'observability',
       heading: 'Observability',
       paragraphs: [
-        'The backend exposes Spring Boot Actuator including health, info, and a Prometheus scrape endpoint for metrics. Micrometer with OpenTelemetry can export traces to Arize Phoenix over OTLP (gRPC) when enabled — typically to the Phoenix container in Compose.',
-        'That keeps errors, traffic, and latency visible in one place without scattering tracing logic across the codebase.',
+        'The backend exposes Spring Boot Actuator including health, info, and a Prometheus scrape endpoint for metrics. Micrometer with OpenTelemetry can export traces to Arize Phoenix over OTLP (gRPC) when enabled — typically to the Phoenix container in Compose — for deep traces and debugging.',
+        'LLM calls (tokens, estimated cost, latency) are also sent as PostHog `$ai_generation` events from the server when enabled, so product analytics and model usage can live alongside consent-gated frontend analytics in one tool.',
+        'RAG evaluation with Phoenix-hosted datasets and the in-app LLM-as-judge pipeline stay on Phoenix for now: PostHog’s built-in LLM eval and dataset workflows are not yet a mature replacement for that batch-style setup, so this is a deliberate two-phase split (traces + eval in Phoenix, aggregated LLM and usage data in PostHog).',
       ],
       icon: Eye,
       category: 'devops',
-      badges: ['Actuator', 'Prometheus', 'Micrometer', 'OpenTelemetry', 'Phoenix'],
+      badges: ['Actuator', 'Prometheus', 'Micrometer', 'OpenTelemetry', 'Phoenix', 'PostHog'],
     },
     {
       id: 'runtime',
