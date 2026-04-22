@@ -27,7 +27,7 @@ public class OpenApiConfig {
                 .title("AboutMe Portfolio API")
                 .description("""
                     REST API for the personal portfolio: RAG chat (`POST /ask`), auth (`POST /auth/login`), \
-                    Chroma health (`GET /health/chroma`), and admin document tools under `/admin/tools/documents` \
+                    Vector store health (`GET /health/chroma` alias, `GET /health/vectorstore`), and admin document tools under `/admin/tools/documents` \
                     (HTTP Basic, ADMIN role).
 
                     Local SPA (Vite) calls these routes with an `/api` prefix via proxy, e.g. `http://localhost:5173/api/ask` \

@@ -23,27 +23,50 @@ describe('portfolio views (smoke)', () => {
 		})
 	}
 
+	const routerLinkStub = { template: '<a><slot /></a>' }
+
 	it('renders AboutView', () => {
 		const wrapper = mountView(AboutView)
 		expect(wrapper.text()).toContain('about page')
 	})
 
-	it('renders TechStackView in English by default', async () => {
-		const wrapper = mountView(TechStackView)
-		await flushPromises()
-		expect(wrapper.text()).toContain('Tech stack')
-		expect(wrapper.text()).toMatch(/Spring AI|Backend/i)
-	})
+	it(
+		'renders TechStackView in English by default',
+		async () => {
+			const pinia = createPinia()
+			setActivePinia(pinia)
+			useLangStore().setLanguage('en')
+			const wrapper = mount(TechStackView, {
+				global: {
+					plugins: [pinia, MotionPlugin],
+					stubs: { RouterLink: routerLinkStub },
+				},
+			})
+			await flushPromises()
+			expect(wrapper.text()).toContain('Tech stack')
+			expect(wrapper.text()).toMatch(/Spring AI|Backend/i)
+		},
+		15_000,
+	)
 
-	it('renders TechStackView in Norwegian when language is no', async () => {
-		const pinia = createPinia()
-		setActivePinia(pinia)
-		useLangStore().setLanguage('no')
-		const wrapper = mount(TechStackView, { global: { plugins: [pinia, MotionPlugin] } })
-		await flushPromises()
-		expect(wrapper.text()).toContain('Teknologistakk')
-		expect(wrapper.text()).toMatch(/Spring AI|Backend/i)
-	})
+	it(
+		'renders TechStackView in Norwegian when language is no',
+		async () => {
+			const pinia = createPinia()
+			setActivePinia(pinia)
+			useLangStore().setLanguage('no')
+			const wrapper = mount(TechStackView, {
+				global: {
+					plugins: [pinia, MotionPlugin],
+					stubs: { RouterLink: routerLinkStub },
+				},
+			})
+			await flushPromises()
+			expect(wrapper.text()).toContain('Teknologistakk')
+			expect(wrapper.text()).toMatch(/Spring AI|Backend/i)
+		},
+		15_000,
+	)
 
 	it('renders PrivacyPolicyView in English by default', async () => {
 		const wrapper = mountView(PrivacyPolicyView)

@@ -8,7 +8,7 @@ import org.springframework.core.io.Resource;
 import java.util.List;
 
 /**
- * Configuration properties for document seeding sources (Chroma ingest).
+ * Configuration properties for document seeding sources (vector store ingest).
  */
 @Getter
 @Configuration
@@ -27,8 +27,8 @@ public class VectorStoreProperties {
   private String documentsToLoadDir;
 
   /**
-   * When {@code true}, startup classpath seeding re-ingests seed files even if the Chroma collection
-   * already has embeddings, replacing chunks per {@code content_hash} / {@code document_id}.
+   * When {@code true}, startup classpath seeding re-ingests seed files even if the vector table
+   * already has rows, replacing chunks per {@code content_hash} / {@code document_id}.
    */
   private boolean forceReindex = false;
 

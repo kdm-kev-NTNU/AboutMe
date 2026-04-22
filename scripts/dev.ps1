@@ -1,12 +1,12 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Starts Docker infra (MySQL, ChromaDB, Phoenix), then opens backend and frontend dev servers in new windows.
+  Starts Docker infra (PostgreSQL + pgvector, Phoenix), then opens backend and frontend dev servers in new windows.
 .DESCRIPTION
   Run from anywhere: pwsh -File .\scripts\dev.ps1
   Expects a .env file at the repository root (copy from .env.example). Backend runs with repo root as cwd
   so Spring loads .env at the repo root as documented in application.yaml.
-  Only starts db, chromadb, and phoenix so ports 8080/5173 stay free for local Spring Boot and Vite.
+  Only starts db and phoenix so ports 8080/5173 stay free for local Spring Boot and Vite.
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -42,8 +42,8 @@ $shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { '
 
 Push-Location $RepoRoot
 try {
-    Write-Info "Starting MySQL, ChromaDB, and Phoenix (docker compose up -d db chromadb phoenix)..."
-    & docker compose up -d db chromadb phoenix
+    Write-Info "Starting PostgreSQL (pgvector) and Phoenix (docker compose up -d db phoenix)..."
+    & docker compose up -d db phoenix
     if ($LASTEXITCODE -ne 0) {
         throw "docker compose exited with code $LASTEXITCODE"
     }
@@ -52,12 +52,12 @@ finally {
     Pop-Location
 }
 
-Write-Info "Waiting for MySQL on port 3307..."
+Write-Info "Waiting for Postgres on port 5432..."
 $deadline = (Get-Date).AddSeconds(90)
 $ready = $false
 while ((Get-Date) -lt $deadline) {
     try {
-        $tcp = Test-NetConnection -ComputerName 'localhost' -Port 3307 -WarningAction SilentlyContinue
+        $tcp = Test-NetConnection -ComputerName 'localhost' -Port 5432 -WarningAction SilentlyContinue
         if ($tcp.TcpTestSucceeded) {
             $ready = $true
             break
@@ -70,7 +70,7 @@ while ((Get-Date) -lt $deadline) {
 }
 
 if (-not $ready) {
-    Write-Warn "MySQL did not become reachable on localhost:3307 within 90s. You can still try starting the backend manually."
+    Write-Warn "Postgres did not become reachable on localhost:5432 within 90s. You can still try starting the backend manually."
 }
 
 $repoRootEscaped = $RepoRoot.Replace("'", "''")

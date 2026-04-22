@@ -22,11 +22,18 @@ public class InputValidator {
      * @return true if valid, false otherwise
      */
     public static boolean isValidQuestion(String question) {
+        return isValidQuestion(question, MAX_QUESTION_LENGTH);
+    }
+
+    /**
+     * @param maxLength maximum characters allowed (from {@code portfolio.ai.limits.max-question-chars})
+     */
+    public static boolean isValidQuestion(String question, int maxLength) {
         if (question == null || question.isBlank()) {
             return false;
         }
         
-        if (question.length() > MAX_QUESTION_LENGTH) {
+        if (question.length() > maxLength) {
             return false;
         }
         
@@ -64,10 +71,14 @@ public class InputValidator {
      * Validates a feedback message (same safety rules as questions, different max length).
      */
     public static boolean isValidFeedbackMessage(String message) {
+        return isValidFeedbackMessage(message, MAX_FEEDBACK_LENGTH);
+    }
+
+    public static boolean isValidFeedbackMessage(String message, int maxLength) {
         if (message == null || message.isBlank()) {
             return false;
         }
-        if (message.length() > MAX_FEEDBACK_LENGTH) {
+        if (message.length() > maxLength) {
             return false;
         }
         String lower = message.toLowerCase();

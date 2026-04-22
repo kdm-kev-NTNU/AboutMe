@@ -2,17 +2,23 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.MockConfig;
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
+import com.kevinmazali.portfolio.controller.advice.GlobalApiExceptionHandler;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
 import com.kevinmazali.portfolio.service.ChatModelCatalog;
+import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
+import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
+import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.service.OpenAIService;
 import com.kevinmazali.portfolio.service.RequestLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -32,7 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-5.4-mini")
-@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class })
+@EnableConfigurationProperties({ AskRateLimitProperties.class, ExperimentRunRateLimitProperties.class })
+@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class, GlobalApiExceptionHandler.class })
 class QuestionControllerTest {
 
 	@Autowired
@@ -124,5 +131,27 @@ class QuestionControllerTest {
 				.content("{\"question\":\"Hello?\"}"))
 			.andExpect(status().isServiceUnavailable())
 			.andExpect(jsonPath("$.error").exists());
+	}
+
+	@Test
+	void askReturns429WhenBudgetExceeded() throws Exception {
+		when(openAIService.getAnswer(any(Question.class))).thenThrow(new BudgetExceededException("over limit"));
+
+		mockMvc.perform(post("/ask")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"question\":\"Hello?\"}"))
+			.andExpect(status().isTooManyRequests())
+			.andExpect(jsonPath("$.error").value("over limit"));
+	}
+
+	@Test
+	void askReturns503WhenAiCircuitOpen() throws Exception {
+		when(openAIService.getAnswer(any(Question.class))).thenThrow(new AiCircuitOpenException("paused"));
+
+		mockMvc.perform(post("/ask")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"question\":\"Hello?\"}"))
+			.andExpect(status().isServiceUnavailable())
+			.andExpect(jsonPath("$.error").value("paused"));
 	}
 }

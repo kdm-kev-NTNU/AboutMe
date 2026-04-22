@@ -1,6 +1,9 @@
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration
   datasource:
-    url: jdbc:h2:mem:aboutmetest;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:mem:aboutmetest;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
@@ -20,6 +23,11 @@ server:
   port: 0
 
 portfolio:
+  ai:
+    budget:
+      enabled: false
+    kill-switch:
+      enabled: false
   chat:
     default-model-id: gpt-5.4-mini
   phoenix:
@@ -36,5 +44,8 @@ management:
     enabled: false
   otlp:
     tracing:
+      export:
+        enabled: false
+    metrics:
       export:
         enabled: false

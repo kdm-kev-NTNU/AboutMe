@@ -2,11 +2,11 @@
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { healthChroma, type ChromaHealthResponse } from '@/api/generated/portfolio'
+import { healthChroma, type VectorStoreHealthResponse } from '@/api/generated/portfolio'
 
-/** Admin hub: links to pipeline / chunks / prompts plus GET /health/chroma (no Basic auth required). */
+/** Admin hub: links to pipeline / chunks / prompts plus GET /health/chroma (alias, no Basic auth required). */
 const auth = useAuthStore()
-const chromaHealth = ref<ChromaHealthResponse | null>(null)
+const chromaHealth = ref<VectorStoreHealthResponse | null>(null)
 const chromaHealthLoading = ref(false)
 
 onMounted(() => {
@@ -40,15 +40,15 @@ onMounted(() => {
     <main class="mx-auto max-w-3xl px-4 pt-8">
       <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Internal tools</h1>
       <p class="text-sm text-gray-600 mb-8 leading-relaxed">
-        Verktøy for dokumentpipeline og ChromaDB. Krever admin-innlogging. Velg en side under. Samme idé som
+        Verktøy for dokumentpipeline og pgvector. Krever admin-innlogging. Velg en side under. Samme idé som
         Piscada tools-hub.
       </p>
 
-      <!-- Chroma quick health -->
+      <!-- Vector store quick health -->
       <section
         class="mb-8 rounded-xl border border-gray-200 bg-white p-4 shadow-[0_1px_3px_rgb(0_0_0/0.06)]"
       >
-        <h2 class="text-sm font-semibold text-gray-900 mb-2">ChromaDB (hurtigstatus)</h2>
+        <h2 class="text-sm font-semibold text-gray-900 mb-2">Vektorlagring (hurtigstatus)</h2>
         <p v-if="chromaHealthLoading" class="text-sm text-gray-500">Sjekker…</p>
         <template v-else-if="chromaHealth">
           <p class="text-sm" :class="chromaHealth.healthy ? 'text-green-700' : 'text-amber-800'">
@@ -75,7 +75,7 @@ onMounted(() => {
             <RouterLink to="/admin/pipeline" class="block group">
               <span class="text-base font-semibold text-blue-600 group-hover:underline">Document pipeline</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">
-                Last opp og indekser dokumenter til ChromaDB: enkeltfil, batch fra data-mappe, re-seed og liste over
+                Last opp og indekser dokumenter til PostgreSQL/pgvector: enkeltfil, batch fra data-mappe, re-seed og liste over
                 indekserte dokumenter.
               </p>
             </RouterLink>
@@ -87,7 +87,7 @@ onMounted(() => {
               <span class="text-base font-semibold text-blue-600 group-hover:underline">Chunk viewer</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">
                 Se chunks i aktiv collection: tabell med dokument, chunk #, content hash, tekst (forkortet), utvidbar
-                rad med full tekst og metadata, inspirert av Piscada Chroma-siden.
+                rad med full tekst og metadata, inspirert av Piscada chunk-visning.
               </p>
             </RouterLink>
           </li>

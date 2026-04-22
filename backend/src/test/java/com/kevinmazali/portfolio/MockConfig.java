@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio;
 
+import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.model.ChatModelOption;
 import com.kevinmazali.portfolio.model.chat.ChatProvider;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
@@ -26,6 +27,11 @@ public class MockConfig {
     @Bean
     RequestLogService requestLogService() {
         return Mockito.mock(RequestLogService.class);
+    }
+
+    @Bean
+    AiLimitsProperties aiLimitsProperties() {
+        return new AiLimitsProperties();
     }
 
     @Bean
