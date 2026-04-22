@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import posthog from 'posthog-js'
 import { useLangStore } from '@/stores/lang'
+import {
+  grantAllCookies,
+  grantNecessaryCookiesOnly,
+  rejectOptionalCookies,
+  isCookieBannerDismissed,
+  isPosthogEnabled,
+} from '../lib/posthog-consent'
+import { openCookieSettings } from '../lib/cookie-settings-state'
 
 const langStore = useLangStore()
 const showBanner = ref(false)
@@ -13,42 +20,49 @@ const bannerTitle = computed(() =>
 )
 const bannerBody = computed(() =>
   isNo.value
-    ? 'Vi bruker PostHog for å forstå hvordan nettsiden brukes. Du kan godta eller avslå analyse-cookies.'
-    : 'We use PostHog to understand how the website is used. You can accept or decline analytics cookies.',
+    ? 'Jeg bruker PostHog for å forstå hvordan nettsiden brukes. Du kan velge nødvendige, akseptere alle eller avvise valgfri analyse.'
+    : 'I use PostHog to understand how the site is used. You can allow necessary only, accept all, or reject optional analytics.',
 )
-const acceptLabel = computed(() => (isNo.value ? 'Godta' : 'Accept'))
-const declineLabel = computed(() => (isNo.value ? 'Avslå' : 'Decline'))
+const acceptAllLabel = computed(() => (isNo.value ? 'Godta alle' : 'Accept all'))
+const necessaryOnlyLabel = computed(() =>
+  isNo.value ? 'Kun nødvendige' : 'Necessary only',
+)
+const rejectLabel = computed(() => (isNo.value ? 'Avslå' : 'Reject'))
+const customizeLabel = computed(() => (isNo.value ? 'Tilpass' : 'Customize'))
 
-function refreshConsentStatus() {
-  showBanner.value = posthog.get_explicit_consent_status() === 'pending'
+function refreshBanner() {
+  showBanner.value = isPosthogEnabled() && !isCookieBannerDismissed()
 }
 
-function acceptConsent() {
-  posthog.opt_in_capturing()
+function acceptAll() {
+  grantAllCookies('banner_accept_all')
   showBanner.value = false
 }
 
-function declineConsent() {
-  posthog.opt_out_capturing()
+function necessaryOnly() {
+  grantNecessaryCookiesOnly('banner_necessary_only')
   showBanner.value = false
 }
 
-function openConsentSettings() {
-  posthog.clear_opt_in_out_capturing()
-  refreshConsentStatus()
+function rejectOptional() {
+  rejectOptionalCookies('banner_reject')
+  showBanner.value = false
 }
 
-onMounted(refreshConsentStatus)
+function openSettings() {
+  openCookieSettings()
+  showBanner.value = false
+}
 
-defineExpose({
-  openConsentSettings,
-})
+onMounted(refreshBanner)
 </script>
 
 <template>
   <div
     v-if="showBanner"
-    class="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-2xl rounded-xl border border-gray-200 bg-white p-4 shadow-lg sm:inset-x-0"
+    class="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-3xl rounded-2xl border border-gray-200 bg-white p-4 shadow-xl ring-1 ring-black/5 sm:inset-x-0"
+    role="region"
+    aria-label="Cookie consent"
   >
     <h2 class="text-sm font-semibold text-gray-900">
       {{ bannerTitle }}
@@ -59,17 +73,31 @@ defineExpose({
     <div class="mt-4 flex flex-wrap gap-2">
       <button
         type="button"
-        class="rounded-md bg-gray-900 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-gray-700"
-        @click="acceptConsent"
+        class="rounded-md bg-gray-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-gray-800"
+        @click="acceptAll"
       >
-        {{ acceptLabel }}
+        {{ acceptAllLabel }}
       </button>
       <button
         type="button"
-        class="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100"
-        @click="declineConsent"
+        class="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-100"
+        @click="necessaryOnly"
       >
-        {{ declineLabel }}
+        {{ necessaryOnlyLabel }}
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-100"
+        @click="rejectOptional"
+      >
+        {{ rejectLabel }}
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100"
+        @click="openSettings"
+      >
+        {{ customizeLabel }}
       </button>
     </div>
   </div>

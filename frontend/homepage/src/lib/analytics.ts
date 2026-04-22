@@ -1,23 +1,26 @@
 import posthog from 'posthog-js'
+import { hasAnalyticsConsent, isPosthogEnabled } from './posthog-consent'
+import { isPosthogSdkInitialized } from './posthog-sdk'
 
-function normalizeToken(token: string | undefined): string {
-  return (token ?? '').trim()
+function isReady(): boolean {
+  return isPosthogEnabled() && hasAnalyticsConsent() && isPosthogSdkInitialized()
 }
 
-export function initPosthogIfConfigured(token: string | undefined, host: string | undefined): boolean {
-  const normalizedToken = normalizeToken(token)
-  if (!normalizedToken) return false
-
-  posthog.init(normalizedToken, {
-    api_host: host || 'https://us.i.posthog.com',
-    defaults: '2026-01-30',
-    opt_out_capturing_by_default: true,
-    persistence: 'localStorage+cookie',
-  })
-
-  return true
+export function trackEvent(event: string, properties?: Record<string, unknown>): void {
+  if (!isReady()) return
+  posthog.capture(event, properties ?? {})
 }
 
 export function captureClientException(err: unknown): void {
-  posthog.captureException(err)
+  if (!isReady()) return
+
+  if (typeof posthog.captureException === 'function') {
+    posthog.captureException(err)
+    return
+  }
+
+  posthog.capture('client_exception', {
+    message: err instanceof Error ? err.message : String(err),
+    name: err instanceof Error ? err.name : 'UnknownError',
+  })
 }
