@@ -1,6 +1,6 @@
 # AboutMe
 
-Personal portfolio with an AI chat that answers from your own documents (RAG). Norwegian and English in the UI; stack is **Vue 3**, **Spring Boot**, **MySQL**, and **ChromaDB**. Optional OTLP traces to **Phoenix** when you enable it.
+Personal portfolio with an AI chat that answers from your own documents (RAG). Norwegian and English in the UI; stack is **Vue 3**, **Spring Boot**, and **PostgreSQL with pgvector** (relational data + embeddings in one database). Optional OTLP traces to **Phoenix** when you enable it.
 
 ## Repository layout
 
@@ -9,10 +9,10 @@ Personal portfolio with an AI chat that answers from your own documents (RAG). N
 | `backend/` | Spring Boot API (RAG, auth, admin document pipeline) |
 | `frontend/homepage/` | Vue 3 SPA: [frontend/homepage/README.md](frontend/homepage/README.md) for npm scripts and Orval |
 | `scripts/dev.ps1` | Windows: Docker for infra, then opens API + Vite in separate terminals |
-| `docker-compose.yml` | MySQL, ChromaDB, Phoenix, backend, Nginx frontend |
+| `docker-compose.yml` | PostgreSQL (pgvector), Phoenix, backend, Nginx frontend |
 | `.github/workflows/` | `tests.yml` (Maven verify + frontend unit coverage), `semgrep.yml` |
 
-Seed documents for Chroma go in **`backend/data/docs/`** (gitignored). With hybrid dev, create that folder and add PDFs/DOCX/MD as needed.
+Seed documents for the vector store go in **`backend/data/docs/`** (gitignored). With hybrid dev, create that folder and add PDFs/DOCX/MD as needed.
 
 ## Prerequisites
 
@@ -36,16 +36,15 @@ Typical URLs:
 
 - App (Nginx): [http://localhost:5173](http://localhost:5173). `/api` proxied to the backend
 - API: [http://localhost:8080](http://localhost:8080)
-- MySQL: host **3307** → container 3306, DB `aboutme`, user/password `root`/`root`
-- Chroma: host **8100**
+- PostgreSQL: host **5432**, DB `aboutme`, user/password `postgres`/`postgres`
 - Phoenix UI: [http://localhost:6006](http://localhost:6006), OTLP gRPC **4317**
 
 The backend image mounts `./backend/data` read-only; `file:./data/docs/` resolves to that path inside the container.
 
-### Option B: hybrid (DBs in Docker, app on the host)
+### Option B: hybrid (DB in Docker, app on the host)
 
 ```bash
-docker compose up -d db chromadb phoenix
+docker compose up -d db phoenix
 ```
 
 Then:
@@ -59,9 +58,9 @@ On Windows you can use **`.\scripts\dev.ps1`** after copying `.env.example` to `
 
 Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `backend/` (Spring loads it via `spring.config.import` in `application.yaml`). Never commit secrets.
 
-**Usually required:** `OPENAI_API_KEY`, MySQL user/password (defaults align with Compose: `root` / `root`), `PORT` for the API (default **8080**).
+**Usually required:** `OPENAI_API_KEY`, PostgreSQL user/password (defaults align with Compose: `postgres` / `postgres`), `PORT` for the API (default **8080**).
 
-**Common optional:** `ANTHROPIC_API_KEY`, `CHROMA_*` / `CHROMA_ENABLED`, OTLP (`OTLP_EXPORT_ENABLED`, `PHOENIX_OTLP_ENDPOINT`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`. Details and comments live in `.env.example`.
+**Common optional:** `ANTHROPIC_API_KEY`, OTLP (`OTLP_EXPORT_ENABLED`, `PHOENIX_OTLP_ENDPOINT`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`. Details and comments live in `.env.example`.
 
 ## Tests
 
@@ -73,14 +72,14 @@ Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `bac
 - **`POST /ask`**: JSON `{ "question": "...", "model": "<optional>" }` → `{ "answer": "..." }`. Rate limited; max question length enforced server-side.
 - **`GET /chat/models`**: models available for configured providers
 - **`POST /auth/login`**: JSON credentials; admin UI uses HTTP Basic on protected routes
-- **`GET /health/chroma`**: Chroma health for ops
+- **`GET /health/chroma`** (alias) and **`GET /health/vectorstore`**: vector store / pgvector health for ops
 - **Admin**: document upload, pipeline, chunks, prompts under `/admin/tools/**` (requires `ADMIN` role). Full contract: **Swagger UI** at `/swagger-ui/index.html` when the API runs (e.g. [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)).
 
 ## Security and privacy (summary)
 
-Spring Security protects admin routes; public **`POST /ask`** is rate-limited. Production should use **`SPRING_PROFILES_ACTIVE=prod`**. Use TLS-backed JDBC URLs in production; treat DB and Chroma backups as sensitive if documents are personal.
+Spring Security protects admin routes; public **`POST /ask`** is rate-limited. Production should use **`SPRING_PROFILES_ACTIVE=prod`**. Use TLS-backed JDBC URLs in production; treat database backups as sensitive if documents are personal.
 
-**Privacy:** conversations may be stored for troubleshooting and improvement. Do not send secrets. **RAG chunks and embeddings** live in Chroma; protect that data like any PII-bearing store. **AI output** can be wrong; verify anything important.
+**Privacy:** conversations may be stored for troubleshooting and improvement. Do not send secrets. **RAG chunks and embeddings** live in PostgreSQL (`vector_store`); protect that data like any PII-bearing store. **AI output** can be wrong; verify anything important.
 
 ## Feedback
 
