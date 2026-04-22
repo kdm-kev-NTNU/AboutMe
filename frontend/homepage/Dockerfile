@@ -13,6 +13,15 @@ RUN npm ci
 # Copy source and build
 COPY . .
 ENV NODE_ENV=production
+
+# Vite bakes VITE_* env vars at build time; receive them as Docker build args
+ARG VITE_POSTHOG_KEY
+ARG VITE_POSTHOG_HOST
+ARG VITE_POSTHOG_ENABLED
+ENV VITE_POSTHOG_KEY=$VITE_POSTHOG_KEY
+ENV VITE_POSTHOG_HOST=$VITE_POSTHOG_HOST
+ENV VITE_POSTHOG_ENABLED=$VITE_POSTHOG_ENABLED
+
 RUN npm run build-only
 
 # Production stage
