@@ -164,7 +164,7 @@ describe('HomeView, ChatHistory, admin views (smoke)', () => {
   it('renders AdminChunksView', async () => {
     const wrapper = mountView(AdminChunksView)
     await flushPromises()
-    expect(wrapper.text()).toContain('ChromaDB chunks')
+    expect(wrapper.text()).toContain('PostgreSQL / pgvector chunks')
   })
 
   it('renders AdminPipelineView', async () => {
