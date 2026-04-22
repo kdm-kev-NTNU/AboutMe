@@ -40,3 +40,4 @@ Vite and tooling: [https://vite.dev/config/](https://vite.dev/config/). Type-che
 - Enable by setting `VITE_POSTHOG_ENABLED=true` and `VITE_POSTHOG_KEY=<phc_xxx>` (optional `VITE_POSTHOG_HOST`, default `https://eu.i.posthog.com`).
 - Initialization is deferred until the user accepts analytics in the cookie banner/settings modal. Pageviews and events are ignored until consent is granted.
 - Session replay is disabled by default. Do not identify users; only anonymous events are sent.
+- Server-side LLM analytics (`$ai_generation`): configure Spring with `POSTHOG_ENABLED`, `POSTHOG_API_KEY`, and optional `POSTHOG_HOST` (see repo root `.env.example`). Same PostHog project as the frontend is fine for unified dashboards.
