@@ -15,7 +15,8 @@ spring:
         distance-type: COSINE_DISTANCE
         dimensions: 3072
         initialize-schema: true
-        schema-validation: true
+        # When true, validation runs before first-time DDL; an empty database can fail first startup on some managed Postgres setups.
+        schema-validation: false
         schema-name: public
         table-name: vector_store
         # Chunk ids are content-hash based strings (not UUIDs).
@@ -114,6 +115,9 @@ portfolio:
 
 sfg:
   aiapp:
+    # Explicit classpath seeds (used by startup + admin reseed); dir scan is fallback when this is empty.
+    documentsToLoad:
+      - classpath:/static/seed/portfolio-seed.md
     documentsToLoadDir: file:./data/docs/
     # When true, startup seeding re-ingests even if chunks already exist for the same content_hash
     forceReindex: false

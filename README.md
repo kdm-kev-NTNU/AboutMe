@@ -1,6 +1,6 @@
 # AboutMe
 
-Personal portfolio with an AI chat that answers from your own documents (RAG). Norwegian and English in the UI; stack is **Vue 3**, **Spring Boot**, and **PostgreSQL with pgvector** (relational data + embeddings in one database). Optional OTLP traces to **Phoenix** when you enable it.
+Portfolio web app with a document-grounded AI chat (RAG). The UI supports Norwegian and English. Stack: **Vue 3**, **Spring Boot**, and **PostgreSQL with pgvector** (relational data and embeddings in one database). **Phoenix** can receive OTLP traces when OTLP export is enabled in configuration.
 
 ## Repository layout
 
@@ -79,8 +79,10 @@ Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `bac
 
 Spring Security protects admin routes; public **`POST /ask`** is rate-limited. Production should use **`SPRING_PROFILES_ACTIVE=prod`**. Use TLS-backed JDBC URLs in production; treat database backups as sensitive if documents are personal.
 
+**Managed Postgres (e.g. Railway):** ensure the **`vector`** extension exists once on the database (Railway **Data** → **Query** / `psql`): `CREATE EXTENSION IF NOT EXISTS vector;` Spring AI can create the `vector_store` table when `spring.ai.vectorstore.pgvector.initialize-schema` is true, but the extension must be allowed by the provider.
+
 **Privacy:** conversations may be stored for troubleshooting and improvement. Do not send secrets. **RAG chunks and embeddings** live in PostgreSQL (`vector_store`); protect that data like any PII-bearing store. **AI output** can be wrong; verify anything important.
 
 ## Feedback
 
-Built as a personal project; edge cases may exist. Suggestions welcome: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)
+The project is under active development; some edge cases may remain. Feedback and suggestions: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)
