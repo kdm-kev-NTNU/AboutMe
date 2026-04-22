@@ -488,7 +488,10 @@ describe('Admin CRUD views (integration-style)', () => {
         }
         if (url.includes('/api/admin/tools/experiments/models')) {
           return new Response(
-            JSON.stringify([{ id: 'gpt-test', label: 'Test', provider: 'OPENAI' }]),
+            JSON.stringify([
+              { id: 'gpt-test', label: 'Test', provider: 'OPENAI' },
+              { id: 'claude-judge', label: 'Judge', provider: 'ANTHROPIC' },
+            ]),
             { status: 200, headers: headersJson },
           )
         }
@@ -513,6 +516,64 @@ describe('Admin CRUD views (integration-style)', () => {
     expect(wrapper.text()).toContain('Velg et datasett.')
   })
 
+  it('AdminExperimentsView evaluator dropdown only lists models from the other provider', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+        if (url.includes('/api/admin/tools/experiments/config')) {
+          return new Response(JSON.stringify({ phoenixConfigured: true, phoenixBaseUrl: 'https://px.test' }), {
+            status: 200,
+            headers: headersJson,
+          })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets')) {
+          return new Response(JSON.stringify([{ id: 'ds1', name: 'Demo', exampleCount: 1 }]), {
+            status: 200,
+            headers: headersJson,
+          })
+        }
+        if (url.includes('/api/admin/tools/experiments/models')) {
+          return new Response(
+            JSON.stringify([
+              { id: 'o1', label: 'O1', provider: 'OPENAI' },
+              { id: 'o2', label: 'O2', provider: 'OPENAI' },
+              { id: 'a1', label: 'A1', provider: 'ANTHROPIC' },
+            ]),
+            { status: 200, headers: headersJson },
+          )
+        }
+        if (url.includes('/api/admin/tools/experiments/runs')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        return new Response('{}', { status: 404, headers: headersJson })
+      }),
+    )
+
+    const wrapper = mountAdmin(AdminExperimentsView)
+    await flushPromises()
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('RAG-experiments')
+    })
+
+    const selects = wrapper.findAll('select')
+    expect(selects.length).toBeGreaterThanOrEqual(3)
+    const genSelect = selects[1]
+    const evSelect = selects[2]
+
+    expect(genSelect.element.value).toBe('o1')
+    expect(evSelect.findAll('option')).toHaveLength(1)
+    expect(evSelect.findAll('option')[0]!.text()).toContain('A1')
+
+    await genSelect.setValue('a1')
+    await flushPromises()
+    expect(evSelect.findAll('option').length).toBe(2)
+    const labels = evSelect.findAll('option').map((o) => o.text())
+    expect(labels.some((t) => t.includes('O1'))).toBe(true)
+    expect(labels.some((t) => t.includes('O2'))).toBe(true)
+  })
+
   it('AdminExperimentsView shows dataset error when Phoenix list fails', async () => {
     vi.stubGlobal(
       'fetch',
@@ -529,10 +590,16 @@ describe('Admin CRUD views (integration-style)', () => {
           return new Response(JSON.stringify({ error: 'Phoenix nede' }), { status: 500, headers: headersJson })
         }
         if (url.includes('/api/admin/tools/experiments/models')) {
-          return new Response(JSON.stringify([{ id: 'm1', label: 'M', provider: 'OPENAI' }]), {
-            status: 200,
-            headers: headersJson,
-          })
+          return new Response(
+            JSON.stringify([
+              { id: 'm1', label: 'M', provider: 'OPENAI' },
+              { id: 'c1', label: 'C', provider: 'ANTHROPIC' },
+            ]),
+            {
+              status: 200,
+              headers: headersJson,
+            },
+          )
         }
         if (url.includes('/api/admin/tools/experiments/runs')) {
           return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
@@ -650,7 +717,7 @@ describe('Admin CRUD views (integration-style)', () => {
           return new Response(
             JSON.stringify([
               { id: 'g1', label: 'G', provider: 'OPENAI' },
-              { id: 'e1', label: 'E', provider: 'OPENAI' },
+              { id: 'e1', label: 'E', provider: 'ANTHROPIC' },
             ]),
             { status: 200, headers: headersJson },
           )
