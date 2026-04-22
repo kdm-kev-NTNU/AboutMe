@@ -145,6 +145,7 @@ public class EvaluatorService {
       aiCircuitBreaker.assertClosed();
       String instructions = "You output only valid JSON. No markdown fences.\n\n" + userContent;
       int judgeMax = aiLimitsProperties.getJudgeMaxTokens();
+      long startNs = System.nanoTime();
       ChatResponse chatResponse = switch (model.provider()) {
         case OPENAI -> {
           OpenAiChatOptions opts = OpenAiChatOptions.builder()
@@ -165,7 +166,8 @@ public class EvaluatorService {
           yield anthropic.call(new Prompt(instructions, opts));
         }
       };
-      recordEvaluatorUsage(model.modelId(), chatResponse);
+      double latencySec = (System.nanoTime() - startNs) / 1_000_000_000.0;
+      recordEvaluatorUsage(model.modelId(), chatResponse, latencySec);
       String text = chatResponse.getResult().getOutput().getText();
       return parseScoreJson(text);
     } catch (AiCircuitOpenException e) {
@@ -201,7 +203,7 @@ public class EvaluatorService {
     }
   }
 
-  private void recordEvaluatorUsage(String modelId, ChatResponse chatResponse) {
+  private void recordEvaluatorUsage(String modelId, ChatResponse chatResponse, double latencySeconds) {
     int prompt = 0;
     int completion = 0;
     if (chatResponse != null && chatResponse.getMetadata() != null) {
@@ -216,7 +218,9 @@ public class EvaluatorService {
         modelId,
         prompt,
         completion,
-        false);
+        false,
+        latencySeconds,
+        "llm_judge");
   }
 
   private static int safeTokenCount(Number n) {
