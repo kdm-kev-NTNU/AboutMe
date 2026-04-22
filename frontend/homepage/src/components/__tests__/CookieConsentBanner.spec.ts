@@ -1,106 +1,94 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import CookieConsentBanner from '../CookieConsentBanner.vue'
-import { useLangStore } from '@/stores/lang'
-import posthog from 'posthog-js'
+import {
+  grantAllCookies,
+  grantNecessaryCookiesOnly,
+  rejectOptionalCookies,
+  isCookieBannerDismissed,
+  isPosthogEnabled,
+  __setPosthogTestEnv,
+} from '../../lib/posthog-consent'
+import { openCookieSettings } from '../../lib/cookie-settings-state'
 
-vi.mock('posthog-js', () => ({
-  default: {
-    get_explicit_consent_status: vi.fn(),
-    opt_in_capturing: vi.fn(),
-    opt_out_capturing: vi.fn(),
-    clear_opt_in_out_capturing: vi.fn(),
-  },
+vi.mock('../../lib/posthog-consent', async () => {
+  const actual = await vi.importActual<typeof import('../../lib/posthog-consent')>(
+    '../../lib/posthog-consent',
+  )
+  return {
+    ...actual,
+    grantAllCookies: vi.fn(),
+    grantNecessaryCookiesOnly: vi.fn(),
+    rejectOptionalCookies: vi.fn(),
+    isCookieBannerDismissed: vi.fn(() => false),
+    isPosthogEnabled: vi.fn(() => true),
+  }
+})
+
+vi.mock('../../lib/cookie-settings-state', () => ({
+  openCookieSettings: vi.fn(),
 }))
 
 describe('CookieConsentBanner', () => {
+  const mountBanner = () =>
+    mount(CookieConsentBanner, {
+      global: {
+        stubs: { RouterLink: { template: '<a><slot /></a>' } },
+      },
+    })
+
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(isCookieBannerDismissed).mockReturnValue(false)
+    vi.mocked(isPosthogEnabled).mockReturnValue(true)
     setActivePinia(createPinia())
+    __setPosthogTestEnv({ enabled: true, key: 'phc_test', host: 'https://eu.i.posthog.com' })
   })
 
-  it('shows banner when explicit consent is pending', async () => {
-    vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('pending')
-
-    const wrapper = mount(CookieConsentBanner, {
-      global: { plugins: [createPinia()] },
-    })
+  it('renders when banner is not dismissed', async () => {
+    const wrapper = mountBanner()
     await nextTick()
-
-    expect(wrapper.text()).toContain('Cookies and analytics')
-    expect(wrapper.text()).toContain('Accept')
-    expect(wrapper.text()).toContain('Decline')
+    expect(wrapper.find('[role="region"]').exists()).toBe(true)
   })
 
-  it('hides banner when consent is not pending', async () => {
-    vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('granted')
-
-    const wrapper = mount(CookieConsentBanner, {
-      global: { plugins: [createPinia()] },
-    })
+  it('does not render when consent was previously recorded', async () => {
+    vi.mocked(isCookieBannerDismissed).mockReturnValue(true)
+    const wrapper = mountBanner()
     await nextTick()
-
-    expect(wrapper.text()).toBe('')
+    expect(wrapper.find('[role="region"]').exists()).toBe(false)
   })
 
-  it('accept button opts in capturing and hides banner', async () => {
-    vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('pending')
-
-    const wrapper = mount(CookieConsentBanner, {
-      global: { plugins: [createPinia()] },
-    })
+  it('accepts all cookies and hides banner', async () => {
+    const wrapper = mountBanner()
     await nextTick()
-
     await wrapper.get('button').trigger('click')
-    expect(posthog.opt_in_capturing).toHaveBeenCalledTimes(1)
-    expect(wrapper.text()).toBe('')
+    expect(grantAllCookies).toHaveBeenCalledWith('banner_accept_all')
+    expect(wrapper.find('[role="region"]').exists()).toBe(false)
   })
 
-  it('decline button opts out capturing and hides banner', async () => {
-    vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('pending')
-
-    const wrapper = mount(CookieConsentBanner, {
-      global: { plugins: [createPinia()] },
-    })
+  it('accepts necessary only and hides banner', async () => {
+    const wrapper = mountBanner()
     await nextTick()
-
-    await wrapper.findAll('button')[1].trigger('click')
-    expect(posthog.opt_out_capturing).toHaveBeenCalledTimes(1)
-    expect(wrapper.text()).toBe('')
+    const buttons = wrapper.findAll('button')
+    await buttons[1].trigger('click')
+    expect(grantNecessaryCookiesOnly).toHaveBeenCalledWith('banner_necessary_only')
   })
 
-  it('openConsentSettings clears status and refreshes banner visibility', async () => {
-    vi.mocked(posthog.get_explicit_consent_status)
-      .mockReturnValueOnce('granted')
-      .mockReturnValueOnce('pending')
-
-    const wrapper = mount(CookieConsentBanner, {
-      global: { plugins: [createPinia()] },
-    })
-
-    expect(wrapper.text()).toBe('')
-    ;(wrapper.vm as { openConsentSettings: () => void }).openConsentSettings()
-    await wrapper.vm.$nextTick()
-
-    expect(posthog.clear_opt_in_out_capturing).toHaveBeenCalledTimes(1)
-    expect(wrapper.text()).toContain('Cookies and analytics')
-  })
-
-  it('renders norwegian text when language is no', async () => {
-    vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('pending')
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    useLangStore().setLanguage('no')
-
-    const wrapper = mount(CookieConsentBanner, {
-      global: { plugins: [pinia] },
-    })
+  it('rejects optional cookies and hides banner', async () => {
+    const wrapper = mountBanner()
     await nextTick()
+    const buttons = wrapper.findAll('button')
+    await buttons[2].trigger('click')
+    expect(rejectOptionalCookies).toHaveBeenCalledWith('banner_reject')
+  })
 
-    expect(wrapper.text()).toContain('Informasjonskapsler og analyse')
-    expect(wrapper.text()).toContain('Godta')
-    expect(wrapper.text()).toContain('Avslå')
+  it('opens cookie settings when customizing', async () => {
+    const wrapper = mountBanner()
+    await nextTick()
+    const buttons = wrapper.findAll('button')
+    await buttons[3].trigger('click')
+    expect(openCookieSettings).toHaveBeenCalled()
   })
 })
