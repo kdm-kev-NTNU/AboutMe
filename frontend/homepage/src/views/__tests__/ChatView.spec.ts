@@ -32,6 +32,7 @@ describe('ChatView', () => {
 
   beforeEach(() => {
     sessionStorage.clear()
+    localStorage.clear()
     vi.clearAllMocks()
     vi.mocked(listChatModels).mockResolvedValue({
       status: 200,
@@ -59,6 +60,15 @@ describe('ChatView', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
+          Dialog: {
+            props: ['open'],
+            template: '<div v-if="open"><slot /></div>',
+          },
+          DialogContent: { template: '<div><slot /></div>' },
+          DialogHeader: { template: '<div><slot /></div>' },
+          DialogTitle: { template: '<h2><slot /></h2>' },
+          DialogDescription: { template: '<p><slot /></p>' },
+          DialogFooter: { template: '<div><slot /></div>' },
           MessagesArea: {
             props: ['messages', 'isLoading', 'isReadOnly'],
             template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
@@ -157,5 +167,22 @@ describe('ChatView', () => {
     expect(wrapper.find('.stub-messages').text()).toContain('From API')
 
     vi.unstubAllGlobals()
+  })
+
+  it('shows updated first-time popup and saves versioned dismissal key', async () => {
+    const { wrapper } = await mountChat({})
+    expect(wrapper.text()).toContain('The portfolio is being actively adapted')
+
+    const dismissBtn = wrapper.findAll('button').find((b) => /got it/i.test(b.text()))
+    expect(dismissBtn).toBeDefined()
+    await dismissBtn!.trigger('click')
+
+    expect(localStorage.getItem('chatInfoPopupDismissed.v2')).toBe('true')
+  })
+
+  it('shows updated popup even when legacy dismissal key exists', async () => {
+    localStorage.setItem('chatInfoPopupDismissed', 'true')
+    const { wrapper } = await mountChat({})
+    expect(wrapper.text()).toContain('The portfolio is being actively adapted')
   })
 })

@@ -10,6 +10,7 @@ import { useLangStore } from '@/stores/lang'
 import ProjectsView from '../ProjectsView.vue'
 import CareerView from '../CareerView.vue'
 import FutureWorkView from '../FutureWorkView.vue'
+import BachelorView from '../BachelorView.vue'
 
 describe('portfolio views (smoke)', () => {
 	function mountView(component: Component) {
@@ -95,6 +96,7 @@ describe('portfolio views (smoke)', () => {
     const wrapper = mountView(FutureWorkView)
     await flushPromises()
     expect(wrapper.text()).toContain('Future work and improvements')
+    expect(wrapper.text()).toContain('being actively adapted')
     expect(wrapper.text()).toContain('References (arXiv)')
     const links = wrapper.findAll('a[href^="https://arxiv.org/abs/"]')
     expect(links.length).toBeGreaterThan(0)
@@ -107,7 +109,27 @@ describe('portfolio views (smoke)', () => {
     const wrapper = mount(FutureWorkView, { global: { plugins: [pinia, MotionPlugin] } })
     await flushPromises()
     expect(wrapper.text()).toContain('Videre arbeid og forbedringer')
+    expect(wrapper.text()).toContain('under aktiv tilpasning')
     expect(wrapper.text()).toContain('Referanser (arXiv)')
     expect(wrapper.text()).toContain('Lokal modell og Obsidian-journal')
+  })
+
+  it('renders BachelorView in English with active adaptation messaging', async () => {
+    const wrapper = mountView(BachelorView)
+    await flushPromises()
+    expect(wrapper.text()).toContain("Bachelor's thesis")
+    expect(wrapper.text()).toContain('active work in progress')
+    expect(wrapper.text()).toContain('shaping the portfolio now')
+  })
+
+  it('renders BachelorView in Norwegian with active adaptation messaging', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useLangStore().setLanguage('no')
+    const wrapper = mount(BachelorView, { global: { plugins: [pinia, MotionPlugin] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Bacheloroppgaven')
+    expect(wrapper.text()).toContain('aktivt arbeid i utvikling')
+    expect(wrapper.text()).toContain('styrer porteføljen nå')
   })
 })
