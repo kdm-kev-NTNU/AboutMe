@@ -66,19 +66,6 @@ const feedbackInvite = computed(() => {
   }
 })
 
-const portfolioStatus = computed(() => {
-  if (language.value === 'no') {
-    return {
-      title: 'Porteføljen tilpasses fortløpende',
-      body: 'Denne siden er et aktivt arbeid i utvikling. Innhold, chat-kontekst og AI-atferd justeres iterativt med læring fra bacheloroppgaven.',
-    }
-  }
-  return {
-    title: 'The portfolio is continuously being adapted',
-    body: "This site is an active work in progress. Content, chat context, and AI behavior are iteratively adjusted using learnings from my bachelor's thesis.",
-  }
-})
-
 const futureWorkHomeLink = computed(() => {
   if (language.value === 'no') {
     return {
@@ -245,18 +232,6 @@ function submitQuick() {
               </select>
             </div>
           </div>
-        </section>
-
-        <section class="w-full max-w-2xl">
-          <Alert
-            class="border-blue-200/80 bg-white/90 text-slate-800 shadow-sm backdrop-blur-sm [&>svg]:text-blue-600"
-          >
-            <Info class="size-4 shrink-0" aria-hidden="true" />
-            <AlertTitle>{{ portfolioStatus.title }}</AlertTitle>
-            <AlertDescription>
-              <p>{{ portfolioStatus.body }}</p>
-            </AlertDescription>
-          </Alert>
         </section>
 
         <section class="quick">
