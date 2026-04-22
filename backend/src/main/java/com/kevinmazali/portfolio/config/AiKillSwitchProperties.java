@@ -14,8 +14,6 @@ public class AiKillSwitchProperties {
 
   private BigDecimal monthlyLimitUsd = new BigDecimal("50.00");
 
-  private int checkIntervalSeconds = 60;
-
   /** Log WARN when global month spend crosses this fraction of the limit (0–1). */
   private double warnFraction = 0.80;
 
@@ -33,14 +31,6 @@ public class AiKillSwitchProperties {
 
   public void setMonthlyLimitUsd(BigDecimal monthlyLimitUsd) {
     this.monthlyLimitUsd = monthlyLimitUsd;
-  }
-
-  public int getCheckIntervalSeconds() {
-    return checkIntervalSeconds;
-  }
-
-  public void setCheckIntervalSeconds(int checkIntervalSeconds) {
-    this.checkIntervalSeconds = checkIntervalSeconds;
   }
 
   public double getWarnFraction() {
