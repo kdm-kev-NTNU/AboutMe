@@ -312,8 +312,6 @@ class ExperimentServiceTest {
   @Test
   void startRunRejectsSameProviderModels() {
     when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(phoenixDatasetService.getExamples("ds-1")).thenReturn(
-        List.of(new PhoenixDatasetExample("What?", "Ref", null, null)));
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4_MINI)).thenReturn(true);
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4)).thenReturn(true);
 
