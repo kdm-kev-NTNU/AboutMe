@@ -45,7 +45,6 @@ class AiBudgetServiceTest {
     pricing.setInputPerMillionUsd(new BigDecimal("1"));
     pricing.setOutputPerMillionUsd(new BigDecimal("2"));
     properties.getModels().put("gpt-5.4-mini", pricing);
-    when(postHogLlmService.isEnabled()).thenReturn(false);
     service = new AiBudgetService(properties, usageRepository, new SimpleMeterRegistry(), null, postHogLlmService);
   }
 
@@ -63,6 +62,7 @@ class AiBudgetServiceTest {
 
   @Test
   void recordUsagePersistsRow() {
+    when(postHogLlmService.isEnabled()).thenReturn(false);
     service.recordUsage("user:a", "gpt-5.4-mini", 1000, 500, false);
     verify(usageRepository).save(any());
   }
