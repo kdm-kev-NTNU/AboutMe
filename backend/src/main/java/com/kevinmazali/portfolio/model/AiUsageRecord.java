@@ -18,8 +18,8 @@ import java.time.Instant;
 @Table(
     name = "ai_usage_record",
     indexes = {
-        @Index(name = "idx_ai_usage_user_created", columnList = "userIdentifier,createdAt"),
-        @Index(name = "idx_ai_usage_created", columnList = "createdAt")
+        @Index(name = "idx_ai_usage_user_created", columnList = "user_identifier,created_at"),
+        @Index(name = "idx_ai_usage_created", columnList = "created_at")
     })
 public class AiUsageRecord {
 
