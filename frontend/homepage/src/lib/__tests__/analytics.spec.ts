@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest'
 import posthog from 'posthog-js'
 
 vi.mock('posthog-js', () => ({
@@ -29,11 +29,11 @@ describe('analytics helpers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     __setPosthogTestEnv({ enabled: true, key: 'phc_test', host: 'https://eu.i.posthog.com' })
-    ;(posthog as unknown as { capture: vi.Mock; captureException: vi.Mock }).capture = vi.fn()
+    ;(posthog as unknown as { capture: Mock; captureException: Mock }).capture = vi.fn()
     ;(
       posthog as unknown as {
-        capture: vi.Mock
-        captureException: vi.Mock
+        capture: Mock
+        captureException: Mock
       }
     ).captureException = vi.fn()
     vi.mocked(isPosthogEnabled).mockReturnValue(true)

@@ -20,6 +20,12 @@ import {
   applyStoredTrackingConsent,
   grantAllCookies,
   grantNecessaryCookiesOnly,
+  rejectOptionalCookies,
+  saveAnalyticsConsent,
+  getConsentRecord,
+  hasAnalyticsConsent,
+  isCookieBannerDismissed,
+  isPosthogEnabled,
   COOKIE_CONSENT_RECORD_KEY,
   PRIVACY_POLICY_VERSION,
   registerPosthogActivationHandler,
@@ -33,6 +39,7 @@ describe('posthog-consent', () => {
   beforeEach(() => {
     localStorageMock = {}
     vi.clearAllMocks()
+    vi.mocked(posthog.get_explicit_consent_status).mockReturnValue(undefined as never)
 
     __setPosthogTestEnv({
       enabled: true,
@@ -111,5 +118,57 @@ describe('posthog-consent', () => {
     const record = JSON.parse(localStorageMock[COOKIE_CONSENT_RECORD_KEY])
     expect(record.analytics).toBe(false)
     expect(localStorageMock).toHaveProperty(COOKIE_CONSENT_RECORD_KEY)
+  })
+
+  it('rejectOptionalCookies persists denied consent and deactivates sdk', () => {
+    vi.mocked(isPosthogSdkInitialized).mockReturnValue(true)
+    rejectOptionalCookies('banner_reject')
+
+    const record = JSON.parse(localStorageMock[COOKIE_CONSENT_RECORD_KEY])
+    expect(record.analytics).toBe(false)
+    expect(record.source).toBe('banner_reject')
+    expect(posthog.opt_out_capturing).toHaveBeenCalledTimes(1)
+    expect(posthog.reset).toHaveBeenCalledTimes(1)
+  })
+
+  it('saveAnalyticsConsent stores and applies true choice', () => {
+    const handler = vi.fn()
+    registerPosthogActivationHandler(handler)
+    saveAnalyticsConsent(true, 'settings')
+
+    expect(hasAnalyticsConsent()).toBe(true)
+    expect(isCookieBannerDismissed()).toBe(true)
+    expect(posthog.opt_in_capturing).toHaveBeenCalledTimes(1)
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('migrates legacy granted consent from posthog status', () => {
+    vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('granted')
+
+    const record = getConsentRecord()
+    expect(record?.analytics).toBe(true)
+    expect(record?.source).toBe('legacy_migration')
+  })
+
+  it('migrates legacy denied consent from localStorage flag', () => {
+    localStorage.setItem('posthog_tracking_consent', 'denied')
+
+    const record = getConsentRecord()
+    expect(record?.analytics).toBe(false)
+    expect(record?.source).toBe('legacy_migration')
+  })
+
+  it('isPosthogEnabled reflects env override state', () => {
+    __setPosthogTestEnv({ enabled: false, key: '', host: '' })
+    expect(isPosthogEnabled()).toBe(false)
+    __setPosthogTestEnv({ enabled: true, key: 'phc_123', host: 'https://eu.i.posthog.com' })
+    expect(isPosthogEnabled()).toBe(true)
+  })
+
+  it('does nothing when applyStoredTrackingConsent has no dismissed record', () => {
+    applyStoredTrackingConsent()
+    expect(initializePosthogSdk).not.toHaveBeenCalled()
+    expect(posthog.opt_in_capturing).not.toHaveBeenCalled()
+    expect(posthog.opt_out_capturing).not.toHaveBeenCalled()
   })
 })
