@@ -3,7 +3,13 @@ import './assets/main.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { MotionPlugin } from '@vueuse/motion'
-import { captureClientException, initPosthogIfConfigured } from './lib/analytics'
+import { captureClientException } from './lib/analytics'
+import {
+  applyStoredTrackingConsent,
+  isPosthogEnabled,
+  registerPosthogActivationHandler,
+} from './lib/posthog-consent'
+import { setupPosthogAppHooks } from './lib/posthog-app-hooks'
 
 import App from './App.vue'
 import router from './router'
@@ -11,22 +17,23 @@ import router from './router'
 // Pinia must be registered before the router so route guards and components can inject stores synchronously.
 const app = createApp(App)
 
-const isPosthogEnabled = initPosthogIfConfigured(
-  import.meta.env.VITE_POSTHOG_KEY,
-  import.meta.env.VITE_POSTHOG_HOST,
-)
-if (!isPosthogEnabled) {
-  console.warn('[analytics] PostHog disabled: VITE_POSTHOG_KEY is missing or empty.')
-}
+const posthogEnabled = isPosthogEnabled()
 
 app.use(createPinia())
 app.use(router)
 app.use(MotionPlugin)
 
+if (posthogEnabled) {
+  registerPosthogActivationHandler(() => {
+    setupPosthogAppHooks(app, router)
+  })
+  applyStoredTrackingConsent()
+} else {
+  console.info('[analytics] PostHog disabled: set VITE_POSTHOG_ENABLED=true and VITE_POSTHOG_KEY to enable.')
+}
+
 app.config.errorHandler = (err) => {
-  if (isPosthogEnabled) {
-    captureClientException(err)
-  }
+  captureClientException(err)
 }
 
 app.mount('#app')
