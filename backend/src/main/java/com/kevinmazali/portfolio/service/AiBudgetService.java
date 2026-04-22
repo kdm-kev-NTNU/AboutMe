@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -36,16 +38,20 @@ public class AiBudgetService {
   private final MeterRegistry meterRegistry;
   @Nullable
   private final Tracer tracer;
+  @Nullable
+  private final PostHogLlmService postHogLlmService;
 
   public AiBudgetService(
       AiBudgetProperties properties,
       AiUsageRepository usageRepository,
       MeterRegistry meterRegistry,
-      @Autowired(required = false) @Nullable Tracer tracer) {
+      @Autowired(required = false) @Nullable Tracer tracer,
+      @Autowired(required = false) @Nullable PostHogLlmService postHogLlmService) {
     this.properties = properties;
     this.usageRepository = usageRepository;
     this.meterRegistry = meterRegistry;
     this.tracer = tracer;
+    this.postHogLlmService = postHogLlmService;
   }
 
   /**
@@ -86,6 +92,24 @@ public class AiBudgetService {
       int promptTokens,
       int completionTokens,
       boolean anonymous) {
+    recordUsage(userIdentifier, modelId, promptTokens, completionTokens, anonymous, null, null);
+  }
+
+  /**
+   * Records usage and optionally forwards LLM analytics to PostHog after successful commit.
+   *
+   * @param latencySeconds wall-clock LLM call duration, or null if not measured
+   * @param generationSpanName logical step name for PostHog (e.g. {@code query_expansion}, {@code rag_completion})
+   */
+  @Transactional
+  public void recordUsage(
+      String userIdentifier,
+      String modelId,
+      int promptTokens,
+      int completionTokens,
+      boolean anonymous,
+      @Nullable Double latencySeconds,
+      @Nullable String generationSpanName) {
     BigDecimal cost = estimateCostUsd(modelId, promptTokens, completionTokens);
     AiUsageRecord row = new AiUsageRecord();
     row.setUserIdentifier(userIdentifier != null ? userIdentifier : "unknown");
@@ -113,8 +137,42 @@ public class AiBudgetService {
 
     tagCurrentSpanForPhoenix(modelId, cost, promptTokens, completionTokens);
 
+    schedulePostHogGenerationCapture(
+        userIdentifier, modelId, promptTokens, completionTokens, anonymous, cost, latencySeconds, generationSpanName);
+
     if (userIdentifier == null || !userIdentifier.startsWith("system:")) {
       detectSpendSpike(userIdentifier != null ? userIdentifier : "unknown", anonymous);
+    }
+  }
+
+  private void schedulePostHogGenerationCapture(
+      String userIdentifier,
+      String modelId,
+      int promptTokens,
+      int completionTokens,
+      boolean anonymous,
+      BigDecimal cost,
+      @Nullable Double latencySeconds,
+      @Nullable String generationSpanName) {
+    PostHogLlmService sink = postHogLlmService;
+    if (sink == null || !sink.isEnabled()) {
+      return;
+    }
+    String uid = userIdentifier != null ? userIdentifier : "unknown";
+    Runnable task =
+        () ->
+            sink.captureGenerationAsync(
+                uid, modelId, promptTokens, completionTokens, cost, anonymous, latencySeconds, generationSpanName);
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              task.run();
+            }
+          });
+    } else {
+      task.run();
     }
   }
 
