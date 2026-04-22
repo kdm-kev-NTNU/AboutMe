@@ -1,10 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
-import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
 import com.kevinmazali.portfolio.model.ApiError;
-import com.kevinmazali.portfolio.util.ChromaClientDiagnostics;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,44 +10,29 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 
 /**
- * Maps Chroma / HTTP client failures on admin document routes to 503 with {@link ApiError},
- * consistent with {@link ChromaHealthController} behavior.
+ * Maps ingestion / I/O failures on admin document routes to 503 with {@link ApiError}.
  */
 @RestControllerAdvice(assignableTypes = DocumentPipelineController.class)
 @RequiredArgsConstructor
 public class DocumentPipelineControllerAdvice {
 
-  private final Environment environment;
-
-  /** Chroma disabled via {@code portfolio.chroma.enabled=false}. */
-  @ExceptionHandler(ChromaFeatureDisabledException.class)
-  public ResponseEntity<ApiError> chromaDisabled(ChromaFeatureDisabledException ex) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(new ApiError(ex.getMessage()));
-  }
-
-  /** Chroma misconfiguration or unexpected empty state from the ingestion service. */
+  /** Misconfiguration or unexpected empty state from the ingestion service. */
   @ExceptionHandler(IllegalStateException.class)
   public ResponseEntity<ApiError> illegalState(IllegalStateException ex) {
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiError(ex.getMessage()));
   }
 
-  /** Low-level I/O to Chroma (timeouts, connection refused); message often lacks detail without wrapping. */
+  /** Low-level I/O (timeouts, connection refused). */
   @ExceptionHandler(ResourceAccessException.class)
   public ResponseEntity<ApiError> resourceAccess(ResourceAccessException ex) {
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-        .body(new ApiError(ChromaClientDiagnostics.describeChromaFailure(ex, chromaClientBaseUrl())));
+        .body(new ApiError(ex.getMessage()));
   }
 
-  /** Network or HTTP errors when calling the Chroma REST API from the admin pipeline. */
+  /** Network or HTTP errors from downstream services used by the admin pipeline. */
   @ExceptionHandler(RestClientException.class)
   public ResponseEntity<ApiError> restClient(RestClientException ex) {
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-        .body(new ApiError(ChromaClientDiagnostics.apiErrorBodyMessage(ex, chromaClientBaseUrl())));
-  }
-
-  private String chromaClientBaseUrl() {
-    String host = environment.getProperty("spring.ai.vectorstore.chroma.client.host", "");
-    int port = environment.getProperty("spring.ai.vectorstore.chroma.client.port", Integer.class, 8100);
-    return ChromaClientDiagnostics.baseUrl(host, port);
+        .body(new ApiError(ex.getMessage()));
   }
 }

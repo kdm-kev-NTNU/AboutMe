@@ -2,11 +2,14 @@ package com.kevinmazali.portfolio.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kevinmazali.portfolio.config.AiLimitsProperties;
+import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
 import com.kevinmazali.portfolio.model.experiment.EvaluationScore;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -23,19 +26,26 @@ import java.util.stream.Collectors;
 @Service
 public class EvaluatorService {
 
-  private static final int JUDGE_MAX_TOKENS = 512;
-
   private final OpenAiChatModel openAiChatModel;
   private final ObjectProvider<AnthropicChatModel> anthropicChatModel;
   private final ObjectMapper objectMapper;
+  private final AiLimitsProperties aiLimitsProperties;
+  private final AiCircuitBreaker aiCircuitBreaker;
+  private final AiBudgetService aiBudgetService;
 
   public EvaluatorService(
       OpenAiChatModel openAiChatModel,
       ObjectProvider<AnthropicChatModel> anthropicChatModel,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      AiLimitsProperties aiLimitsProperties,
+      AiCircuitBreaker aiCircuitBreaker,
+      AiBudgetService aiBudgetService) {
     this.openAiChatModel = openAiChatModel;
     this.anthropicChatModel = anthropicChatModel;
     this.objectMapper = objectMapper;
+    this.aiLimitsProperties = aiLimitsProperties;
+    this.aiCircuitBreaker = aiCircuitBreaker;
+    this.aiBudgetService = aiBudgetService;
   }
 
   public EvaluationScore evaluateFaithfulness(
@@ -132,12 +142,14 @@ public class EvaluatorService {
     }
     SupportedChatModel model = resolved.get();
     try {
+      aiCircuitBreaker.assertClosed();
       String instructions = "You output only valid JSON. No markdown fences.\n\n" + userContent;
+      int judgeMax = aiLimitsProperties.getJudgeMaxTokens();
       ChatResponse chatResponse = switch (model.provider()) {
         case OPENAI -> {
           OpenAiChatOptions opts = OpenAiChatOptions.builder()
               .model(model.modelId())
-              .maxCompletionTokens(JUDGE_MAX_TOKENS)
+              .maxCompletionTokens(judgeMax)
               .build();
           yield openAiChatModel.call(new Prompt(instructions, opts));
         }
@@ -148,13 +160,16 @@ public class EvaluatorService {
           }
           AnthropicChatOptions opts = AnthropicChatOptions.builder()
               .model(model.modelId())
-              .maxTokens(JUDGE_MAX_TOKENS)
+              .maxTokens(judgeMax)
               .build();
           yield anthropic.call(new Prompt(instructions, opts));
         }
       };
+      recordEvaluatorUsage(model.modelId(), chatResponse);
       String text = chatResponse.getResult().getOutput().getText();
       return parseScoreJson(text);
+    } catch (AiCircuitOpenException e) {
+      throw e;
     } catch (Exception e) {
       return EvaluationScore.failed(e.getMessage());
     }
@@ -184,6 +199,38 @@ public class EvaluatorService {
     } catch (Exception e) {
       return EvaluationScore.failed("JSON parse: " + e.getMessage());
     }
+  }
+
+  private void recordEvaluatorUsage(String modelId, ChatResponse chatResponse) {
+    int prompt = 0;
+    int completion = 0;
+    if (chatResponse != null && chatResponse.getMetadata() != null) {
+      Usage u = chatResponse.getMetadata().getUsage();
+      if (u != null) {
+        prompt = safeTokenCount(u.getPromptTokens());
+        completion = safeTokenCount(u.getCompletionTokens());
+      }
+    }
+    aiBudgetService.recordUsage(
+        AiBudgetService.systemEvaluatorUserId(),
+        modelId,
+        prompt,
+        completion,
+        false);
+  }
+
+  private static int safeTokenCount(Number n) {
+    if (n == null) {
+      return 0;
+    }
+    long v = n.longValue();
+    if (v < 0) {
+      return 0;
+    }
+    if (v > Integer.MAX_VALUE) {
+      return Integer.MAX_VALUE;
+    }
+    return (int) v;
   }
 
   private static String escapeTemplate(String s) {

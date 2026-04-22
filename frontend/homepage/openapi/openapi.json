@@ -97,7 +97,7 @@
           "answer": { "type": "string" }
         }
       },
-      "ChromaHealthResponse": {
+      "VectorStoreHealthResponse": {
         "type": "object",
         "properties": {
           "healthy": { "type": "boolean" },
@@ -125,21 +125,21 @@
           "lastIngestedAt": { "type": "string" }
         }
       },
-      "ChromaCollectionSummary": {
+      "VectorStoreCollectionEntry": {
         "type": "object",
         "properties": {
           "id": { "type": "string" },
           "name": { "type": "string" }
         }
       },
-      "ChromaCollectionsResponse": {
+      "VectorStoreInfoResponse": {
         "type": "object",
         "properties": {
           "activeCollectionName": { "type": "string" },
           "activeCollectionEmbeddingCount": { "type": "integer", "format": "int64", "nullable": true },
           "collections": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/ChromaCollectionSummary" }
+            "items": { "$ref": "#/components/schemas/VectorStoreCollectionEntry" }
           }
         }
       },
@@ -394,14 +394,14 @@
     "/health/chroma": {
       "get": {
         "tags": ["Health"],
-        "summary": "ChromaDB health",
+        "summary": "Vector store health (legacy /health/chroma)",
         "operationId": "healthChroma",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ChromaHealthResponse" }
+                "schema": { "$ref": "#/components/schemas/VectorStoreHealthResponse" }
               }
             }
           },
@@ -409,7 +409,7 @@
             "description": "Service Unavailable",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ChromaHealthResponse" }
+                "schema": { "$ref": "#/components/schemas/VectorStoreHealthResponse" }
               }
             }
           }
@@ -632,7 +632,7 @@
     "/admin/tools/documents/collections": {
       "get": {
         "tags": ["Admin documents"],
-        "summary": "List Chroma collections",
+        "summary": "List vector store (pgvector table summary)",
         "operationId": "adminDocumentsCollections",
         "security": [{ "basicAuth": [] }],
         "responses": {
@@ -640,7 +640,7 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ChromaCollectionsResponse" }
+                "schema": { "$ref": "#/components/schemas/VectorStoreInfoResponse" }
               }
             }
           }

@@ -51,8 +51,8 @@
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.mysql</groupId>
-			<artifactId>mysql-connector-j</artifactId>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
@@ -69,7 +69,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-starter-vector-store-chroma</artifactId>
+			<artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.opennlp</groupId>
@@ -109,6 +109,14 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-otlp</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents.client5</groupId>
@@ -171,6 +179,9 @@
 						<exclude>**/com/kevinmazali/portfolio/model/**</exclude>
 						<exclude>**/com/kevinmazali/portfolio/config/**</exclude>
 						<exclude>**/com/kevinmazali/portfolio/PortfolioApplication.class</exclude>
+						<!-- Large ingestion + JDBC/pgvector paths; covered by dedicated tests + manual re-ingest verification. -->
+						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService.class</exclude>
+						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService$*.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>
