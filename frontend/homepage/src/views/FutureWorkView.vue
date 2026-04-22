@@ -265,21 +265,21 @@ const hero = computed(() =>
 		? {
 				title: 'Videre arbeid og forbedringer',
 				lead:
-					'Dette er en kort, forskningsforankret roadmap for funksjoner som allerede finnes i porteføljen: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, samt promptversjoner.',
+					'Dette er en forskningsforankret roadmap for neste iterasjoner i en portefølje som er under aktiv tilpasning: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, samt promptversjoner.',
 				contextBefore:
-					'Roadmapen er formet av det jeg lærer gjennom bacheloroppgaven (2026) hos Piscada AS i Trondheim, og av arbeid med deres ',
+					'Roadmapen viser hva jeg prioriterer mens jeg kontinuerlig tilpasser porteføljen med læring fra bacheloroppgaven (2026) hos Piscada AS i Trondheim og arbeid på ',
 				contextLinkText: 'Foresight AI',
-				contextAfter: '-system, som jeg og en annen jobber med for tiden.',
+				contextAfter: ', som jeg utvikler sammen med en annen i teamet.',
 				contextLinkHref: foresightAiProductUrl,
 			}
 		: {
 				title: 'Future work and improvements',
 				lead:
-					'A concise, research-backed roadmap focused on capabilities already shipped in this portfolio: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning.',
+					'A research-backed roadmap for the next iterations of a portfolio that is being actively adapted: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning.',
 				contextBefore:
-					"This roadmap is informed by what I'm learning through my bachelor's thesis (2026) at Piscada AS in Trondheim, and by work on their ",
+					"This roadmap reflects what I prioritize while continuously adapting the portfolio based on learnings from my bachelor's thesis (2026) at Piscada AS in Trondheim and work on ",
 				contextLinkText: 'Foresight AI',
-				contextAfter: ' system together with another teammate.',
+				contextAfter: ', which I develop with another teammate.',
 				contextLinkHref: foresightAiProductUrl,
 			},
 )
