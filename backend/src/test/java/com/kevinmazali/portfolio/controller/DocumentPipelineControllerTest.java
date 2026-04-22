@@ -2,7 +2,6 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.SecurityConfig;
-import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
 import com.kevinmazali.portfolio.service.DocumentIngestionService;
@@ -39,10 +38,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = DocumentPipelineController.class, properties = {
-		"spring.ai.vectorstore.chroma.client.host=http://localhost",
-		"spring.ai.vectorstore.chroma.client.port=8100"
-})
+@WebMvcTest(controllers = DocumentPipelineController.class)
 @Import({ SecurityConfig.class, MvcTestUserDetailsConfig.class, DocumentPipelineControllerAdvice.class })
 class DocumentPipelineControllerTest {
 
@@ -99,13 +95,13 @@ class DocumentPipelineControllerTest {
 
 	@Test
 	@WithMockUser(username = "admin", roles = "ADMIN")
-	void listReturns503WhenChromaCollectionMissing() throws Exception {
+	void listReturns503WhenVectorTableInaccessible() throws Exception {
 		when(documentIngestionService.listDocuments())
-			.thenThrow(new IllegalStateException("Chroma collection not found: portfolio-documents"));
+			.thenThrow(new IllegalStateException("Cannot access vector table public.vector_store: boom"));
 
 		mockMvc.perform(get("/admin/tools/documents"))
 			.andExpect(status().isServiceUnavailable())
-			.andExpect(jsonPath("$.error").value("Chroma collection not found: portfolio-documents"));
+			.andExpect(jsonPath("$.error").value(containsString("Cannot access vector table")));
 	}
 
 	@Test
@@ -116,31 +112,18 @@ class DocumentPipelineControllerTest {
 
 		mockMvc.perform(get("/admin/tools/documents"))
 			.andExpect(status().isServiceUnavailable())
-			.andExpect(jsonPath("$.error").value(containsString("Connection refused")))
-			.andExpect(jsonPath("$.error").value(containsString("http://localhost:8100")));
-	}
-
-	@Test
-	@WithMockUser(username = "admin", roles = "ADMIN")
-	void listReturns501WhenChromaFeatureDisabled() throws Exception {
-		when(documentIngestionService.listDocuments())
-			.thenThrow(new ChromaFeatureDisabledException("Chroma is disabled for this deployment."));
-
-		mockMvc.perform(get("/admin/tools/documents"))
-			.andExpect(status().isNotImplemented())
-			.andExpect(jsonPath("$.error").value("Chroma is disabled for this deployment."));
+			.andExpect(jsonPath("$.error").value(containsString("Connection refused")));
 	}
 
 	@Test
 	@WithMockUser(username = "admin", roles = "ADMIN")
 	void listReturns503OnGenericRestClientException() throws Exception {
 		when(documentIngestionService.listDocuments())
-			.thenThrow(new RestClientException("Bad gateway from Chroma proxy"));
+			.thenThrow(new RestClientException("Bad gateway from upstream"));
 
 		mockMvc.perform(get("/admin/tools/documents"))
 			.andExpect(status().isServiceUnavailable())
-			.andExpect(jsonPath("$.error").value(containsString("Bad gateway from Chroma proxy")))
-			.andExpect(jsonPath("$.error").value(containsString("Hint:")));
+			.andExpect(jsonPath("$.error").value(containsString("Bad gateway from upstream")));
 	}
 
 	@Test
