@@ -32,6 +32,7 @@ describe('ChatView', () => {
 
   beforeEach(() => {
     sessionStorage.clear()
+    localStorage.clear()
     vi.clearAllMocks()
     vi.mocked(listChatModels).mockResolvedValue({
       status: 200,
@@ -157,5 +158,22 @@ describe('ChatView', () => {
     expect(wrapper.find('.stub-messages').text()).toContain('From API')
 
     vi.unstubAllGlobals()
+  })
+
+  it('shows updated first-time popup and saves versioned dismissal key', async () => {
+    const { wrapper } = await mountChat({})
+    expect(wrapper.text()).toContain('The portfolio is being actively adapted')
+
+    const dismissBtn = wrapper.findAll('button').find((b) => /got it/i.test(b.text()))
+    expect(dismissBtn).toBeDefined()
+    await dismissBtn!.trigger('click')
+
+    expect(localStorage.getItem('chatInfoPopupDismissed.v2')).toBe('true')
+  })
+
+  it('shows updated popup even when legacy dismissal key exists', async () => {
+    localStorage.setItem('chatInfoPopupDismissed', 'true')
+    const { wrapper } = await mountChat({})
+    expect(wrapper.text()).toContain('The portfolio is being actively adapted')
   })
 })

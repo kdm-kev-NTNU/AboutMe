@@ -22,13 +22,13 @@ const hero = computed(() =>
 		? {
 				title: 'Bacheloroppgaven',
 				lead:
-					'Denne porteføljen bygger videre på arbeidet jeg har gjort i bacheloroppgaven (2026) hos Piscada AS i Trondheim. Oppgaven har gitt meg en solid forståelse for hvordan RAG, språkmodeller og produksjonsklar programvare henger sammen — og det er den kompetansen jeg bruker når jeg videreutvikler nettsiden over tid.',
+					'Denne porteføljen er et aktivt arbeid i utvikling. Jeg tilpasser innhold, struktur og AI-atferd fortløpende med læring fra bacheloroppgaven (2026) hos Piscada AS i Trondheim, slik at siden blir tydeligere og mer treffsikker over tid.',
 				lastUpdated: 'Sist oppdatert: april 2026',
 			}
 		: {
 				title: "Bachelor's thesis",
 				lead:
-					"This portfolio builds on work from my bachelor's thesis (2026) at Piscada AS in Trondheim. The thesis gave me a solid grasp of how RAG, language models, and production-ready software fit together — and that's the foundation I use when I keep evolving this site over time.",
+					"This portfolio is an active work in progress. I continuously adapt content, structure, and AI behavior using learnings from my bachelor's thesis (2026) at Piscada AS in Trondheim so the site becomes clearer and more accurate over time.",
 				lastUpdated: 'Last updated: April 2026',
 			},
 )
@@ -74,9 +74,10 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 				},
 				{
 					category: 'Porteføljen',
-					title: 'Hvorfor dette gir mening her',
+					title: 'Hvordan dette styrer porteføljen nå',
 					body: [
-						'Nettsiden er et levende sted der jeg kan teste ideer fra oppgaven, holde teknologistakken oppdatert og vise hvordan jeg tenker om AI-produkter.',
+						'Nettsiden er et levende arbeidsrom der jeg kontinuerlig tester og justerer ideer fra bacheloroppgaven.',
+						'Det betyr at både innhold, prioriteringer og AI-atferd kan endres i iterasjoner etter hvert som jeg lærer mer.',
 						'Du finner mer teknisk detalj på siden Teknologistakk, og en forskningsforankret roadmap på Videre arbeid.',
 					],
 				},
@@ -100,9 +101,10 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 				},
 				{
 					category: 'Portfolio',
-					title: 'Why this connects to the site',
+					title: 'How this is shaping the portfolio now',
 					body: [
-						'The site is a living place to try ideas from the thesis, keep the tech stack current, and show how I think about AI-powered products.',
+						'The site is a living workspace where I continuously test and adjust ideas from the bachelor thesis.',
+						'This means content, priorities, and AI behavior can change in iterations as I keep learning.',
 						'For more technical depth, see Tech stack; for a research-backed roadmap, see Future work.',
 					],
 				},
