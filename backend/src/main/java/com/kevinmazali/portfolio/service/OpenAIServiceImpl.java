@@ -1,14 +1,21 @@
 package com.kevinmazali.portfolio.service;
 
+import com.kevinmazali.portfolio.config.AiBudgetProperties;
+import com.kevinmazali.portfolio.config.AiLimitsProperties;
+import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
+import com.kevinmazali.portfolio.exception.BudgetExceededException;
+import com.kevinmazali.portfolio.exception.PremiumModelForbiddenException;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.RagAnswer;
 import com.kevinmazali.portfolio.model.chat.ChatProvider;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
+import com.kevinmazali.portfolio.util.AiRequestContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
@@ -33,25 +40,35 @@ import java.util.Map;
 @Service
 public class OpenAIServiceImpl implements OpenAIService {
 
-  private static final int CHAT_MAX_TOKENS = 400;
-
   private final OpenAiChatModel openAiChatModel;
   private final ObjectProvider<AnthropicChatModel> anthropicChatModel;
   private final VectorStore vectorStore;
   private final String defaultModelId;
   private final PromptVersionService promptVersionService;
+  private final AiLimitsProperties aiLimitsProperties;
+  private final AiBudgetProperties aiBudgetProperties;
+  private final AiBudgetService aiBudgetService;
+  private final AiCircuitBreaker aiCircuitBreaker;
 
   public OpenAIServiceImpl(
       OpenAiChatModel openAiChatModel,
       ObjectProvider<AnthropicChatModel> anthropicChatModel,
       @Lazy VectorStore vectorStore,
       @Value("${portfolio.chat.default-model-id}") String defaultModelId,
-      PromptVersionService promptVersionService) {
+      PromptVersionService promptVersionService,
+      AiLimitsProperties aiLimitsProperties,
+      AiBudgetProperties aiBudgetProperties,
+      AiBudgetService aiBudgetService,
+      AiCircuitBreaker aiCircuitBreaker) {
     this.openAiChatModel = openAiChatModel;
     this.anthropicChatModel = anthropicChatModel;
     this.vectorStore = vectorStore;
     this.defaultModelId = defaultModelId;
     this.promptVersionService = promptVersionService;
+    this.aiLimitsProperties = aiLimitsProperties;
+    this.aiBudgetProperties = aiBudgetProperties;
+    this.aiBudgetService = aiBudgetService;
+    this.aiCircuitBreaker = aiCircuitBreaker;
   }
 
   @Override
@@ -67,16 +84,14 @@ public class OpenAIServiceImpl implements OpenAIService {
       throw new IllegalStateException("Anthropic chat is not available (missing API key or autoconfiguration).");
     }
 
-    // #region agent log
+    String budgetUserId = AiRequestContext.budgetUserIdentifier(aiBudgetProperties);
+    boolean anonymous = AiRequestContext.isAnonymousInteractiveUser();
+
     log.info("[DEBUG-b64a63] vectorStore class={}, question={}", vectorStore.getClass().getName(), question.question());
-    // #endregion
 
-    // Cross-language retrieval: run similarity search once per expanded query, then dedupe and cap.
-    List<String> queries = expandQueryToLanguages(question.question(), model);
+    List<String> queries = expandQueryToLanguages(question.question(), model, budgetUserId, anonymous);
 
-    // #region agent log
     log.info("[DEBUG-b64a63] expanded queries={}", queries);
-    // #endregion
 
     List<Document> documents = queries.stream()
         .flatMap(q -> {
@@ -99,15 +114,12 @@ public class OpenAIServiceImpl implements OpenAIService {
         .limit(40)
         .toList();
 
-    // #region agent log
     log.info("[DEBUG-b64a63] total retrieved docs={}", documents.size());
     if (!documents.isEmpty()) {
       documents.stream().limit(3).forEach(d ->
           log.info("[DEBUG-b64a63] doc snippet: {}", d.getText().substring(0, Math.min(150, d.getText().length()))));
     }
-    // #endregion
 
-    // Build RAG prompt from DB-managed template (per provider) plus flattened chunk text.
     List<String> contentList = documents.stream().map(Document::getText).toList();
     String providerName = switch (model.provider()) {
       case OPENAI -> "openai";
@@ -120,25 +132,45 @@ public class OpenAIServiceImpl implements OpenAIService {
         "documents", String.join("\n", contentList)
     ));
 
-    // Provider-specific chat options (model id, max tokens) are applied inside invokeChat.
-    ChatResponse response = invokeChat(model, basePrompt);
-    return new RagAnswer(response.getResult().getOutput().getText(), contentList);
+    ChatResponse response = invokeManagedChat(model, basePrompt, budgetUserId, anonymous);
+    String answerText = response.getResult().getOutput().getText();
+    answerText = truncateOutput(answerText, aiLimitsProperties.getMaxOutputChars());
+    return new RagAnswer(answerText, contentList);
   }
 
   private SupportedChatModel resolveModel(Question question) {
     String id = (question.model() == null || question.model().isBlank())
         ? defaultModelId
         : question.model().trim();
-    return SupportedChatModel.fromModelId(id)
+    SupportedChatModel model = SupportedChatModel.fromModelId(id)
         .orElseThrow(() -> new IllegalArgumentException("Unknown or unsupported model id: " + id));
+    if (AiRequestContext.isAnonymousInteractiveUser() && model.requiresAuthenticationForPublicChat()) {
+      throw new PremiumModelForbiddenException(
+          "This model requires sign-in. Use a public model or authenticate.");
+    }
+    return model;
+  }
+
+  private ChatResponse invokeManagedChat(
+      SupportedChatModel model,
+      Prompt basePrompt,
+      String budgetUserId,
+      boolean anonymous) {
+    aiCircuitBreaker.assertClosed();
+    aiBudgetService.assertWithinBudget(budgetUserId, anonymous);
+    ChatResponse response = invokeChat(model, basePrompt);
+    UsageTokens usage = extractUsage(response);
+    aiBudgetService.recordUsage(budgetUserId, model.modelId(), usage.promptTokens(), usage.completionTokens(), anonymous);
+    return response;
   }
 
   private ChatResponse invokeChat(SupportedChatModel model, Prompt basePrompt) {
+    int maxTokens = aiLimitsProperties.getChatMaxCompletionTokens();
     return switch (model.provider()) {
       case OPENAI -> {
         OpenAiChatOptions opts = OpenAiChatOptions.builder()
             .model(model.modelId())
-            .maxCompletionTokens(CHAT_MAX_TOKENS)
+            .maxCompletionTokens(maxTokens)
             .build();
         yield openAiChatModel.call(new Prompt(basePrompt.getInstructions(), opts));
       }
@@ -149,18 +181,18 @@ public class OpenAIServiceImpl implements OpenAIService {
         }
         AnthropicChatOptions opts = AnthropicChatOptions.builder()
             .model(model.modelId())
-            .maxTokens(CHAT_MAX_TOKENS)
+            .maxTokens(maxTokens)
             .build();
         yield anthropic.call(new Prompt(basePrompt.getInstructions(), opts));
       }
     };
   }
 
-  /**
-   * Optional LLM step: asks the same model to emit EN/NO phrasing so vector search hits both languages.
-   * On any failure, returns a singleton list containing only the original query (graceful degradation).
-   */
-  private List<String> expandQueryToLanguages(String original, SupportedChatModel model) {
+  private List<String> expandQueryToLanguages(
+      String original,
+      SupportedChatModel model,
+      String budgetUserId,
+      boolean anonymous) {
     try {
       String sys = """
       Translate the user query into both English and Norwegian.
@@ -170,7 +202,7 @@ public class OpenAIServiceImpl implements OpenAIService {
 
       Prompt base = new PromptTemplate("{sys}\nUser: {q}")
           .create(Map.of("sys", sys, "q", original));
-      ChatResponse r = invokeChat(model, base);
+      ChatResponse r = invokeManagedChat(model, base, budgetUserId, anonymous);
       String json = r.getResult().getOutput().getText();
 
       String en = extractJsonValue(json, "en");
@@ -179,6 +211,8 @@ public class OpenAIServiceImpl implements OpenAIService {
       return List.of(original,
           en == null || en.isBlank() ? original : en,
           no == null || no.isBlank() ? original : no);
+    } catch (BudgetExceededException | AiCircuitOpenException | PremiumModelForbiddenException e) {
+      throw e;
     } catch (Exception e) {
       return List.of(original);
     }
@@ -205,4 +239,43 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
   }
 
+  private static String truncateOutput(String text, int maxChars) {
+    if (text == null) {
+      return "";
+    }
+    if (text.length() <= maxChars) {
+      return text;
+    }
+    return text.substring(0, maxChars);
+  }
+
+  private static UsageTokens extractUsage(ChatResponse response) {
+    if (response == null || response.getMetadata() == null) {
+      return new UsageTokens(0, 0);
+    }
+    Usage usage = response.getMetadata().getUsage();
+    if (usage == null) {
+      return new UsageTokens(0, 0);
+    }
+    int prompt = safeInt(usage.getPromptTokens());
+    int completion = safeInt(usage.getCompletionTokens());
+    return new UsageTokens(prompt, completion);
+  }
+
+  private static int safeInt(Number v) {
+    if (v == null) {
+      return 0;
+    }
+    long x = v.longValue();
+    if (x > Integer.MAX_VALUE) {
+      return Integer.MAX_VALUE;
+    }
+    if (x < 0) {
+      return 0;
+    }
+    return (int) x;
+  }
+
+  private record UsageTokens(int promptTokens, int completionTokens) {
+  }
 }
