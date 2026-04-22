@@ -45,6 +45,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -124,6 +125,9 @@ public class DocumentIngestionService implements ApplicationRunner {
       return;
     }
     try {
+      // VectorStore bean is @Lazy: ChromaVectorStore.initializeSchema runs on first proxy use.
+      // Seed logic calls ChromaApi#getCollection first; materialize the store so the collection exists.
+      vectorStore.add(Collections.<Document>emptyList());
       seedFromClasspathIfCollectionEmpty();
     } catch (Exception e) {
       log.warn("Startup vector seed skipped or failed: {}", e.getMessage(), e);

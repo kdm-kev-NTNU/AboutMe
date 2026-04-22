@@ -29,7 +29,7 @@ const errorText = ref('')
 const showInfoPopup = ref(false)
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
-const CHAT_INFO_DISMISSED_KEY = 'chatInfoPopupDismissed'
+const CHAT_INFO_DISMISSED_KEY = 'chatInfoPopupDismissed.v2'
 const langStore = useLangStore()
 const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
@@ -58,17 +58,17 @@ const showProviderToggle = computed(
 const popupCopy = computed(() =>
   language.value === 'no'
     ? {
-        title: 'Chat i kontinuerlig forbedring',
-        body: 'Denne chat-funksjonen forbedres kontinuerlig. Jeg legger stadig til mer kontekst om meg selv for å gi bedre og mer presise svar.',
-        recommendation: 'For mer innblikk i arbeidet mitt, anbefaler jeg at du sjekker bachelor-siden.',
-        bachelorCta: 'Gå til bachelor-siden',
+        title: 'Porteføljen er i aktiv tilpasning',
+        body: 'Denne chatten og kunnskapsgrunnlaget justeres fortløpende ut fra det jeg lærer i bacheloroppgaven. Svarene blir derfor gradvis mer presise over tid.',
+        recommendation: 'Vil du se hva som tilpasses nå? Besøk bachelor-siden for kontekst og status.',
+        bachelorCta: 'Se bachelorkontekst og status',
         dismiss: 'Forstått',
       }
     : {
-        title: 'Chat is continuously improving',
-        body: "This chat feature is continuously improving. I'm constantly adding more context about myself to provide better and more accurate answers.",
-        recommendation: 'For deeper insight into my work, I recommend checking out the bachelor page.',
-        bachelorCta: 'Go to bachelor page',
+        title: 'The portfolio is being actively adapted',
+        body: "This chat and its knowledge base are being continuously adjusted based on what I'm learning in my bachelor's thesis. Replies will therefore become progressively more precise over time.",
+        recommendation: 'Want to see what is currently being adapted? Visit the bachelor page for context and status.',
+        bachelorCta: 'See bachelor context and status',
         dismiss: 'Got it',
       },
 )
@@ -382,5 +382,4 @@ onMounted(async () => {
     </div>
   </main>
 </template>
-
 
