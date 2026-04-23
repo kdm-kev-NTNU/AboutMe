@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 
-type PhoenixDataset = { id: string; name: string; exampleCount: number }
+type EvalDatasetSummary = { id: string; name: string; exampleCount: number }
 type ChatModelOption = { id: string; label: string; provider: string }
 type RunSummary = {
   id: number
@@ -39,8 +39,8 @@ type ExperimentResultRow = {
   concisenessExplanation: string | null
 }
 type RunDetail = RunSummary & {
-  phoenixDatasetId: string | null
-  phoenixBaseUrl: string | null
+  evalDatasetId: number | null
+  posthogHost: string
   results: ExperimentResultRow[]
 }
 
@@ -58,9 +58,10 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: bool
   return { ok: r.ok, status: r.status, data }
 }
 
-const phoenixConfigured = ref(false)
-const phoenixBaseUrl = ref('')
-const datasets = ref<PhoenixDataset[]>([])
+/** Backend LLM capture to PostHog ($ai_generation); optional — eval datasets live in PostgreSQL. */
+const posthogCaptureConfigured = ref(false)
+const posthogIngestHost = ref('')
+const datasets = ref<EvalDatasetSummary[]>([])
 const datasetsLoading = ref(false)
 const datasetsError = ref('')
 
@@ -88,6 +89,21 @@ const baselineLabel = computed(() => {
   const d = datasets.value.find((x) => x.id === selectedDatasetId.value)
   return d ? `${d.name} (${d.exampleCount})` : '– Velg datasett –'
 })
+
+const posthogAppBase = computed(() => posthogAppBaseUrl(posthogIngestHost.value))
+
+/** Map ingest host (e.g. https://eu.i.posthog.com) to browser app origin (https://eu.posthog.com). */
+function posthogAppBaseUrl(ingestHost: string): string {
+  const t = ingestHost.trim()
+  if (!t) return ''
+  try {
+    const u = new URL(t)
+    const host = u.hostname.replace(/\.i\.posthog\.com$/i, '.posthog.com')
+    return `${u.protocol}//${host}`
+  } catch {
+    return ''
+  }
+}
 
 /** Evaluator must be from a different LLM vendor than the generator (avoid model-family bias). */
 const evaluatorModels = computed(() => {
@@ -124,22 +140,16 @@ watch(generatorModel, () => {
   syncEvaluatorToCrossFamily()
 })
 
-function phoenixDatasetLink(datasetId: string) {
-  const base = (phoenixBaseUrl.value || '').replace(/\/$/, '')
-  if (!base || !datasetId) return ''
-  return `${base}/datasets/${encodeURIComponent(datasetId)}/experiments`
-}
-
 function formatScore(v: number | null | undefined) {
   if (v == null || Number.isNaN(v)) return '–'
   return v.toFixed(3)
 }
 
 async function loadConfig() {
-  const { ok, data } = await fetchJson<{ phoenixConfigured: boolean; phoenixBaseUrl: string }>(`${API}/config`)
+  const { ok, data } = await fetchJson<{ posthogConfigured: boolean; posthogHost: string }>(`${API}/config`)
   if (ok && data) {
-    phoenixConfigured.value = !!data.phoenixConfigured
-    phoenixBaseUrl.value = data.phoenixBaseUrl || ''
+    posthogCaptureConfigured.value = !!data.posthogConfigured
+    posthogIngestHost.value = data.posthogHost || ''
   }
 }
 
@@ -147,7 +157,7 @@ async function loadDatasets() {
   datasetsLoading.value = true
   datasetsError.value = ''
   try {
-    const { ok, status, data } = await fetchJson<PhoenixDataset[] | { error?: string }>(`${API}/datasets`)
+    const { ok, status, data } = await fetchJson<EvalDatasetSummary[] | { error?: string }>(`${API}/datasets`)
     if (!ok) {
       datasetsError.value =
         typeof (data as { error?: string }).error === 'string'
@@ -188,7 +198,7 @@ async function loadRuns() {
 
 async function deleteDataset() {
   if (!selectedDatasetId.value) return
-  if (!confirm('Slette datasettet fra Phoenix? Kan ikke angres.')) return
+  if (!confirm('Slette datasettet permanent fra databasen? Kan ikke angres.')) return
   const { ok, status, data } = await fetchJson<{ error?: string }>(`${API}/datasets/${encodeURIComponent(selectedDatasetId.value)}`, {
     method: 'DELETE',
   })
@@ -260,8 +270,12 @@ function startPoll(runId: number) {
     if (data.status === 'COMPLETED' || data.status === 'FAILED') {
       if (pollTimer.value) clearInterval(pollTimer.value)
       pollTimer.value = null
+      const tail =
+        data.status === 'COMPLETED' && posthogCaptureConfigured.value && posthogAppBase.value
+          ? ' Se også LLM-hendelser i PostHog.'
+          : ''
       runMessage.value =
-        data.status === 'COMPLETED' ? 'Ferdig. Se resultater under eller åpne Phoenix.' : `Feilet: ${data.errorMessage || ''}`
+        data.status === 'COMPLETED' ? `Ferdig. Se resultater under.${tail}` : `Feilet: ${data.errorMessage || ''}`
       await loadRuns()
       await openRunDetail(runId)
     }
@@ -302,32 +316,37 @@ onMounted(() => {
 
     <main class="mx-auto max-w-5xl px-4 pt-8 space-y-8">
       <div>
-        <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">RAG-experiments (Phoenix + dommer)</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">RAG-experiments (datasett + dommer)</h1>
         <p class="text-sm text-gray-600 leading-relaxed max-w-3xl">
-          Velg et eval-datasett fra Phoenix (Railway eller lokal), kjør AboutMe-RAG per spørsmål med valgt modell, og få
-          LLM-as-judge-scorer (faithfulness, relevance, correctness, conciseness) lagret i MySQL. Spor finner du i
-          Phoenix via lenke under.
+          Velg et eval-datasett lagret i PostgreSQL, kjør AboutMe-RAG per spørsmål med valgt modell, og få LLM-as-judge-scorer
+          (faithfulness, relevance, correctness, conciseness) lagret i databasen. Valgfritt: samme LLM-kall kan også sendes som
+          <code class="text-xs bg-gray-100 px-1 rounded">$ai_generation</code>
+          til PostHog når
+          <code class="text-xs bg-gray-100 px-1 rounded">POSTHOG_*</code>
+          er satt på backend.
         </p>
       </div>
 
       <section
         class="rounded-xl border border-gray-200 bg-white p-4 shadow-[0_1px_3px_rgb(0_0_0/0.06)]"
-        v-if="!phoenixConfigured && !datasetsLoading"
+        v-if="!posthogCaptureConfigured && !datasetsLoading"
       >
         <p class="text-sm text-amber-800">
-          Phoenix REST er ikke konfigurert. Sett <code class="text-xs bg-gray-100 px-1 rounded">PHOENIX_BASE_URL</code>
-          (f.eks. <code class="text-xs">http://localhost:6006</code> eller Railway-URL) og eventuelt
-          <code class="text-xs">PHOENIX_API_KEY</code> i miljøet for backend.
+          PostHog LLM-hendelser fra backend er ikke aktivert. Eksperiment-flyten og datasett fungerer likevel. For spor i PostHog,
+          sett <code class="text-xs bg-gray-100 px-1 rounded">POSTHOG_ENABLED=true</code>,
+          <code class="text-xs bg-gray-100 px-1 rounded">POSTHOG_API_KEY</code> og
+          <code class="text-xs bg-gray-100 px-1 rounded">POSTHOG_HOST</code> (se
+          <code class="text-xs">.env.example</code>).
         </p>
       </section>
 
       <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)]">
-        <h2 class="text-lg font-semibold text-gray-900 mb-3">1. Datasett (Phoenix)</h2>
+        <h2 class="text-lg font-semibold text-gray-900 mb-3">1. Eval-datasett (PostgreSQL)</h2>
         <div class="flex flex-wrap gap-2 items-center mb-2">
           <select
             v-model="selectedDatasetId"
             class="border border-gray-300 rounded-md px-2 py-1.5 text-sm min-w-[14rem] bg-white"
-            :disabled="datasetsLoading || !phoenixConfigured"
+            :disabled="datasetsLoading"
           >
             <option value="">– Velg datasett –</option>
             <option v-for="d in datasets" :key="d.id" :value="d.id">{{ d.name }} ({{ d.exampleCount }})</option>
@@ -336,7 +355,7 @@ onMounted(() => {
             type="button"
             class="text-sm px-3 py-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50"
             @click="loadDatasets"
-            :disabled="datasetsLoading || !phoenixConfigured"
+            :disabled="datasetsLoading"
           >
             Oppdater liste
           </button>
@@ -344,7 +363,7 @@ onMounted(() => {
             type="button"
             class="text-sm px-3 py-1.5 rounded-md border border-red-200 text-red-800 hover:bg-red-50"
             @click="deleteDataset"
-            :disabled="!selectedDatasetId || !phoenixConfigured"
+            :disabled="!selectedDatasetId"
           >
             Slett valgt
           </button>
@@ -354,13 +373,9 @@ onMounted(() => {
         <p class="text-sm text-gray-600 mt-2">
           <span class="font-medium">Baseline:</span> {{ baselineLabel }}
         </p>
-        <p v-if="selectedDatasetId && phoenixBaseUrl" class="text-sm mt-2">
-          <a
-            :href="phoenixDatasetLink(selectedDatasetId)"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-blue-600 hover:underline"
-            >Åpne datasett / experiments i Phoenix</a
+        <p v-if="posthogCaptureConfigured && posthogAppBase" class="text-sm mt-2">
+          <a :href="posthogAppBase" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline"
+            >Åpne PostHog (LLM-observabilitet og produktanalyse)</a
           >
         </p>
       </section>
@@ -415,7 +430,7 @@ onMounted(() => {
           type="button"
           class="mt-4 text-sm font-medium px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           @click="startRun"
-          :disabled="runBusy || !phoenixConfigured || !crossFamilyPairAvailable || !evaluatorModel"
+          :disabled="runBusy || !crossFamilyPairAvailable || !evaluatorModel"
         >
           Start experiment
         </button>
@@ -462,13 +477,12 @@ onMounted(() => {
             {{ selectedRunDetail.evaluatorModel }}
           </p>
           <p v-if="selectedRunDetail.errorMessage" class="text-sm text-red-700 mb-2">{{ selectedRunDetail.errorMessage }}</p>
-          <p v-if="selectedRunDetail.phoenixDatasetId && selectedRunDetail.phoenixBaseUrl" class="text-sm mb-4">
-            <a
-              :href="phoenixDatasetLink(selectedRunDetail.phoenixDatasetId)"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-blue-600 hover:underline"
-              >Phoenix (datasett)</a
+          <p v-if="selectedRunDetail.evalDatasetId != null" class="text-sm text-gray-600 mb-2">
+            Eval-datasett-ID: <span class="font-mono">{{ selectedRunDetail.evalDatasetId }}</span>
+          </p>
+          <p v-if="posthogCaptureConfigured && posthogAppBase" class="text-sm mb-4">
+            <a :href="posthogAppBase" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline"
+              >PostHog (LLM-observabilitet)</a
             >
           </p>
           <div class="overflow-x-auto">
