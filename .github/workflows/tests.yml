@@ -39,7 +39,7 @@ jobs:
           echo "JaCoCo site:" && ls -la target/site/jacoco 2>/dev/null || echo "(none)"
       - name: Upload backend test and coverage reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-test-reports
           path: |
@@ -70,7 +70,7 @@ jobs:
         run: npm run test:unit:coverage
       - name: Upload frontend test and coverage reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-test-reports
           path: |
