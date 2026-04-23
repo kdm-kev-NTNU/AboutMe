@@ -17,7 +17,7 @@ import {
 import MessagesArea from '@/views/MessagesArea.vue'
 import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
 
-// RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id.
+// RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
 // --- Route + local UI state ---
@@ -101,14 +101,24 @@ const loadMessagesFromStorage = () => {
 
 watch(() => state.messages, saveMessagesToStorage, { deep: true })
 
-// Drops the in-memory transcript and returns to the marketing shell.
+function readApiError(data: unknown): string | undefined {
+  if (data && typeof data === 'object' && 'error' in data) {
+    const err = (data as { error?: unknown }).error
+    return typeof err === 'string' && err.length > 0 ? err : undefined
+  }
+  return undefined
+}
+
+const GENERIC_ASK_ERROR = 'Noe gikk galt. Prøv igjen.'
+
+// Drops the in-memory transcript and stays on /chat (strip deep-link query params).
 const clearChat = () => {
-  // Clear session storage first
   sessionStorage.removeItem('chatMessages')
   window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
-
-  // Redirect to home page
-  router.push({ name: 'home' })
+  state.messages = []
+  errorText.value = ''
+  input.value = ''
+  void router.replace({ name: 'chat', query: {} })
 }
 
 const shouldShowInfoPopup = () => {
@@ -167,11 +177,15 @@ async function send(text: string) {
       errorText.value = 'For mange forespørsler. Vent litt før du prøver igjen.'
       return
     }
-    if (r.status === 400 || r.status === 503) {
-      errorText.value = r.data.error || 'Noe gikk galt. Prøv igjen.'
+    if (r.status === 403) {
+      errorText.value = readApiError(r.data) ?? GENERIC_ASK_ERROR
       return
     }
-    errorText.value = 'Noe gikk galt. Prøv igjen.'
+    if (r.status === 400 || r.status === 503) {
+      errorText.value = readApiError(r.data) ?? GENERIC_ASK_ERROR
+      return
+    }
+    errorText.value = readApiError(r.data) ?? GENERIC_ASK_ERROR
   } catch {
     errorText.value = 'Nettverksfeil. Prøv igjen.'
   } finally {

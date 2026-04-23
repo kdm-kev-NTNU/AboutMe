@@ -19,25 +19,14 @@ type SectionCopy = {
 const sectionsEn: SectionCopy[] = [
 	{
 		category: 'Personal',
-		title: 'Local model and Obsidian journal',
+		title: 'ElevenLabs voice agent: collect, then I process',
 		intro:
-			'I want a local model with my Obsidian journal as context, similar to a small journal-focused bot in the vault. The idea is to generate plain .txt drafts about me, not to publish the whole journal raw online.',
+			'I am building a conversational ElevenLabs voice agent as a capture layer: it gathers richer, spoken detail than polished portfolio pages alone, so the site is not limited to cookie-cutter answers. That output is not public by default—I personally process exports or transcripts into structured notes or .txt drafts, and only then does the material follow the existing document pipeline into the corpus Kevin’s AI retrieves from.',
 		points: [
-			'Pick a local setup that fits my hardware and what I am comfortable sharing.',
-			'Feed the model curated journal context (themes, timelines, decisions) so it can write useful .txt drafts.',
-			'Read and trim each .txt while it still lives in that private loop.',
-		],
-		refs: [],
-	},
-	{
-		category: 'Pipeline',
-		title: 'From curated drafts to Kevin’s AI',
-		intro:
-			'After review, those .txt files should be curated and sanitized, then ingested into the same document corpus the portfolio RAG stack already searches, so Kevin’s AI can ground answers in them.',
-		points: [
-			'Keep the hand-off as simple .txt files (or convert to whatever shape ingestion expects) and upload through the existing document pipeline and admin tools.',
-			'Apply the same hygiene as the rest of the app: PII redaction, tone, and versioning before anything lands in the corpus.',
-			'Re-ingest with clear provenance, then sanity-check retrieval on the new chunks before they power live chat.',
+			'Use the agent to collect conversational material (exports or transcripts) with clear purpose, consent, and boundaries on what gets captured.',
+			'Process that raw material myself—structure, trim, redact, and tune tone—before anything is ingestible or visitor-facing.',
+			'Upload curated artefacts through the document pipeline and admin tools.',
+			'Re-ingest and sanity-check retrieval on the new chunks before they power Kevin’s AI in live chat.',
 		],
 		refs: [
 			{
@@ -95,12 +84,7 @@ const sectionsEn: SectionCopy[] = [
 		points: [
 			'Let the system decide when to retrieve, skip retrieval, or retrieve again after a first draft, using patterns inspired by self-reflective RAG that critique their own need for evidence.',
 		],
-		refs: [
-			{
-				label: 'Asai et al. (2023): Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
-				href: 'https://arxiv.org/abs/2310.11511',
-			},
-		],
+		refs: [],
 	},
 	{
 		category: 'Analytics',
@@ -140,25 +124,14 @@ const sectionsEn: SectionCopy[] = [
 const sectionsNo: SectionCopy[] = [
 	{
 		category: 'Personlig',
-		title: 'Lokal modell og Obsidian-journal',
+		title: 'ElevenLabs stemmeagent: samle inn, så prosesserer jeg',
 		intro:
-			'Jeg vil bruke en lokal modell med Obsidian-journalen som kontekst, omtrent som en enkel «journal-bot» i vaulten. Målet er å lage .txt-filer om meg selv, uten å legge ut hele journalen rått på nett.',
+			'Jeg bygger en samtalebasert ElevenLabs stemmeagent som et innsamlingsledd: den samler rikere, muntlig detalj enn polert porteføljetekst alene, slik at siden ikke er begrenset til cookie-cutter-svar. Den rå outputen er ikke offentlig som standard—jeg prosesserer personlig eksport eller transkripsjoner til strukturerte notater eller .txt-utkast, og først etter det følger materialet den eksisterende dokumentpipelinen inn i korpuset som Kevin sin AI henter fra.',
 		points: [
-			'Finne en lokal løsning som passer maskinen og personvernbehovet mitt.',
-			'Gi modellen kuratert journalinnhold (tema, tidslinjer, valg) så den kan skrive nyttige .txt-utkast.',
-			'Lese gjennom og trimme hver .txt mens den fortsatt bare lever i det private løpet mitt.',
-		],
-		refs: [],
-	},
-	{
-		category: 'Pipeline',
-		title: 'Fra kuraterte utkast til Kevin sin AI',
-		intro:
-			'Etter gjennomgang skal .txt-filene kurateres og saniteres, og deretter inn i dokumentkorpuset som RAG-løsningen allerede henter fra, slik at Kevin sin AI kan bruke dem som kontekst.',
-		points: [
-			'Beholde overleveringen som enkle .txt-filer (eller konvertere til formatet ingest forventer) og laste opp via dokumentpipelinen og admin som finnes i dag.',
-			'Samme hygiene som ellers i appen: PII, tone og versjonering før noe havner i korpuset.',
-			'Re-ingest med tydelig proveniens, deretter en rask sjekk av retrieval mot nye chunks før de brukes i live chat.',
+			'Bruk agenten til å samle samtalemateriale (eksport eller transkripsjoner) med tydelig formål, samtykke og grenser for hva som fanges opp.',
+			'Prosesser det råmaterialet selv—strukturere, trimme, sladde og juster tonen—før noe kan ingestes eller vises for besøkende.',
+			'Last opp kuraterte filer via dokumentpipelinen og admin-verktøyene.',
+			'Re-ingest og sanity-check av retrieval på de nye chunks før de driver Kevin sin AI i live chat.',
 		],
 		refs: [
 			{
@@ -216,12 +189,7 @@ const sectionsNo: SectionCopy[] = [
 		points: [
 			'La systemet avgjøre når det skal hente, hoppe over retrieval, eller hente på nytt etter et første utkast, inspirert av selvreflekterende RAG som vurderer eget behov for evidens.',
 		],
-		refs: [
-			{
-				label: 'Asai et al. (2023): Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
-				href: 'https://arxiv.org/abs/2310.11511',
-			},
-		],
+		refs: [],
 	},
 	{
 		category: 'Analyse',
