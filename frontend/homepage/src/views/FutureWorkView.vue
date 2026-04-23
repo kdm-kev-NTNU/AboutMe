@@ -21,10 +21,10 @@ const sectionsEn: SectionCopy[] = [
 		category: 'Personal',
 		title: 'ElevenLabs voice agent: collect, then I process',
 		intro:
-			'I am building a conversational ElevenLabs voice agent as a capture layer: it gathers richer, spoken detail than polished portfolio pages alone, so the site is not limited to cookie-cutter answers. That output is not public by default—I personally process exports or transcripts into structured notes or .txt drafts, and only then does the material follow the existing document pipeline into the corpus Kevin’s AI retrieves from.',
+			'I am building a conversational ElevenLabs voice agent as a capture layer: it gathers richer, spoken detail than polished portfolio pages alone, so the site is not limited to cookie-cutter answers. That output is not public by default. I personally process exports or transcripts into structured notes or .txt drafts, and only then does the material follow the existing document pipeline into the corpus Kevin’s AI retrieves from.',
 		points: [
 			'Use the agent to collect conversational material (exports or transcripts) with clear purpose, consent, and boundaries on what gets captured.',
-			'Process that raw material myself—structure, trim, redact, and tune tone—before anything is ingestible or visitor-facing.',
+			'Process that raw material myself (structure, trim, redact, and tune tone) before anything is ingestible or visitor-facing.',
 			'Upload curated artefacts through the document pipeline and admin tools.',
 			'Re-ingest and sanity-check retrieval on the new chunks before they power Kevin’s AI in live chat.',
 		],
@@ -126,10 +126,10 @@ const sectionsNo: SectionCopy[] = [
 		category: 'Personlig',
 		title: 'ElevenLabs stemmeagent: samle inn, så prosesserer jeg',
 		intro:
-			'Jeg bygger en samtalebasert ElevenLabs stemmeagent som et innsamlingsledd: den samler rikere, muntlig detalj enn polert porteføljetekst alene, slik at siden ikke er begrenset til cookie-cutter-svar. Den rå outputen er ikke offentlig som standard—jeg prosesserer personlig eksport eller transkripsjoner til strukturerte notater eller .txt-utkast, og først etter det følger materialet den eksisterende dokumentpipelinen inn i korpuset som Kevin sin AI henter fra.',
+			'Jeg bygger en samtalebasert ElevenLabs stemmeagent som et innsamlingsledd: den samler rikere, muntlig detalj enn polert porteføljetekst alene, slik at siden ikke er begrenset til cookie-cutter-svar. Den rå outputen er ikke offentlig som standard. Jeg prosesserer personlig eksport eller transkripsjoner til strukturerte notater eller .txt-utkast, og først etter det følger materialet den eksisterende dokumentpipelinen inn i korpuset som Kevin sin AI henter fra.',
 		points: [
 			'Bruk agenten til å samle samtalemateriale (eksport eller transkripsjoner) med tydelig formål, samtykke og grenser for hva som fanges opp.',
-			'Prosesser det råmaterialet selv—strukturere, trimme, sladde og juster tonen—før noe kan ingestes eller vises for besøkende.',
+			'Prosesser det råmaterialet selv (strukturere, trimme, sladde og juster tonen) før noe kan ingestes eller vises for besøkende.',
 			'Last opp kuraterte filer via dokumentpipelinen og admin-verktøyene.',
 			'Re-ingest og sanity-check av retrieval på de nye chunks før de driver Kevin sin AI i live chat.',
 		],
@@ -148,7 +148,7 @@ const sectionsNo: SectionCopy[] = [
 		category: 'Retrieval',
 		title: 'Forbedringer i retrieval-pipelinen',
 		intro:
-			'Den eksisterende RAG-løsningen embedder dokumenter, lagrer vektorer og kjører likhetssøk før generering. Neste steg handler ofte om bedre rangering og bedre innbyrdes samsvar mellom spørsmål og dokumenter – ikke om å bytte ut hele arkitekturen.',
+			'Den eksisterende RAG-løsningen embedder dokumenter, lagrer vektorer og kjører likhetssøk før generering. Neste steg handler ofte om bedre rangering og bedre innbyrdes samsvar mellom spørsmål og dokumenter, ikke om å bytte ut hele arkitekturen.',
 		points: [
 			'Legg inn en reranking-fase (f.eks. monoT5-lignende krysskodere) oppå vektorsøk for å sortere treffene semantisk og redusere støy i kontekstvinduet.',
 			'Test domenetilpassede eller finjusterte embeddings slik at brukerspørsmål treffer chunk-representasjonene mer stabilt, særlig ved fagterminologi.',

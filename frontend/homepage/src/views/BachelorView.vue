@@ -68,7 +68,7 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 					category: 'Ferdigheter',
 					title: 'Det jeg har lært',
 					body: [
-						'Jeg har jobbet tett med API-design, dokumentpipelines, vektorlagring og evaluering av språkmodeller — områder som direkte gjenbrukes i porteføljen.',
+						'Jeg har jobbet tett med API-design, dokumentpipelines, vektorlagring og evaluering av språkmodeller: områder som direkte gjenbrukes i porteføljen.',
 						'Samarbeid med veileder og team hos Piscada har også trent meg i å scope arbeid, dokumentere beslutninger og levere i iterasjoner.',
 					],
 				},
@@ -95,7 +95,7 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 					category: 'Skills',
 					title: 'What I took away',
 					body: [
-						'I worked closely with API design, document pipelines, vector storage, and evaluation of language models — areas that map directly onto this portfolio.',
+						'I worked closely with API design, document pipelines, vector storage, and evaluation of language models: areas that map directly onto this portfolio.',
 						'Collaboration with supervisors and the team at Piscada also trained me to scope work, document decisions, and ship in iterations.',
 					],
 				},

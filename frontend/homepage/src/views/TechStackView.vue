@@ -31,8 +31,8 @@ const headerBadge = computed(() =>
 
 const headerSubtitle = computed(() =>
   isNo.value
-    ? 'Sporbarhet fra bacheloroppgave og produktkontekst til konkrete teknologivalg i denne porteføljen — uten å erstatte full dokumentasjon i rapporten.'
-    : 'Traceability from the bachelor thesis and product context to the concrete technology choices in this portfolio — without replacing full documentation in the report.',
+    ? 'Sporbarhet fra bacheloroppgave og produktkontekst til konkrete teknologivalg i denne porteføljen, uten å erstatte full dokumentasjon i rapporten.'
+    : 'Traceability from the bachelor thesis and product context to the concrete technology choices in this portfolio, without replacing full documentation in the report.',
 )
 
 const contextParagraph = computed(() =>
