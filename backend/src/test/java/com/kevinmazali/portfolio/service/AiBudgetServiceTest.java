@@ -19,6 +19,8 @@ import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.kevinmazali.portfolio.model.analytics.AiGenerationAnalytics;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 @ExtendWith(MockitoExtension.class)
@@ -45,7 +47,7 @@ class AiBudgetServiceTest {
     pricing.setInputPerMillionUsd(new BigDecimal("1"));
     pricing.setOutputPerMillionUsd(new BigDecimal("2"));
     properties.getModels().put("gpt-5.4-mini", pricing);
-    service = new AiBudgetService(properties, usageRepository, new SimpleMeterRegistry(), null, postHogLlmService);
+    service = new AiBudgetService(properties, usageRepository, new SimpleMeterRegistry(), postHogLlmService);
   }
 
   @Test
@@ -81,7 +83,8 @@ class AiBudgetServiceTest {
             org.mockito.ArgumentMatchers.any(BigDecimal.class),
             eq(false),
             eq(0.42),
-            eq("rag_completion"));
+            eq("rag_completion"),
+            eq(AiGenerationAnalytics.empty()));
   }
 
   @Test
