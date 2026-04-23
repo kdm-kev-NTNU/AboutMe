@@ -112,7 +112,7 @@ const pillarCards = computed(() =>
         {
           to: '/chat' as const,
           title: 'AI & RAG',
-          body: 'Spring AI, språkmodeller og RAG med PostgreSQL/pgvector for kontekstuelle svar.',
+          body: 'Spring AI 1.0.x, språkmodeller og RAG med PostgreSQL/pgvector; valgfri ONNX cross-encoder-reranking etter konfigurasjon.',
           cta: 'Åpne chat',
           icon: BrainCircuit,
           accentBorder: 'hover:border-blue-200',
@@ -123,7 +123,7 @@ const pillarCards = computed(() =>
         {
           to: '/projects' as const,
           title: 'Backend',
-          body: 'Spring Boot, sikkerhet, persistens og API mot klienten.',
+          body: 'Spring Boot 3.5.x, sikkerhet, persistens og API mot klienten.',
           cta: 'Se prosjekter',
           icon: Server,
           accentBorder: 'hover:border-emerald-200',
@@ -147,7 +147,7 @@ const pillarCards = computed(() =>
         {
           to: '/chat' as const,
           title: 'AI & RAG',
-          body: 'Spring AI, language models, and RAG with PostgreSQL/pgvector for contextual answers.',
+          body: 'Spring AI 1.0.x, language models, and RAG with PostgreSQL/pgvector; optional ONNX cross-encoder reranking when configured.',
           cta: 'Open chat',
           icon: BrainCircuit,
           accentBorder: 'hover:border-blue-200',
@@ -158,7 +158,7 @@ const pillarCards = computed(() =>
         {
           to: '/projects' as const,
           title: 'Backend',
-          body: 'Spring Boot, security, persistence, and APIs for the client.',
+          body: 'Spring Boot 3.5.x, security, persistence, and APIs for the client.',
           cta: 'View projects',
           icon: Server,
           accentBorder: 'hover:border-emerald-200',
@@ -188,7 +188,7 @@ const stackFront = computed(() =>
         'Tailwind CSS 4, Reka UI (shadcn-stil), Lucide',
         'VueUse (Core, Motion), markdown-it, DOMPurify',
         'Orval, OpenAPI-generert fetch-klient',
-        'PostHog (analyse + LLM-observabilitet, samtykkestyrt på nettsiden)',
+        'PostHog (posthog-js: samtykkestyrt analyse i nettleseren; eksperimenter i admin der konfigurert)',
       ] as const)
     : ([
         'Vue 3, TypeScript, Vite 7',
@@ -196,25 +196,27 @@ const stackFront = computed(() =>
         'Tailwind CSS 4, Reka UI (shadcn-style), Lucide',
         'VueUse (Core, Motion), markdown-it, DOMPurify',
         'Orval, OpenAPI-generated fetch client',
-        'PostHog (analytics + LLM observability, consent-gated in the browser)',
+        'PostHog (posthog-js: consent-gated browser analytics; admin experiments when configured)',
       ] as const),
 )
 
 const stackBack = computed(() =>
   isNo.value
     ? ([
-        'Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA',
-        'PostgreSQL 17 med pgvector, Spring AI, Tika-dokumentlesing',
+        'Java 21, Spring Boot 3.5.x, Spring Security, Spring Data JPA',
+        'PostgreSQL 17 med pgvector, Spring AI 1.0.x (BOM), Tika-dokumentlesing',
+        'Valgfri ONNX cross-encoder-reranking (ONNX Runtime, Hugging Face-tokenizers); konfigurasjonsstyrt, faller tilbake uten modell',
         'Apache OpenNLP (NER m.m. i saniterings-/tekstflyt)',
-        'Actuator (helse, metrics, Prometheus-scrape), Micrometer, PostHog (LLM-genereringer + analyse)',
+        'Actuator (helse, metrics, Prometheus-scrape), Micrometer; valgfri PostHog-server (Java) for $ai_generation og relatert analyse',
         'Docker Compose, nginx (produksjonsbygg)',
         'Bucket4j (rate limiting)',
       ] as const)
     : ([
-        'Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA',
-        'PostgreSQL 17 with pgvector, Spring AI, Tika document reading',
+        'Java 21, Spring Boot 3.5.x, Spring Security, Spring Data JPA',
+        'PostgreSQL 17 with pgvector, Spring AI 1.0.x (BOM), Tika document reading',
+        'Optional ONNX cross-encoder reranking (ONNX Runtime, Hugging Face tokenizers); configuration-driven, pass-through without a model',
         'Apache OpenNLP (NER etc. in sanitization / text flow)',
-        'Actuator (health, metrics, Prometheus scrape), Micrometer, PostHog (LLM generations + analytics)',
+        'Actuator (health, metrics, Prometheus scrape), Micrometer; optional PostHog server (Java) for `$ai_generation` and related analytics',
         'Docker Compose, nginx (production build)',
         'Bucket4j (rate limiting)',
       ] as const),
@@ -259,31 +261,32 @@ const sections = computed<Section[]>(() => {
         id: 'spring-ai',
         heading: 'Spring AI',
         paragraphs: [
-          'Spring og Java brukes mye i enterprise-løsninger. Spring AI bygger videre på det økosystemet og gjør det naturlig å koble språkmodeller, dokumentflyt og vektorlagring inn i en Spring Boot-tjeneste.',
+          'Spring og Java brukes mye i enterprise-løsninger. Spring AI bygger videre på det økosystemet og gjør det naturlig å koble språkmodeller, dokumentflyt og vektorlagring inn i en Spring Boot-tjeneste. I denne porteføljen følger Spring AI-avhengigheter en 1.0.x-BOM med OpenAI-, Anthropic- og pgvector-startere.',
           'Spring AI er et relativt nytt prosjekt, og jeg valgte det fordi jeg ønsket å følge med på hvordan integrasjonen mellom JVM-verdenen og AI utvikler seg, og for å lære det som sannsynligvis blir en vanlig sti for AI i Spring-baserte applikasjoner.',
           'Chat går mot OpenAI eller Anthropic (Anthropic er tilgjengelig når API-nøkkel er konfigurert). Embeddings lagres i PostgreSQL med pgvector (OpenAI); standard chat-modell og modellvalg styres i konfigurasjon og kan velges fra klienten innenfor et trygt sett støttede modeller.',
         ],
         icon: BrainCircuit,
         category: 'ai',
-        badges: ['Spring AI', 'OpenAI', 'Anthropic', 'Java 21'],
+        badges: ['Spring AI 1.0.x', 'OpenAI', 'Anthropic', 'Java 21'],
       },
       {
         id: 'backend',
         heading: 'Backend',
         paragraphs: [
-          'Backend kjører på Spring Boot 3.5 med Java 21. Jeg bruker Spring Security og Spring Data JPA mot PostgreSQL for persistens, og Bucket4j for enkel rate limiting der det trengs.',
+          'Backend kjører på Spring Boot 3.5.x med Java 21. Jeg bruker Spring Security og Spring Data JPA mot PostgreSQL for persistens, og Bucket4j for enkel rate limiting der det trengs.',
           'Apache OpenNLP brukes der det trengs i tekstbehandling og sanitering (for eksempel navngitte entiteter).',
           'Det gir en kjent «batteries included»-opplevelse: god dokumentasjon, sterk typing og verktøy som passer godt når man vil at koden skal være forutsigbar over tid.',
         ],
         icon: Server,
         category: 'backend',
-        badges: ['Spring Boot 3.5', 'Java 21', 'Spring Security', 'JPA', 'PostgreSQL', 'OpenNLP', 'Bucket4j'],
+        badges: ['Spring Boot 3.5.x', 'Java 21', 'Spring Security', 'JPA', 'PostgreSQL', 'OpenNLP', 'Bucket4j'],
       },
       {
         id: 'rag',
         heading: 'RAG og vektorlagring',
         paragraphs: [
           'For RAG-lignende funksjonalitet bruker jeg PostgreSQL med pgvector som vektorbase, sammen med Spring AIs pgvector-integrasjon. Dokumenter kan leses inn via Tika-basert dokumentlesing i Spring AI.',
+          'Etter vektorhenting og sammenslåing kan kandidat-chunks valgfritt rerankes med en ONNX-basert cross-encoder og Hugging Face-tokenizers når modell- og tokenizer-stier er satt i konfigurasjon; ellers brukes pass-through uten ekstra inferens.',
           'RAG-prompten er leverandørspesifikk og hentes fra versjonerte maler, slik at OpenAI og Anthropic kan tones litt ulikt uten å duplisere hele flyten.',
           'Ved henting utvides brukerens spørsmål til både norsk og engelsk, slik at treff i dokumenter på begge språk blir lettere å få med.',
           'PostgreSQL med pgvector kjører i Docker sammen med resten av stakken, som gjør det enkelt å få opp et konsistent miljø lokalt og i deploy.',
@@ -292,7 +295,7 @@ const sections = computed<Section[]>(() => {
         ],
         icon: Database,
         category: 'ai',
-        badges: ['PostgreSQL', 'pgvector', 'Tika', 'Embeddings', 'Docker'],
+        badges: ['PostgreSQL', 'pgvector', 'Tika', 'Embeddings', 'Docker', 'ONNX (valgfritt)'],
       },
       {
         id: 'frontend',
@@ -320,13 +323,14 @@ const sections = computed<Section[]>(() => {
         id: 'observability',
         heading: 'Observabilitet',
         paragraphs: [
-          'Backend eksponerer Spring Boot Actuator med blant annet health, info og Prometheus-scrape for metrics via Micrometer.',
-          'LLM-kall (tokens, estimert kostnad, latens, kontekst) kan sendes som PostHog $ai_generation-hendelser fra serveren når det er slått på, slik at produktanalyse og modellbruk kan sees i samme verktøy som samtykkestyrt frontend-analyse.',
+          'Backend eksponerer Spring Boot Actuator med blant annet helse, info og Prometheus-scrape for metrics via Micrometer.',
+          'LLM-kall (tokens, estimert kostnad, latens, kontekst) kan sendes som PostHog $ai_generation-hendelser via posthog-server (Java) når API-nøkkel og vert er satt, slik at serverside modellbruk kan sees i samme prosjekt som samtykkestyrt posthog-js i nettleseren.',
           'Admin RAG-eval bruker eval-datasett i PostgreSQL og LLM-as-judge i egen kode; PostHogs LLM-observabilitet kompletterer med hendelser fra faktisk trafikk og evalueringer i PostHog-prosjektet.',
+          'Eksperiment- og admin-flater kan bruke PostHog-feature-flagg (resolver mot /decide) når nøkkel og vert er konfigurert, i tillegg til analyse og feilfangst i klienten.',
         ],
         icon: Eye,
         category: 'devops',
-        badges: ['Actuator', 'Prometheus', 'Micrometer', 'PostHog'],
+        badges: ['Actuator', 'Prometheus', 'Micrometer', 'PostHog', 'Feature flags'],
       },
       {
         id: 'runtime',
@@ -356,31 +360,32 @@ const sections = computed<Section[]>(() => {
       id: 'spring-ai',
       heading: 'Spring AI',
       paragraphs: [
-        'Spring and Java are widely used in enterprise systems. Spring AI extends that ecosystem and makes it natural to wire language models, document flows, and vector storage into a Spring Boot service.',
+        'Spring and Java are widely used in enterprise systems. Spring AI extends that ecosystem and makes it natural to wire language models, document flows, and vector storage into a Spring Boot service. In this portfolio the Spring AI dependencies follow a 1.0.x BOM with OpenAI, Anthropic, and pgvector starters.',
         'Spring AI is a relatively new project, and I chose it because I want to follow how AI integration on the JVM evolves, and to learn what is likely to become a common path for AI in Spring-based applications.',
         'Chat targets OpenAI or Anthropic (Anthropic is available when an API key is configured). Embeddings are stored in PostgreSQL with pgvector (OpenAI); the default chat model and model selection are configuration-driven, with the client choosing from a small allow-listed set of supported models.',
       ],
       icon: BrainCircuit,
       category: 'ai',
-      badges: ['Spring AI', 'OpenAI', 'Anthropic', 'Java 21'],
+      badges: ['Spring AI 1.0.x', 'OpenAI', 'Anthropic', 'Java 21'],
     },
     {
       id: 'backend',
       heading: 'Backend',
       paragraphs: [
-        'The backend runs on Spring Boot 3.5 with Java 21. I use Spring Security and Spring Data JPA with PostgreSQL for persistence, and Bucket4j for straightforward rate limiting where needed.',
+        'The backend runs on Spring Boot 3.5.x with Java 21. I use Spring Security and Spring Data JPA with PostgreSQL for persistence, and Bucket4j for straightforward rate limiting where needed.',
         'Apache OpenNLP is used where needed for text processing and sanitization (for example named-entity recognition).',
         'That combination provides a familiar batteries-included experience: solid documentation, strong typing, and tooling that fits well when you want the codebase to stay predictable over time.',
       ],
       icon: Server,
       category: 'backend',
-      badges: ['Spring Boot 3.5', 'Java 21', 'Spring Security', 'JPA', 'PostgreSQL', 'OpenNLP', 'Bucket4j'],
+      badges: ['Spring Boot 3.5.x', 'Java 21', 'Spring Security', 'JPA', 'PostgreSQL', 'OpenNLP', 'Bucket4j'],
     },
     {
       id: 'rag',
       heading: 'RAG and vector storage',
       paragraphs: [
         "For RAG-style features I use PostgreSQL with pgvector as the vector database, together with Spring AI's pgvector integration. Documents can be ingested using Spring AI's Tika-based document reader.",
+        'After vector retrieval and merge, candidate chunks can optionally be reranked with an ONNX cross-encoder and Hugging Face tokenizers when model and tokenizer paths are configured; otherwise the flow passes through without extra inference.',
         'The RAG prompt is provider-specific and loaded from versioned templates, so OpenAI and Anthropic can be tuned slightly differently without duplicating the whole flow.',
         'At retrieval time the user question is expanded into Norwegian and English so documents in either language are easier to surface.',
         'PostgreSQL with pgvector runs in Docker alongside the rest of the stack, which makes it easy to spin up a consistent environment locally and in deployment.',
@@ -389,7 +394,7 @@ const sections = computed<Section[]>(() => {
       ],
       icon: Database,
       category: 'ai',
-      badges: ['PostgreSQL', 'pgvector', 'Tika', 'Embeddings', 'Docker'],
+      badges: ['PostgreSQL', 'pgvector', 'Tika', 'Embeddings', 'Docker', 'ONNX (optional)'],
     },
     {
       id: 'frontend',
@@ -418,12 +423,13 @@ const sections = computed<Section[]>(() => {
       heading: 'Observability',
       paragraphs: [
         'The backend exposes Spring Boot Actuator including health, info, and a Prometheus scrape endpoint for metrics via Micrometer.',
-        'LLM calls (tokens, estimated cost, latency, context) can be sent as PostHog `$ai_generation` events from the server when enabled, so product analytics and model usage can live alongside consent-gated frontend analytics in one tool.',
+        'LLM calls (tokens, estimated cost, latency, context) can be sent as PostHog `$ai_generation` events through posthog-server (Java) when the API key and host are set, so server-side model usage can live in the same project as consent-gated posthog-js in the browser.',
         'Admin RAG evaluation uses eval datasets in PostgreSQL and an in-app LLM-as-judge pipeline; PostHog LLM observability complements that with events from live traffic and evaluations in the PostHog project.',
+        'Experiment and admin views can use PostHog feature flags (resolved via `/decide`) when the key and host are configured, alongside analytics and client-side error capture.',
       ],
       icon: Eye,
       category: 'devops',
-      badges: ['Actuator', 'Prometheus', 'Micrometer', 'PostHog'],
+      badges: ['Actuator', 'Prometheus', 'Micrometer', 'PostHog', 'Feature flags'],
     },
     {
       id: 'runtime',
