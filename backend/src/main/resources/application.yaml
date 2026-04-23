@@ -1,5 +1,6 @@
 spring:
   config:
+    # Load optional .env as properties (repo root or backend/)
     import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:backend/.env[.properties]
   application:
     name: aboutme-backend
@@ -10,27 +11,24 @@ spring:
   ai:
     vectorstore:
       pgvector:
-        # Must match spring.ai.openai.embedding.options.dimensions. Changing embedding model/dims
-        # requires updating this value and re-ingesting all chunks (truncate vector_store or new DB).
-        # HNSW/IVFFlat index max dimension is ~2000 in pgvector; embeddings are 3072 → exact search (no ANN index).
+        # Embedding dimensions must match spring.ai.openai.embedding.options.dimensions; re-ingest if you change either.
+        # 3072 exceeds pgvector HNSW/IVFFlat limits here → index-type NONE (exact search).
         index-type: NONE
         distance-type: COSINE_DISTANCE
         dimensions: 3072
         initialize-schema: true
-        # When true, validation runs before first-time DDL; an empty database can fail first startup on some managed Postgres setups.
+        # Managed Postgres: schema validation can fail on empty DB before first DDL.
         schema-validation: false
         schema-name: public
         table-name: vector_store
-        # Chunk ids are content-hash based strings (not UUIDs).
         id-type: TEXT
     openai:
-      api-key: ${OPENAI_API_KEY}
+      api-key: ${OPENAI_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
       chat:
+        api-key: ${OPENAI_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
         options:
           model: gpt-5.4-mini
-          # Limit completion tokens per response
           max-completion-tokens: ${portfolio.ai.limits.chat-max-completion-tokens:400}
-      # Embedding model + dimensions must stay aligned with vectorstore.pgvector.dimensions above.
       embedding:
         options:
           model: text-embedding-3-large
@@ -46,9 +44,10 @@ spring:
         log-prompt: true
         log-completion: true
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/aboutme}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    # Compose / manual: set SPRING_DATASOURCE_* . Railway Postgres: link service → PG* vars (used when SPRING_* unset).
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:aboutme}}
+    username: ${SPRING_DATASOURCE_USERNAME:${PGUSER:postgres}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${PGPASSWORD:postgres}}
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
@@ -93,7 +92,6 @@ portfolio:
       enabled: true
       monthly-limit-usd: 50.00
       warn-fraction: 0.80
-      # Every minute (UTC); aligns with default check cadence for global spend
       check-cron: "0 * * * * *"
   ask-rate-limit:
     enabled: true
@@ -107,11 +105,9 @@ portfolio:
       capacity: 10
       window-seconds: 60
   chat:
-    # Used when the client omits "model" on POST /ask
     default-model-id: gpt-5.4-mini
   retrieval:
-    # Wide retrieval + optional local ONNX cross-encoder rerank. Typical export: optimum-cli export onnx
-    # --model cross-encoder/multilingual-MiniLM-L12-v2 <dir> (model.onnx + tokenizer.json in same folder).
+    # Optional ONNX rerank; Docker image sets paths under /app/rerank (see backend/Dockerfile).
     rerank-enabled: false
     onnx-model-path: ""
     tokenizer-path: ""
@@ -125,7 +121,6 @@ portfolio:
     enabled: ${POSTHOG_ENABLED:false}
     api-key: ${POSTHOG_API_KEY:}
     host: ${POSTHOG_HOST:https://eu.i.posthog.com}
-    # Keys to resolve via /decide and attach as $feature/<key> on $ai_generation (see PostHogFeatureFlagService).
     feature-flag-keys:
       - aboutme_rag_feature_flags
     feature-flags-timeout-ms: 2000
@@ -135,11 +130,9 @@ portfolio:
 
 sfg:
   aiapp:
-    # Explicit classpath seeds (used by startup + admin reseed); dir scan is fallback when this is empty.
     documentsToLoad:
       - classpath:/static/seed/portfolio-seed.md
     documentsToLoadDir: file:./data/docs/
-    # When true, startup seeding re-ingests even if chunks already exist for the same content_hash
     forceReindex: false
 logging:
   level:
@@ -167,4 +160,3 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-
