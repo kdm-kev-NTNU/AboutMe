@@ -190,6 +190,9 @@
 						<!-- Large ingestion + JDBC/pgvector paths; covered by dedicated tests + manual re-ingest verification. -->
 						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService.class</exclude>
 						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService$*.class</exclude>
+						<!-- Optional native ONNX stack; CI/dev typically run without model weights. -->
+						<exclude>**/com/kevinmazali/portfolio/service/OnnxCrossEncoderReranker.class</exclude>
+						<exclude>**/com/kevinmazali/portfolio/service/OnnxCrossEncoderReranker$*.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>
