@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * LLM-as-judge evaluators aligned with Phoenix-style metrics (faithfulness, relevance, correctness, conciseness).
+ * LLM-as-judge evaluators for standard RAG metrics (faithfulness, relevance, correctness, conciseness).
  */
 @Service
 public class EvaluatorService {
