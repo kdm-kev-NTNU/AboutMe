@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio;
 
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
@@ -25,7 +26,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-5.4-mini")
 @TestPropertySource(properties = "portfolio.ask-rate-limit.enabled=true")
-@EnableConfigurationProperties({ AskRateLimitProperties.class, ExperimentRunRateLimitProperties.class })
+@EnableConfigurationProperties({
+  AskRateLimitProperties.class,
+  ExperimentRunRateLimitProperties.class,
+  DatasetGenerateRateLimitProperties.class
+})
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class })
 class RateLimitFilterTest {
 

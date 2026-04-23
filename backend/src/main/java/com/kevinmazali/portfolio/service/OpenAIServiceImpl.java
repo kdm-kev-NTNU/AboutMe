@@ -2,10 +2,12 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
+import com.kevinmazali.portfolio.config.RetrievalProperties;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
 import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.exception.PremiumModelForbiddenException;
 import com.kevinmazali.portfolio.model.Answer;
+import com.kevinmazali.portfolio.model.analytics.AiGenerationAnalytics;
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.RagAnswer;
 import com.kevinmazali.portfolio.model.chat.ChatProvider;
@@ -14,6 +16,10 @@ import com.kevinmazali.portfolio.util.AiRequestContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -24,12 +30,18 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Default implementation of {@link OpenAIService} that performs RAG:
@@ -40,7 +52,7 @@ import java.util.Map;
 @Service
 public class OpenAIServiceImpl implements OpenAIService {
 
-  private final OpenAiChatModel openAiChatModel;
+  private final ObjectProvider<OpenAiChatModel> openAiChatModel;
   private final ObjectProvider<AnthropicChatModel> anthropicChatModel;
   private final VectorStore vectorStore;
   private final String defaultModelId;
@@ -49,9 +61,14 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final AiBudgetProperties aiBudgetProperties;
   private final AiBudgetService aiBudgetService;
   private final AiCircuitBreaker aiCircuitBreaker;
+  private final DocumentReranker documentReranker;
+  private final RetrievalProperties retrievalProperties;
+  private final PostHogTraceContext postHogTraceContext;
+  @org.springframework.lang.Nullable
+  private final PostHogFeatureFlagService postHogFeatureFlagService;
 
   public OpenAIServiceImpl(
-      OpenAiChatModel openAiChatModel,
+      ObjectProvider<OpenAiChatModel> openAiChatModel,
       ObjectProvider<AnthropicChatModel> anthropicChatModel,
       @Lazy VectorStore vectorStore,
       @Value("${portfolio.chat.default-model-id}") String defaultModelId,
@@ -59,7 +76,11 @@ public class OpenAIServiceImpl implements OpenAIService {
       AiLimitsProperties aiLimitsProperties,
       AiBudgetProperties aiBudgetProperties,
       AiBudgetService aiBudgetService,
-      AiCircuitBreaker aiCircuitBreaker) {
+      AiCircuitBreaker aiCircuitBreaker,
+      DocumentReranker documentReranker,
+      RetrievalProperties retrievalProperties,
+      PostHogTraceContext postHogTraceContext,
+      @Autowired(required = false) @org.springframework.lang.Nullable PostHogFeatureFlagService postHogFeatureFlagService) {
     this.openAiChatModel = openAiChatModel;
     this.anthropicChatModel = anthropicChatModel;
     this.vectorStore = vectorStore;
@@ -69,6 +90,10 @@ public class OpenAIServiceImpl implements OpenAIService {
     this.aiBudgetProperties = aiBudgetProperties;
     this.aiBudgetService = aiBudgetService;
     this.aiCircuitBreaker = aiCircuitBreaker;
+    this.documentReranker = documentReranker;
+    this.retrievalProperties = retrievalProperties;
+    this.postHogTraceContext = postHogTraceContext;
+    this.postHogFeatureFlagService = postHogFeatureFlagService;
   }
 
   @Override
@@ -80,6 +105,9 @@ public class OpenAIServiceImpl implements OpenAIService {
   @Override
   public RagAnswer getAnswerWithDocuments(Question question) {
     SupportedChatModel model = resolveModel(question);
+    if (model.provider() == ChatProvider.OPENAI && openAiChatModel.getIfAvailable() == null) {
+      throw new IllegalStateException("OpenAI chat is not available (missing API key, OPENAI_CHAT_ENABLED=false, or autoconfiguration).");
+    }
     if (model.provider() == ChatProvider.ANTHROPIC && anthropicChatModel.getIfAvailable() == null) {
       throw new IllegalStateException("Anthropic chat is not available (missing API key or autoconfiguration).");
     }
@@ -87,38 +115,62 @@ public class OpenAIServiceImpl implements OpenAIService {
     String budgetUserId = AiRequestContext.budgetUserIdentifier(aiBudgetProperties);
     boolean anonymous = AiRequestContext.isAnonymousInteractiveUser();
 
-    log.info("[DEBUG-b64a63] vectorStore class={}, question={}", vectorStore.getClass().getName(), question.question());
+    String conversationId = "rag:" + UUID.randomUUID();
+    postHogTraceContext.beginTrace("rag_ask", conversationId);
+    try {
+      return getAnswerWithDocumentsInner(question, model, budgetUserId, anonymous);
+    } finally {
+      postHogTraceContext.clear();
+    }
+  }
 
-    List<String> queries = expandQueryToLanguages(question.question(), model, budgetUserId, anonymous);
+  private RagAnswer getAnswerWithDocumentsInner(
+      Question question, SupportedChatModel model, String budgetUserId, boolean anonymous) {
 
-    log.info("[DEBUG-b64a63] expanded queries={}", queries);
+    Map<String, Object> phFeatureProps = Collections.emptyMap();
+    PostHogFeatureFlagService ffSvc = postHogFeatureFlagService;
+    if (ffSvc != null && ffSvc.isEnabled()) {
+      phFeatureProps = ffSvc.resolveForDistinctId(budgetUserId);
+    }
 
-    List<Document> documents = queries.stream()
+    List<String> queries =
+        expandQueryToLanguages(question.question(), model, budgetUserId, anonymous, phFeatureProps);
+
+    int vectorTopK = Math.max(1, retrievalProperties.getVectorTopK());
+    int candidateCap = Math.max(1, retrievalProperties.getCandidateLimit());
+    int contextTopK = Math.max(1, retrievalProperties.getContextTopK());
+
+    List<Document> merged = queries.stream()
         .flatMap(q -> {
-          log.info("[DEBUG-b64a63] searching query='{}' topK=40", q);
           try {
+            String queryText = q == null ? "" : q;
             List<Document> results = vectorStore.similaritySearch(
                 SearchRequest.builder()
-                    .query(q)
-                    .topK(40)
+                    .query(queryText)
+                    .topK(vectorTopK)
                     .build()
             );
-            log.info("[DEBUG-b64a63] query='{}' returned {} docs", q, results.size());
             return results.stream();
           } catch (Exception ex) {
-            log.error("[DEBUG-b64a63] similaritySearch FAILED for query='{}': {}", q, ex.getMessage(), ex);
-            return java.util.stream.Stream.<Document>empty();
+            log.warn("similaritySearch failed for a query variant: {}", ex.getMessage());
+            return Stream.empty();
           }
         })
-        .distinct()
-        .limit(40)
         .toList();
 
-    log.info("[DEBUG-b64a63] total retrieved docs={}", documents.size());
-    if (!documents.isEmpty()) {
-      documents.stream().limit(3).forEach(d ->
-          log.info("[DEBUG-b64a63] doc snippet: {}", d.getText().substring(0, Math.min(150, d.getText().length()))));
-    }
+    List<Document> candidates = dedupePreserveOrder(merged).stream()
+        .limit(candidateCap)
+        .toList();
+
+    List<Document> documents =
+        documentReranker.rerank(question.question(), candidates, contextTopK);
+
+    log.debug(
+        "RAG retrieval: merged={} dedupCapped={} contextTopK={} finalDocs={}",
+        merged.size(),
+        candidates.size(),
+        contextTopK,
+        documents.size());
 
     List<String> contentList = documents.stream().map(Document::getText).toList();
     String providerName = switch (model.provider()) {
@@ -132,10 +184,35 @@ public class OpenAIServiceImpl implements OpenAIService {
         "documents", String.join("\n", contentList)
     ));
 
-    ChatResponse response = invokeManagedChat(model, basePrompt, budgetUserId, anonymous, "rag_completion");
+    String joinedContext = String.join("\n---\n", contentList);
+    ChatResponse response =
+        invokeManagedChat(
+            model,
+            basePrompt,
+            budgetUserId,
+            anonymous,
+            "rag_completion",
+            joinedContext,
+            phFeatureProps);
     String answerText = response.getResult().getOutput().getText();
     answerText = truncateOutput(answerText, aiLimitsProperties.getMaxOutputChars());
     return new RagAnswer(answerText, contentList);
+  }
+
+  private static List<Document> dedupePreserveOrder(List<Document> merged) {
+    LinkedHashMap<String, Document> byKey = new LinkedHashMap<>();
+    for (Document d : merged) {
+      byKey.putIfAbsent(documentDedupeKey(d), d);
+    }
+    return List.copyOf(byKey.values());
+  }
+
+  private static String documentDedupeKey(Document d) {
+    if (d.getId() != null && !d.getId().isBlank()) {
+      return d.getId();
+    }
+    String t = d.getText();
+    return t == null ? "" : t;
   }
 
   private SupportedChatModel resolveModel(Question question) {
@@ -156,33 +233,63 @@ public class OpenAIServiceImpl implements OpenAIService {
       Prompt basePrompt,
       String budgetUserId,
       boolean anonymous,
-      String generationSpanName) {
-    aiCircuitBreaker.assertClosed();
-    aiBudgetService.assertWithinBudget(budgetUserId, anonymous);
-    long startNs = System.nanoTime();
-    ChatResponse response = invokeChat(model, basePrompt);
-    double latencySec = (System.nanoTime() - startNs) / 1_000_000_000.0;
-    UsageTokens usage = extractUsage(response);
-    aiBudgetService.recordUsage(
-        budgetUserId,
-        model.modelId(),
-        usage.promptTokens(),
-        usage.completionTokens(),
-        anonymous,
-        latencySec,
-        generationSpanName);
-    return response;
+      String generationSpanName,
+      @org.springframework.lang.Nullable String posthogContextDocuments,
+      Map<String, Object> posthogFeatureProps) {
+    PostHogTraceContext.ActiveSpan span = postHogTraceContext.startSpan();
+    try {
+      aiCircuitBreaker.assertClosed();
+      aiBudgetService.assertWithinBudget(budgetUserId, anonymous);
+      long startNs = System.nanoTime();
+      ChatResponse response = invokeChat(model, basePrompt);
+      double latencySec = (System.nanoTime() - startNs) / 1_000_000_000.0;
+      UsageTokens usage = extractUsage(response);
+      String outputText = response.getResult().getOutput().getText();
+      Map<String, Object> flags =
+          posthogFeatureProps != null && !posthogFeatureProps.isEmpty()
+              ? posthogFeatureProps
+              : Map.of();
+      AiGenerationAnalytics analytics =
+          AiGenerationAnalytics.empty()
+              .withTrace(
+                  span.spanId(),
+                  span.parentSpanId(),
+                  span.rootTraceId(),
+                  span.traceName(),
+                  span.conversationId())
+              .withTexts(
+                  promptContentsAsString(basePrompt),
+                  outputText,
+                  "rag_completion".equals(generationSpanName) ? posthogContextDocuments : null)
+              .withExperimentProps(flags);
+      aiBudgetService.recordUsage(
+          budgetUserId,
+          model.modelId(),
+          usage.promptTokens(),
+          usage.completionTokens(),
+          anonymous,
+          latencySec,
+          generationSpanName,
+          analytics);
+      return response;
+    } finally {
+      postHogTraceContext.endSpan();
+    }
   }
 
   private ChatResponse invokeChat(SupportedChatModel model, Prompt basePrompt) {
     int maxTokens = aiLimitsProperties.getChatMaxCompletionTokens();
     return switch (model.provider()) {
       case OPENAI -> {
+        OpenAiChatModel openAi = openAiChatModel.getIfAvailable();
+        if (openAi == null) {
+          throw new IllegalStateException("OpenAI chat is not available (missing API key, OPENAI_CHAT_ENABLED=false, or autoconfiguration).");
+        }
         OpenAiChatOptions opts = OpenAiChatOptions.builder()
             .model(model.modelId())
             .maxCompletionTokens(maxTokens)
             .build();
-        yield openAiChatModel.call(new Prompt(basePrompt.getInstructions(), opts));
+        yield openAi.call(new Prompt(basePrompt.getInstructions(), opts));
       }
       case ANTHROPIC -> {
         AnthropicChatModel anthropic = anthropicChatModel.getIfAvailable();
@@ -202,7 +309,8 @@ public class OpenAIServiceImpl implements OpenAIService {
       String original,
       SupportedChatModel model,
       String budgetUserId,
-      boolean anonymous) {
+      boolean anonymous,
+      Map<String, Object> posthogFeatureProps) {
     try {
       String sys = """
       Translate the user query into both English and Norwegian.
@@ -212,7 +320,9 @@ public class OpenAIServiceImpl implements OpenAIService {
 
       Prompt base = new PromptTemplate("{sys}\nUser: {q}")
           .create(Map.of("sys", sys, "q", original));
-      ChatResponse r = invokeManagedChat(model, base, budgetUserId, anonymous, "query_expansion");
+      ChatResponse r =
+          invokeManagedChat(
+              model, base, budgetUserId, anonymous, "query_expansion", null, posthogFeatureProps);
       String json = r.getResult().getOutput().getText();
 
       String en = extractJsonValue(json, "en");
@@ -247,6 +357,27 @@ public class OpenAIServiceImpl implements OpenAIService {
     } catch (Exception ex) {
       return null;
     }
+  }
+
+  private static String promptContentsAsString(Prompt prompt) {
+    List<Message> messages = prompt.getInstructions();
+    if (messages == null || messages.isEmpty()) {
+      return "";
+    }
+    return messages.stream().map(OpenAIServiceImpl::messageToPlainText).collect(Collectors.joining("\n---\n"));
+  }
+
+  private static String messageToPlainText(Message m) {
+    if (m instanceof UserMessage um) {
+      return um.getText() != null ? um.getText() : "";
+    }
+    if (m instanceof SystemMessage sm) {
+      return sm.getText() != null ? sm.getText() : "";
+    }
+    if (m instanceof AssistantMessage am) {
+      return am.getText() != null ? am.getText() : "";
+    }
+    return m != null ? m.toString() : "";
   }
 
   private static String truncateOutput(String text, int maxChars) {

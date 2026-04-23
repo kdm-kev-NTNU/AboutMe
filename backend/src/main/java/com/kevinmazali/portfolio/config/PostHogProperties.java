@@ -1,5 +1,7 @@
 package com.kevinmazali.portfolio.config;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -16,6 +18,15 @@ public class PostHogProperties {
 
   /** Ingest host, e.g. {@code https://eu.i.posthog.com}. */
   private String host = "https://eu.i.posthog.com";
+
+  /**
+   * PostHog feature flag keys to resolve via {@code /decide} and attach to {@code $ai_generation} as
+   * {@code $feature/<key>}. When empty, no decide calls are made.
+   */
+  private List<String> featureFlagKeys = new ArrayList<>();
+
+  /** HTTP timeout for {@code /decide} (milliseconds). */
+  private int featureFlagsTimeoutMs = 2_000;
 
   public boolean isEnabled() {
     return enabled;
@@ -41,7 +52,28 @@ public class PostHogProperties {
     this.host = host;
   }
 
+  public List<String> getFeatureFlagKeys() {
+    return featureFlagKeys;
+  }
+
+  public void setFeatureFlagKeys(List<String> featureFlagKeys) {
+    this.featureFlagKeys = featureFlagKeys != null ? featureFlagKeys : new ArrayList<>();
+  }
+
+  public int getFeatureFlagsTimeoutMs() {
+    return featureFlagsTimeoutMs;
+  }
+
+  public void setFeatureFlagsTimeoutMs(int featureFlagsTimeoutMs) {
+    this.featureFlagsTimeoutMs = featureFlagsTimeoutMs;
+  }
+
   public boolean isCaptureConfigured() {
     return enabled && apiKey != null && !apiKey.isBlank();
+  }
+
+  /** True when decide-based flags should run for RAG (same credentials as capture). */
+  public boolean isFeatureFlagDecideConfigured() {
+    return isCaptureConfigured() && featureFlagKeys != null && !featureFlagKeys.isEmpty();
   }
 }

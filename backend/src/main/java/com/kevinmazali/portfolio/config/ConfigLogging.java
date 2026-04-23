@@ -58,13 +58,12 @@ public class ConfigLogging implements ApplicationRunner {
             environment.getProperty("spring.ai.vectorstore.pgvector.table-name", "<unset>"));
         log.info("Config: spring.ai.vectorstore.pgvector.index-type={}",
             environment.getProperty("spring.ai.vectorstore.pgvector.index-type", "<unset>"));
-        log.info("Config: management.otlp.tracing.endpoint={}",
-            environment.getProperty("management.otlp.tracing.endpoint", "<unset>"));
-        log.info("Config: management.otlp.tracing.export.enabled={}",
-            environment.getProperty("management.otlp.tracing.export.enabled", "<unset>"));
-        log.info("Config: management.otlp.metrics.export.enabled={}",
-            environment.getProperty("management.otlp.metrics.export.enabled", "<unset>"));
-        log.info("Config: management.otlp.metrics.export.url={}",
-            environment.getProperty("management.otlp.metrics.export.url", "<unset>"));
+        log.info("Config: portfolio.posthog.enabled={}",
+            environment.getProperty("portfolio.posthog.enabled", "<unset>"));
+        log.info("Config: portfolio.posthog.host={}",
+            environment.getProperty("portfolio.posthog.host", "<unset>"));
+        String posthogKey = environment.getProperty("portfolio.posthog.api-key");
+        log.info("Config: portfolio.posthog.api-key={}",
+            posthogKey == null || posthogKey.isBlank() ? "<empty>" : "***");
     }
 }

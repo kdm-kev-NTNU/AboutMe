@@ -115,10 +115,6 @@
 			<artifactId>micrometer-registry-prometheus</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>io.micrometer</groupId>
-			<artifactId>micrometer-registry-otlp</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.httpcomponents.client5</groupId>
 			<artifactId>httpclient5</artifactId>
 		</dependency>
@@ -127,13 +123,20 @@
 			<artifactId>micrometer-tracing-bridge-otel</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>io.opentelemetry</groupId>
-			<artifactId>opentelemetry-exporter-otlp</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>com.posthog</groupId>
 			<artifactId>posthog-server</artifactId>
 			<version>2.4.1</version>
+		</dependency>
+		<!-- Local cross-encoder reranking (ONNX Runtime + Hugging Face tokenizers) -->
+		<dependency>
+			<groupId>com.microsoft.onnxruntime</groupId>
+			<artifactId>onnxruntime</artifactId>
+			<version>1.20.0</version>
+		</dependency>
+		<dependency>
+			<groupId>ai.djl.huggingface</groupId>
+			<artifactId>tokenizers</artifactId>
+			<version>0.31.1</version>
 		</dependency>
 	</dependencies>
 	<dependencyManagement>
@@ -187,6 +190,9 @@
 						<!-- Large ingestion + JDBC/pgvector paths; covered by dedicated tests + manual re-ingest verification. -->
 						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService.class</exclude>
 						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService$*.class</exclude>
+						<!-- Optional native ONNX stack; CI/dev typically run without model weights. -->
+						<exclude>**/com/kevinmazali/portfolio/service/OnnxCrossEncoderReranker.class</exclude>
+						<exclude>**/com/kevinmazali/portfolio/service/OnnxCrossEncoderReranker$*.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>

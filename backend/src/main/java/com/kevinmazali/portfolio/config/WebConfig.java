@@ -22,7 +22,12 @@ import org.springframework.lang.NonNull;
 
 /**
  * Registers servlet filters that rate-limit {@code POST /ask}, {@code POST /auth/login},
- * {@code POST /feedback}, and {@code POST /admin/tools/experiments/run} (token buckets per client key or IP).
+ * {@code POST /feedback}, {@code POST /admin/tools/experiments/run}, and
+ * {@code POST /admin/tools/experiments/datasets/generate} (token buckets per client key or IP).
+ * <p>
+ * Admin experiment POSTs use {@code portfolio.experiments.*-rate-limit} defaults that are more generous than
+ * {@code POST /ask}, because those routes already require {@code ROLE_ADMIN} (HTTP Basic) in
+ * {@link SecurityConfig}; limits here mainly guard accidental bursts and shared credentials rather than anonymous abuse.
  * CORS is configured in {@link SecurityConfig}.
  */
 @Configuration
@@ -30,18 +35,22 @@ public class WebConfig {
 
     private final AskRateLimitProperties askRateLimitProperties;
     private final ExperimentRunRateLimitProperties experimentRunRateLimitProperties;
+    private final DatasetGenerateRateLimitProperties datasetGenerateRateLimitProperties;
 
     public WebConfig(
         AskRateLimitProperties askRateLimitProperties,
-        ExperimentRunRateLimitProperties experimentRunRateLimitProperties) {
+        ExperimentRunRateLimitProperties experimentRunRateLimitProperties,
+        DatasetGenerateRateLimitProperties datasetGenerateRateLimitProperties) {
         this.askRateLimitProperties = askRateLimitProperties;
         this.experimentRunRateLimitProperties = experimentRunRateLimitProperties;
+        this.datasetGenerateRateLimitProperties = datasetGenerateRateLimitProperties;
     }
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> loginBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> feedbackBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> experimentRunBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> datasetGenerateBuckets = new ConcurrentHashMap<>();
 
     private Bucket newAskBucketAuthenticated() {
         AskRateLimitProperties p = askRateLimitProperties;
@@ -103,6 +112,20 @@ public class WebConfig {
     private String experimentRunKey(HttpServletRequest req) {
         String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : "unknown";
         return "exp-run:" + user;
+    }
+
+    private Bucket newDatasetGenerateBucket() {
+        DatasetGenerateRateLimitProperties p = datasetGenerateRateLimitProperties;
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(p.getCapacity())
+            .refillGreedy(p.getCapacity(), Duration.ofSeconds(p.getWindowSeconds()))
+            .build();
+        return Bucket.builder().addLimit(limit).build();
+    }
+
+    private String datasetGenerateKey(HttpServletRequest req) {
+        String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : "unknown";
+        return "dataset-gen:" + user;
     }
 
     private static void write429(HttpServletResponse response, ConsumptionProbe probe) throws IOException {
@@ -222,6 +245,36 @@ public class WebConfig {
         registration.addUrlPatterns("/admin/tools/experiments/run");
         registration.setName("experimentRunRateLimitFilter");
         registration.setOrder(3);
+        return registration;
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "portfolio.experiments.dataset-generate-rate-limit.enabled", havingValue = "true", matchIfMissing = true)
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> datasetGenerateRateLimitFilter() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<Filter>();
+        registration.setFilter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+                throws ServletException, IOException {
+                String uri = request.getRequestURI();
+                if (!"POST".equalsIgnoreCase(request.getMethod())
+                    || uri == null
+                    || !uri.endsWith("/admin/tools/experiments/datasets/generate")) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                Bucket bucket = datasetGenerateBuckets.computeIfAbsent(datasetGenerateKey(request), k -> newDatasetGenerateBucket());
+                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+                if (probe.isConsumed()) {
+                    filterChain.doFilter(request, response);
+                } else {
+                    write429(response, probe);
+                }
+            }
+        });
+        registration.addUrlPatterns("/admin/tools/experiments/datasets/generate");
+        registration.setName("datasetGenerateRateLimitFilter");
+        registration.setOrder(4);
         return registration;
     }
 }

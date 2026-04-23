@@ -79,12 +79,15 @@ function setupFetchForExperimentsAndHistory() {
         )
       }
       if (url.includes('/api/admin/tools/experiments/config')) {
-        return new Response(JSON.stringify({ phoenixConfigured: false, phoenixBaseUrl: '' }), {
+        return new Response(JSON.stringify({ posthogConfigured: false, posthogHost: '' }), {
           status: 200,
           headers: headersJson,
         })
       }
-      if (url.includes('/api/admin/tools/experiments/datasets')) {
+      if (url.includes('/api/admin/tools/documents')) {
+        return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+      }
+      if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
         return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
       }
       if (url.includes('/api/admin/tools/experiments/models')) {
