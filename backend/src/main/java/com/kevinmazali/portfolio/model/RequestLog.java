@@ -30,7 +30,7 @@ public class RequestLog {
     private String method;
 
     @Lob
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String payload;
 
     @Column(nullable = true, length = 128)

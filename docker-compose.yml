@@ -1,38 +1,20 @@
 services:
   db:
-    image: mysql:lts
-    container_name: aboutme-mysql
+    image: pgvector/pgvector:pg17
+    container_name: aboutme-postgres
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: aboutme
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aboutme
     ports:
-      - "3307:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aboutme"]
       interval: 5s
       timeout: 5s
       retries: 20
-
-  # Chroma listens on 8000 in-container; host maps 8100 for local dev.
-  # Railway private networking is often IPv6-only: if the backend cannot connect to Chroma over
-  # *.railway.internal, set CHROMA_HOST_ADDR=:: (or equivalent) on the Chroma service so uvicorn binds IPv6.
-  chromadb:
-    image: chromadb/chroma:1.0.13
-    container_name: aboutme-chromadb
-    ports:
-      - "8100:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-    environment:
-      - ANONYMIZED_TELEMETRY=false
-    healthcheck:
-      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8000' || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
 
   phoenix:
     image: arizephoenix/phoenix:latest
@@ -53,15 +35,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      chromadb:
-        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/aboutme?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/aboutme
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
       PORT: "8080"
-      CHROMA_HTTP_HOST: http://chromadb
-      CHROMA_PORT: "8000"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       PHOENIX_OTLP_ENDPOINT: http://phoenix:4317
@@ -70,7 +48,6 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      # Host seed docs for Chroma (gitignored; matches file:./data/docs/ with WORKDIR /app)
       - ./backend/data:/app/data:ro
 
   frontend:
@@ -86,6 +63,5 @@ services:
       - "5173:80"
 
 volumes:
-  mysql_data:
-  chroma_data:
+  postgres_data:
   phoenix_data:

@@ -1,5 +1,8 @@
 # Production overrides: reduce log leakage, disable Swagger, and avoid logging full prompts/completions.
 # Activate with SPRING_PROFILES_ACTIVE=prod (e.g. Railway).
+#
+# OTLP to Phoenix/Arize: enable with OTLP_EXPORT_ENABLED / OTLP_METRICS_EXPORT_ENABLED and set
+# PHOENIX_OTLP_ENDPOINT (traces, gRPC), PHOENIX_OTLP_METRICS_URL (metrics, HTTP), PHOENIX_API_KEY as needed.
 
 spring:
   jpa:

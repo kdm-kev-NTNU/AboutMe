@@ -1,4 +1,4 @@
-package com.kevinmazali.portfolio.config;
+package com.kevinmazali.portfolio.testsupport;
 
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -7,11 +7,8 @@ import org.springframework.ai.vectorstore.filter.Filter;
 
 import java.util.List;
 
-/**
- * Used when {@link PortfolioChromaProperties#isEnabled()} is {@code false}: RAG runs without retrieval
- * (empty context) instead of failing at bean creation time.
- */
-public final class NoOpVectorStore implements VectorStore {
+/** Test-only no-op vector store when pgvector autoconfig is excluded (H2 in-memory tests). */
+public final class TestNoOpVectorStore implements VectorStore {
 
   @Override
   public void add(List<Document> documents) {

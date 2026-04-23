@@ -44,4 +44,11 @@ public enum SupportedChatModel {
         .filter(m -> m.modelId.equals(id.trim()))
         .findFirst();
   }
+
+  /**
+   * Premium models that anonymous public {@code /ask} callers must not use (cheaper models stay public).
+   */
+  public boolean requiresAuthenticationForPublicChat() {
+    return this == GPT_5_4 || this == CLAUDE_SONNET_4_6;
+  }
 }

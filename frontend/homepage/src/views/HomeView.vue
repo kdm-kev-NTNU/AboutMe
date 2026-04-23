@@ -66,6 +66,19 @@ const feedbackInvite = computed(() => {
   }
 })
 
+const futureWorkHomeLink = computed(() => {
+  if (language.value === 'no') {
+    return {
+      label: 'Videre arbeid og forbedringer',
+      ariaLabel: 'Gå til siden om planlagt utvikling av porteføljen',
+    }
+  }
+  return {
+    label: 'Future work and improvements',
+    ariaLabel: 'Go to the roadmap for planned portfolio improvements',
+  }
+})
+
 const quickQuestion = ref('')
 
 const providerLabels = computed(() =>
@@ -235,6 +248,18 @@ function submitQuick() {
             </button>
           </div>
         </section>
+
+        <RouterLink
+          to="/future-work"
+          class="group flex w-full max-w-2xl items-center justify-center gap-1 rounded-xl border border-blue-200/80 bg-white/90 px-4 py-3 text-center text-sm font-medium text-blue-800 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-blue-300 hover:bg-white hover:shadow-md hover:shadow-blue-500/10"
+          :aria-label="futureWorkHomeLink.ariaLabel"
+        >
+          {{ futureWorkHomeLink.label }}
+          <ChevronRight
+            class="size-4 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
+        </RouterLink>
       </div>
     </div>
 
@@ -418,7 +443,7 @@ function submitQuick() {
   animation-duration: 6s;
 }
 
-/* Decorative blobs — smaller blur/size on narrow viewports */
+/* Decorative blobs: smaller blur/size on narrow viewports */
 @media (max-width: 768px) {
   .blob {
     filter: blur(30px);

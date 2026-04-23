@@ -4,6 +4,10 @@ import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.ApiError;
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
+import com.kevinmazali.portfolio.config.AiLimitsProperties;
+import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
+import com.kevinmazali.portfolio.exception.BudgetExceededException;
+import com.kevinmazali.portfolio.exception.PremiumModelForbiddenException;
 import com.kevinmazali.portfolio.service.ChatModelCatalog;
 import com.kevinmazali.portfolio.service.OpenAIService;
 import com.kevinmazali.portfolio.service.RequestLogService;
@@ -37,25 +41,28 @@ public class QuestionController {
     private final RequestLogService requestLogService;
     private final ChatModelCatalog chatModelCatalog;
     private final String defaultChatModelId;
+    private final AiLimitsProperties aiLimitsProperties;
 
     public QuestionController(
         OpenAIService openAIService,
         RequestLogService requestLogService,
         ChatModelCatalog chatModelCatalog,
-        @Value("${portfolio.chat.default-model-id}") String defaultChatModelId) {
+        @Value("${portfolio.chat.default-model-id}") String defaultChatModelId,
+        AiLimitsProperties aiLimitsProperties) {
         this.openAIService = openAIService;
         this.requestLogService = requestLogService;
         this.chatModelCatalog = chatModelCatalog;
         this.defaultChatModelId = defaultChatModelId;
+        this.aiLimitsProperties = aiLimitsProperties;
     }
 
-    @Operation(summary = "Ask a question", description = "Runs RAG over indexed documents and returns an answer. Rate limited (5 requests / 10s per IP).")
+    @Operation(summary = "Ask a question", description = "Runs RAG over indexed documents and returns an answer. Rate limited (anonymous: 3 / 10s; authenticated: 5 / 10s per client key).")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Generated answer",
             content = @Content(schema = @Schema(implementation = Answer.class))),
         @ApiResponse(responseCode = "400", description = "Empty, invalid, or too long question",
             content = @Content(schema = @Schema(implementation = ApiError.class))),
-        @ApiResponse(responseCode = "503", description = "LLM provider or Chroma unavailable",
+        @ApiResponse(responseCode = "503", description = "LLM provider or vector store unavailable",
             content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/ask")
@@ -64,7 +71,7 @@ public class QuestionController {
             return ResponseEntity.badRequest().body(new ApiError("Question cannot be empty"));
         }
 
-        if (!InputValidator.isValidQuestion(question.question())) {
+        if (!InputValidator.isValidQuestion(question.question(), aiLimitsProperties.getMaxQuestionChars())) {
             return ResponseEntity.badRequest().body(new ApiError("Invalid question format"));
         }
 
@@ -90,8 +97,10 @@ public class QuestionController {
             Answer answer = openAIService.getAnswer(sanitizedQuestionObj);
             requestLogService.save("/ask:response", "POST", answer.answer(), null);
             return ResponseEntity.ok(answer);
+        } catch (BudgetExceededException | AiCircuitOpenException | PremiumModelForbiddenException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("/ask failed (e.g. ChromaDB or OpenAI unavailable): {}: {}",
+            log.warn("/ask failed (e.g. vector store or OpenAI unavailable): {}: {}",
                 e.getClass().getSimpleName(), e.getMessage());
             log.debug("/ask failure diagnostics: {}", LlmClientDiagnostics.describeAskFailure(e));
             log.debug("/ask failure stack trace", e);

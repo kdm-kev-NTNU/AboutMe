@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import MessagesArea from '@/views/MessagesArea.vue'
 import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
 
@@ -18,8 +26,10 @@ const router = useRouter()
 const input = ref('')
 const isLoading = ref(false)
 const errorText = ref('')
+const showInfoPopup = ref(false)
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = 3000
+const CHAT_INFO_DISMISSED_KEY = 'chatInfoPopupDismissed.v2'
 const langStore = useLangStore()
 const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
@@ -43,6 +53,24 @@ const selectedModelId = computed({
 
 const showProviderToggle = computed(
   () => chatModelStore.hasOpenAI && chatModelStore.hasAnthropic,
+)
+
+const popupCopy = computed(() =>
+  language.value === 'no'
+    ? {
+        title: 'Porteføljen er i aktiv tilpasning',
+        body: 'Denne chatten og kunnskapsgrunnlaget justeres fortløpende ut fra det jeg lærer i bacheloroppgaven. Svarene blir derfor gradvis mer presise over tid.',
+        recommendation: 'Vil du se hva som tilpasses nå? Besøk bachelor-siden for kontekst og status.',
+        bachelorCta: 'Se bachelorkontekst og status',
+        dismiss: 'Forstått',
+      }
+    : {
+        title: 'The portfolio is being actively adapted',
+        body: "This chat and its knowledge base are being continuously adjusted based on what I'm learning in my bachelor's thesis. Replies will therefore become progressively more precise over time.",
+        recommendation: 'Want to see what is currently being adapted? Visit the bachelor page for context and status.',
+        bachelorCta: 'See bachelor context and status',
+        dismiss: 'Got it',
+      },
 )
 
 // --- Ephemeral transcript (same-tab only; not a substitute for server-side conversation storage) ---
@@ -82,6 +110,31 @@ const clearChat = () => {
   // Redirect to home page
   router.push({ name: 'home' })
 }
+
+const shouldShowInfoPopup = () => {
+  try {
+    return !localStorage.getItem(CHAT_INFO_DISMISSED_KEY)
+  } catch {
+    return true
+  }
+}
+
+const markInfoPopupDismissed = () => {
+  try {
+    localStorage.setItem(CHAT_INFO_DISMISSED_KEY, 'true')
+  } catch {}
+}
+
+const dismissInfoPopup = () => {
+  showInfoPopup.value = false
+  markInfoPopupDismissed()
+}
+
+watch(showInfoPopup, (isOpen, wasOpen) => {
+  if (wasOpen && !isOpen) {
+    markInfoPopupDismissed()
+  }
+})
 
 // Calls the portfolio backend; auth store is restored so optional future authenticated /ask works the same way.
 async function send(text: string) {
@@ -151,6 +204,9 @@ const loadConversation = async (conversationId: string) => {
 
 onMounted(async () => {
   await chatModelStore.ensureModelsLoaded()
+  if (shouldShowInfoPopup()) {
+    showInfoPopup.value = true
+  }
 
   const conversationId = route.query.conversationId as string
 
@@ -170,32 +226,59 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 pt-20">
+  <main class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 pt-20">
+    <Dialog v-model:open="showInfoPopup">
+      <DialogContent class="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{{ popupCopy.title }}</DialogTitle>
+          <DialogDescription>{{ popupCopy.body }}</DialogDescription>
+        </DialogHeader>
+        <p class="text-sm text-slate-700">
+          {{ popupCopy.recommendation }}
+        </p>
+        <DialogFooter class="flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button as-child variant="outline">
+            <RouterLink :to="{ name: 'bachelor' }">{{ popupCopy.bachelorCta }}</RouterLink>
+          </Button>
+          <Button type="button" @click="dismissInfoPopup">{{ popupCopy.dismiss }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     <!-- Background overlay -->
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);"></div>
     </div>
     <!-- Chat Container -->
-    <div class="relative z-10 mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
+    <div class="relative z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
       <!-- Error Alert -->
       <Alert v-if="errorText" variant="destructive" class="mb-6 flex-shrink-0">
         <AlertDescription>{{ errorText }}</AlertDescription>
       </Alert>
 
-      <!-- Chat Header with Clear Button -->
-      <div v-if="state.messages.length > 0" class="flex justify-center items-center mb-4 flex-shrink-0">
-        <Button
-          @click="clearChat"
-          variant="outline"
-          size="sm"
-          class="border-2 border-blue-300/30 text-blue-600 bg-blue-50/50 hover:border-blue-300/60 hover:bg-blue-50 hover:text-blue-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300 relative overflow-hidden cursor-pointer"
-        >
-          Clear Chat
-        </Button>
-      </div>
+      <section class="mb-5 flex-shrink-0 rounded-3xl border border-blue-100/70 bg-white/85 p-4 shadow-lg shadow-blue-900/10 backdrop-blur-xl sm:p-5">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
+              Kevin's AI
+            </h1>
+            <span class="rounded-full border border-blue-200/70 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+              {{ isLoading ? 'Thinking...' : 'Online' }}
+            </span>
+          </div>
+          <Button
+            v-if="state.messages.length > 0"
+            @click="clearChat"
+            variant="outline"
+            size="sm"
+            class="border border-blue-200/80 bg-white/85 text-blue-700 hover:border-blue-300/80 hover:bg-blue-50/70 hover:text-blue-800"
+          >
+            Clear chat
+          </Button>
+        </div>
+      </section>
 
       <!-- Messages Area -->
-      <div class="flex-1 mb-8 min-h-0">
+      <div class="flex-1 mb-6 min-h-0">
         <MessagesArea 
           :messages="state.messages" 
           :is-loading="isLoading"
@@ -204,21 +287,24 @@ onMounted(async () => {
       </div>
 
       <!-- Form at Bottom -->
-      <div class="pb-8 flex-shrink-0 space-y-2">
+      <div class="pb-8 flex-shrink-0 space-y-4">
         <div
           v-if="chatModelStore.models.length > 0"
-          class="flex flex-col gap-3 text-sm text-slate-700 px-1"
+          class="grid gap-3 text-sm text-slate-700 sm:grid-cols-2"
         >
-          <div v-if="showProviderToggle" class="flex flex-col gap-2">
-            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div
+            v-if="showProviderToggle"
+            class="rounded-2xl border border-blue-100/70 bg-white/85 px-4 py-3 shadow-sm backdrop-blur-md"
+          >
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
               {{ providerLabels.heading }}
             </p>
-            <div class="flex justify-center">
+            <div class="flex justify-start">
               <div
-                class="relative rounded-full p-1 flex bg-gradient-to-r from-slate-200 to-slate-300 shadow-md border-2 border-transparent bg-clip-padding"
+                class="relative flex rounded-full border border-blue-100/70 bg-slate-100/80 p-1"
               >
                 <div
-                  class="absolute top-1 bottom-1 w-28 rounded-full shadow-lg transition-transform duration-300 ease-in-out bg-gradient-to-r from-white to-slate-50 border border-blue-200"
+                  class="absolute bottom-1 top-1 w-28 rounded-full border border-blue-100 bg-white shadow-sm transition-transform duration-300 ease-in-out"
                   :class="
                     chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
                       ? 'translate-x-0'
@@ -227,11 +313,11 @@ onMounted(async () => {
                 ></div>
                 <button
                   type="button"
-                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden disabled:opacity-40"
+                  class="relative z-10 w-28 rounded-full py-2 text-sm font-medium transition-all duration-300 disabled:opacity-40"
                   :class="
                     chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
-                      ? 'text-blue-700 font-semibold'
-                      : 'text-gray-500'
+                      ? 'font-semibold text-blue-700'
+                      : 'text-slate-500'
                   "
                   :disabled="isLoading || !chatModelStore.hasOpenAI"
                   @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.OPENAI)"
@@ -240,11 +326,11 @@ onMounted(async () => {
                 </button>
                 <button
                   type="button"
-                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden disabled:opacity-40"
+                  class="relative z-10 w-28 rounded-full py-2 text-sm font-medium transition-all duration-300 disabled:opacity-40"
                   :class="
                     chatModelStore.activeProvider === ChatModelOptionProvider.ANTHROPIC
-                      ? 'text-blue-700 font-semibold'
-                      : 'text-gray-500'
+                      ? 'font-semibold text-blue-700'
+                      : 'text-slate-500'
                   "
                   :disabled="isLoading || !chatModelStore.hasAnthropic"
                   @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.ANTHROPIC)"
@@ -254,15 +340,18 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-            <label for="chat-model-select" class="font-medium shrink-0">
+          <div class="rounded-2xl border border-blue-100/70 bg-white/85 px-4 py-3 shadow-sm backdrop-blur-md">
+            <label
+              for="chat-model-select"
+              class="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
               {{ language === 'en' ? 'Model' : 'Modell' }}
             </label>
             <select
               id="chat-model-select"
               v-model="selectedModelId"
               :disabled="isLoading"
-              class="w-full sm:max-w-md rounded-lg border-2 border-blue-200/40 bg-white/90 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none disabled:opacity-50"
+              class="w-full rounded-xl border border-blue-200/70 bg-white/90 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-300/80 focus:outline-none disabled:opacity-50"
             >
               <option v-for="m in modelsForActiveProvider" :key="m.id" :value="m.id">
                 {{ m.label }} ({{ m.provider }})
@@ -270,15 +359,22 @@ onMounted(async () => {
             </select>
           </div>
         </div>
-        <form class="flex gap-3 relative bg-white/90 backdrop-blur-sm border-2 border-blue-200/20 rounded-xl p-2 transition-all duration-300 hover:border-blue-300/40 hover:bg-white/95 hover:shadow-lg hover:shadow-blue-500/15 focus-within:border-blue-300/60 focus-within:bg-white/98 focus-within:shadow-lg focus-within:shadow-blue-500/25" @submit.prevent="send(input)">
+        <form
+          class="relative flex gap-3 rounded-3xl border border-blue-100/70 bg-white/85 p-3 shadow-lg shadow-blue-900/10 backdrop-blur-xl transition-all duration-300 hover:border-blue-200/80 focus-within:border-blue-300/70 focus-within:shadow-lg focus-within:shadow-blue-500/20"
+          @submit.prevent="send(input)"
+        >
           <Input
             v-model="input"
             :disabled="isLoading"
             type="text"
-            class="flex-1 bg-white/80 border-2 border-blue-200/20 rounded-lg transition-all duration-300 focus:bg-white/95 focus:border-blue-300/50 focus:shadow-sm focus:shadow-blue-500/10 focus:outline-none placeholder:text-blue-600/60 placeholder:font-medium"
+            class="flex-1 rounded-2xl border border-blue-100/70 bg-white/85 text-slate-700 transition-all duration-300 placeholder:font-medium placeholder:text-slate-400 focus:border-blue-300/70 focus:bg-white focus:shadow-sm focus:shadow-blue-500/15 focus:outline-none"
             :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'"
           />
-          <Button type="submit" :disabled="isLoading || !input.trim()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300 relative overflow-hidden disabled:bg-blue-300/30 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-none">
+          <Button
+            type="submit"
+            :disabled="isLoading || !input.trim()"
+            class="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:shadow-blue-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:transform-none"
+          >
             {{ isLoading ? 'Sending...' : 'Send →' }}
           </Button>
         </form>
@@ -286,22 +382,4 @@ onMounted(async () => {
     </div>
   </main>
 </template>
-
-<style scoped>
-/* Avatar Styling */
-.w-8.h-8.rounded-full {
-  transition: all 0.3s ease;
-}
-
-.w-8.h-8.rounded-full:hover {
-  transform: scale(1.1);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .hover\:-translate-y-0\.5:hover {
-    transform: translateY(-1px);
-  }
-}
-</style>
 

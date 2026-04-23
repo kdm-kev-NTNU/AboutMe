@@ -19,6 +19,7 @@ describe('HomeView', () => {
 				{ path: '/', name: 'home', component: HomeView },
 				{ path: '/chat', name: 'chat', component: { template: '<div>chat</div>' } },
 				{ path: '/feedback', name: 'feedback', component: { template: '<div>feedback</div>' } },
+				{ path: '/future-work', name: 'future-work', component: { template: '<div>future-work</div>' } },
 			],
 		})
 	}
@@ -134,5 +135,33 @@ describe('HomeView', () => {
 		await anthropicBtn!.trigger('click')
 		await flushPromises()
 		expect(useChatModelStore().selectedModelId).toBe('a1')
+	})
+
+	it('links to the future work roadmap from the home hero', async () => {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		const router = makeRouter()
+		await router.push('/')
+		await router.isReady()
+		const wrapper = mount(HomeView, {
+			global: {
+				plugins: [pinia, router],
+				stubs: {
+					Input: { props: ['modelValue'], template: '<input />' },
+					Button: { template: '<button type="submit"><slot /></button>' },
+					Alert: { template: '<div><slot /></div>' },
+					AlertTitle: { template: '<div><slot /></div>' },
+					AlertDescription: { template: '<div><slot /></div>' },
+					Info: true,
+					Github: true,
+					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
+				},
+			},
+		})
+		await flushPromises()
+		const futureLink = wrapper.get('a[href="/future-work"]')
+		expect(futureLink.text()).toContain('Future work and improvements')
 	})
 })

@@ -6,7 +6,7 @@ import {
   adminDocumentsChunks,
   adminDocumentsCollections,
   adminDocumentsList,
-  type ChromaCollectionsResponse,
+  type VectorStoreInfoResponse,
   type ChunkListResponse,
   type DocumentListEntry,
 } from '@/api/generated/portfolio'
@@ -15,7 +15,7 @@ import {
 const auth = useAuthStore()
 const error = ref('')
 const documents = ref<DocumentListEntry[]>([])
-const chromaInfo = ref<ChromaCollectionsResponse | null>(null)
+const chromaInfo = ref<VectorStoreInfoResponse | null>(null)
 
 const chunksData = ref<ChunkListResponse | null>(null)
 const chunksBusy = ref(false)
@@ -46,7 +46,7 @@ async function loadData() {
       throw new Error(formatHttpError(dRes.status, dRes.data))
     }
     if (cRes.status !== 200) {
-      throw new Error(`Chroma status feilet (${cRes.status})`)
+      throw new Error(`Vektorlagring status feilet (${cRes.status})`)
     }
     documents.value = dRes.data
     chromaInfo.value = cRes.data
@@ -63,7 +63,7 @@ function contentHashFromMetadata(meta: Record<string, unknown> | undefined): str
 }
 
 function hashShort(hash: string): string {
-  if (!hash) return '—'
+  if (!hash) return '–'
   return hash.length > 12 ? hash.slice(0, 12) + '…' : hash
 }
 
@@ -160,7 +160,7 @@ onMounted(() => {
     </nav>
 
     <main class="mx-auto max-w-5xl px-4 pt-8">
-      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">ChromaDB chunks</h1>
+      <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">PostgreSQL / pgvector chunks</h1>
       <p class="text-sm text-gray-600 mb-6 leading-relaxed">
         Se råtekst og metadata fra den aktive collection. Paginering som i Piscada-tools.
         <RouterLink to="/admin/pipeline" class="text-blue-600 hover:underline">Document pipeline</RouterLink>
@@ -171,18 +171,18 @@ onMounted(() => {
         {{ error }}
       </p>
 
-      <!-- Summary card (Piscada chroma-collections style) -->
+      <!-- Summary card (vector store table) -->
       <section
         class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-[0_1px_3px_rgb(0_0_0/0.06)]"
       >
         <div class="flex flex-wrap gap-x-8 gap-y-3 items-center text-sm">
           <div>
             <strong class="text-gray-900">Aktiv collection:</strong>
-            <span class="text-gray-700 ml-1">{{ chromaInfo?.activeCollectionName ?? '—' }}</span>
+            <span class="text-gray-700 ml-1">{{ chromaInfo?.activeCollectionName ?? '–' }}</span>
           </div>
           <div>
             <strong class="text-gray-900">Embeddings:</strong>
-            <span class="text-gray-700 ml-1">{{ chromaInfo?.activeCollectionEmbeddingCount ?? '—' }}</span>
+            <span class="text-gray-700 ml-1">{{ chromaInfo?.activeCollectionEmbeddingCount ?? '–' }}</span>
           </div>
           <div>
             <strong class="text-gray-900">Dokumenter (liste):</strong>
@@ -218,7 +218,7 @@ onMounted(() => {
               class="min-w-[14rem] border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
               @change="onChunkFilterOrLimitChange"
             >
-              <option value="">Alle (paginering i Chroma-rekkefølge)</option>
+              <option value="">Alle (paginering i tabell-rekkefølge)</option>
               <option v-for="d in documents" :key="d.documentId" :value="d.documentId">
                 {{ d.filename }} ({{ d.chunkCount }} chunks)
               </option>
@@ -295,9 +295,9 @@ onMounted(() => {
                 <td class="border border-gray-200 px-2 py-2 text-gray-400">
                   {{ expandedChunkId === c.id ? '▼' : '▶' }}
                 </td>
-                <td class="border border-gray-200 px-2 py-2">{{ c.documentTitle || '—' }}</td>
+                <td class="border border-gray-200 px-2 py-2">{{ c.documentTitle || '–' }}</td>
                 <td class="border border-gray-200 px-2 py-2 font-mono text-xs">
-                  {{ c.chunkIndex ?? '—' }}
+                  {{ c.chunkIndex ?? '–' }}
                 </td>
                 <td
                   class="border border-gray-200 px-2 py-2 font-mono text-[11px]"

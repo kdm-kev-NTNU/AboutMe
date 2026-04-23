@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref, type Ref } from 'vue'
+import { useIntersectionObserver } from '@vueuse/core'
 import { useLangStore } from '../stores/lang'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -13,6 +14,7 @@ import {
   Layers,
   Workflow,
   MonitorSmartphone,
+  BookOpen,
 } from 'lucide-vue-next'
 
 const langStore = useLangStore()
@@ -23,8 +25,27 @@ const lastUpdated = computed(() =>
   isNo.value ? 'Sist oppdatert: april 2026' : 'Last updated: April 2026',
 )
 
+const headerBadge = computed(() =>
+  isNo.value ? 'IDATT2901 · Piscada AS' : 'IDATT2901 · Piscada AS',
+)
+
+const headerSubtitle = computed(() =>
+  isNo.value
+    ? 'Sporbarhet fra bacheloroppgave og produktkontekst til konkrete teknologivalg i denne porteføljen — uten å erstatte full dokumentasjon i rapporten.'
+    : 'Traceability from the bachelor thesis and product context to the concrete technology choices in this portfolio — without replacing full documentation in the report.',
+)
+
+const contextParagraph = computed(() =>
+  isNo.value
+    ? 'Denne porteføljen utvikles aktivt som grunnlag for bacheloroppgave (IDATT2901) ved NTNU Trondheim, i samarbeid med Piscada AS. Prosjektet retter seg mot en AI-assistent som kan forklare energidata på naturlig språk og gi målrettede råd om energisparing i næringsbygg.'
+    : 'This portfolio is being actively developed as the foundation for a bachelor thesis (IDATT2901) at NTNU Trondheim, in collaboration with Piscada AS. The project focuses on an AI assistant that explains energy data in natural language and provides targeted energy-saving advice for commercial buildings.',
+)
+
+const contextLinkLabel = computed(() =>
+  isNo.value ? 'Les mer om bacheloroppgaven' : 'Read more about the bachelor thesis',
+)
+
 type Category = 'all' | 'ai' | 'backend' | 'frontend' | 'integration' | 'devops'
-type CardSize = 'large' | 'medium' | 'small' | 'full'
 
 interface Section {
   id: string
@@ -33,48 +54,192 @@ interface Section {
   icon: typeof Cpu
   category: Category
   badges: string[]
-  size: CardSize
-  accentFrom: string
-  accentTo: string
 }
 
-const activeFilter = ref<Category>('all')
+function useReducedMotion(): Ref<boolean> {
+  const reduce = ref(false)
+  let mq: MediaQueryList | null = null
+  const update = () => {
+    reduce.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  }
+  onMounted(() => {
+    if (typeof window.matchMedia !== 'function') {
+      reduce.value = false
+      return
+    }
+    mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    update()
+    mq.addEventListener('change', update)
+  })
+  onUnmounted(() => mq?.removeEventListener('change', update))
+  return reduce
+}
 
-const filterTabs = computed<{ id: Category; label: string }[]>(() =>
+function useRevealSection(reduceMotion: Ref<boolean>) {
+  const target = ref<HTMLElement | null>(null)
+  const visible = ref(false)
+  useIntersectionObserver(
+    target,
+    ([entry]) => {
+      if (entry?.isIntersecting) visible.value = true
+    },
+    { threshold: 0.08, rootMargin: '0px 0px -32px 0px' },
+  )
+
+  const motionClass = computed(() => {
+    if (reduceMotion.value) {
+      return 'opacity-100'
+    }
+    return [
+      'transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0',
+      visible.value ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8',
+    ].join(' ')
+  })
+
+  return { target, motionClass }
+}
+
+const reduceMotion = useReducedMotion()
+const { target: refContext, motionClass: clsContext } = useRevealSection(reduceMotion)
+const { target: refPillars, motionClass: clsPillars } = useRevealSection(reduceMotion)
+const { target: refSections, motionClass: clsSections } = useRevealSection(reduceMotion)
+const { target: refStack, motionClass: clsStack } = useRevealSection(reduceMotion)
+const { target: refFooter, motionClass: clsFooter } = useRevealSection(reduceMotion)
+
+const pillarCards = computed(() =>
   isNo.value
     ? [
-        { id: 'all', label: 'Alle' },
-        { id: 'ai', label: 'AI & RAG' },
-        { id: 'backend', label: 'Backend' },
-        { id: 'frontend', label: 'Frontend' },
-        { id: 'integration', label: 'Integrasjon' },
-        { id: 'devops', label: 'Drift' },
+        {
+          to: '/chat' as const,
+          title: 'AI & RAG',
+          body: 'Spring AI, språkmodeller og RAG med PostgreSQL/pgvector for kontekstuelle svar.',
+          cta: 'Åpne chat',
+          icon: BrainCircuit,
+          accentBorder: 'hover:border-blue-200',
+          accentRing: 'focus-visible:ring-blue-600',
+          iconBg: 'bg-blue-50 text-blue-700 group-hover:bg-blue-100',
+          ctaClass: 'text-blue-700',
+        },
+        {
+          to: '/projects' as const,
+          title: 'Backend',
+          body: 'Spring Boot, sikkerhet, persistens og API mot klienten.',
+          cta: 'Se prosjekter',
+          icon: Server,
+          accentBorder: 'hover:border-emerald-200',
+          accentRing: 'focus-visible:ring-emerald-600',
+          iconBg: 'bg-emerald-50 text-emerald-700 group-hover:bg-emerald-100',
+          ctaClass: 'text-emerald-800',
+        },
+        {
+          to: '/' as const,
+          title: 'Frontend',
+          body: 'Vue 3, Vite og komponentbibliotek i shadcn-stil.',
+          cta: 'Til forsiden',
+          icon: Globe,
+          accentBorder: 'hover:border-sky-200',
+          accentRing: 'focus-visible:ring-sky-600',
+          iconBg: 'bg-sky-50 text-sky-700 group-hover:bg-sky-100',
+          ctaClass: 'text-sky-800',
+        },
       ]
     : [
-        { id: 'all', label: 'All' },
-        { id: 'ai', label: 'AI & RAG' },
-        { id: 'backend', label: 'Backend' },
-        { id: 'frontend', label: 'Frontend' },
-        { id: 'integration', label: 'Integration' },
-        { id: 'devops', label: 'DevOps' },
+        {
+          to: '/chat' as const,
+          title: 'AI & RAG',
+          body: 'Spring AI, language models, and RAG with PostgreSQL/pgvector for contextual answers.',
+          cta: 'Open chat',
+          icon: BrainCircuit,
+          accentBorder: 'hover:border-blue-200',
+          accentRing: 'focus-visible:ring-blue-600',
+          iconBg: 'bg-blue-50 text-blue-700 group-hover:bg-blue-100',
+          ctaClass: 'text-blue-700',
+        },
+        {
+          to: '/projects' as const,
+          title: 'Backend',
+          body: 'Spring Boot, security, persistence, and APIs for the client.',
+          cta: 'View projects',
+          icon: Server,
+          accentBorder: 'hover:border-emerald-200',
+          accentRing: 'focus-visible:ring-emerald-600',
+          iconBg: 'bg-emerald-50 text-emerald-700 group-hover:bg-emerald-100',
+          ctaClass: 'text-emerald-800',
+        },
+        {
+          to: '/' as const,
+          title: 'Frontend',
+          body: 'Vue 3, Vite, and shadcn-style UI components.',
+          cta: 'Back to home',
+          icon: Globe,
+          accentBorder: 'hover:border-sky-200',
+          accentRing: 'focus-visible:ring-sky-600',
+          iconBg: 'bg-sky-50 text-sky-700 group-hover:bg-sky-100',
+          ctaClass: 'text-sky-800',
+        },
       ],
 )
 
-const heroNodes = computed(() =>
+const stackFront = computed(() =>
   isNo.value
-    ? [
-        { label: 'Frontend', icon: MonitorSmartphone },
-        { label: 'Backend (REST)', icon: Server },
-        { label: 'Database & Vektorer', icon: Database },
-        { label: 'AI-modeller', icon: BrainCircuit },
-      ]
-    : [
-        { label: 'Frontend', icon: MonitorSmartphone },
-        { label: 'Backend (REST)', icon: Server },
-        { label: 'Database & Vectors', icon: Database },
-        { label: 'AI Models', icon: BrainCircuit },
-      ],
+    ? ([
+        'Vue 3, TypeScript, Vite 7',
+        'Pinia, Vue Router',
+        'Tailwind CSS 4, Reka UI (shadcn-stil), Lucide',
+        'VueUse (Core, Motion), markdown-it, DOMPurify',
+        'Orval, OpenAPI-generert fetch-klient',
+        'PostHog (analyse + LLM-observabilitet, samtykkestyrt på nettsiden)',
+      ] as const)
+    : ([
+        'Vue 3, TypeScript, Vite 7',
+        'Pinia, Vue Router',
+        'Tailwind CSS 4, Reka UI (shadcn-style), Lucide',
+        'VueUse (Core, Motion), markdown-it, DOMPurify',
+        'Orval, OpenAPI-generated fetch client',
+        'PostHog (analytics + LLM observability, consent-gated in the browser)',
+      ] as const),
 )
+
+const stackBack = computed(() =>
+  isNo.value
+    ? ([
+        'Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA',
+        'PostgreSQL 17 med pgvector, Spring AI, Tika-dokumentlesing',
+        'Apache OpenNLP (NER m.m. i saniterings-/tekstflyt)',
+        'Actuator (helse, metrics, Prometheus-scrape), Micrometer, OTel → Phoenix (spor), PostHog (LLM-genereringer)',
+        'Docker Compose, nginx (produksjonsbygg)',
+        'Bucket4j (rate limiting)',
+      ] as const)
+    : ([
+        'Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA',
+        'PostgreSQL 17 with pgvector, Spring AI, Tika document reading',
+        'Apache OpenNLP (NER etc. in sanitization / text flow)',
+        'Actuator (health, metrics, Prometheus scrape), Micrometer, OTel → Phoenix (traces), PostHog (LLM generations)',
+        'Docker Compose, nginx (production build)',
+        'Bucket4j (rate limiting)',
+      ] as const),
+)
+
+const stackHeading = computed(() => (isNo.value ? 'Teknologistakk (kort)' : 'Tech stack (summary)'))
+
+const sectionsHeading = computed(() =>
+  isNo.value ? 'Valg og begrunnelse' : 'Choices and rationale',
+)
+
+const sectionsIntro = computed(() =>
+  isNo.value
+    ? 'Hver blokk beskriver hvordan teknologien brukes i porteføljen.'
+    : 'Each block describes how the technology is used in the portfolio.',
+)
+
+const footerText = computed(() =>
+  isNo.value
+    ? 'Mer om oppgaven og retningen finner du under bachelor. Full brukerhistorier og krav ligger i avtale og veiledning med oppdragsgiver.'
+    : 'More about the thesis and direction is on the bachelor page. Full user stories and requirements live in agreements and supervision with the industry partner.',
+)
+
+const footerHome = computed(() => (isNo.value ? 'Til forsiden' : 'Back to home'))
+const footerBachelor = computed(() => (isNo.value ? 'Bacheloroppgaven' : 'Bachelor thesis'))
 
 const sections = computed<Section[]>(() => {
   if (isNo.value) {
@@ -84,59 +249,48 @@ const sections = computed<Section[]>(() => {
         heading: 'Hvorfor denne stakken?',
         paragraphs: [
           'Jeg prøver gjennomgående i prosjektet å finne en balanse mellom lettvinthet og funksjonalitet: løsninger som er enkle å jobbe med dag til dag, men som fortsatt gir nok struktur og kraft til å bygge noe som tåler litt vekst og endring.',
-          'Valgene under speiler det — modne rammeverk der det gir mening, og pragmatiske byggeklosser der det sparer tid uten å ofre det viktigste.',
+          'Valgene under speiler det: modne rammeverk der det gir mening, og pragmatiske byggeklosser der det sparer tid uten å ofre det viktigste.',
         ],
         icon: Layers,
         category: 'all',
         badges: [],
-        size: 'full',
-        accentFrom: 'from-slate-400',
-        accentTo: 'to-slate-500',
       },
       {
         id: 'spring-ai',
         heading: 'Spring AI',
         paragraphs: [
           'Spring og Java brukes mye i enterprise-løsninger. Spring AI bygger videre på det økosystemet og gjør det naturlig å koble språkmodeller, dokumentflyt og vektorlagring inn i en Spring Boot-tjeneste.',
-          'Spring AI er et relativt nytt prosjekt, og jeg valgte det fordi jeg ønsket å følge med på hvordan integrasjonen mellom JVM-verdenen og AI utvikler seg — og for å lære det som sannsynligvis blir en vanlig sti for AI i Spring-baserte applikasjoner.',
-          'Chat går mot OpenAI eller Anthropic (Anthropic er tilgjengelig når API-nøkkel er konfigurert). Embeddings til Chroma kommer fra OpenAI; standard chat-modell og modellvalg styres i konfigurasjon og kan velges fra klienten innenfor et trygt sett støttede modeller.',
+          'Spring AI er et relativt nytt prosjekt, og jeg valgte det fordi jeg ønsket å følge med på hvordan integrasjonen mellom JVM-verdenen og AI utvikler seg, og for å lære det som sannsynligvis blir en vanlig sti for AI i Spring-baserte applikasjoner.',
+          'Chat går mot OpenAI eller Anthropic (Anthropic er tilgjengelig når API-nøkkel er konfigurert). Embeddings lagres i PostgreSQL med pgvector (OpenAI); standard chat-modell og modellvalg styres i konfigurasjon og kan velges fra klienten innenfor et trygt sett støttede modeller.',
         ],
         icon: BrainCircuit,
         category: 'ai',
         badges: ['Spring AI', 'OpenAI', 'Anthropic', 'Java 21'],
-        size: 'large',
-        accentFrom: 'from-violet-500',
-        accentTo: 'to-purple-600',
       },
       {
         id: 'backend',
         heading: 'Backend',
         paragraphs: [
-          'Backend kjører på Spring Boot med Java 21. Jeg bruker Spring Security og Spring Data JPA mot MySQL for persistens, og Bucket4j for enkel rate limiting der det trengs.',
+          'Backend kjører på Spring Boot 3.5 med Java 21. Jeg bruker Spring Security og Spring Data JPA mot PostgreSQL for persistens, og Bucket4j for enkel rate limiting der det trengs.',
+          'Apache OpenNLP brukes der det trengs i tekstbehandling og sanitering (for eksempel navngitte entiteter).',
           'Det gir en kjent «batteries included»-opplevelse: god dokumentasjon, sterk typing og verktøy som passer godt når man vil at koden skal være forutsigbar over tid.',
         ],
         icon: Server,
         category: 'backend',
-        badges: ['Spring Boot', 'Java 21', 'Spring Security', 'JPA', 'MySQL', 'Bucket4j'],
-        size: 'medium',
-        accentFrom: 'from-green-500',
-        accentTo: 'to-emerald-600',
+        badges: ['Spring Boot 3.5', 'Java 21', 'Spring Security', 'JPA', 'PostgreSQL', 'OpenNLP', 'Bucket4j'],
       },
       {
         id: 'rag',
         heading: 'RAG og vektorlagring',
         paragraphs: [
-          'For RAG-lignende funksjonalitet bruker jeg Chroma som vektorbase, sammen med Spring AIs Chroma-integrasjon. Dokumenter kan leses inn via Tika-basert dokumentlesing i Spring AI.',
+          'For RAG-lignende funksjonalitet bruker jeg PostgreSQL med pgvector som vektorbase, sammen med Spring AIs pgvector-integrasjon. Dokumenter kan leses inn via Tika-basert dokumentlesing i Spring AI.',
           'RAG-prompten er leverandørspesifikk og hentes fra versjonerte maler, slik at OpenAI og Anthropic kan tones litt ulikt uten å duplisere hele flyten.',
           'Ved henting utvides brukerens spørsmål til både norsk og engelsk, slik at treff i dokumenter på begge språk blir lettere å få med.',
-          'Chroma kjører i Docker sammen med resten av stakken, som gjør det enkelt å få opp et konsistent miljø lokalt og i deploy.',
+          'PostgreSQL med pgvector kjører i Docker sammen med resten av stakken, som gjør det enkelt å få opp et konsistent miljø lokalt og i deploy.',
         ],
         icon: Database,
         category: 'ai',
-        badges: ['Chroma', 'Tika', 'Embeddings', 'Docker'],
-        size: 'medium',
-        accentFrom: 'from-amber-500',
-        accentTo: 'to-orange-600',
+        badges: ['PostgreSQL', 'pgvector', 'Tika', 'Embeddings', 'Docker'],
       },
       {
         id: 'frontend',
@@ -148,9 +302,6 @@ const sections = computed<Section[]>(() => {
         icon: Globe,
         category: 'frontend',
         badges: ['Vue 3', 'Vite', 'TypeScript', 'Pinia', 'Tailwind 4', 'Reka UI'],
-        size: 'medium',
-        accentFrom: 'from-sky-500',
-        accentTo: 'to-blue-600',
       },
       {
         id: 'api',
@@ -162,36 +313,28 @@ const sections = computed<Section[]>(() => {
         icon: Workflow,
         category: 'integration',
         badges: ['OpenAPI', 'SpringDoc', 'Swagger', 'Orval'],
-        size: 'small',
-        accentFrom: 'from-teal-500',
-        accentTo: 'to-cyan-600',
       },
       {
         id: 'observability',
         heading: 'Observabilitet',
         paragraphs: [
-          'Backend eksponerer Spring Boot Actuator, og Micrometer med OpenTelemetry sender spor til Arize Phoenix over OTLP (gRPC). Det gir et sted å se kjeder av kall og latens uten å spre sporingslogikk overalt i koden.',
-          'Phoenix kjører som egen tjeneste i Docker Compose (sammen med OTLP-endepunktet), slik at samme oppsett fungerer lokalt som i et typisk compose-basert miljø.',
+          'Backend eksponerer Spring Boot Actuator med blant annet health, info og Prometheus-scrape for metrics. Micrometer med OpenTelemetry kan sende spor til Arize Phoenix over OTLP (gRPC) når eksport er slått på — typisk mot Phoenix-containeren i Compose — for detaljerte spor og feilsøking.',
+          'LLM-kall (tokens, estimert kostnad, latens) sendes også som PostHog $ai_generation-hendelser fra serveren når det er slått på, slik at produktanalyse og modellbruk kan sees i samme verktøy som samtykkestyrt frontend-analyse.',
+          'RAG-evaluering med datasett i Phoenix og LLM-as-judge i egen kode beholdes der: PostHogs innebygde LLM-eval og datasett-flyt er mindre modne for denne typen batch-pipeline enn dagens Phoenix-integrasjon, så det er en bevisst to-fase-arkitektur (spor + eval i Phoenix, aggregert LLM- og bruksdata i PostHog).',
         ],
         icon: Eye,
         category: 'devops',
-        badges: ['Actuator', 'Micrometer', 'OpenTelemetry', 'Phoenix'],
-        size: 'small',
-        accentFrom: 'from-rose-500',
-        accentTo: 'to-pink-600',
+        badges: ['Actuator', 'Prometheus', 'Micrometer', 'OpenTelemetry', 'Phoenix', 'PostHog'],
       },
       {
         id: 'runtime',
         heading: 'Kjøring og drift',
         paragraphs: [
-          'Applikasjonen orkestreres med Docker Compose: MySQL, Chroma, Phoenix (sporings-UI og OTLP), Spring-backend og en nginx-basert frontend-container. Det gir et helhetlig bilde av hvordan tjenestene snakker sammen uten å måtte sette opp alt manuelt hver gang.',
+          'Applikasjonen orkestreres med Docker Compose: PostgreSQL (pgvector), Phoenix (sporings-UI og OTLP), Spring-backend og en nginx-basert frontend-container. Det gir et helhetlig bilde av hvordan tjenestene snakker sammen uten å måtte sette opp alt manuelt hver gang.',
         ],
         icon: Container,
         category: 'devops',
-        badges: ['Docker Compose', 'MySQL', 'Chroma', 'Phoenix', 'nginx'],
-        size: 'full',
-        accentFrom: 'from-blue-500',
-        accentTo: 'to-indigo-600',
+        badges: ['Docker Compose', 'PostgreSQL', 'pgvector', 'Phoenix', 'nginx'],
       },
     ]
   }
@@ -201,59 +344,48 @@ const sections = computed<Section[]>(() => {
       heading: 'Why this stack?',
       paragraphs: [
         'Across this project I try to balance ease of use with functionality: choices that stay pleasant to work with day to day, while still providing enough structure and power to build something that can grow and evolve.',
-        'The items below reflect that — mature frameworks where they earn their place, and pragmatic building blocks where they save time without giving up what matters most.',
+        'The items below reflect that: mature frameworks where they earn their place, and pragmatic building blocks where they save time without giving up what matters most.',
       ],
       icon: Layers,
       category: 'all',
       badges: [],
-      size: 'full',
-      accentFrom: 'from-slate-400',
-      accentTo: 'to-slate-500',
     },
     {
       id: 'spring-ai',
       heading: 'Spring AI',
       paragraphs: [
         'Spring and Java are widely used in enterprise systems. Spring AI extends that ecosystem and makes it natural to wire language models, document flows, and vector storage into a Spring Boot service.',
-        'Spring AI is a relatively new project, and I chose it because I want to follow how AI integration on the JVM evolves — and to learn what is likely to become a common path for AI in Spring-based applications.',
-        'Chat targets OpenAI or Anthropic (Anthropic is available when an API key is configured). Embeddings for Chroma come from OpenAI; the default chat model and model selection are configuration-driven, with the client choosing from a small allow-listed set of supported models.',
+        'Spring AI is a relatively new project, and I chose it because I want to follow how AI integration on the JVM evolves, and to learn what is likely to become a common path for AI in Spring-based applications.',
+        'Chat targets OpenAI or Anthropic (Anthropic is available when an API key is configured). Embeddings are stored in PostgreSQL with pgvector (OpenAI); the default chat model and model selection are configuration-driven, with the client choosing from a small allow-listed set of supported models.',
       ],
       icon: BrainCircuit,
       category: 'ai',
       badges: ['Spring AI', 'OpenAI', 'Anthropic', 'Java 21'],
-      size: 'large',
-      accentFrom: 'from-violet-500',
-      accentTo: 'to-purple-600',
     },
     {
       id: 'backend',
       heading: 'Backend',
       paragraphs: [
-        'The backend runs on Spring Boot with Java 21. I use Spring Security and Spring Data JPA with MySQL for persistence, and Bucket4j for straightforward rate limiting where needed.',
+        'The backend runs on Spring Boot 3.5 with Java 21. I use Spring Security and Spring Data JPA with PostgreSQL for persistence, and Bucket4j for straightforward rate limiting where needed.',
+        'Apache OpenNLP is used where needed for text processing and sanitization (for example named-entity recognition).',
         'That combination provides a familiar batteries-included experience: solid documentation, strong typing, and tooling that fits well when you want the codebase to stay predictable over time.',
       ],
       icon: Server,
       category: 'backend',
-      badges: ['Spring Boot', 'Java 21', 'Spring Security', 'JPA', 'MySQL', 'Bucket4j'],
-      size: 'medium',
-      accentFrom: 'from-green-500',
-      accentTo: 'to-emerald-600',
+      badges: ['Spring Boot 3.5', 'Java 21', 'Spring Security', 'JPA', 'PostgreSQL', 'OpenNLP', 'Bucket4j'],
     },
     {
       id: 'rag',
       heading: 'RAG and vector storage',
       paragraphs: [
-        'For RAG-style features I use Chroma as the vector database, together with Spring AI\'s Chroma integration. Documents can be ingested using Spring AI\'s Tika-based document reader.',
+        "For RAG-style features I use PostgreSQL with pgvector as the vector database, together with Spring AI's pgvector integration. Documents can be ingested using Spring AI's Tika-based document reader.",
         'The RAG prompt is provider-specific and loaded from versioned templates, so OpenAI and Anthropic can be tuned slightly differently without duplicating the whole flow.',
         'At retrieval time the user question is expanded into Norwegian and English so documents in either language are easier to surface.',
-        'Chroma runs in Docker alongside the rest of the stack, which makes it easy to spin up a consistent environment locally and in deployment.',
+        'PostgreSQL with pgvector runs in Docker alongside the rest of the stack, which makes it easy to spin up a consistent environment locally and in deployment.',
       ],
       icon: Database,
       category: 'ai',
-      badges: ['Chroma', 'Tika', 'Embeddings', 'Docker'],
-      size: 'medium',
-      accentFrom: 'from-amber-500',
-      accentTo: 'to-orange-600',
+      badges: ['PostgreSQL', 'pgvector', 'Tika', 'Embeddings', 'Docker'],
     },
     {
       id: 'frontend',
@@ -265,9 +397,6 @@ const sections = computed<Section[]>(() => {
       icon: Globe,
       category: 'frontend',
       badges: ['Vue 3', 'Vite', 'TypeScript', 'Pinia', 'Tailwind 4', 'Reka UI'],
-      size: 'medium',
-      accentFrom: 'from-sky-500',
-      accentTo: 'to-blue-600',
     },
     {
       id: 'api',
@@ -279,422 +408,257 @@ const sections = computed<Section[]>(() => {
       icon: Workflow,
       category: 'integration',
       badges: ['OpenAPI', 'SpringDoc', 'Swagger', 'Orval'],
-      size: 'small',
-      accentFrom: 'from-teal-500',
-      accentTo: 'to-cyan-600',
     },
     {
       id: 'observability',
       heading: 'Observability',
       paragraphs: [
-        'The backend exposes Spring Boot Actuator, and Micrometer with OpenTelemetry exports traces to Arize Phoenix over OTLP (gRPC). That gives one place to inspect call chains and latency without scattering tracing logic across the codebase.',
-        'Phoenix runs as its own Docker Compose service (alongside the OTLP endpoint), so the same layout works locally as in a typical compose-based environment.',
+        'The backend exposes Spring Boot Actuator including health, info, and a Prometheus scrape endpoint for metrics. Micrometer with OpenTelemetry can export traces to Arize Phoenix over OTLP (gRPC) when enabled — typically to the Phoenix container in Compose — for deep traces and debugging.',
+        'LLM calls (tokens, estimated cost, latency) are also sent as PostHog `$ai_generation` events from the server when enabled, so product analytics and model usage can live alongside consent-gated frontend analytics in one tool.',
+        'RAG evaluation with Phoenix-hosted datasets and the in-app LLM-as-judge pipeline stay on Phoenix for now: PostHog’s built-in LLM eval and dataset workflows are not yet a mature replacement for that batch-style setup, so this is a deliberate two-phase split (traces + eval in Phoenix, aggregated LLM and usage data in PostHog).',
       ],
       icon: Eye,
       category: 'devops',
-      badges: ['Actuator', 'Micrometer', 'OpenTelemetry', 'Phoenix'],
-      size: 'small',
-      accentFrom: 'from-rose-500',
-      accentTo: 'to-pink-600',
+      badges: ['Actuator', 'Prometheus', 'Micrometer', 'OpenTelemetry', 'Phoenix', 'PostHog'],
     },
     {
       id: 'runtime',
       heading: 'Runtime and operations',
       paragraphs: [
-        'The application is orchestrated with Docker Compose: MySQL, Chroma, Phoenix (trace UI and OTLP), the Spring backend, and an nginx-served frontend container. That gives a coherent picture of how services talk to each other without manual setup every time.',
+        'The application is orchestrated with Docker Compose: PostgreSQL (pgvector), Phoenix (trace UI and OTLP), the Spring backend, and an nginx-served frontend container. That gives a coherent picture of how services talk to each other without manual setup every time.',
       ],
       icon: Container,
       category: 'devops',
-      badges: ['Docker Compose', 'MySQL', 'Chroma', 'Phoenix', 'nginx'],
-      size: 'full',
-      accentFrom: 'from-blue-500',
-      accentTo: 'to-indigo-600',
+      badges: ['Docker Compose', 'PostgreSQL', 'pgvector', 'Phoenix', 'nginx'],
     },
   ]
 })
 
-const filteredSections = computed(() =>
-  activeFilter.value === 'all'
-    ? sections.value
-    : sections.value.filter(
-        (s) => s.category === activeFilter.value || s.category === 'all',
-      ),
-)
-
-function gridClass(size: CardSize): string {
-  switch (size) {
-    case 'large':
-      return 'md:col-span-2'
-    case 'full':
-      return 'md:col-span-3'
-    case 'small':
-    case 'medium':
+function sectionIconWrapClass(cat: Category): string {
+  switch (cat) {
+    case 'ai':
+      return 'bg-blue-600 text-white shadow-md'
+    case 'backend':
+      return 'bg-emerald-600 text-white shadow-md'
+    case 'frontend':
+      return 'bg-sky-600 text-white shadow-md'
+    case 'integration':
+      return 'bg-teal-600 text-white shadow-md'
+    case 'devops':
+      return 'bg-rose-600 text-white shadow-md'
     default:
-      return 'md:col-span-1'
+      return 'bg-slate-700 text-white shadow-md'
   }
-}
-
-function cardDelay(index: number): number {
-  return 100 + index * 80
 }
 </script>
 
 <template>
-  <main class="min-h-screen pt-20 pb-16 bg-gradient-to-br from-slate-50 to-slate-100 relative overflow-hidden">
-    <!-- Background blobs -->
-    <div class="blob-container">
-      <div class="blob blob-1"></div>
-      <div class="blob blob-2"></div>
-      <div class="blob blob-3"></div>
-      <div class="blob blob-4"></div>
-    </div>
-
-    <!-- Gradient overlay -->
-    <div class="absolute inset-0 pointer-events-none">
-      <div
-        class="absolute top-0 left-0 w-full h-full"
-        style="
-          background: radial-gradient(
-              circle at 20% 80%,
-              rgba(59, 130, 246, 0.08) 0%,
-              transparent 50%
-            ),
-            radial-gradient(
-              circle at 80% 20%,
-              rgba(37, 99, 235, 0.08) 0%,
-              transparent 50%
-            );
-        "
-      ></div>
-    </div>
-
-    <div class="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-      <!-- Header -->
-      <div
-        v-motion
-        :initial="{ opacity: 0, y: 30 }"
-        :visible-once="{ opacity: 1, y: 0, transition: { duration: 600 } }"
-        class="text-center mb-12"
+  <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-20">
+    <div class="max-w-5xl mx-auto px-4 py-10 lg:py-14">
+      <header
+        class="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 p-8 shadow-lg shadow-slate-900/5 backdrop-blur-sm lg:p-10"
       >
-        <h1
-          class="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x"
-        >
-          {{ title }}
-        </h1>
-        <p class="mt-3 text-sm text-gray-500">{{ lastUpdated }}</p>
-      </div>
-
-      <!-- Architecture Hero Diagram -->
-      <div
-        v-motion
-        :initial="{ opacity: 0, y: 20 }"
-        :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: 200 } }"
-        class="mb-14"
-      >
-        <div class="hidden md:flex items-center justify-center gap-0">
-          <template v-for="(node, i) in heroNodes" :key="node.label">
-            <div
-              v-motion
-              :initial="{ opacity: 0, scale: 0.8 }"
-              :visible-once="{
-                opacity: 1,
-                scale: 1,
-                transition: { duration: 400, delay: 300 + i * 150 },
-              }"
-              class="hero-node group relative flex flex-col items-center gap-2"
-            >
-              <div
-                class="w-16 h-16 rounded-2xl bg-white shadow-lg border border-gray-100 flex items-center justify-center transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1 group-hover:border-blue-200"
-              >
-                <component
-                  :is="node.icon"
-                  class="w-7 h-7 text-blue-600 transition-colors duration-300 group-hover:text-blue-700"
-                />
-              </div>
-              <span
-                class="text-xs font-medium text-gray-600 whitespace-nowrap group-hover:text-blue-700 transition-colors duration-300"
-              >
-                {{ node.label }}
-              </span>
-            </div>
-            <div
-              v-if="i < heroNodes.length - 1"
-              class="connector-line mx-2 flex-shrink-0"
-            >
-              <svg width="60" height="20" viewBox="0 0 60 20" fill="none">
-                <line
-                  x1="0"
-                  y1="10"
-                  x2="48"
-                  y2="10"
-                  stroke="#93C5FD"
-                  stroke-width="2"
-                  stroke-dasharray="6 4"
-                  class="animate-dash"
-                />
-                <polygon points="48,5 58,10 48,15" fill="#3B82F6" />
-              </svg>
-            </div>
-          </template>
+        <div
+          class="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-100/60 blur-3xl"
+          aria-hidden="true"
+        />
+        <div
+          class="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-slate-200/40 blur-3xl"
+          aria-hidden="true"
+        />
+        <div class="relative flex flex-col gap-3">
+          <p
+            class="mb-1 inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-800"
+          >
+            <BookOpen class="h-4 w-4 shrink-0" aria-hidden="true" />
+            {{ headerBadge }}
+          </p>
+          <h1 class="text-3xl font-bold tracking-tight text-slate-900 lg:text-4xl">
+            {{ title }}
+          </h1>
+          <p class="max-w-2xl text-lg text-slate-600">
+            {{ headerSubtitle }}
+          </p>
+          <p class="text-sm text-slate-500">{{ lastUpdated }}</p>
         </div>
+      </header>
 
-        <!-- Mobile hero: vertical -->
-        <div class="flex md:hidden flex-col items-center gap-3">
-          <template v-for="(node, i) in heroNodes" :key="'m-' + node.label">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-12 h-12 rounded-xl bg-white shadow-md border border-gray-100 flex items-center justify-center"
-              >
-                <component :is="node.icon" class="w-5 h-5 text-blue-600" />
-              </div>
-              <span class="text-sm font-medium text-gray-700">{{ node.label }}</span>
-            </div>
-            <div v-if="i < heroNodes.length - 1">
-              <svg width="20" height="28" viewBox="0 0 20 28" fill="none">
-                <line
-                  x1="10"
-                  y1="0"
-                  x2="10"
-                  y2="18"
-                  stroke="#93C5FD"
-                  stroke-width="2"
-                  stroke-dasharray="4 3"
-                  class="animate-dash-v"
-                />
-                <polygon points="5,18 10,27 15,18" fill="#3B82F6" />
-              </svg>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- Filter Tabs -->
-      <div
-        v-motion
-        :initial="{ opacity: 0, y: 15 }"
-        :visible-once="{ opacity: 1, y: 0, transition: { duration: 500, delay: 400 } }"
-        class="flex flex-wrap justify-center gap-2 mb-10"
-      >
-        <button
-          v-for="tab in filterTabs"
-          :key="tab.id"
-          class="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 cursor-pointer"
-          :class="
-            activeFilter === tab.id
-              ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/25'
-              : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-700 hover:shadow-sm'
-          "
-          @click="activeFilter = tab.id"
+      <section ref="refContext" :class="['mt-10', clsContext]" aria-labelledby="ctx-heading">
+        <h2 id="ctx-heading" class="sr-only">{{ isNo ? 'Kontekst' : 'Context' }}</h2>
+        <div
+          class="rounded-2xl border border-slate-200 bg-white p-6 shadow-md transition-shadow hover:shadow-lg lg:p-8"
         >
-          {{ tab.label }}
-        </button>
-      </div>
-
-      <!-- Bento Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <section
-          v-for="(section, idx) in filteredSections"
-          :key="section.id"
-          v-motion
-          :initial="{ opacity: 0, y: 30 }"
-          :visible-once="{
-            opacity: 1,
-            y: 0,
-            transition: { duration: 500, delay: cardDelay(idx) },
-          }"
-          :class="gridClass(section.size)"
-          class="bento-card group rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-blue-200/60"
-        >
-          <!-- Accent gradient bar -->
-          <div
-            class="h-1 bg-gradient-to-r"
-            :class="[section.accentFrom, section.accentTo]"
-          ></div>
-
-          <div class="p-6">
-            <!-- Card header -->
-            <div class="flex items-center gap-3 mb-4">
-              <div
-                class="w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
-                :class="[section.accentFrom, section.accentTo]"
-              >
-                <component :is="section.icon" class="w-5 h-5 text-white" />
-              </div>
-              <h2 class="text-lg font-semibold text-gray-900">
-                {{ section.heading }}
-              </h2>
+          <div class="flex items-start gap-4">
+            <div
+              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md"
+            >
+              <BrainCircuit class="h-6 w-6" aria-hidden="true" />
             </div>
-
-            <!-- Card body -->
-            <div class="space-y-3 text-sm leading-relaxed text-gray-600 mb-5">
-              <p v-for="(p, pIdx) in section.paragraphs" :key="pIdx">{{ p }}</p>
-            </div>
-
-            <!-- Badges -->
-            <div v-if="section.badges.length" class="flex flex-wrap gap-2">
-              <Badge
-                v-for="badge in section.badges"
-                :key="badge"
-                variant="secondary"
-                class="text-xs bg-gradient-to-r from-blue-50 to-slate-50 text-blue-700 border border-blue-100 hover:border-blue-300 transition-colors duration-200"
-              >
-                {{ badge }}
-              </Badge>
+            <div class="space-y-3 text-slate-700">
+              <p class="text-base leading-relaxed lg:text-lg">
+                {{ contextParagraph }}
+              </p>
+              <p>
+                <RouterLink
+                  to="/bachelor"
+                  class="text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                >
+                  {{ contextLinkLabel }}
+                </RouterLink>
+              </p>
             </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
+
+      <section ref="refPillars" :class="['mt-12', clsPillars]" aria-labelledby="pillars-heading">
+        <div class="mb-6 text-center lg:text-left">
+          <h2 id="pillars-heading" class="text-2xl font-bold text-slate-900">
+            {{ isNo ? 'Hovedspor i løsningen' : 'Main tracks in the solution' }}
+          </h2>
+          <p class="mt-1 text-slate-600">
+            {{ isNo ? 'Tre innganger som speiler kjernen i arkitekturen.' : 'Three entry points that mirror the core architecture.' }}
+          </p>
+        </div>
+        <div class="grid gap-5 md:grid-cols-3">
+          <RouterLink
+            v-for="card in pillarCards"
+            :key="card.title"
+            :to="card.to"
+            :class="[
+              'group relative flex flex-col rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:hover:translate-y-0',
+              card.accentBorder,
+              card.accentRing,
+            ]"
+          >
+            <div
+              :class="[
+                'mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+                card.iconBg,
+              ]"
+            >
+              <component :is="card.icon" class="h-6 w-6" aria-hidden="true" />
+            </div>
+            <h3 class="text-lg font-semibold text-slate-900">{{ card.title }}</h3>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
+              {{ card.body }}
+            </p>
+            <span
+              :class="[
+                'mt-4 inline-flex items-center text-sm font-semibold group-hover:gap-1',
+                card.ctaClass,
+              ]"
+            >
+              {{ card.cta }}
+              <span class="transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>
+            </span>
+          </RouterLink>
+        </div>
+      </section>
+
+      <section ref="refSections" :class="['mt-14', clsSections]" aria-labelledby="sections-heading">
+        <h2 id="sections-heading" class="text-2xl font-bold text-slate-900">
+          {{ sectionsHeading }}
+        </h2>
+        <p class="mt-1 text-slate-600">{{ sectionsIntro }}</p>
+        <div class="mt-6 flex flex-col gap-5">
+          <article
+            v-for="section in sections"
+            :key="section.id"
+            class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md lg:p-6"
+          >
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <div
+                :class="[
+                  'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+                  sectionIconWrapClass(section.category),
+                ]"
+              >
+                <component :is="section.icon" class="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <h3 class="text-lg font-semibold text-slate-900">{{ section.heading }}</h3>
+                <div class="mt-3 space-y-3 text-sm leading-relaxed text-slate-600">
+                  <p v-for="(p, pIdx) in section.paragraphs" :key="pIdx">{{ p }}</p>
+                </div>
+                <div v-if="section.badges.length" class="mt-4 flex flex-wrap gap-2">
+                  <Badge
+                    v-for="badge in section.badges"
+                    :key="badge"
+                    variant="secondary"
+                    class="text-xs border border-slate-200 bg-slate-50 text-slate-800 hover:border-blue-200 hover:bg-blue-50/80"
+                  >
+                    {{ badge }}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section ref="refStack" :class="['mt-14', clsStack]" aria-labelledby="stack-heading">
+        <h2 id="stack-heading" class="text-2xl font-bold text-slate-900">{{ stackHeading }}</h2>
+        <div class="mt-6 grid gap-5 lg:grid-cols-2">
+          <div
+            class="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-md"
+          >
+            <div class="mb-4 flex items-center gap-2 text-slate-900">
+              <MonitorSmartphone class="h-5 w-5 text-blue-600" aria-hidden="true" />
+              <h3 class="text-lg font-semibold">{{ isNo ? 'Frontend' : 'Frontend' }}</h3>
+            </div>
+            <ul class="space-y-2 text-sm text-slate-700">
+              <li v-for="line in stackFront" :key="line" class="flex gap-2">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" aria-hidden="true" />
+                <span>{{ line }}</span>
+              </li>
+            </ul>
+          </div>
+          <div
+            class="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-md"
+          >
+            <div class="mb-4 flex items-center gap-2 text-slate-900">
+              <Server class="h-5 w-5 text-emerald-600" aria-hidden="true" />
+              <h3 class="text-lg font-semibold">{{ isNo ? 'Backend' : 'Backend' }}</h3>
+            </div>
+            <ul class="space-y-2 text-sm text-slate-700">
+              <li v-for="line in stackBack" :key="line" class="flex gap-2">
+                <span
+                  class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
+                  aria-hidden="true"
+                />
+                <span>{{ line }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <footer
+        ref="refFooter"
+        :class="[
+          'mt-14 flex flex-col gap-4 border-t border-slate-200 pt-8 sm:flex-row sm:items-center sm:justify-between',
+          clsFooter,
+        ]"
+      >
+        <p class="text-sm text-slate-600">
+          {{ footerText }}
+        </p>
+        <div class="flex flex-wrap gap-2 sm:justify-end">
+          <RouterLink
+            to="/"
+            class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          >
+            {{ footerHome }}
+          </RouterLink>
+          <RouterLink
+            to="/bachelor"
+            class="inline-flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-5 py-2.5 text-sm font-semibold text-blue-900 shadow-sm transition hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          >
+            {{ footerBachelor }}
+          </RouterLink>
+        </div>
+      </footer>
     </div>
-  </main>
+  </div>
 </template>
-
-<style scoped>
-@keyframes gradient-x {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-.animate-gradient-x {
-  background-size: 200% 200%;
-  animation: gradient-x 3s ease-in-out infinite;
-}
-
-/* Animated dashes flowing along the connector */
-@keyframes dash-flow {
-  to {
-    stroke-dashoffset: -20;
-  }
-}
-
-@keyframes dash-flow-v {
-  to {
-    stroke-dashoffset: -14;
-  }
-}
-
-.animate-dash {
-  animation: dash-flow 1.2s linear infinite;
-}
-
-.animate-dash-v {
-  animation: dash-flow-v 1.2s linear infinite;
-}
-
-/* Background blobs */
-.blob-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 1;
-}
-
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(50px);
-  animation: float 8s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(20px, -30px) scale(1.1);
-  }
-  50% {
-    transform: translate(-15px, -20px) scale(0.9);
-  }
-  75% {
-    transform: translate(-25px, 10px) scale(1.05);
-  }
-}
-
-.blob-1 {
-  width: 280px;
-  height: 280px;
-  background: radial-gradient(
-    circle,
-    rgba(59, 130, 246, 0.15) 0%,
-    rgba(37, 99, 235, 0.1) 50%,
-    transparent 70%
-  );
-  top: 5%;
-  left: 5%;
-  animation-duration: 9s;
-}
-
-.blob-2 {
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(
-    circle,
-    rgba(96, 165, 250, 0.12) 0%,
-    rgba(59, 130, 246, 0.08) 50%,
-    transparent 70%
-  );
-  top: 50%;
-  right: 8%;
-  animation-delay: 2s;
-  animation-duration: 11s;
-}
-
-.blob-3 {
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(
-    circle,
-    rgba(147, 197, 253, 0.14) 0%,
-    rgba(96, 165, 250, 0.1) 50%,
-    transparent 70%
-  );
-  bottom: 15%;
-  left: 20%;
-  animation-delay: 4s;
-  animation-duration: 10s;
-}
-
-.blob-4 {
-  width: 180px;
-  height: 180px;
-  background: radial-gradient(
-    circle,
-    rgba(37, 99, 235, 0.12) 0%,
-    rgba(30, 64, 175, 0.08) 50%,
-    transparent 70%
-  );
-  top: 25%;
-  right: 25%;
-  animation-delay: 3s;
-  animation-duration: 7s;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .blob {
-    filter: blur(35px);
-  }
-
-  .blob-1,
-  .blob-3 {
-    width: 180px;
-    height: 180px;
-  }
-
-  .blob-2,
-  .blob-4 {
-    width: 140px;
-    height: 140px;
-  }
-}
-</style>

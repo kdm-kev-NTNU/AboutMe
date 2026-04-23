@@ -11,7 +11,7 @@ import {
   adminDocumentsReseed,
   adminDocumentsUpload,
   adminDocumentsUploadBatch,
-  type ChromaCollectionsResponse,
+  type VectorStoreInfoResponse,
   type DocumentListEntry,
   type IngestionResult,
 } from '@/api/generated/portfolio'
@@ -24,7 +24,7 @@ const busy = ref(false)
 const status = ref('')
 const error = ref('')
 const documents = ref<DocumentListEntry[]>([])
-const chromaInfo = ref<ChromaCollectionsResponse | null>(null)
+const chromaInfo = ref<VectorStoreInfoResponse | null>(null)
 
 const uploadProgress = ref('')
 const batchResults = ref<IngestionResult[]>([])
@@ -60,7 +60,7 @@ async function loadData() {
       throw new Error(formatHttpError(dRes.status, dRes.data))
     }
     if (cRes.status !== 200) {
-      throw new Error(`Chroma status feilet (${cRes.status})`)
+      throw new Error(`Vektorlagring status feilet (${cRes.status})`)
     }
     documents.value = dRes.data
     chromaInfo.value = cRes.data
@@ -273,16 +273,16 @@ onMounted(() => {
     <main class="mx-auto max-w-xl px-4 pt-8">
       <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Document pipeline</h1>
       <p class="text-sm text-gray-600 mb-6 leading-relaxed">
-        Last opp og indekser dokumenter til ChromaDB (Spring AI). Krever admin-innlogging. For å inspisere
+        Last opp og indekser dokumenter til PostgreSQL med pgvector (Spring AI). Krever admin-innlogging. For å inspisere
         chunks og metadata, gå til
         <RouterLink to="/admin/chunks" class="text-blue-600 hover:underline">Chunk viewer</RouterLink>.
       </p>
 
-      <!-- Chroma summary card -->
+      <!-- Vector store summary card -->
       <section
         class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-[0_1px_3px_rgb(0_0_0/0.06)]"
       >
-        <h2 class="text-sm font-semibold text-gray-900 mb-3">ChromaDB</h2>
+        <h2 class="text-sm font-semibold text-gray-900 mb-3">PostgreSQL / pgvector</h2>
         <div v-if="chromaInfo" class="text-sm text-gray-700 space-y-1">
           <p>
             <span class="font-medium">Aktiv collection:</span>
@@ -404,14 +404,14 @@ onMounted(() => {
                   class="bg-white"
                   :class="resultRowClass(row)"
                 >
-                  <td class="border border-gray-200 px-2 py-2 align-top">{{ row.filename || '—' }}</td>
+                  <td class="border border-gray-200 px-2 py-2 align-top">{{ row.filename || '–' }}</td>
                   <td class="border border-gray-200 px-2 py-2 align-top">{{ row.chunksIngested ?? 0 }}</td>
                   <td class="border border-gray-200 px-2 py-2 align-top">
                     <span v-if="row.skipped">Hoppet over</span>
                     <span v-else-if="(row.chunksIngested ?? 0) > 0">OK</span>
-                    <span v-else>—</span>
+                    <span v-else>–</span>
                   </td>
-                  <td class="border border-gray-200 px-2 py-2 align-top text-xs">{{ row.message || '—' }}</td>
+                  <td class="border border-gray-200 px-2 py-2 align-top text-xs">{{ row.message || '–' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -523,9 +523,9 @@ onMounted(() => {
                   class="bg-white"
                   :class="resultRowClass(row)"
                 >
-                  <td class="border border-gray-200 px-2 py-2 align-top">{{ row.filename || '—' }}</td>
+                  <td class="border border-gray-200 px-2 py-2 align-top">{{ row.filename || '–' }}</td>
                   <td class="border border-gray-200 px-2 py-2 align-top">{{ row.chunksIngested ?? 0 }}</td>
-                  <td class="border border-gray-200 px-2 py-2 align-top text-xs">{{ row.message || '—' }}</td>
+                  <td class="border border-gray-200 px-2 py-2 align-top text-xs">{{ row.message || '–' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -556,7 +556,7 @@ onMounted(() => {
                 </td>
                 <td class="border border-gray-200 px-2 py-2 align-top">{{ d.chunkCount }}</td>
                 <td class="border border-gray-200 px-2 py-2 align-top text-gray-600">
-                  {{ d.lastIngestedAt || '—' }}
+                  {{ d.lastIngestedAt || '–' }}
                 </td>
                 <td class="border border-gray-200 px-2 py-2 align-top">
                   <button

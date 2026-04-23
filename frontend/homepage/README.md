@@ -22,10 +22,10 @@ E2E against a production build: `npm run build` then `npm run test:e2e`.
 
 ## OpenAPI client (Orval)
 
-Generated client lives under `src/api/generated/` — do not edit by hand.
+Generated client lives under `src/api/generated/`. Do not edit by hand.
 
 1. Run the backend on **8080** (see root README).
-2. `npm run api:pull` — optional env `OPENAPI_URL` (default `http://localhost:8080/v3/api-docs`, see root `.env.example`).
+2. `npm run api:pull`: optional env `OPENAPI_URL` (default `http://localhost:8080/v3/api-docs`, see root `.env.example`).
 3. `npm run api:generate`.
 
 HTTP calls use [`src/api/orval-mutator.ts`](src/api/orval-mutator.ts): `/api` prefix and `Authorization: Basic` when the auth store has credentials after login.
@@ -33,3 +33,11 @@ HTTP calls use [`src/api/orval-mutator.ts`](src/api/orval-mutator.ts): `/api` pr
 ## Configuration
 
 Vite and tooling: [https://vite.dev/config/](https://vite.dev/config/). Type-check for `.vue` files uses `vue-tsc` rather than plain `tsc`.
+
+### Analytics (PostHog)
+
+- Anonymous, consented-only tracking; EU ingest host by default.
+- Enable by setting `VITE_POSTHOG_ENABLED=true` and `VITE_POSTHOG_KEY=<phc_xxx>` (optional `VITE_POSTHOG_HOST`, default `https://eu.i.posthog.com`).
+- Initialization is deferred until the user accepts analytics in the cookie banner/settings modal. Pageviews and events are ignored until consent is granted.
+- Session replay is disabled by default. Do not identify users; only anonymous events are sent.
+- Server-side LLM analytics (`$ai_generation`): configure Spring with `POSTHOG_ENABLED`, `POSTHOG_API_KEY`, and optional `POSTHOG_HOST` (see repo root `.env.example`). Same PostHog project as the frontend is fine for unified dashboards.

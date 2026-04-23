@@ -1,22 +1,18 @@
 package com.kevinmazali.portfolio.service;
 
-import com.kevinmazali.portfolio.config.PortfolioChromaProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.SanitizerProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
-import com.kevinmazali.portfolio.exception.ChromaFeatureDisabledException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.ai.chroma.vectorstore.ChromaApi;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.chroma.autoconfigure.ChromaVectorStoreProperties;
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreProperties;
 import org.springframework.boot.ApplicationArguments;
-import org.springframework.core.env.Environment;
-import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.file.Path;
 import java.util.Collections;
@@ -24,9 +20,8 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,60 +31,39 @@ class DocumentIngestionServiceTest {
   @Mock
   private VectorStore vectorStore;
   @Mock
-  private ObjectProvider<ChromaApi> chromaApiProvider;
-  @Mock
-  private Environment environment;
-  @Mock
-  private ChromaVectorStoreProperties chromaStoreProperties;
+  private JdbcTemplate jdbcTemplate;
   @Mock
   private VectorStoreProperties vectorStoreProperties;
   @Mock
-  private PortfolioChromaProperties portfolioChromaProperties;
-  @Mock
-  private ObjectProvider<PiiSanitizerService> piiSanitizerProvider;
-  @Mock
   private ApplicationArguments applicationArguments;
+  @Mock
+  private org.springframework.beans.factory.ObjectProvider<PiiSanitizerService> piiSanitizerProvider;
 
   private DocumentIngestionService service;
+  private final PgVectorStoreProperties pgVectorStoreProperties = new PgVectorStoreProperties();
 
   @BeforeEach
   void setUp() {
     SanitizerProperties sanitizerProperties = new SanitizerProperties();
     sanitizerProperties.setEnabled(false);
+    pgVectorStoreProperties.setSchemaName("public");
+    pgVectorStoreProperties.setTableName("vector_store");
     service = new DocumentIngestionService(
         vectorStore,
-        chromaApiProvider,
-        environment,
-        chromaStoreProperties,
+        jdbcTemplate,
+        new ObjectMapper(),
+        pgVectorStoreProperties,
         vectorStoreProperties,
-        portfolioChromaProperties,
         new NoiseCleaner(),
         piiSanitizerProvider,
         sanitizerProperties);
   }
 
   @Test
-  void runSkipsWhenChromaDisabled() {
-    when(portfolioChromaProperties.isEnabled()).thenReturn(false);
+  void runTouchesVectorStore() {
+    when(jdbcTemplate.queryForObject(contains("COUNT(*)"), eq(Long.class))).thenReturn(0L);
     service.run(applicationArguments);
-    verify(chromaApiProvider, never()).getIfAvailable();
-  }
-
-  @Test
-  void describeCollectionsThrowsWhenChromaDisabled() {
-    when(portfolioChromaProperties.isEnabled()).thenReturn(false);
-    assertThrows(ChromaFeatureDisabledException.class, () -> service.describeCollections());
-  }
-
-  @Test
-  void describeCollectionsThrowsWhenChromaApiBeanMissing() {
-    when(portfolioChromaProperties.isEnabled()).thenReturn(true);
-    when(chromaApiProvider.getIfAvailable()).thenReturn(null);
-    when(environment.getProperty("spring.ai.vectorstore.chroma.client.host", "")).thenReturn("localhost");
-    when(environment.getProperty("spring.ai.vectorstore.chroma.client.port", Integer.class, 8100)).thenReturn(8100);
-
-    IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.describeCollections());
-    assertTrue(ex.getMessage().contains("ChromaApi bean is missing"));
+    verify(vectorStore).add(Collections.emptyList());
   }
 
   @Test
@@ -111,7 +85,7 @@ class DocumentIngestionServiceTest {
     List<String> many = IntStream.range(0, 101).mapToObj(i -> "a.txt").toList();
     var results = service.ingestFromPaths(many, false);
     assertEquals(1, results.size());
-    assertTrue(results.get(0).message().contains("Too many paths"));
+    assertEquals(true, results.get(0).message().contains("Too many paths"));
   }
 
   @Test
@@ -127,7 +101,7 @@ class DocumentIngestionServiceTest {
     when(vectorStoreProperties.getDocumentsToLoadDir()).thenReturn("file:./data/");
     var results = service.ingestFromPaths(List.of("../secret.txt"), false);
     assertEquals(1, results.size());
-    assertTrue(results.get(0).message().contains("Invalid path"));
+    assertEquals(true, results.get(0).message().contains("Invalid path"));
   }
 
   @Test
@@ -135,7 +109,7 @@ class DocumentIngestionServiceTest {
     when(vectorStoreProperties.getDocumentsToLoadDir()).thenReturn("file:./data/");
     var results = service.ingestFromPaths(List.of("x.exe"), false);
     assertEquals(1, results.size());
-    assertTrue(results.get(0).message().contains("Unsupported file type"));
+    assertEquals(true, results.get(0).message().contains("Unsupported file type"));
   }
 
   @Test
@@ -153,13 +127,13 @@ class DocumentIngestionServiceTest {
   @Test
   void listAvailableFilesReturnsEmptyWhenDirBlank() throws Exception {
     when(vectorStoreProperties.getDocumentsToLoadDir()).thenReturn("  ");
-    assertTrue(service.listAvailableFiles().isEmpty());
+    assertEquals(true, service.listAvailableFiles().isEmpty());
   }
 
   @Test
   void listAvailableFilesReturnsEmptyForNonFileBaseUrl() throws Exception {
     when(vectorStoreProperties.getDocumentsToLoadDir()).thenReturn("http://example.invalid/docs/");
-    assertTrue(service.listAvailableFiles().isEmpty());
+    assertEquals(true, service.listAvailableFiles().isEmpty());
   }
 
   @Test
@@ -170,7 +144,7 @@ class DocumentIngestionServiceTest {
 
   @Test
   void ingestMultipartRejectsEmptyUpload() throws Exception {
-    var file = new MockMultipartFile("file", "a.txt", "text/plain", new byte[0]);
+    var file = new org.springframework.mock.web.MockMultipartFile("file", "a.txt", "text/plain", new byte[0]);
     var r = service.ingestMultipart(file, null, false);
     assertEquals("Empty file", r.message());
   }

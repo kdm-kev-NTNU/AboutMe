@@ -365,11 +365,11 @@ onMounted(() => {
                 @click="loadHistory(entry.name ?? '', entry.language ?? undefined, entry.provider ?? undefined)"
               >
                 <td class="border border-gray-200 px-3 py-2 font-medium">{{ entry.name }}</td>
-                <td class="border border-gray-200 px-3 py-2 text-gray-600">{{ entry.language ?? '—' }}</td>
-                <td class="border border-gray-200 px-3 py-2 text-gray-600">{{ entry.provider ?? '—' }}</td>
+                <td class="border border-gray-200 px-3 py-2 text-gray-600">{{ entry.language ?? '–' }}</td>
+                <td class="border border-gray-200 px-3 py-2 text-gray-600">{{ entry.provider ?? '–' }}</td>
                 <td class="border border-gray-200 px-3 py-2 font-mono text-xs">v{{ entry.activeVersion }}</td>
                 <td class="border border-gray-200 px-3 py-2 text-xs text-gray-600">
-                  {{ entry.createdAt?.slice(0, 19) ?? '—' }}
+                  {{ entry.createdAt?.slice(0, 19) ?? '–' }}
                 </td>
                 <td class="border border-gray-200 px-3 py-2">
                   <div class="flex gap-2">
@@ -515,10 +515,10 @@ onMounted(() => {
                     <span v-else class="text-xs text-gray-500">inaktiv</span>
                   </td>
                   <td class="border border-gray-200 px-3 py-2 text-xs text-gray-700 max-w-xs truncate">
-                    {{ v.description || '—' }}
+                    {{ v.description || '–' }}
                   </td>
                   <td class="border border-gray-200 px-3 py-2 text-xs text-gray-600">
-                    {{ v.createdAt?.slice(0, 19) ?? '—' }}
+                    {{ v.createdAt?.slice(0, 19) ?? '–' }}
                   </td>
                   <td class="border border-gray-200 px-3 py-2">
                     <button
@@ -530,7 +530,7 @@ onMounted(() => {
                     >
                       Aktiver
                     </button>
-                    <span v-else class="text-xs text-gray-400">—</span>
+                    <span v-else class="text-xs text-gray-400">–</span>
                   </td>
                 </tr>
                 <tr v-if="expandedVersionId === v.id" class="bg-gray-50">
