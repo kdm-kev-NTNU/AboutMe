@@ -4,10 +4,15 @@ import com.kevinmazali.portfolio.config.PostHogProperties;
 import com.kevinmazali.portfolio.model.ApiError;
 import com.kevinmazali.portfolio.model.ChatModelOption;
 import com.kevinmazali.portfolio.model.experiment.CreateEvalDatasetRequest;
+import com.kevinmazali.portfolio.model.experiment.DatasetGenerationStartResponse;
+import com.kevinmazali.portfolio.model.experiment.DatasetGenerationStatus;
+import com.kevinmazali.portfolio.model.experiment.DatasetGenerationStatusResponse;
 import com.kevinmazali.portfolio.model.experiment.EvalDatasetSummary;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunSummaryResponse;
+import com.kevinmazali.portfolio.model.experiment.GenerateDatasetRequest;
 import com.kevinmazali.portfolio.model.experiment.RunExperimentRequest;
 import com.kevinmazali.portfolio.service.ChatModelCatalog;
+import com.kevinmazali.portfolio.service.DatasetGenerationService;
 import com.kevinmazali.portfolio.service.ExperimentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ExperimentController {
 
   private final ExperimentService experimentService;
+  private final DatasetGenerationService datasetGenerationService;
   private final ChatModelCatalog chatModelCatalog;
   private final PostHogProperties postHogProperties;
 
@@ -59,6 +65,30 @@ public class ExperimentController {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(new ApiError("Delete failed: " + e.getMessage()));
     }
+  }
+
+  @Operation(summary = "Generate eval dataset from vector chunks (async QRA)")
+  @PostMapping("/datasets/generate")
+  public ResponseEntity<?> generateDataset(@RequestBody GenerateDatasetRequest body) {
+    try {
+      long id = datasetGenerationService.startGeneration(body);
+      return ResponseEntity.accepted()
+          .body(new DatasetGenerationStartResponse(id, DatasetGenerationStatus.RUNNING));
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.badRequest().body(new ApiError(e.getMessage()));
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(new ApiError(e.getMessage()));
+    }
+  }
+
+  @Operation(summary = "Poll async dataset generation status")
+  @GetMapping("/datasets/generate/{id}/status")
+  public ResponseEntity<?> generationStatus(@PathVariable long id) {
+    return datasetGenerationService
+        .getGenerationStatus(id)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   @Operation(summary = "Create eval dataset")

@@ -84,7 +84,10 @@ function setupFetchForExperimentsAndHistory() {
           headers: headersJson,
         })
       }
-      if (url.includes('/api/admin/tools/experiments/datasets')) {
+      if (url.includes('/api/admin/tools/documents')) {
+        return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+      }
+      if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
         return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
       }
       if (url.includes('/api/admin/tools/experiments/models')) {

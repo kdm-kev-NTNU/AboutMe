@@ -105,6 +105,10 @@ portfolio:
       enabled: true
       capacity: 10
       window-seconds: 60
+    dataset-generate-rate-limit:
+      enabled: true
+      capacity: 5
+      window-seconds: 300
   chat:
     default-model-id: gpt-5.4-mini
   retrieval:

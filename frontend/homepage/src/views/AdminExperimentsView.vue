@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -44,7 +44,20 @@ type RunDetail = RunSummary & {
   results: ExperimentResultRow[]
 }
 
+type DocumentEntry = { documentId: string; filename: string; chunkCount: number; lastIngestedAt: string }
+
+type GenerationStatus = {
+  id: number
+  status: string
+  questionsGenerated: number | null
+  resultDatasetId: string | null
+  errorMessage: string | null
+  createdAt: string | null
+  completedAt: string | null
+}
+
 const API = '/api/admin/tools/experiments'
+const DOC_API = '/api/admin/tools/documents'
 
 function authHeaders(): HeadersInit {
   const h: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -64,6 +77,21 @@ const posthogIngestHost = ref('')
 const datasets = ref<EvalDatasetSummary[]>([])
 const datasetsLoading = ref(false)
 const datasetsError = ref('')
+
+const documents = ref<DocumentEntry[]>([])
+const documentsLoading = ref(false)
+const documentsError = ref('')
+
+const genName = ref('')
+const genModel = ref('')
+const genDocumentId = ref('') /** empty = alle dokumenter */
+const genQuestionsPerChunk = ref('1')
+const genMaxQuestions = ref('')
+const genSeed = ref('')
+const genBusy = ref(false)
+const genMessage = ref('')
+const genError = ref('')
+const genPollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 const models = ref<ChatModelOption[]>([])
 const modelsLoading = ref(false)
@@ -179,10 +207,104 @@ async function loadModels() {
     if (ok && Array.isArray(data)) {
       models.value = data
       if (!generatorModel.value && data.length) generatorModel.value = data[0].id
+      if (!genModel.value && data.length) genModel.value = data[0].id
       syncEvaluatorToCrossFamily()
     }
   } finally {
     modelsLoading.value = false
+  }
+}
+
+async function loadDocuments() {
+  documentsLoading.value = true
+  documentsError.value = ''
+  try {
+    const { ok, status, data } = await fetchJson<DocumentEntry[] | { error?: string }>(DOC_API)
+    if (!ok) {
+      documentsError.value =
+        typeof (data as { error?: string }).error === 'string'
+          ? (data as { error: string }).error
+          : `Kunne ikke hente dokumenter (${status})`
+      documents.value = []
+      return
+    }
+    documents.value = Array.isArray(data) ? data : []
+  } finally {
+    documentsLoading.value = false
+  }
+}
+
+function stopGenPoll() {
+  if (genPollTimer.value) clearInterval(genPollTimer.value)
+  genPollTimer.value = null
+}
+
+function startGenPoll(generationId: number) {
+  stopGenPoll()
+  genPollTimer.value = setInterval(async () => {
+    const { ok, data } = await fetchJson<GenerationStatus>(`${API}/datasets/generate/${generationId}/status`)
+    if (!ok || !data) return
+    if (data.questionsGenerated != null) {
+      genMessage.value = `Genererer… (${data.questionsGenerated} spørsmål hittil)`
+    }
+    if (data.status === 'COMPLETED') {
+      stopGenPoll()
+      genBusy.value = false
+      genMessage.value = `Datasett opprettet (id ${data.resultDatasetId ?? ''}).`
+      await loadDatasets()
+      if (data.resultDatasetId) selectedDatasetId.value = data.resultDatasetId
+    } else if (data.status === 'FAILED') {
+      stopGenPoll()
+      genBusy.value = false
+      genError.value = data.errorMessage || 'Generering feilet.'
+    }
+  }, 2000)
+}
+
+async function startDatasetGeneration() {
+  genError.value = ''
+  genMessage.value = ''
+  if (!genName.value.trim()) {
+    genError.value = 'Angi et navn på datasettet.'
+    return
+  }
+  if (!genModel.value) {
+    genError.value = 'Velg en modell for generering.'
+    return
+  }
+  const qpc = Number.parseInt(genQuestionsPerChunk.value.trim(), 10)
+  const body: Record<string, unknown> = {
+    name: genName.value.trim(),
+    description: '',
+    documentId: genDocumentId.value.trim() || null,
+    model: genModel.value,
+    questionsPerChunk: Number.isFinite(qpc) && qpc > 0 ? qpc : 1,
+  }
+  const maxQ = genMaxQuestions.value.trim()
+  if (maxQ !== '') {
+    const n = Number.parseInt(maxQ, 10)
+    if (Number.isFinite(n) && n > 0) body.maxQuestions = n
+  }
+  const seedStr = genSeed.value.trim()
+  if (seedStr !== '') {
+    const s = Number.parseInt(seedStr, 10)
+    if (Number.isFinite(s)) body.seed = s
+  }
+  genBusy.value = true
+  try {
+    const { ok, status, data } = await fetchJson<{ generationId?: number; status?: string; error?: string }>(
+      `${API}/datasets/generate`,
+      { method: 'POST', body: JSON.stringify(body) },
+    )
+    if (!ok) {
+      genError.value = (data as { error?: string })?.error || `Start feilet (${status})`
+      return
+    }
+    const id = (data as { generationId: number }).generationId
+    genMessage.value = `QRA-generering startet (jobb #${id}). Poller status…`
+    startGenPoll(id)
+  } finally {
+    if (!genPollTimer.value) genBusy.value = false
   }
 }
 
@@ -297,8 +419,14 @@ onMounted(() => {
   auth.restore()
   loadConfig()
   loadDatasets()
+  loadDocuments()
   loadModels()
   loadRuns()
+})
+
+onUnmounted(() => {
+  if (pollTimer.value) clearInterval(pollTimer.value)
+  stopGenPoll()
 })
 </script>
 
@@ -345,6 +473,7 @@ onMounted(() => {
         <div class="flex flex-wrap gap-2 items-center mb-2">
           <select
             v-model="selectedDatasetId"
+            data-testid="exp-dataset-select"
             class="border border-gray-300 rounded-md px-2 py-1.5 text-sm min-w-[14rem] bg-white"
             :disabled="datasetsLoading"
           >
@@ -381,12 +510,97 @@ onMounted(() => {
       </section>
 
       <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)]">
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">1b. Generer eval-datasett (QRA)</h2>
+        <p class="text-sm text-gray-600 mb-4 max-w-3xl leading-relaxed">
+          Opprett syntetiske spørsmål og referansesvar fra tekst-chunks i pgvector (samme idé som Piscada QRA-pipeline): velg modell,
+          filtrer valgfritt på ett dokument, og kjør asynkron generering. Når jobben er ferdig, dukker datasettet opp i listen over.
+        </p>
+        <div class="grid gap-3 sm:grid-cols-2 max-w-2xl">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-700 mb-1">Datasett-navn</label>
+            <input
+              v-model="genName"
+              type="text"
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+              placeholder="f.eks. portfolio-eval-v1"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Modell (generering)</label>
+            <select
+              v-model="genModel"
+              data-testid="gen-model-select"
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white"
+              :disabled="modelsLoading"
+            >
+              <option v-for="m in models" :key="'gen-' + m.id" :value="m.id">{{ m.label }} ({{ m.id }})</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Dokument (valgfritt)</label>
+            <select
+              v-model="genDocumentId"
+              data-testid="gen-doc-select"
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white"
+              :disabled="documentsLoading"
+            >
+              <option value="">Alle dokumenter</option>
+              <option v-for="d in documents" :key="d.documentId" :value="d.documentId">
+                {{ d.filename }} ({{ d.chunkCount }} chunks)
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Spørsmål per chunk</label>
+            <input v-model="genQuestionsPerChunk" type="number" min="1" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Maks antall spørsmål totalt (valgfritt)</label>
+            <input
+              v-model="genMaxQuestions"
+              type="number"
+              min="1"
+              placeholder="Standard: alle mulige fra chunks"
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+            />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-700 mb-1">Seed (valgfritt, reproduserbar shuffle)</label>
+            <input v-model="genSeed" type="number" class="w-full max-w-xs border border-gray-300 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button
+            type="button"
+            class="text-sm font-medium px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+            @click="startDatasetGeneration"
+            :disabled="genBusy || modelsLoading"
+          >
+            Generer datasett
+          </button>
+          <button
+            type="button"
+            class="text-sm px-3 py-2 rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+            @click="loadDocuments"
+            :disabled="documentsLoading"
+          >
+            Oppdater dokumenter
+          </button>
+        </div>
+        <p v-if="documentsLoading" class="text-sm text-gray-500 mt-2">Laster dokumentliste…</p>
+        <p v-if="documentsError" class="text-sm text-red-700 mt-2">{{ documentsError }}</p>
+        <p v-if="genMessage" class="text-sm text-green-800 mt-3">{{ genMessage }}</p>
+        <p v-if="genError" class="text-sm text-red-700 mt-3">{{ genError }}</p>
+      </section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)]">
         <h2 class="text-lg font-semibold text-gray-900 mb-3">2. Kjør experiment</h2>
         <div class="grid gap-4 sm:grid-cols-2 max-w-xl">
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Generator (RAG)</label>
             <select
               v-model="generatorModel"
+              data-testid="exp-generator-select"
               class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white"
               :disabled="modelsLoading"
             >
@@ -397,6 +611,7 @@ onMounted(() => {
             <label class="block text-xs font-medium text-gray-700 mb-1">Evaluator (dommer)</label>
             <select
               v-model="evaluatorModel"
+              data-testid="exp-evaluator-select"
               class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white"
               :disabled="modelsLoading || !evaluatorModels.length"
             >
