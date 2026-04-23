@@ -16,17 +16,6 @@ services:
       timeout: 5s
       retries: 20
 
-  phoenix:
-    image: arizephoenix/phoenix:latest
-    container_name: aboutme-phoenix
-    ports:
-      - "6006:6006"
-      - "4317:4317"
-    volumes:
-      - phoenix_data:/mnt/data
-    environment:
-      - PHOENIX_WORKING_DIR=/mnt/data
-
   backend:
     build:
       context: ./backend
@@ -42,8 +31,6 @@ services:
       PORT: "8080"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      PHOENIX_OTLP_ENDPOINT: http://phoenix:4317
-      PHOENIX_BASE_URL: http://phoenix:6006
       SANITIZER_ENABLED: "true"
     ports:
       - "8080:8080"
@@ -64,4 +51,3 @@ services:
 
 volumes:
   postgres_data:
-  phoenix_data:
