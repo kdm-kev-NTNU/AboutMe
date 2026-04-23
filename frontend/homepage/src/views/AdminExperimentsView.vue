@@ -272,7 +272,7 @@ async function startDatasetGeneration() {
     genError.value = 'Velg en modell for generering.'
     return
   }
-  const qpc = Number.parseInt(genQuestionsPerChunk.value.trim(), 10)
+  const qpc = Number.parseInt(String(genQuestionsPerChunk.value).trim(), 10)
   const body: Record<string, unknown> = {
     name: genName.value.trim(),
     description: '',
@@ -280,12 +280,12 @@ async function startDatasetGeneration() {
     model: genModel.value,
     questionsPerChunk: Number.isFinite(qpc) && qpc > 0 ? qpc : 1,
   }
-  const maxQ = genMaxQuestions.value.trim()
+  const maxQ = String(genMaxQuestions.value).trim()
   if (maxQ !== '') {
     const n = Number.parseInt(maxQ, 10)
     if (Number.isFinite(n) && n > 0) body.maxQuestions = n
   }
-  const seedStr = genSeed.value.trim()
+  const seedStr = String(genSeed.value).trim()
   if (seedStr !== '') {
     const s = Number.parseInt(seedStr, 10)
     if (Number.isFinite(s)) body.seed = s
@@ -303,6 +303,8 @@ async function startDatasetGeneration() {
     const id = (data as { generationId: number }).generationId
     genMessage.value = `QRA-generering startet (jobb #${id}). Poller status…`
     startGenPoll(id)
+  } catch (e) {
+    genError.value = e instanceof Error ? e.message : String(e)
   } finally {
     if (!genPollTimer.value) genBusy.value = false
   }
