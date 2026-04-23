@@ -568,7 +568,7 @@ describe('Admin CRUD views (integration-style)', () => {
     expect(genSelect.exists()).toBe(true)
     expect(evSelect.exists()).toBe(true)
 
-    expect(genSelect.element.value).toBe('o1')
+    expect((genSelect.element as HTMLSelectElement).value).toBe('o1')
     expect(evSelect.findAll('option')).toHaveLength(1)
     expect(evSelect.findAll('option')[0]!.text()).toContain('A1')
 
