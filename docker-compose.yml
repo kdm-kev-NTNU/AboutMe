@@ -24,13 +24,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Same names as .env.example / Railway; do not inject empty OPENAI_API_KEY (that overrides keys from this file).
+    env_file:
+      - path: .env
+        required: false
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/aboutme
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       PORT: "8080"
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       SANITIZER_ENABLED: "true"
     ports:
       - "8080:8080"
