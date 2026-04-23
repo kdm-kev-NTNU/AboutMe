@@ -24,9 +24,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Same names as .env.example / Railway; do not inject empty OPENAI_API_KEY (that overrides keys from this file).
+    # Secrets live in backend/.env (same keys as .env.example). Do not set empty OPENAI_API_KEY here (overrides file).
     env_file:
-      - path: .env
+      - path: backend/.env
         required: false
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/aboutme
@@ -46,6 +46,11 @@ services:
     container_name: aboutme-frontend
     depends_on:
       - backend
+    # VITE_* for the static build must live in frontend/homepage/.env (build context); COPY picks it up at build time.
+    # env_file also loads the same file at container runtime for any non-Vite vars you add later.
+    env_file:
+      - path: frontend/homepage/.env
+        required: false
     environment:
       BACKEND_URL: http://backend:8080
     ports:
