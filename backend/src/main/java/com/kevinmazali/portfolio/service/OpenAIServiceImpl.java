@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
+import com.kevinmazali.portfolio.config.RetrievalProperties;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
 import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.exception.PremiumModelForbiddenException;
@@ -28,8 +29,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Default implementation of {@link OpenAIService} that performs RAG:
@@ -49,6 +52,8 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final AiBudgetProperties aiBudgetProperties;
   private final AiBudgetService aiBudgetService;
   private final AiCircuitBreaker aiCircuitBreaker;
+  private final DocumentReranker documentReranker;
+  private final RetrievalProperties retrievalProperties;
 
   public OpenAIServiceImpl(
       OpenAiChatModel openAiChatModel,
@@ -59,7 +64,9 @@ public class OpenAIServiceImpl implements OpenAIService {
       AiLimitsProperties aiLimitsProperties,
       AiBudgetProperties aiBudgetProperties,
       AiBudgetService aiBudgetService,
-      AiCircuitBreaker aiCircuitBreaker) {
+      AiCircuitBreaker aiCircuitBreaker,
+      DocumentReranker documentReranker,
+      RetrievalProperties retrievalProperties) {
     this.openAiChatModel = openAiChatModel;
     this.anthropicChatModel = anthropicChatModel;
     this.vectorStore = vectorStore;
@@ -69,6 +76,8 @@ public class OpenAIServiceImpl implements OpenAIService {
     this.aiBudgetProperties = aiBudgetProperties;
     this.aiBudgetService = aiBudgetService;
     this.aiCircuitBreaker = aiCircuitBreaker;
+    this.documentReranker = documentReranker;
+    this.retrievalProperties = retrievalProperties;
   }
 
   @Override
@@ -87,38 +96,43 @@ public class OpenAIServiceImpl implements OpenAIService {
     String budgetUserId = AiRequestContext.budgetUserIdentifier(aiBudgetProperties);
     boolean anonymous = AiRequestContext.isAnonymousInteractiveUser();
 
-    log.info("[DEBUG-b64a63] vectorStore class={}, question={}", vectorStore.getClass().getName(), question.question());
-
     List<String> queries = expandQueryToLanguages(question.question(), model, budgetUserId, anonymous);
 
-    log.info("[DEBUG-b64a63] expanded queries={}", queries);
+    int vectorTopK = Math.max(1, retrievalProperties.getVectorTopK());
+    int candidateCap = Math.max(1, retrievalProperties.getCandidateLimit());
+    int contextTopK = Math.max(1, retrievalProperties.getContextTopK());
 
-    List<Document> documents = queries.stream()
+    List<Document> merged = queries.stream()
         .flatMap(q -> {
-          log.info("[DEBUG-b64a63] searching query='{}' topK=40", q);
           try {
+            String queryText = q == null ? "" : q;
             List<Document> results = vectorStore.similaritySearch(
                 SearchRequest.builder()
-                    .query(q)
-                    .topK(40)
+                    .query(queryText)
+                    .topK(vectorTopK)
                     .build()
             );
-            log.info("[DEBUG-b64a63] query='{}' returned {} docs", q, results.size());
             return results.stream();
           } catch (Exception ex) {
-            log.error("[DEBUG-b64a63] similaritySearch FAILED for query='{}': {}", q, ex.getMessage(), ex);
-            return java.util.stream.Stream.<Document>empty();
+            log.warn("similaritySearch failed for a query variant: {}", ex.getMessage());
+            return Stream.empty();
           }
         })
-        .distinct()
-        .limit(40)
         .toList();
 
-    log.info("[DEBUG-b64a63] total retrieved docs={}", documents.size());
-    if (!documents.isEmpty()) {
-      documents.stream().limit(3).forEach(d ->
-          log.info("[DEBUG-b64a63] doc snippet: {}", d.getText().substring(0, Math.min(150, d.getText().length()))));
-    }
+    List<Document> candidates = dedupePreserveOrder(merged).stream()
+        .limit(candidateCap)
+        .toList();
+
+    List<Document> documents =
+        documentReranker.rerank(question.question(), candidates, contextTopK);
+
+    log.debug(
+        "RAG retrieval: merged={} dedupCapped={} contextTopK={} finalDocs={}",
+        merged.size(),
+        candidates.size(),
+        contextTopK,
+        documents.size());
 
     List<String> contentList = documents.stream().map(Document::getText).toList();
     String providerName = switch (model.provider()) {
@@ -136,6 +150,22 @@ public class OpenAIServiceImpl implements OpenAIService {
     String answerText = response.getResult().getOutput().getText();
     answerText = truncateOutput(answerText, aiLimitsProperties.getMaxOutputChars());
     return new RagAnswer(answerText, contentList);
+  }
+
+  private static List<Document> dedupePreserveOrder(List<Document> merged) {
+    LinkedHashMap<String, Document> byKey = new LinkedHashMap<>();
+    for (Document d : merged) {
+      byKey.putIfAbsent(documentDedupeKey(d), d);
+    }
+    return List.copyOf(byKey.values());
+  }
+
+  private static String documentDedupeKey(Document d) {
+    if (d.getId() != null && !d.getId().isBlank()) {
+      return d.getId();
+    }
+    String t = d.getText();
+    return t == null ? "" : t;
   }
 
   private SupportedChatModel resolveModel(Question question) {

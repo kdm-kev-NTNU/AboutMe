@@ -10,6 +10,8 @@ spring:
   ai:
     vectorstore:
       pgvector:
+        # Must match spring.ai.openai.embedding.options.dimensions. Changing embedding model/dims
+        # requires updating this value and re-ingesting all chunks (truncate vector_store or new DB).
         # HNSW/IVFFlat index max dimension is ~2000 in pgvector; embeddings are 3072 → exact search (no ANN index).
         index-type: NONE
         distance-type: COSINE_DISTANCE
@@ -28,6 +30,7 @@ spring:
           model: gpt-5.4-mini
           # Limit completion tokens per response
           max-completion-tokens: ${portfolio.ai.limits.chat-max-completion-tokens:400}
+      # Embedding model + dimensions must stay aligned with vectorstore.pgvector.dimensions above.
       embedding:
         options:
           model: text-embedding-3-large
@@ -106,6 +109,18 @@ portfolio:
   chat:
     # Used when the client omits "model" on POST /ask
     default-model-id: gpt-5.4-mini
+  retrieval:
+    # Wide retrieval + optional local ONNX cross-encoder rerank. Typical export: optimum-cli export onnx
+    # --model cross-encoder/multilingual-MiniLM-L12-v2 <dir> (model.onnx + tokenizer.json in same folder).
+    rerank-enabled: false
+    onnx-model-path: ""
+    tokenizer-path: ""
+    vector-top-k: 40
+    candidate-limit: 40
+    context-top-k: 40
+    rerank-batch-size: 8
+    max-passage-chars: 2000
+    max-sequence-length: 256
   phoenix:
     base-url: ${PHOENIX_BASE_URL:}
     api-key: ${PHOENIX_API_KEY:}
