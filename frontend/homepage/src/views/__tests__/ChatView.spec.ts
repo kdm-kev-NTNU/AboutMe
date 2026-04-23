@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import ChatView from '../ChatView.vue'
-import { askQuestion, listChatModels } from '@/api/generated/portfolio'
+import { askQuestion, listChatModels, type askQuestionResponse } from '@/api/generated/portfolio'
 import { useLangStore } from '@/stores/lang'
 import { useChatModelStore } from '@/stores/model'
 
@@ -122,6 +122,17 @@ describe('ChatView', () => {
     expect(wrapper.text()).toContain('Bad input')
   })
 
+  it('maps 403 to server error field when present', async () => {
+    vi.mocked(askQuestion).mockResolvedValueOnce({
+      status: 403,
+      data: { error: 'This model requires sign-in. Use a public model or authenticate.' },
+      headers: new Headers(),
+    } as unknown as askQuestionResponse)
+    const { wrapper } = await mountChat({ q: 'hi' })
+    await flushPromises()
+    expect(wrapper.text()).toContain('This model requires sign-in')
+  })
+
   it('maps network failure to Norwegian network message', async () => {
     vi.mocked(askQuestion).mockRejectedValueOnce(new Error('offline'))
     const { wrapper } = await mountChat({ q: 'hi' })
@@ -129,9 +140,10 @@ describe('ChatView', () => {
     expect(wrapper.text()).toContain('Nettverksfeil')
   })
 
-  it('clearChat removes storage and navigates home', async () => {
+  it('clearChat clears transcript and stays on chat', async () => {
     sessionStorage.setItem('chatMessages', JSON.stringify([{ role: 'user', text: 'x' }]))
     const { wrapper, router } = await mountChat({})
+    const replaceSpy = vi.spyOn(router, 'replace')
     const pushSpy = vi.spyOn(router, 'push')
 
     const clearBtn = wrapper
@@ -139,9 +151,12 @@ describe('ChatView', () => {
       .find((b) => /clear chat/i.test(b.text()))
     expect(clearBtn).toBeDefined()
     await clearBtn!.trigger('click')
+    await flushPromises()
 
-    expect(sessionStorage.getItem('chatMessages')).toBeNull()
-    expect(pushSpy).toHaveBeenCalledWith({ name: 'home' })
+    expect(JSON.parse(sessionStorage.getItem('chatMessages') || '[]')).toEqual([])
+    expect(wrapper.find('.stub-messages').text()).toBe('')
+    expect(replaceSpy).toHaveBeenCalledWith(expect.objectContaining({ name: 'chat', query: {} }))
+    expect(pushSpy).not.toHaveBeenCalledWith({ name: 'home' })
   })
 
   it('hydrates messages from conversation API when conversationId is set', async () => {

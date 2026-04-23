@@ -124,7 +124,7 @@ public class AiCircuitBreaker {
     boolean shouldTrip = sum.compareTo(limit) >= 0;
     if (shouldTrip && !autoKillOpen.get()) {
       log.error(
-          "Global AI month spend {} USD exceeded kill-switch limit {} USD — opening circuit",
+          "Global AI month spend {} USD exceeded kill-switch limit {} USD; opening circuit",
           sum,
           limit);
     }

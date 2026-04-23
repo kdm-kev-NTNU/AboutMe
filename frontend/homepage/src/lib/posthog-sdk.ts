@@ -17,6 +17,18 @@ function resolveConfig(config?: Partial<PosthogConfig>): PosthogConfig | null {
   }
 }
 
+/** Custom product events (aligned with PostHog experiments / goals). */
+export const POSTHOG_CHAT_EVENTS = {
+  ASK_SUBMITTED: 'portfolio_chat_ask_submitted',
+  ANSWER_RECEIVED: 'portfolio_chat_answer_received',
+  ANSWER_ERROR: 'portfolio_chat_answer_error',
+} as const
+
+/** Feature flag keys created in PostHog (MCP / UI). */
+export const POSTHOG_FEATURE_FLAGS = {
+  CHAT_REPLY_EXPERIMENT: 'aboutme_chat_reply_experiment',
+} as const
+
 /**
  * Initializes PostHog exactly once. Call only after the user has granted analytics consent.
  */
@@ -43,4 +55,38 @@ export function initializePosthogSdk(config?: Partial<PosthogConfig>): boolean {
 
 export function isPosthogSdkInitialized(): boolean {
   return sdkInitialized
+}
+
+/** Safe capture when SDK is active and user has not opted out. */
+export function captureAnalyticsEvent(
+  event: string,
+  properties?: Record<string, unknown>,
+): void {
+  if (!sdkInitialized) return
+  try {
+    posthog.capture(event, properties)
+  } catch {
+    // ignore capture failures
+  }
+}
+
+export function getFeatureFlag(flagKey: string): boolean | string | undefined {
+  if (!sdkInitialized) return undefined
+  try {
+    return posthog.getFeatureFlag(flagKey) as boolean | string | undefined
+  } catch {
+    return undefined
+  }
+}
+
+export function onFeatureFlagsReady(callback: () => void): void {
+  if (!sdkInitialized) {
+    callback()
+    return
+  }
+  try {
+    posthog.onFeatureFlags(callback)
+  } catch {
+    callback()
+  }
 }

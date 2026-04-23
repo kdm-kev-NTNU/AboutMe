@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio;
 
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.controller.AuthController;
@@ -24,7 +25,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = AuthController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class)
 @TestPropertySource(properties = "portfolio.login-rate-limit.enabled=true")
-@EnableConfigurationProperties({ AskRateLimitProperties.class, ExperimentRunRateLimitProperties.class })
+@EnableConfigurationProperties({
+  AskRateLimitProperties.class,
+  ExperimentRunRateLimitProperties.class,
+  DatasetGenerateRateLimitProperties.class
+})
 @Import(WebConfig.class)
 class LoginRateLimitFilterTest {
 
