@@ -5,7 +5,7 @@ import java.util.Map;
 import org.springframework.lang.Nullable;
 
 /**
- * Optional fields sent with {@code $ai_generation} for PostHog LLM observability (replaces Phoenix OTLP detail).
+ * Optional fields sent with {@code $ai_generation} for PostHog LLM observability.
  */
 public record AiGenerationAnalytics(
     @Nullable String inputText,
