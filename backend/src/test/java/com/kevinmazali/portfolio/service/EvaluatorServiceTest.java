@@ -52,7 +52,7 @@ class EvaluatorServiceTest {
     lenient()
         .doNothing()
         .when(aiBudgetService)
-        .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), any(), any());
+        .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), any(), any(), any());
     AiLimitsProperties limits = new AiLimitsProperties();
     evaluatorService = new EvaluatorService(
         openAiChatModel,
