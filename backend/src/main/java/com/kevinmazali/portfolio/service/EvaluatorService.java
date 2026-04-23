@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
+import com.kevinmazali.portfolio.model.analytics.AiGenerationAnalytics;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
 import com.kevinmazali.portfolio.model.experiment.EvaluationScore;
@@ -21,12 +22,12 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * LLM-as-judge evaluators aligned with Phoenix-style metrics (faithfulness, relevance, correctness, conciseness).
+ * LLM-as-judge evaluators for standard RAG metrics (faithfulness, relevance, correctness, conciseness).
  */
 @Service
 public class EvaluatorService {
 
-  private final OpenAiChatModel openAiChatModel;
+  private final ObjectProvider<OpenAiChatModel> openAiChatModel;
   private final ObjectProvider<AnthropicChatModel> anthropicChatModel;
   private final ObjectMapper objectMapper;
   private final AiLimitsProperties aiLimitsProperties;
@@ -34,7 +35,7 @@ public class EvaluatorService {
   private final AiBudgetService aiBudgetService;
 
   public EvaluatorService(
-      OpenAiChatModel openAiChatModel,
+      ObjectProvider<OpenAiChatModel> openAiChatModel,
       ObjectProvider<AnthropicChatModel> anthropicChatModel,
       ObjectMapper objectMapper,
       AiLimitsProperties aiLimitsProperties,
@@ -148,11 +149,15 @@ public class EvaluatorService {
       long startNs = System.nanoTime();
       ChatResponse chatResponse = switch (model.provider()) {
         case OPENAI -> {
+          OpenAiChatModel openAi = openAiChatModel.getIfAvailable();
+          if (openAi == null) {
+            throw new IllegalStateException("OpenAI chat is not configured.");
+          }
           OpenAiChatOptions opts = OpenAiChatOptions.builder()
               .model(model.modelId())
               .maxCompletionTokens(judgeMax)
               .build();
-          yield openAiChatModel.call(new Prompt(instructions, opts));
+          yield openAi.call(new Prompt(instructions, opts));
         }
         case ANTHROPIC -> {
           AnthropicChatModel anthropic = anthropicChatModel.getIfAvailable();
@@ -167,7 +172,7 @@ public class EvaluatorService {
         }
       };
       double latencySec = (System.nanoTime() - startNs) / 1_000_000_000.0;
-      recordEvaluatorUsage(model.modelId(), chatResponse, latencySec);
+      recordEvaluatorUsage(model.modelId(), chatResponse, latencySec, instructions);
       String text = chatResponse.getResult().getOutput().getText();
       return parseScoreJson(text);
     } catch (AiCircuitOpenException e) {
@@ -203,7 +208,8 @@ public class EvaluatorService {
     }
   }
 
-  private void recordEvaluatorUsage(String modelId, ChatResponse chatResponse, double latencySeconds) {
+  private void recordEvaluatorUsage(
+      String modelId, ChatResponse chatResponse, double latencySeconds, String judgeInput) {
     int prompt = 0;
     int completion = 0;
     if (chatResponse != null && chatResponse.getMetadata() != null) {
@@ -213,6 +219,12 @@ public class EvaluatorService {
         completion = safeTokenCount(u.getCompletionTokens());
       }
     }
+    String out =
+        chatResponse != null && chatResponse.getResult() != null && chatResponse.getResult().getOutput() != null
+            ? chatResponse.getResult().getOutput().getText()
+            : "";
+    AiGenerationAnalytics analytics =
+        AiGenerationAnalytics.empty().withTexts(judgeInput, out, null);
     aiBudgetService.recordUsage(
         AiBudgetService.systemEvaluatorUserId(),
         modelId,
@@ -220,7 +232,8 @@ public class EvaluatorService {
         completion,
         false,
         latencySeconds,
-        "llm_judge");
+        "llm_judge",
+        analytics);
   }
 
   private static int safeTokenCount(Number n) {

@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
@@ -24,7 +25,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ChatModelsController.class)
-@EnableConfigurationProperties({ AskRateLimitProperties.class, ExperimentRunRateLimitProperties.class })
+@EnableConfigurationProperties({
+  AskRateLimitProperties.class,
+  ExperimentRunRateLimitProperties.class,
+  DatasetGenerateRateLimitProperties.class
+})
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
 class ChatModelsControllerTest {
 

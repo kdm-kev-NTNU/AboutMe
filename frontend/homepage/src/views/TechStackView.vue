@@ -31,8 +31,8 @@ const headerBadge = computed(() =>
 
 const headerSubtitle = computed(() =>
   isNo.value
-    ? 'Sporbarhet fra bacheloroppgave og produktkontekst til konkrete teknologivalg i denne porteføljen — uten å erstatte full dokumentasjon i rapporten.'
-    : 'Traceability from the bachelor thesis and product context to the concrete technology choices in this portfolio — without replacing full documentation in the report.',
+    ? 'Sporbarhet fra bacheloroppgave og produktkontekst til konkrete teknologivalg i denne porteføljen, uten å erstatte full dokumentasjon i rapporten.'
+    : 'Traceability from the bachelor thesis and product context to the concrete technology choices in this portfolio, without replacing full documentation in the report.',
 )
 
 const contextParagraph = computed(() =>
@@ -206,7 +206,7 @@ const stackBack = computed(() =>
         'Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA',
         'PostgreSQL 17 med pgvector, Spring AI, Tika-dokumentlesing',
         'Apache OpenNLP (NER m.m. i saniterings-/tekstflyt)',
-        'Actuator (helse, metrics, Prometheus-scrape), Micrometer, OTel → Phoenix (spor), PostHog (LLM-genereringer)',
+        'Actuator (helse, metrics, Prometheus-scrape), Micrometer, PostHog (LLM-genereringer + analyse)',
         'Docker Compose, nginx (produksjonsbygg)',
         'Bucket4j (rate limiting)',
       ] as const)
@@ -214,7 +214,7 @@ const stackBack = computed(() =>
         'Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA',
         'PostgreSQL 17 with pgvector, Spring AI, Tika document reading',
         'Apache OpenNLP (NER etc. in sanitization / text flow)',
-        'Actuator (health, metrics, Prometheus scrape), Micrometer, OTel → Phoenix (traces), PostHog (LLM generations)',
+        'Actuator (health, metrics, Prometheus scrape), Micrometer, PostHog (LLM generations + analytics)',
         'Docker Compose, nginx (production build)',
         'Bucket4j (rate limiting)',
       ] as const),
@@ -287,6 +287,8 @@ const sections = computed<Section[]>(() => {
           'RAG-prompten er leverandørspesifikk og hentes fra versjonerte maler, slik at OpenAI og Anthropic kan tones litt ulikt uten å duplisere hele flyten.',
           'Ved henting utvides brukerens spørsmål til både norsk og engelsk, slik at treff i dokumenter på begge språk blir lettere å få med.',
           'PostgreSQL med pgvector kjører i Docker sammen med resten av stakken, som gjør det enkelt å få opp et konsistent miljø lokalt og i deploy.',
+          'Fangst → kuratér → ingest → verifiser: valgfritt samtaleinnslag (f.eks. stemmeleverandør) er et produktvalg for rikere råmateriale; det som faktisk indekseres, er kuraterte dokumenter via admin-pipelinen. Faglitteratur om RAG dekker indeksering, chunking, retrieval og evaluering — ikke valg av stemme-UI.',
+          'Primærkilder (arXiv): https://arxiv.org/abs/2407.01219 (Wang m.fl., EMNLP 2024), https://arxiv.org/abs/2312.10997 (Gao m.fl., oversikt, des. 2023). Menneskeforankret eval: https://arxiv.org/abs/2503.09902, https://arxiv.org/abs/2504.14891. Utdypet flyt og praksislenker står i rot-README og på siden «Videre arbeid».',
         ],
         icon: Database,
         category: 'ai',
@@ -318,23 +320,23 @@ const sections = computed<Section[]>(() => {
         id: 'observability',
         heading: 'Observabilitet',
         paragraphs: [
-          'Backend eksponerer Spring Boot Actuator med blant annet health, info og Prometheus-scrape for metrics. Micrometer med OpenTelemetry kan sende spor til Arize Phoenix over OTLP (gRPC) når eksport er slått på — typisk mot Phoenix-containeren i Compose — for detaljerte spor og feilsøking.',
-          'LLM-kall (tokens, estimert kostnad, latens) sendes også som PostHog $ai_generation-hendelser fra serveren når det er slått på, slik at produktanalyse og modellbruk kan sees i samme verktøy som samtykkestyrt frontend-analyse.',
-          'RAG-evaluering med datasett i Phoenix og LLM-as-judge i egen kode beholdes der: PostHogs innebygde LLM-eval og datasett-flyt er mindre modne for denne typen batch-pipeline enn dagens Phoenix-integrasjon, så det er en bevisst to-fase-arkitektur (spor + eval i Phoenix, aggregert LLM- og bruksdata i PostHog).',
+          'Backend eksponerer Spring Boot Actuator med blant annet health, info og Prometheus-scrape for metrics via Micrometer.',
+          'LLM-kall (tokens, estimert kostnad, latens, kontekst) kan sendes som PostHog $ai_generation-hendelser fra serveren når det er slått på, slik at produktanalyse og modellbruk kan sees i samme verktøy som samtykkestyrt frontend-analyse.',
+          'Admin RAG-eval bruker eval-datasett i PostgreSQL og LLM-as-judge i egen kode; PostHogs LLM-observabilitet kompletterer med hendelser fra faktisk trafikk og evalueringer i PostHog-prosjektet.',
         ],
         icon: Eye,
         category: 'devops',
-        badges: ['Actuator', 'Prometheus', 'Micrometer', 'OpenTelemetry', 'Phoenix', 'PostHog'],
+        badges: ['Actuator', 'Prometheus', 'Micrometer', 'PostHog'],
       },
       {
         id: 'runtime',
         heading: 'Kjøring og drift',
         paragraphs: [
-          'Applikasjonen orkestreres med Docker Compose: PostgreSQL (pgvector), Phoenix (sporings-UI og OTLP), Spring-backend og en nginx-basert frontend-container. Det gir et helhetlig bilde av hvordan tjenestene snakker sammen uten å måtte sette opp alt manuelt hver gang.',
+          'Applikasjonen orkestreres med Docker Compose: PostgreSQL (pgvector), Spring-backend og en nginx-basert frontend-container. Det gir et helhetlig bilde av hvordan tjenestene snakker sammen uten å måtte sette opp alt manuelt hver gang.',
         ],
         icon: Container,
         category: 'devops',
-        badges: ['Docker Compose', 'PostgreSQL', 'pgvector', 'Phoenix', 'nginx'],
+        badges: ['Docker Compose', 'PostgreSQL', 'pgvector', 'nginx'],
       },
     ]
   }
@@ -382,6 +384,8 @@ const sections = computed<Section[]>(() => {
         'The RAG prompt is provider-specific and loaded from versioned templates, so OpenAI and Anthropic can be tuned slightly differently without duplicating the whole flow.',
         'At retrieval time the user question is expanded into Norwegian and English so documents in either language are easier to surface.',
         'PostgreSQL with pgvector runs in Docker alongside the rest of the stack, which makes it easy to spin up a consistent environment locally and in deployment.',
+        'Capture → curate → ingest → verify: optional conversational capture (for example a voice vendor) is a product choice for richer raw material; what gets indexed is curated content through the admin pipeline. RAG literature covers indexing, chunking, retrieval, and evaluation—not the voice UI choice.',
+        'Primary arXiv sources: https://arxiv.org/abs/2407.01219 (Wang et al., EMNLP 2024), https://arxiv.org/abs/2312.10997 (Gao et al., survey, Dec 2023). Human-grounded evaluation: https://arxiv.org/abs/2503.09902, https://arxiv.org/abs/2504.14891. The root README and the Future work page spell out the flow and practice links.',
       ],
       icon: Database,
       category: 'ai',
@@ -413,23 +417,23 @@ const sections = computed<Section[]>(() => {
       id: 'observability',
       heading: 'Observability',
       paragraphs: [
-        'The backend exposes Spring Boot Actuator including health, info, and a Prometheus scrape endpoint for metrics. Micrometer with OpenTelemetry can export traces to Arize Phoenix over OTLP (gRPC) when enabled — typically to the Phoenix container in Compose — for deep traces and debugging.',
-        'LLM calls (tokens, estimated cost, latency) are also sent as PostHog `$ai_generation` events from the server when enabled, so product analytics and model usage can live alongside consent-gated frontend analytics in one tool.',
-        'RAG evaluation with Phoenix-hosted datasets and the in-app LLM-as-judge pipeline stay on Phoenix for now: PostHog’s built-in LLM eval and dataset workflows are not yet a mature replacement for that batch-style setup, so this is a deliberate two-phase split (traces + eval in Phoenix, aggregated LLM and usage data in PostHog).',
+        'The backend exposes Spring Boot Actuator including health, info, and a Prometheus scrape endpoint for metrics via Micrometer.',
+        'LLM calls (tokens, estimated cost, latency, context) can be sent as PostHog `$ai_generation` events from the server when enabled, so product analytics and model usage can live alongside consent-gated frontend analytics in one tool.',
+        'Admin RAG evaluation uses eval datasets in PostgreSQL and an in-app LLM-as-judge pipeline; PostHog LLM observability complements that with events from live traffic and evaluations in the PostHog project.',
       ],
       icon: Eye,
       category: 'devops',
-      badges: ['Actuator', 'Prometheus', 'Micrometer', 'OpenTelemetry', 'Phoenix', 'PostHog'],
+      badges: ['Actuator', 'Prometheus', 'Micrometer', 'PostHog'],
     },
     {
       id: 'runtime',
       heading: 'Runtime and operations',
       paragraphs: [
-        'The application is orchestrated with Docker Compose: PostgreSQL (pgvector), Phoenix (trace UI and OTLP), the Spring backend, and an nginx-served frontend container. That gives a coherent picture of how services talk to each other without manual setup every time.',
+        'The application is orchestrated with Docker Compose: PostgreSQL (pgvector), the Spring backend, and an nginx-served frontend container. That gives a coherent picture of how services talk to each other without manual setup every time.',
       ],
       icon: Container,
       category: 'devops',
-      badges: ['Docker Compose', 'PostgreSQL', 'pgvector', 'Phoenix', 'nginx'],
+      badges: ['Docker Compose', 'PostgreSQL', 'pgvector', 'nginx'],
     },
   ]
 })

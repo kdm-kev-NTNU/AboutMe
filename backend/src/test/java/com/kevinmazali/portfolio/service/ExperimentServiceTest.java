@@ -1,17 +1,20 @@
 package com.kevinmazali.portfolio.service;
 
-import com.kevinmazali.portfolio.config.PhoenixProperties;
+import com.kevinmazali.portfolio.config.PostHogProperties;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
-import com.kevinmazali.portfolio.model.experiment.CreatePhoenixDatasetRequest;
-import com.kevinmazali.portfolio.model.experiment.ExperimentRun;
-import com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus;
+import com.kevinmazali.portfolio.model.experiment.CreateEvalDatasetRequest;
+import com.kevinmazali.portfolio.model.experiment.EvalDatasetExampleRow;
+import com.kevinmazali.portfolio.model.experiment.EvalDatasetSummary;
 import com.kevinmazali.portfolio.model.experiment.ExperimentResult;
+import com.kevinmazali.portfolio.model.experiment.ExperimentRun;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunDetailResponse;
-import com.kevinmazali.portfolio.model.experiment.PhoenixDatasetExample;
-import com.kevinmazali.portfolio.model.experiment.PhoenixDatasetSummary;
+import com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus;
 import com.kevinmazali.portfolio.model.experiment.RunExperimentRequest;
 import com.kevinmazali.portfolio.repository.ExperimentResultRepository;
 import com.kevinmazali.portfolio.repository.ExperimentRunRepository;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,15 +22,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,10 +40,10 @@ class ExperimentServiceTest {
   private ExperimentResultRepository experimentResultRepository;
 
   @Mock
-  private PhoenixDatasetService phoenixDatasetService;
+  private EvalDatasetService evalDatasetService;
 
   @Mock
-  private PhoenixProperties phoenixProperties;
+  private PostHogProperties postHogProperties;
 
   @Mock
   private ChatModelCatalog chatModelCatalog;
@@ -60,46 +58,28 @@ class ExperimentServiceTest {
     experimentService = new ExperimentService(
         experimentRunRepository,
         experimentResultRepository,
-        phoenixDatasetService,
-        phoenixProperties,
+        evalDatasetService,
+        postHogProperties,
         chatModelCatalog,
         experimentAsyncRunner);
   }
 
   @Test
-  void createPhoenixDatasetRejectsEmptyExamples() {
-    var req = new CreatePhoenixDatasetRequest("ds", "d", List.of());
-    assertThrows(IllegalArgumentException.class, () -> experimentService.createPhoenixDataset(req));
-  }
-
-  @Test
-  void createPhoenixDatasetRejectsBlankQuestion() {
-    var req = new CreatePhoenixDatasetRequest(
-        "ds",
-        null,
-        List.of(new CreatePhoenixDatasetRequest.DatasetExampleInput("  ", null)));
-    assertThrows(IllegalArgumentException.class, () -> experimentService.createPhoenixDataset(req));
-  }
-
-  @Test
-  void startRunRequiresPhoenixEnabled() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(false);
-    var req = new RunExperimentRequest("id", "n", null, "gpt-5.4-mini", "gpt-5.4-mini", null);
-    assertThrows(IllegalStateException.class, () -> experimentService.startRun(req));
-  }
-
-  @Test
   void startRunRequiresDatasetId() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    var req = new RunExperimentRequest("  ", "n", null, "gpt-5.4-mini", "gpt-5.4-mini", null);
+    var req = new RunExperimentRequest("  ", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null);
+    assertThrows(IllegalArgumentException.class, () -> experimentService.startRun(req));
+  }
+
+  @Test
+  void startRunRejectsInvalidDatasetId() {
+    var req = new RunExperimentRequest("not-a-number", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null);
     assertThrows(IllegalArgumentException.class, () -> experimentService.startRun(req));
   }
 
   @Test
   void startRunRejectsEmptyDatasetExamples() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(phoenixDatasetService.getExamples("ds-1")).thenReturn(List.of());
-    var req = new RunExperimentRequest("ds-1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null);
+    when(evalDatasetService.getExamples("1")).thenReturn(List.of());
+    var req = new RunExperimentRequest("1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null);
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4_MINI)).thenReturn(true);
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.CLAUDE_HAIKU_4_5)).thenReturn(true);
     assertThrows(IllegalArgumentException.class, () -> experimentService.startRun(req));
@@ -107,19 +87,16 @@ class ExperimentServiceTest {
 
   @Test
   void startRunPersistsRunAndTriggersAsync() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(phoenixDatasetService.getExamples("ds-1")).thenReturn(
-        List.of(new PhoenixDatasetExample("What?", "Ref", null, null)));
+    when(evalDatasetService.getExamples("1"))
+        .thenReturn(List.of(new EvalDatasetExampleRow("What?", "Ref")));
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4_MINI)).thenReturn(true);
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.CLAUDE_HAIKU_4_5)).thenReturn(true);
-    when(phoenixProperties.getBaseUrl()).thenReturn("http://phoenix:6006");
 
     ExperimentRun saved = ExperimentRun.builder()
         .id(42L)
         .name("Experiment test")
         .datasetName("n")
-        .phoenixDatasetId("ds-1")
-        .phoenixBaseUrl("http://phoenix:6006")
+        .evalDatasetId(1L)
         .generatorModel("gpt-5.4-mini")
         .evaluatorModel("claude-haiku-4-5-20251001")
         .status(ExperimentRunStatus.RUNNING)
@@ -129,13 +106,14 @@ class ExperimentServiceTest {
 
     long id = experimentService.startRun(
         new RunExperimentRequest(
-            "ds-1", "n", "Experiment test", "gpt-5.4-mini", "claude-haiku-4-5-20251001", null));
+            "1", "n", "Experiment test", "gpt-5.4-mini", "claude-haiku-4-5-20251001", null));
 
     assertEquals(42L, id);
     ArgumentCaptor<ExperimentRun> captor = ArgumentCaptor.forClass(ExperimentRun.class);
     verify(experimentRunRepository).save(captor.capture());
     assertEquals(ExperimentRunStatus.RUNNING, captor.getValue().getStatus());
     assertEquals(1, captor.getValue().getTotalExamples());
+    assertEquals(1L, captor.getValue().getEvalDatasetId());
     verify(experimentAsyncRunner).executeExperimentRun(42L);
   }
 
@@ -153,46 +131,31 @@ class ExperimentServiceTest {
   }
 
   @Test
-  void createPhoenixDatasetBuildsInputsAndDelegates() {
-    var req = new CreatePhoenixDatasetRequest(
+  void createEvalDatasetDelegates() {
+    var req = new CreateEvalDatasetRequest(
         "ds",
         "desc",
         List.of(
-            new CreatePhoenixDatasetRequest.DatasetExampleInput(" Q1 ", "R1"),
-            new CreatePhoenixDatasetRequest.DatasetExampleInput("Q2", null)));
-    when(phoenixDatasetService.createDataset(eq("ds"), eq("desc"), any(), any()))
-        .thenReturn(new PhoenixDatasetSummary("id-1", "ds", 2));
+            new CreateEvalDatasetRequest.DatasetExampleInput(" Q1 ", "R1"),
+            new CreateEvalDatasetRequest.DatasetExampleInput("Q2", null)));
+    when(evalDatasetService.createDataset(req)).thenReturn(new EvalDatasetSummary("1", "ds", 2));
 
-    PhoenixDatasetSummary out = experimentService.createPhoenixDataset(req);
+    EvalDatasetSummary out = experimentService.createEvalDataset(req);
 
-    assertEquals("id-1", out.id());
+    assertEquals("1", out.id());
     assertEquals(2, out.exampleCount());
   }
 
   @Test
-  void createPhoenixDatasetUsesEmptyDescriptionWhenNull() {
-    var req = new CreatePhoenixDatasetRequest(
-        "ds",
-        null,
-        List.of(new CreatePhoenixDatasetRequest.DatasetExampleInput("Q", null)));
-    when(phoenixDatasetService.createDataset(eq("ds"), eq(""), any(), any()))
-        .thenReturn(new PhoenixDatasetSummary("x", "ds", 1));
-
-    experimentService.createPhoenixDataset(req);
-
-    verify(phoenixDatasetService).createDataset(eq("ds"), eq(""), any(), any());
+  void deleteEvalDatasetDelegates() {
+    experimentService.deleteEvalDataset("abc");
+    verify(evalDatasetService).deleteDataset("abc");
   }
 
   @Test
-  void deletePhoenixDatasetDelegates() {
-    experimentService.deletePhoenixDataset("abc");
-    verify(phoenixDatasetService).deleteDataset("abc");
-  }
-
-  @Test
-  void listPhoenixDatasetsDelegates() {
-    when(phoenixDatasetService.listDatasets()).thenReturn(List.of());
-    assertTrue(experimentService.listPhoenixDatasets().isEmpty());
+  void listEvalDatasetsDelegates() {
+    when(evalDatasetService.listDatasets()).thenReturn(List.of());
+    assertTrue(experimentService.listEvalDatasets().isEmpty());
   }
 
   @Test
@@ -202,8 +165,7 @@ class ExperimentServiceTest {
         .id(1L)
         .name("N")
         .datasetName("D")
-        .phoenixDatasetId("p")
-        .phoenixBaseUrl("http://p")
+        .evalDatasetId(9L)
         .generatorModel("gpt-5.4-mini")
         .evaluatorModel("gpt-5.4-mini")
         .status(ExperimentRunStatus.COMPLETED)
@@ -229,11 +191,13 @@ class ExperimentServiceTest {
             .correctnessExplanation("c")
             .concisenessExplanation("k")
             .build()));
+    when(postHogProperties.getHost()).thenReturn("https://eu.i.posthog.com");
 
     Optional<ExperimentRunDetailResponse> got = experimentService.getRun(1L);
     assertTrue(got.isPresent());
     assertEquals(1, got.get().results().size());
     assertTrue(got.get().results().getFirst().documentsPreview().endsWith("..."));
+    assertEquals(9L, got.get().evalDatasetId());
   }
 
   @Test
@@ -275,35 +239,31 @@ class ExperimentServiceTest {
 
   @Test
   void startRunRejectsUnknownGeneratorModel() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    var req = new RunExperimentRequest("ds-1", "n", null, "unknown-model", "gpt-5.4-mini", null);
+    var req = new RunExperimentRequest("1", "n", null, "unknown-model", "gpt-5.4-mini", null);
     assertThrows(IllegalArgumentException.class, () -> experimentService.startRun(req));
   }
 
   @Test
   void startRunRejectsUnknownEvaluatorModel() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    var req = new RunExperimentRequest("ds-1", "n", null, "gpt-5.4-mini", "unknown-eval", null);
+    var req = new RunExperimentRequest("1", "n", null, "gpt-5.4-mini", "unknown-eval", null);
     assertThrows(IllegalArgumentException.class, () -> experimentService.startRun(req));
   }
 
   @Test
   void startRunRejectsUnconfiguredGenerator() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4_MINI)).thenReturn(false);
 
-    var req = new RunExperimentRequest("ds-1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null);
+    var req = new RunExperimentRequest("1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null);
     IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> experimentService.startRun(req));
     assertTrue(ex.getMessage().contains("Generator model is not configured"));
   }
 
   @Test
   void startRunRejectsUnconfiguredEvaluator() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
     when(chatModelCatalog.isModelConfigured(any(SupportedChatModel.class)))
         .thenAnswer(inv -> inv.getArgument(0) == SupportedChatModel.GPT_5_4_MINI);
 
-    var req = new RunExperimentRequest("ds-1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null);
+    var req = new RunExperimentRequest("1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null);
 
     IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> experimentService.startRun(req));
     assertTrue(ex.getMessage().contains("Evaluator model is not configured"));
@@ -311,32 +271,30 @@ class ExperimentServiceTest {
 
   @Test
   void startRunRejectsSameProviderModels() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4_MINI)).thenReturn(true);
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4)).thenReturn(true);
 
-    var req = new RunExperimentRequest("ds-1", "n", null, "gpt-5.4-mini", "gpt-5.4", null);
+    var req = new RunExperimentRequest("1", "n", null, "gpt-5.4-mini", "gpt-5.4", null);
     IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> experimentService.startRun(req));
     assertTrue(ex.getMessage().contains("different providers"));
   }
 
   @Test
   void startRunCapsExamplesWhenMaxExamplesSet() {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(phoenixDatasetService.getExamples("ds-1")).thenReturn(List.of(
-        new PhoenixDatasetExample("a", "r", null, null),
-        new PhoenixDatasetExample("b", "r", null, null),
-        new PhoenixDatasetExample("c", "r", null, null)));
+    when(evalDatasetService.getExamples("1"))
+        .thenReturn(
+            List.of(
+                new EvalDatasetExampleRow("a", "r"),
+                new EvalDatasetExampleRow("b", "r"),
+                new EvalDatasetExampleRow("c", "r")));
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4_MINI)).thenReturn(true);
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.CLAUDE_HAIKU_4_5)).thenReturn(true);
-    when(phoenixProperties.getBaseUrl()).thenReturn("http://phoenix:6006");
 
     ExperimentRun saved = ExperimentRun.builder()
         .id(50L)
         .name("Experiment test")
         .datasetName("n")
-        .phoenixDatasetId("ds-1")
-        .phoenixBaseUrl("http://phoenix:6006")
+        .evalDatasetId(1L)
         .generatorModel("gpt-5.4-mini")
         .evaluatorModel("claude-haiku-4-5-20251001")
         .status(ExperimentRunStatus.RUNNING)
@@ -346,7 +304,7 @@ class ExperimentServiceTest {
 
     experimentService.startRun(
         new RunExperimentRequest(
-            "ds-1", "n", "Experiment test", "gpt-5.4-mini", "claude-haiku-4-5-20251001", 2));
+            "1", "n", "Experiment test", "gpt-5.4-mini", "claude-haiku-4-5-20251001", 2));
 
     ArgumentCaptor<ExperimentRun> captor = ArgumentCaptor.forClass(ExperimentRun.class);
     verify(experimentRunRepository).save(captor.capture());

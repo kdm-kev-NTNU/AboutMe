@@ -16,8 +16,14 @@ import {
 } from '@/components/ui/dialog'
 import MessagesArea from '@/views/MessagesArea.vue'
 import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
+import {
+  POSTHOG_CHAT_EVENTS,
+  POSTHOG_FEATURE_FLAGS,
+  captureAnalyticsEvent,
+  getFeatureFlag,
+} from '@/lib/posthog-sdk'
 
-// RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id.
+// RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
 // --- Route + local UI state ---
@@ -101,14 +107,24 @@ const loadMessagesFromStorage = () => {
 
 watch(() => state.messages, saveMessagesToStorage, { deep: true })
 
-// Drops the in-memory transcript and returns to the marketing shell.
+function readApiError(data: unknown): string | undefined {
+  if (data && typeof data === 'object' && 'error' in data) {
+    const err = (data as { error?: unknown }).error
+    return typeof err === 'string' && err.length > 0 ? err : undefined
+  }
+  return undefined
+}
+
+const GENERIC_ASK_ERROR = 'Noe gikk galt. Prøv igjen.'
+
+// Drops the in-memory transcript and stays on /chat (strip deep-link query params).
 const clearChat = () => {
-  // Clear session storage first
   sessionStorage.removeItem('chatMessages')
   window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
-
-  // Redirect to home page
-  router.push({ name: 'home' })
+  state.messages = []
+  errorText.value = ''
+  input.value = ''
+  void router.replace({ name: 'chat', query: {} })
 }
 
 const shouldShowInfoPopup = () => {
@@ -150,6 +166,16 @@ async function send(text: string) {
   errorText.value = ''
   state.messages.push({ role: 'user', text })
   input.value = ''
+  const modelId = chatModelStore.selectedModelId ?? null
+  const ffKey = POSTHOG_FEATURE_FLAGS.CHAT_REPLY_EXPERIMENT
+  const ffVariant = getFeatureFlag(ffKey)
+  const ffProp =
+    ffVariant !== undefined ? { [`$feature/${ffKey}`]: ffVariant } : {}
+  captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ASK_SUBMITTED, {
+    prompt_length: text.trim().length,
+    model_id: modelId,
+    ...ffProp,
+  })
   try {
     isLoading.value = true
     const auth = (await import('@/stores/auth')).useAuthStore()
@@ -161,18 +187,54 @@ async function send(text: string) {
     const r = await askQuestion(payload)
     if (r.status === 200) {
       state.messages.push({ role: 'assistant', text: r.data.answer, isNew: true })
+      captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_RECEIVED, {
+        http_status: 200,
+        model_id: modelId,
+        ...ffProp,
+      })
       return
     }
-    if (r.status === 429) {
+    const err = r as { status: number; data: unknown }
+    const sc = err.status
+    if (sc === 429) {
+      captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+        http_status: sc,
+        model_id: modelId,
+        ...ffProp,
+      })
       errorText.value = 'For mange forespørsler. Vent litt før du prøver igjen.'
       return
     }
-    if (r.status === 400 || r.status === 503) {
-      errorText.value = r.data.error || 'Noe gikk galt. Prøv igjen.'
+    if (sc === 403) {
+      captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+        http_status: sc,
+        model_id: modelId,
+        ...ffProp,
+      })
+      errorText.value = readApiError(err.data) ?? GENERIC_ASK_ERROR
       return
     }
-    errorText.value = 'Noe gikk galt. Prøv igjen.'
+    if (sc === 400 || sc === 503) {
+      captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+        http_status: sc,
+        model_id: modelId,
+        ...ffProp,
+      })
+      errorText.value = readApiError(err.data) ?? GENERIC_ASK_ERROR
+      return
+    }
+    captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+      http_status: sc,
+      model_id: modelId,
+      ...ffProp,
+    })
+    errorText.value = readApiError(err.data) ?? GENERIC_ASK_ERROR
   } catch {
+    captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+      http_status: 0,
+      model_id: modelId,
+      ...ffProp,
+    })
     errorText.value = 'Nettverksfeil. Prøv igjen.'
   } finally {
     isLoading.value = false

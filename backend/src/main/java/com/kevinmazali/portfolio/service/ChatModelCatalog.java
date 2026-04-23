@@ -25,7 +25,7 @@ public class ChatModelCatalog {
 
   /** One row per configured provider/model pair (OpenAI and/or Anthropic). */
   public List<ChatModelOption> listAvailableModels() {
-    boolean openai = hasApiKey("spring.ai.openai.api-key");
+    boolean openai = hasApiKey("spring.ai.openai.api-key") && isOpenAiChatEnabled();
     boolean anthropic = hasApiKey("spring.ai.anthropic.api-key");
     return Arrays.stream(SupportedChatModel.values())
         .filter(m -> m.provider() == ChatProvider.OPENAI ? openai : anthropic)
@@ -36,9 +36,13 @@ public class ChatModelCatalog {
   /** Used by {@link com.kevinmazali.portfolio.controller.QuestionController} before calling the LLM. */
   public boolean isModelConfigured(SupportedChatModel model) {
     return switch (model.provider()) {
-      case OPENAI -> hasApiKey("spring.ai.openai.api-key");
+      case OPENAI -> hasApiKey("spring.ai.openai.api-key") && isOpenAiChatEnabled();
       case ANTHROPIC -> hasApiKey("spring.ai.anthropic.api-key");
     };
+  }
+
+  private boolean isOpenAiChatEnabled() {
+    return Boolean.parseBoolean(environment.getProperty("spring.ai.openai.chat.enabled", "false"));
   }
 
   /** Non-blank Spring property means the corresponding SDK can be constructed. */

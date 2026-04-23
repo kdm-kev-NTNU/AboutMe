@@ -2,23 +2,21 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.RagAnswer;
+import com.kevinmazali.portfolio.model.experiment.EvalDatasetExampleRow;
 import com.kevinmazali.portfolio.model.experiment.EvaluationScore;
 import com.kevinmazali.portfolio.model.experiment.ExperimentResult;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRun;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus;
-import com.kevinmazali.portfolio.model.experiment.PhoenixDatasetExample;
 import com.kevinmazali.portfolio.repository.ExperimentResultRepository;
 import com.kevinmazali.portfolio.repository.ExperimentRunRepository;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -43,7 +41,7 @@ class ExperimentAsyncRunnerTest {
   private ExperimentResultRepository experimentResultRepository;
 
   @Mock
-  private PhoenixDatasetService phoenixDatasetService;
+  private EvalDatasetService evalDatasetService;
 
   @Mock
   private OpenAIService openAIService;
@@ -58,7 +56,7 @@ class ExperimentAsyncRunnerTest {
     runner = new ExperimentAsyncRunner(
         experimentRunRepository,
         experimentResultRepository,
-        phoenixDatasetService,
+        evalDatasetService,
         openAIService,
         evaluatorService);
   }
@@ -78,8 +76,8 @@ class ExperimentAsyncRunnerTest {
   void invalidDatasetQuestionMarksRunFailed() {
     ExperimentRun run = baseRun();
     when(experimentRunRepository.findById(1L)).thenReturn(Optional.of(run));
-    when(phoenixDatasetService.getExamples("phx-1")).thenReturn(List.of(
-        new PhoenixDatasetExample("<script>x</script>", "ref", Map.of(), Map.of())));
+    when(evalDatasetService.getExamples("1")).thenReturn(List.of(
+        new EvalDatasetExampleRow("<script>x</script>", "ref")));
 
     runner.executeExperimentRun(1L);
 
@@ -96,9 +94,9 @@ class ExperimentAsyncRunnerTest {
     ExperimentRun run = baseRun();
     run.setTotalExamples(1);
     when(experimentRunRepository.findById(1L)).thenReturn(Optional.of(run));
-    when(phoenixDatasetService.getExamples("phx-1")).thenReturn(List.of(
-        new PhoenixDatasetExample("What is two plus two?", "four", Map.of(), Map.of()),
-        new PhoenixDatasetExample("Other?", "x", Map.of(), Map.of())));
+    when(evalDatasetService.getExamples("1")).thenReturn(List.of(
+        new EvalDatasetExampleRow("What is two plus two?", "four"),
+        new EvalDatasetExampleRow("Other?", "x")));
 
     when(openAIService.getAnswerWithDocuments(any(Question.class)))
         .thenReturn(new RagAnswer("4", List.of("chunk-a")));
@@ -130,7 +128,7 @@ class ExperimentAsyncRunnerTest {
         .id(1L)
         .name("n")
         .datasetName("d")
-        .phoenixDatasetId("phx-1")
+        .evalDatasetId(1L)
         .generatorModel("gpt-test")
         .evaluatorModel("gpt-judge")
         .status(ExperimentRunStatus.RUNNING)
