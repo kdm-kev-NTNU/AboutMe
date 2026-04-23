@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Service
 public class EvaluatorService {
 
-  private final OpenAiChatModel openAiChatModel;
+  private final ObjectProvider<OpenAiChatModel> openAiChatModel;
   private final ObjectProvider<AnthropicChatModel> anthropicChatModel;
   private final ObjectMapper objectMapper;
   private final AiLimitsProperties aiLimitsProperties;
@@ -35,7 +35,7 @@ public class EvaluatorService {
   private final AiBudgetService aiBudgetService;
 
   public EvaluatorService(
-      OpenAiChatModel openAiChatModel,
+      ObjectProvider<OpenAiChatModel> openAiChatModel,
       ObjectProvider<AnthropicChatModel> anthropicChatModel,
       ObjectMapper objectMapper,
       AiLimitsProperties aiLimitsProperties,
@@ -149,11 +149,15 @@ public class EvaluatorService {
       long startNs = System.nanoTime();
       ChatResponse chatResponse = switch (model.provider()) {
         case OPENAI -> {
+          OpenAiChatModel openAi = openAiChatModel.getIfAvailable();
+          if (openAi == null) {
+            throw new IllegalStateException("OpenAI chat is not configured.");
+          }
           OpenAiChatOptions opts = OpenAiChatOptions.builder()
               .model(model.modelId())
               .maxCompletionTokens(judgeMax)
               .build();
-          yield openAiChatModel.call(new Prompt(instructions, opts));
+          yield openAi.call(new Prompt(instructions, opts));
         }
         case ANTHROPIC -> {
           AnthropicChatModel anthropic = anthropicChatModel.getIfAvailable();

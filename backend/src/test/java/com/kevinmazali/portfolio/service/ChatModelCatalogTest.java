@@ -15,6 +15,7 @@ class ChatModelCatalogTest {
   void listAvailableModels_includesOpenAiWhenKeyPresent() {
     MockEnvironment env = new MockEnvironment()
         .withProperty("spring.ai.openai.api-key", "sk-openai-test")
+        .withProperty("spring.ai.openai.chat.enabled", "true")
         .withProperty("spring.ai.anthropic.api-key", "");
     ChatModelCatalog catalog = new ChatModelCatalog(env);
 
@@ -27,6 +28,7 @@ class ChatModelCatalogTest {
   void listAvailableModels_includesBothWhenKeysPresent() {
     MockEnvironment env = new MockEnvironment()
         .withProperty("spring.ai.openai.api-key", "sk-openai-test")
+        .withProperty("spring.ai.openai.chat.enabled", "true")
         .withProperty("spring.ai.anthropic.api-key", "sk-ant-test");
     ChatModelCatalog catalog = new ChatModelCatalog(env);
 
@@ -49,6 +51,7 @@ class ChatModelCatalogTest {
   void isModelConfigured_requiresMatchingProviderKey() {
     MockEnvironment env = new MockEnvironment()
         .withProperty("spring.ai.openai.api-key", "sk-openai-test")
+        .withProperty("spring.ai.openai.chat.enabled", "true")
         .withProperty("spring.ai.anthropic.api-key", "");
     ChatModelCatalog catalog = new ChatModelCatalog(env);
 

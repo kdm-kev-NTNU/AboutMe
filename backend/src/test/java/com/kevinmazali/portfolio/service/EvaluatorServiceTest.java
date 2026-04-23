@@ -36,6 +36,9 @@ class EvaluatorServiceTest {
   private OpenAiChatModel openAiChatModel;
 
   @Mock
+  private ObjectProvider<OpenAiChatModel> openAiChatModelProvider;
+
+  @Mock
   private ObjectProvider<AnthropicChatModel> anthropicChatModelProvider;
 
   @Mock
@@ -48,6 +51,7 @@ class EvaluatorServiceTest {
 
   @BeforeEach
   void setUp() {
+    lenient().when(openAiChatModelProvider.getIfAvailable()).thenReturn(openAiChatModel);
     lenient().doNothing().when(aiCircuitBreaker).assertClosed();
     lenient()
         .doNothing()
@@ -55,7 +59,7 @@ class EvaluatorServiceTest {
         .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), any(), any(), any());
     AiLimitsProperties limits = new AiLimitsProperties();
     evaluatorService = new EvaluatorService(
-        openAiChatModel,
+        openAiChatModelProvider,
         anthropicChatModelProvider,
         new ObjectMapper(),
         limits,

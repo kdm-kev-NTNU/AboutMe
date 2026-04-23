@@ -52,7 +52,7 @@ import java.util.stream.Stream;
 @Service
 public class OpenAIServiceImpl implements OpenAIService {
 
-  private final OpenAiChatModel openAiChatModel;
+  private final ObjectProvider<OpenAiChatModel> openAiChatModel;
   private final ObjectProvider<AnthropicChatModel> anthropicChatModel;
   private final VectorStore vectorStore;
   private final String defaultModelId;
@@ -68,7 +68,7 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final PostHogFeatureFlagService postHogFeatureFlagService;
 
   public OpenAIServiceImpl(
-      OpenAiChatModel openAiChatModel,
+      ObjectProvider<OpenAiChatModel> openAiChatModel,
       ObjectProvider<AnthropicChatModel> anthropicChatModel,
       @Lazy VectorStore vectorStore,
       @Value("${portfolio.chat.default-model-id}") String defaultModelId,
@@ -105,6 +105,9 @@ public class OpenAIServiceImpl implements OpenAIService {
   @Override
   public RagAnswer getAnswerWithDocuments(Question question) {
     SupportedChatModel model = resolveModel(question);
+    if (model.provider() == ChatProvider.OPENAI && openAiChatModel.getIfAvailable() == null) {
+      throw new IllegalStateException("OpenAI chat is not available (missing API key, OPENAI_CHAT_ENABLED=false, or autoconfiguration).");
+    }
     if (model.provider() == ChatProvider.ANTHROPIC && anthropicChatModel.getIfAvailable() == null) {
       throw new IllegalStateException("Anthropic chat is not available (missing API key or autoconfiguration).");
     }
@@ -278,11 +281,15 @@ public class OpenAIServiceImpl implements OpenAIService {
     int maxTokens = aiLimitsProperties.getChatMaxCompletionTokens();
     return switch (model.provider()) {
       case OPENAI -> {
+        OpenAiChatModel openAi = openAiChatModel.getIfAvailable();
+        if (openAi == null) {
+          throw new IllegalStateException("OpenAI chat is not available (missing API key, OPENAI_CHAT_ENABLED=false, or autoconfiguration).");
+        }
         OpenAiChatOptions opts = OpenAiChatOptions.builder()
             .model(model.modelId())
             .maxCompletionTokens(maxTokens)
             .build();
-        yield openAiChatModel.call(new Prompt(basePrompt.getInstructions(), opts));
+        yield openAi.call(new Prompt(basePrompt.getInstructions(), opts));
       }
       case ANTHROPIC -> {
         AnthropicChatModel anthropic = anthropicChatModel.getIfAvailable();
