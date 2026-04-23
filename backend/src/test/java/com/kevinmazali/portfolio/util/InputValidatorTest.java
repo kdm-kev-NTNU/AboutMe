@@ -53,4 +53,16 @@ class InputValidatorTest {
 		assertEquals("a b", InputValidator.sanitizeString("a\u0000b"));
 		assertEquals("a b", InputValidator.sanitizeString("a  \n  b"));
 	}
+
+	@Test
+	void isValidQuestionRespectsCustomMaxLength() {
+		assertFalse(InputValidator.isValidQuestion("12345", 4));
+		assertTrue(InputValidator.isValidQuestion("1234", 4));
+	}
+
+	@Test
+	void isValidFeedbackMessageRejectsBlockedPatterns() {
+		assertFalse(InputValidator.isValidFeedbackMessage("see <script"));
+		assertFalse(InputValidator.isValidFeedbackMessage("ok!", 2));
+	}
 }
