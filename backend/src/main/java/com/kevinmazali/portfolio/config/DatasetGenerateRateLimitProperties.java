@@ -10,7 +10,7 @@ public class DatasetGenerateRateLimitProperties {
 
   private boolean enabled = true;
 
-  private int capacity = 5;
+  private int capacity = 15;
 
   private int windowSeconds = 300;
 

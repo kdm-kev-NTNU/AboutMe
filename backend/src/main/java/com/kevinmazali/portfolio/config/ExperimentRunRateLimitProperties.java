@@ -10,7 +10,7 @@ public class ExperimentRunRateLimitProperties {
 
   private boolean enabled = true;
 
-  private int capacity = 10;
+  private int capacity = 30;
 
   private int windowSeconds = 60;
 

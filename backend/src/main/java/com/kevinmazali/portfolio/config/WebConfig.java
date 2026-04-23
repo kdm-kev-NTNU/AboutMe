@@ -22,7 +22,12 @@ import org.springframework.lang.NonNull;
 
 /**
  * Registers servlet filters that rate-limit {@code POST /ask}, {@code POST /auth/login},
- * {@code POST /feedback}, and {@code POST /admin/tools/experiments/run} (token buckets per client key or IP).
+ * {@code POST /feedback}, {@code POST /admin/tools/experiments/run}, and
+ * {@code POST /admin/tools/experiments/datasets/generate} (token buckets per client key or IP).
+ * <p>
+ * Admin experiment POSTs use {@code portfolio.experiments.*-rate-limit} defaults that are more generous than
+ * {@code POST /ask}, because those routes already require {@code ROLE_ADMIN} (HTTP Basic) in
+ * {@link SecurityConfig}; limits here mainly guard accidental bursts and shared credentials rather than anonymous abuse.
  * CORS is configured in {@link SecurityConfig}.
  */
 @Configuration
