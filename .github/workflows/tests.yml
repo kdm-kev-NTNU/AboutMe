@@ -1,4 +1,4 @@
-# Tests — PR merge gate (validate only; no deploy or image push).
+# Tests: PR merge gate (validate only; no deploy or image push).
 #
 # Triggers: push to main/master; all pull_request events.
 # Green means: backend ./mvnw verify (tests + JaCoCo check); frontend npm ci,

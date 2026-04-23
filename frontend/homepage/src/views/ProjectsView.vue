@@ -82,7 +82,7 @@ const projects = computed(() => {
       technologies: project.technologies,
       status: project.status,
       githubUrl: project.githubUrl,
-      liveUrl: project.liveUrl
+      liveUrl: project.liveUrl,
     }))
 })
 </script>

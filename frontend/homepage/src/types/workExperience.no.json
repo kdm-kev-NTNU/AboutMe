@@ -1,6 +1,16 @@
 {
   "experiences": [
     {
+      "id": "sparebank1-utvikling-internship-2026",
+      "startDate": "2026-06-15",
+      "endDate": "2026-08-15",
+      "company": "SpareBank 1 Utvikling",
+      "position": "Sommerintern",
+      "description": "Kommer til å gjennomføre et 8-ukers sommerinternship innen utvikling.",
+      "location": "Oslo, Norge",
+      "type": "internship"
+    },
+    {
       "id": "ntnu-programming-2025",
       "startDate": "2025-08-01",
       "endDate": "2025-12-31",

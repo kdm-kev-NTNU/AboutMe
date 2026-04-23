@@ -4,7 +4,10 @@ import { RouterView, RouterLink, useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
 import FloatingChatButton from './components/FloatingChatButton.vue'
 import AdminLoginButton from './components/AdminLoginButton.vue'
+import CookieConsentBanner from './components/CookieConsentBanner.vue'
+import CookieConsentSettingsModal from './components/CookieConsentSettingsModal.vue'
 import { useLangStore } from './stores/lang'
+import { openCookieSettings } from './lib/cookie-settings-state'
 
 // Initialize the language store early so detection runs on app boot
 const langStore = useLangStore()
@@ -33,13 +36,15 @@ const cookieSettingsLabel = computed(() => (langStore.language === 'no' ? 'Infor
       </RouterLink>
       <span class="text-gray-300" aria-hidden="true">|</span>
       <button
-        id="revoke-consent-btn"
         type="button"
         class="inline-block px-2 bg-transparent border-none hover:text-gray-600 transition-colors cursor-pointer text-xs text-gray-400"
+        @click="openCookieSettings"
       >
         {{ cookieSettingsLabel }}
       </button>
     </footer>
+    <CookieConsentSettingsModal />
+    <CookieConsentBanner />
     <FloatingChatButton class="cursor-pointer" />
   </div>
 </template>

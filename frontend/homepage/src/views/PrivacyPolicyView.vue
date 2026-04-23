@@ -27,10 +27,10 @@ const sections = computed(() => {
         ],
       },
       {
-        heading: '3. Informasjonskapsler og samtykke (Consentify)',
+        heading: '3. Informasjonskapsler og samtykke',
         paragraphs: [
-          'Nettstedet bruker Consentify (consentify.app) for å vise et samtykkebanner, dokumentere samtykke til informasjonskapsler og la deg endre innstillinger senere.',
-          'Consentify kan sette egne informasjonskapsler eller lignende teknologi for å lagre preferanser. Les Consentifys personvernerklæring for detaljer om deres behandling.',
+          'Nettstedet bruker PostHog for analyse og innsikt i hvordan sider og funksjoner brukes.',
+          'Analyse-cookies og lokal lagring brukes bare hvis du samtykker via samtykkebanneret.',
           'Du kan når som helst åpne «Informasjonskapsler» i bunnteksten for å endre eller trekke tilbake samtykke.',
         ],
       },
@@ -78,10 +78,10 @@ const sections = computed(() => {
       ],
     },
     {
-      heading: '3. Cookies and consent (Consentify)',
+      heading: '3. Cookies and consent',
       paragraphs: [
-        'The Site uses Consentify (consentify.app) to display a consent banner, record cookie consent, and let you change your preferences later.',
-        'Consentify may set its own cookies or similar technologies to store preferences. See Consentify\'s privacy policy for details about their processing.',
+        'The Site uses PostHog analytics to understand how pages and features are used.',
+        'Analytics cookies and local storage are only used if you grant consent in the cookie banner.',
         'You can open «Cookie Settings» in the footer at any time to change or withdraw consent.',
       ],
     },
@@ -142,14 +142,6 @@ const sections = computed(() => {
           </div>
         </section>
 
-        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 class="text-lg font-semibold text-gray-900">
-            {{ isNo ? 'Oversikt over informasjonskapsler' : 'Cookie Overview' }}
-          </h2>
-          <div class="mt-4 text-sm leading-relaxed text-gray-700">
-            <div id="consentify-privacy-policy"></div>
-          </div>
-        </section>
       </div>
     </div>
   </main>

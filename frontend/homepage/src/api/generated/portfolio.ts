@@ -71,7 +71,7 @@ export interface Answer {
   answer: string;
 }
 
-export interface ChromaHealthResponse {
+export interface VectorStoreHealthResponse {
   healthy?: boolean;
   /** @nullable */
   collectionName?: string | null;
@@ -96,16 +96,16 @@ export interface DocumentListEntry {
   lastIngestedAt?: string;
 }
 
-export interface ChromaCollectionSummary {
+export interface VectorStoreCollectionEntry {
   id?: string;
   name?: string;
 }
 
-export interface ChromaCollectionsResponse {
+export interface VectorStoreInfoResponse {
   activeCollectionName?: string;
   /** @nullable */
   activeCollectionEmbeddingCount?: number | null;
-  collections?: ChromaCollectionSummary[];
+  collections?: VectorStoreCollectionEntry[];
 }
 
 export type ChunkItemMetadata = { [key: string]: unknown };
@@ -439,15 +439,15 @@ export const listChatModels = async ( options?: RequestInit): Promise<listChatMo
 
 
 /**
- * @summary ChromaDB health
+ * @summary Vector store health (legacy /health/chroma path)
  */
 export type healthChromaResponse200 = {
-  data: ChromaHealthResponse
+  data: VectorStoreHealthResponse
   status: 200
 }
 
 export type healthChromaResponse503 = {
-  data: ChromaHealthResponse
+  data: VectorStoreHealthResponse
   status: 503
 }
     
@@ -743,10 +743,10 @@ export const adminDocumentsChunks = async (params?: AdminDocumentsChunksParams, 
 
 
 /**
- * @summary List Chroma collections
+ * @summary List vector store collections (pgvector table summary)
  */
 export type adminDocumentsCollectionsResponse200 = {
-  data: ChromaCollectionsResponse
+  data: VectorStoreInfoResponse
   status: 200
 }
     

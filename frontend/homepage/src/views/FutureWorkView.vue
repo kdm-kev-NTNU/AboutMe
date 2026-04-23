@@ -18,17 +18,50 @@ type SectionCopy = {
 
 const sectionsEn: SectionCopy[] = [
 	{
+		category: 'Personal',
+		title: 'Local model and Obsidian journal',
+		intro:
+			'I want a local model with my Obsidian journal as context, similar to a small journal-focused bot in the vault. The idea is to generate plain .txt drafts about me, not to publish the whole journal raw online.',
+		points: [
+			'Pick a local setup that fits my hardware and what I am comfortable sharing.',
+			'Feed the model curated journal context (themes, timelines, decisions) so it can write useful .txt drafts.',
+			'Read and trim each .txt while it still lives in that private loop.',
+		],
+		refs: [],
+	},
+	{
+		category: 'Pipeline',
+		title: 'From curated drafts to Kevin’s AI',
+		intro:
+			'After review, those .txt files should be curated and sanitized, then ingested into the same document corpus the portfolio RAG stack already searches, so Kevin’s AI can ground answers in them.',
+		points: [
+			'Keep the hand-off as simple .txt files (or convert to whatever shape ingestion expects) and upload through the existing document pipeline and admin tools.',
+			'Apply the same hygiene as the rest of the app: PII redaction, tone, and versioning before anything lands in the corpus.',
+			'Re-ingest with clear provenance, then sanity-check retrieval on the new chunks before they power live chat.',
+		],
+		refs: [
+			{
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
+				href: 'https://arxiv.org/abs/2407.01219',
+			},
+			{
+				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
+				href: 'https://arxiv.org/abs/2312.10997',
+			},
+		],
+	},
+	{
 		category: 'Retrieval',
 		title: 'Retrieval pipeline improvements',
 		intro:
-			'The current RAG stack already embeds documents, stores vectors, and runs similarity search before generation. The next incremental gains typically come from ranking quality and embedding alignment—not from replacing the whole architecture.',
+			'The current RAG stack already embeds documents, stores vectors, and runs similarity search before generation. The next incremental gains typically come from ranking quality and embedding alignment, not from replacing the whole architecture.',
 		points: [
 			'Add a reranking stage (e.g. monoT5-style cross-encoders) on top of vector search results to reorder chunks by semantic relevance and reduce noise in the context window.',
 			'Experiment with domain-adapted or fine-tuned embeddings so user questions match chunk representations more reliably, especially when terminology is specialized.',
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 		],
@@ -45,11 +78,11 @@ const sectionsEn: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Renze & Guven (2024) — The Effect of Sampling Temperature on Problem Solving in Large Language Models',
+				label: 'Renze & Guven (2024): The Effect of Sampling Temperature on Problem Solving in Large Language Models',
 				href: 'https://arxiv.org/abs/2402.05201',
 			},
 			{
-				label: 'Willard & Louf (2023) — Efficient Guided Generation for Large Language Models',
+				label: 'Willard & Louf (2023): Efficient Guided Generation for Large Language Models',
 				href: 'https://arxiv.org/abs/2307.09702',
 			},
 		],
@@ -60,11 +93,11 @@ const sectionsEn: SectionCopy[] = [
 		intro:
 			'Today the assistant always retrieves a fixed slice of the corpus. Selective retrieval can cut latency when the model already knows the answer and improve focus when extra evidence is required.',
 		points: [
-			'Let the system decide when to retrieve, skip retrieval, or retrieve again after a first draft—patterns inspired by self-reflective RAG that critique their own need for evidence.',
+			'Let the system decide when to retrieve, skip retrieval, or retrieve again after a first draft, using patterns inspired by self-reflective RAG that critique their own need for evidence.',
 		],
 		refs: [
 			{
-				label: 'Asai et al. (2023) — Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
+				label: 'Asai et al. (2023): Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
 				href: 'https://arxiv.org/abs/2310.11511',
 			},
 		],
@@ -80,7 +113,7 @@ const sectionsEn: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 		],
@@ -97,7 +130,7 @@ const sectionsEn: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Gao et al. (2024) — Retrieval-Augmented Generation for Large Language Models: A Survey',
+				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 		],
@@ -105,6 +138,39 @@ const sectionsEn: SectionCopy[] = [
 ]
 
 const sectionsNo: SectionCopy[] = [
+	{
+		category: 'Personlig',
+		title: 'Lokal modell og Obsidian-journal',
+		intro:
+			'Jeg vil bruke en lokal modell med Obsidian-journalen som kontekst, omtrent som en enkel «journal-bot» i vaulten. Målet er å lage .txt-filer om meg selv, uten å legge ut hele journalen rått på nett.',
+		points: [
+			'Finne en lokal løsning som passer maskinen og personvernbehovet mitt.',
+			'Gi modellen kuratert journalinnhold (tema, tidslinjer, valg) så den kan skrive nyttige .txt-utkast.',
+			'Lese gjennom og trimme hver .txt mens den fortsatt bare lever i det private løpet mitt.',
+		],
+		refs: [],
+	},
+	{
+		category: 'Pipeline',
+		title: 'Fra kuraterte utkast til Kevin sin AI',
+		intro:
+			'Etter gjennomgang skal .txt-filene kurateres og saniteres, og deretter inn i dokumentkorpuset som RAG-løsningen allerede henter fra, slik at Kevin sin AI kan bruke dem som kontekst.',
+		points: [
+			'Beholde overleveringen som enkle .txt-filer (eller konvertere til formatet ingest forventer) og laste opp via dokumentpipelinen og admin som finnes i dag.',
+			'Samme hygiene som ellers i appen: PII, tone og versjonering før noe havner i korpuset.',
+			'Re-ingest med tydelig proveniens, deretter en rask sjekk av retrieval mot nye chunks før de brukes i live chat.',
+		],
+		refs: [
+			{
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
+				href: 'https://arxiv.org/abs/2407.01219',
+			},
+			{
+				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
+				href: 'https://arxiv.org/abs/2312.10997',
+			},
+		],
+	},
 	{
 		category: 'Retrieval',
 		title: 'Forbedringer i retrieval-pipelinen',
@@ -116,7 +182,7 @@ const sectionsNo: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 		],
@@ -133,11 +199,11 @@ const sectionsNo: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Renze & Guven (2024) — The Effect of Sampling Temperature on Problem Solving in Large Language Models',
+				label: 'Renze & Guven (2024): The Effect of Sampling Temperature on Problem Solving in Large Language Models',
 				href: 'https://arxiv.org/abs/2402.05201',
 			},
 			{
-				label: 'Willard & Louf (2023) — Efficient Guided Generation for Large Language Models',
+				label: 'Willard & Louf (2023): Efficient Guided Generation for Large Language Models',
 				href: 'https://arxiv.org/abs/2307.09702',
 			},
 		],
@@ -148,11 +214,11 @@ const sectionsNo: SectionCopy[] = [
 		intro:
 			'I dag hentes alltid et fast utsnitt av korpuset. Selektiv retrieval kan kutte latency når modellen allerede kan svare, og skjerpe fokus når ekstra evidens trengs.',
 		points: [
-			'La systemet avgjøre når det skal hente, hoppe over retrieval, eller hente på nytt etter et første utkast—inspirert av selvreflekterende RAG som vurderer eget behov for evidens.',
+			'La systemet avgjøre når det skal hente, hoppe over retrieval, eller hente på nytt etter et første utkast, inspirert av selvreflekterende RAG som vurderer eget behov for evidens.',
 		],
 		refs: [
 			{
-				label: 'Asai et al. (2023) — Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
+				label: 'Asai et al. (2023): Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
 				href: 'https://arxiv.org/abs/2310.11511',
 			},
 		],
@@ -168,7 +234,7 @@ const sectionsNo: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024) — Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 		],
@@ -185,24 +251,36 @@ const sectionsNo: SectionCopy[] = [
 		],
 		refs: [
 			{
-				label: 'Gao et al. (2024) — Retrieval-Augmented Generation for Large Language Models: A Survey',
+				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 		],
 	},
 ]
 
+const foresightAiProductUrl = 'https://piscada.com/foresight-ai'
+
 const hero = computed(() =>
 	langStore.language === 'no'
 		? {
 				title: 'Videre arbeid og forbedringer',
 				lead:
-					'Dette er en kort, forskningsforankret roadmap for funksjoner som allerede finnes i porteføljen: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, samt promptversjoner.',
+					'Dette er en forskningsforankret roadmap for neste iterasjoner i en portefølje som er under aktiv tilpasning: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, samt promptversjoner.',
+				contextBefore:
+					'Roadmapen viser hva jeg prioriterer mens jeg kontinuerlig tilpasser porteføljen med læring fra bacheloroppgaven (2026) hos Piscada AS i Trondheim og arbeid på ',
+				contextLinkText: 'Foresight AI',
+				contextAfter: ', som jeg utvikler sammen med en annen i teamet.',
+				contextLinkHref: foresightAiProductUrl,
 			}
 		: {
 				title: 'Future work and improvements',
 				lead:
-					'A concise, research-backed roadmap focused on capabilities already shipped in this portfolio: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning.',
+					'A research-backed roadmap for the next iterations of a portfolio that is being actively adapted: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning.',
+				contextBefore:
+					"This roadmap reflects what I prioritize while continuously adapting the portfolio based on learnings from my bachelor's thesis (2026) at Piscada AS in Trondheim and work on ",
+				contextLinkText: 'Foresight AI',
+				contextAfter: ', which I develop with another teammate.',
+				contextLinkHref: foresightAiProductUrl,
 			},
 )
 
@@ -232,8 +310,21 @@ const referencesHeading = computed(() =>
 			>
 				{{ hero.title }}
 			</h1>
-			<p class="text-center text-gray-600 max-w-3xl mx-auto mb-12 leading-relaxed">
+			<p class="text-center text-gray-600 max-w-3xl mx-auto mb-4 leading-relaxed">
 				{{ hero.lead }}
+			</p>
+			<p class="text-center text-sm text-slate-600 max-w-3xl mx-auto mb-12 leading-relaxed">
+				{{ hero.contextBefore }}<a
+					:href="hero.contextLinkHref"
+					class="font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900"
+					target="_blank"
+					rel="noopener noreferrer"
+					:aria-label="
+						langStore.language === 'no'
+							? 'Foresight AI på piscada.com (åpner i ny fane)'
+							: 'Foresight AI on piscada.com (opens in a new tab)'
+					"
+					>{{ hero.contextLinkText }}</a>{{ hero.contextAfter }}
 			</p>
 
 			<div class="space-y-8">
@@ -258,7 +349,10 @@ const referencesHeading = computed(() =>
 						<ul class="list-disc pl-5 space-y-2 text-gray-700 text-sm leading-relaxed">
 							<li v-for="(point, pIndex) in section.points" :key="pIndex">{{ point }}</li>
 						</ul>
-						<div class="rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+						<div
+							v-if="section.refs.length > 0"
+							class="rounded-lg border border-blue-100 bg-blue-50/40 p-4"
+						>
 							<p class="text-xs font-semibold uppercase tracking-wide text-blue-800 mb-2">
 								{{ referencesHeading }}
 							</p>

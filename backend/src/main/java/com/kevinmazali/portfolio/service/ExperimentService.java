@@ -98,6 +98,10 @@ public class ExperimentService {
     if (!chatModelCatalog.isModelConfigured(ev)) {
       throw new IllegalArgumentException("Evaluator model is not configured (API key).");
     }
+    if (gen.provider() == ev.provider()) {
+      throw new IllegalArgumentException(
+          "Generator and evaluator must be from different providers to avoid model-family bias.");
+    }
 
     List<PhoenixDatasetExample> examples = phoenixDatasetService.getExamples(request.datasetId().trim());
     if (examples.isEmpty()) {

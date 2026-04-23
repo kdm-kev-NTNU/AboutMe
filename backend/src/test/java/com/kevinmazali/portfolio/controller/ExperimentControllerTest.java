@@ -2,6 +2,8 @@ package com.kevinmazali.portfolio.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
+import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.PhoenixProperties;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
@@ -18,6 +20,7 @@ import com.kevinmazali.portfolio.service.ExperimentService;
 import com.kevinmazali.portfolio.service.PhoenixDatasetService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
@@ -41,6 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ExperimentController.class)
+@EnableConfigurationProperties({ AskRateLimitProperties.class, ExperimentRunRateLimitProperties.class })
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
 class ExperimentControllerTest {
 
@@ -157,7 +161,7 @@ class ExperimentControllerTest {
     mockMvc.perform(post("/admin/tools/experiments/run")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(new RunExperimentRequest(
-                "ds-1", "n", null, "gpt-5.4-mini", "gpt-5.4-mini", null))))
+                "ds-1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null))))
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.runId").value(7));
   }

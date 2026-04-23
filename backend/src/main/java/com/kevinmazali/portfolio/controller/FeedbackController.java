@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.controller;
 import com.kevinmazali.portfolio.model.ApiError;
 import com.kevinmazali.portfolio.model.FeedbackRequest;
 import com.kevinmazali.portfolio.model.FeedbackSubmission;
+import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.repository.FeedbackRepository;
 import com.kevinmazali.portfolio.util.InputValidator;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class FeedbackController {
 
     private final FeedbackRepository feedbackRepository;
+    private final AiLimitsProperties aiLimitsProperties;
 
-    public FeedbackController(FeedbackRepository feedbackRepository) {
+    public FeedbackController(FeedbackRepository feedbackRepository, AiLimitsProperties aiLimitsProperties) {
         this.feedbackRepository = feedbackRepository;
+        this.aiLimitsProperties = aiLimitsProperties;
     }
 
     @Operation(summary = "Submit feedback", description = "Stores a feedback message from a site visitor. Rate limited (3 requests / 60s per IP).")
@@ -40,7 +43,7 @@ public class FeedbackController {
     })
     @PostMapping("/feedback")
     public ResponseEntity<?> submitFeedback(@RequestBody FeedbackRequest request) {
-        if (!InputValidator.isValidFeedbackMessage(request.message())) {
+        if (!InputValidator.isValidFeedbackMessage(request.message(), aiLimitsProperties.getMaxFeedbackChars())) {
             return ResponseEntity.badRequest().body(new ApiError("Invalid or empty feedback message"));
         }
 

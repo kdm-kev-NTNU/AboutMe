@@ -19,3 +19,6 @@ backend/data/*
 !backend/data/docs/
 backend/data/docs/*
 !backend/data/docs/.gitkeep
+
+# Maven build output
+backend/target/

@@ -1,6 +1,5 @@
 package com.kevinmazali.portfolio.config;
 
-import com.kevinmazali.portfolio.util.ChromaClientDiagnostics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -53,19 +52,19 @@ public class ConfigLogging implements ApplicationRunner {
             log.info("Config: .env property source loaded = {}", hasDotEnv);
         }
 
-        log.info("Config: portfolio.chroma.enabled={}", environment.getProperty("portfolio.chroma.enabled", "true"));
-        log.info("Config: spring.ai.vectorstore.chroma.client.host={}",
-            environment.getProperty("spring.ai.vectorstore.chroma.client.host", "<unset>"));
-        log.info("Config: spring.ai.vectorstore.chroma.client.port={}",
-            environment.getProperty("spring.ai.vectorstore.chroma.client.port", "<unset>"));
-        int chromaPort = environment.getProperty("spring.ai.vectorstore.chroma.client.port", Integer.class, 8100);
-        log.info("Config: Chroma REST client base URL (host:port, same as ChromaApi)={}",
-            ChromaClientDiagnostics.baseUrl(
-                environment.getProperty("spring.ai.vectorstore.chroma.client.host"),
-                chromaPort));
+        log.info("Config: spring.ai.vectorstore.pgvector.schema-name={}",
+            environment.getProperty("spring.ai.vectorstore.pgvector.schema-name", "<unset>"));
+        log.info("Config: spring.ai.vectorstore.pgvector.table-name={}",
+            environment.getProperty("spring.ai.vectorstore.pgvector.table-name", "<unset>"));
+        log.info("Config: spring.ai.vectorstore.pgvector.index-type={}",
+            environment.getProperty("spring.ai.vectorstore.pgvector.index-type", "<unset>"));
         log.info("Config: management.otlp.tracing.endpoint={}",
             environment.getProperty("management.otlp.tracing.endpoint", "<unset>"));
+        log.info("Config: management.otlp.tracing.export.enabled={}",
+            environment.getProperty("management.otlp.tracing.export.enabled", "<unset>"));
+        log.info("Config: management.otlp.metrics.export.enabled={}",
+            environment.getProperty("management.otlp.metrics.export.enabled", "<unset>"));
+        log.info("Config: management.otlp.metrics.export.url={}",
+            environment.getProperty("management.otlp.metrics.export.url", "<unset>"));
     }
 }
-
-
