@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/frontend/homepage"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Dependabot currently cannot apply the security update for uuid here
+      # because Cypress transitively constrains @cypress/request -> uuid@^8.3.2.
+      - dependency-name: "uuid"
+
+  - package-ecosystem: "maven"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
