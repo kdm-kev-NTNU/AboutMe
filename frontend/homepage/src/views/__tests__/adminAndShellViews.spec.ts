@@ -79,7 +79,7 @@ function setupFetchForExperimentsAndHistory() {
         )
       }
       if (url.includes('/api/admin/tools/experiments/config')) {
-        return new Response(JSON.stringify({ phoenixConfigured: false, phoenixBaseUrl: '' }), {
+        return new Response(JSON.stringify({ posthogConfigured: false, posthogHost: '' }), {
           status: 200,
           headers: headersJson,
         })
