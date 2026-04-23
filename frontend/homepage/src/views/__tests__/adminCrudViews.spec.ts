@@ -580,6 +580,91 @@ describe('Admin CRUD views (integration-style)', () => {
     expect(labels.some((t) => t.includes('O2'))).toBe(true)
   })
 
+  it('AdminExperimentsView QRA: Generer datasett posts with numeric fields and shows start message', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url =
+        typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+      const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
+
+      if (url.includes('/api/admin/tools/experiments/config')) {
+        return new Response(JSON.stringify({ posthogConfigured: false, posthogHost: '' }), {
+          status: 200,
+          headers: headersJson,
+        })
+      }
+      if (url.includes('/api/admin/tools/documents')) {
+        return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+      }
+      if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
+        return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+      }
+      if (
+        method === 'POST' &&
+        url.includes('/api/admin/tools/experiments/datasets/generate') &&
+        !url.includes('/status')
+      ) {
+        return new Response(JSON.stringify({ generationId: 99, status: 'RUNNING' }), {
+          status: 202,
+          headers: headersJson,
+        })
+      }
+      if (url.includes('/api/admin/tools/experiments/models')) {
+        return new Response(
+          JSON.stringify([
+            { id: 'gpt-5.4-mini', label: 'GPT-5.4 mini', provider: 'OPENAI' },
+            { id: 'claude-judge', label: 'Judge', provider: 'ANTHROPIC' },
+          ]),
+          { status: 200, headers: headersJson },
+        )
+      }
+      if (url.includes('/api/admin/tools/experiments/runs')) {
+        return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+      }
+      return new Response('{}', { status: 404, headers: headersJson })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mountAdmin(AdminExperimentsView)
+    await flushPromises()
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('RAG-experiments')
+    })
+
+    await wrapper.find('[placeholder="f.eks. portfolio-eval-v1"]').setValue('portfolio-eval-1')
+    await wrapper.find('[data-testid="gen-model-select"]').setValue('gpt-5.4-mini')
+
+    const numInputs = wrapper.findAll('input[type="number"]')
+    expect(numInputs.length).toBeGreaterThanOrEqual(3)
+    await numInputs[0]!.setValue(5)
+    await numInputs[2]!.setValue(42)
+
+    const genBtn = wrapper.findAll('button').find((b) => b.text().includes('Generer datasett'))
+    expect(genBtn).toBeTruthy()
+    await genBtn!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('QRA-generering startet (jobb #99)')
+    expect(wrapper.text()).not.toContain('trim is not a function')
+
+    const genPost = fetchMock.mock.calls.find((args) => {
+      const u = String(args[0])
+      const init = args[1] as RequestInit | undefined
+      return (
+        u.includes('/api/admin/tools/experiments/datasets/generate') &&
+        !u.includes('/status') &&
+        String(init?.method ?? 'GET').toUpperCase() === 'POST'
+      )
+    })
+    expect(genPost).toBeTruthy()
+    const body = JSON.parse((genPost![1] as RequestInit).body as string)
+    expect(body).toMatchObject({
+      name: 'portfolio-eval-1',
+      model: 'gpt-5.4-mini',
+      questionsPerChunk: 5,
+      seed: 42,
+    })
+  })
+
   it('AdminExperimentsView shows dataset error when list fails', async () => {
     vi.stubGlobal(
       'fetch',
