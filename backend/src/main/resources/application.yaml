@@ -125,6 +125,10 @@ portfolio:
     enabled: ${POSTHOG_ENABLED:false}
     api-key: ${POSTHOG_API_KEY:}
     host: ${POSTHOG_HOST:https://eu.i.posthog.com}
+    # Keys to resolve via /decide and attach as $feature/<key> on $ai_generation (see PostHogFeatureFlagService).
+    feature-flag-keys:
+      - aboutme_rag_feature_flags
+    feature-flags-timeout-ms: 2000
   sanitizer:
     enabled: ${SANITIZER_ENABLED:true}
     redaction-format: "{{{REDACTED-%t}}}"
