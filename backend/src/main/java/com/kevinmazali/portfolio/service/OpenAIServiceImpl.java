@@ -30,10 +30,12 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +64,8 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final DocumentReranker documentReranker;
   private final RetrievalProperties retrievalProperties;
   private final PostHogTraceContext postHogTraceContext;
+  @org.springframework.lang.Nullable
+  private final PostHogFeatureFlagService postHogFeatureFlagService;
 
   public OpenAIServiceImpl(
       OpenAiChatModel openAiChatModel,
@@ -75,7 +79,8 @@ public class OpenAIServiceImpl implements OpenAIService {
       AiCircuitBreaker aiCircuitBreaker,
       DocumentReranker documentReranker,
       RetrievalProperties retrievalProperties,
-      PostHogTraceContext postHogTraceContext) {
+      PostHogTraceContext postHogTraceContext,
+      @Autowired(required = false) @org.springframework.lang.Nullable PostHogFeatureFlagService postHogFeatureFlagService) {
     this.openAiChatModel = openAiChatModel;
     this.anthropicChatModel = anthropicChatModel;
     this.vectorStore = vectorStore;
@@ -88,6 +93,7 @@ public class OpenAIServiceImpl implements OpenAIService {
     this.documentReranker = documentReranker;
     this.retrievalProperties = retrievalProperties;
     this.postHogTraceContext = postHogTraceContext;
+    this.postHogFeatureFlagService = postHogFeatureFlagService;
   }
 
   @Override
@@ -118,7 +124,14 @@ public class OpenAIServiceImpl implements OpenAIService {
   private RagAnswer getAnswerWithDocumentsInner(
       Question question, SupportedChatModel model, String budgetUserId, boolean anonymous) {
 
-    List<String> queries = expandQueryToLanguages(question.question(), model, budgetUserId, anonymous);
+    Map<String, Object> phFeatureProps = Collections.emptyMap();
+    PostHogFeatureFlagService ffSvc = postHogFeatureFlagService;
+    if (ffSvc != null && ffSvc.isEnabled()) {
+      phFeatureProps = ffSvc.resolveForDistinctId(budgetUserId);
+    }
+
+    List<String> queries =
+        expandQueryToLanguages(question.question(), model, budgetUserId, anonymous, phFeatureProps);
 
     int vectorTopK = Math.max(1, retrievalProperties.getVectorTopK());
     int candidateCap = Math.max(1, retrievalProperties.getCandidateLimit());
@@ -171,7 +184,13 @@ public class OpenAIServiceImpl implements OpenAIService {
     String joinedContext = String.join("\n---\n", contentList);
     ChatResponse response =
         invokeManagedChat(
-            model, basePrompt, budgetUserId, anonymous, "rag_completion", joinedContext);
+            model,
+            basePrompt,
+            budgetUserId,
+            anonymous,
+            "rag_completion",
+            joinedContext,
+            phFeatureProps);
     String answerText = response.getResult().getOutput().getText();
     answerText = truncateOutput(answerText, aiLimitsProperties.getMaxOutputChars());
     return new RagAnswer(answerText, contentList);
@@ -212,7 +231,8 @@ public class OpenAIServiceImpl implements OpenAIService {
       String budgetUserId,
       boolean anonymous,
       String generationSpanName,
-      @org.springframework.lang.Nullable String posthogContextDocuments) {
+      @org.springframework.lang.Nullable String posthogContextDocuments,
+      Map<String, Object> posthogFeatureProps) {
     PostHogTraceContext.ActiveSpan span = postHogTraceContext.startSpan();
     try {
       aiCircuitBreaker.assertClosed();
@@ -222,6 +242,10 @@ public class OpenAIServiceImpl implements OpenAIService {
       double latencySec = (System.nanoTime() - startNs) / 1_000_000_000.0;
       UsageTokens usage = extractUsage(response);
       String outputText = response.getResult().getOutput().getText();
+      Map<String, Object> flags =
+          posthogFeatureProps != null && !posthogFeatureProps.isEmpty()
+              ? posthogFeatureProps
+              : Map.of();
       AiGenerationAnalytics analytics =
           AiGenerationAnalytics.empty()
               .withTrace(
@@ -233,7 +257,8 @@ public class OpenAIServiceImpl implements OpenAIService {
               .withTexts(
                   promptContentsAsString(basePrompt),
                   outputText,
-                  "rag_completion".equals(generationSpanName) ? posthogContextDocuments : null);
+                  "rag_completion".equals(generationSpanName) ? posthogContextDocuments : null)
+              .withExperimentProps(flags);
       aiBudgetService.recordUsage(
           budgetUserId,
           model.modelId(),
@@ -277,7 +302,8 @@ public class OpenAIServiceImpl implements OpenAIService {
       String original,
       SupportedChatModel model,
       String budgetUserId,
-      boolean anonymous) {
+      boolean anonymous,
+      Map<String, Object> posthogFeatureProps) {
     try {
       String sys = """
       Translate the user query into both English and Norwegian.
@@ -287,7 +313,9 @@ public class OpenAIServiceImpl implements OpenAIService {
 
       Prompt base = new PromptTemplate("{sys}\nUser: {q}")
           .create(Map.of("sys", sys, "q", original));
-      ChatResponse r = invokeManagedChat(model, base, budgetUserId, anonymous, "query_expansion", null);
+      ChatResponse r =
+          invokeManagedChat(
+              model, base, budgetUserId, anonymous, "query_expansion", null, posthogFeatureProps);
       String json = r.getResult().getOutput().getText();
 
       String en = extractJsonValue(json, "en");
