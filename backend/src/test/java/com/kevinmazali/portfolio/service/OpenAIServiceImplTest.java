@@ -88,7 +88,8 @@ class OpenAIServiceImplTest {
         aiCircuitBreaker,
         new PassThroughDocumentReranker(),
         retrievalProperties,
-        new PostHogTraceContext());
+        new PostHogTraceContext(),
+        null);
   }
 
   @AfterEach
@@ -132,7 +133,8 @@ class OpenAIServiceImplTest {
             aiCircuitBreaker,
             reranker,
             retrievalProperties,
-            new PostHogTraceContext());
+            new PostHogTraceContext(),
+            null);
 
     when(vectorStore.similaritySearch(any(SearchRequest.class)))
         .thenReturn(
