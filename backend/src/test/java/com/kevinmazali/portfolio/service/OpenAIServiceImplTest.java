@@ -71,7 +71,7 @@ class OpenAIServiceImplTest {
     lenient()
         .doNothing()
         .when(aiBudgetService)
-        .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), any(), any());
+        .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), any(), any(), any());
 
     AiLimitsProperties limits = new AiLimitsProperties();
     AiBudgetProperties budgetProps = new AiBudgetProperties();
@@ -87,7 +87,8 @@ class OpenAIServiceImplTest {
         aiBudgetService,
         aiCircuitBreaker,
         new PassThroughDocumentReranker(),
-        retrievalProperties);
+        retrievalProperties,
+        new PostHogTraceContext());
   }
 
   @AfterEach
@@ -130,7 +131,8 @@ class OpenAIServiceImplTest {
             aiBudgetService,
             aiCircuitBreaker,
             reranker,
-            retrievalProperties);
+            retrievalProperties,
+            new PostHogTraceContext());
 
     when(vectorStore.similaritySearch(any(SearchRequest.class)))
         .thenReturn(
