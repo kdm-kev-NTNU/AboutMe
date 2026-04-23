@@ -4,20 +4,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
-import com.kevinmazali.portfolio.config.PhoenixProperties;
+import com.kevinmazali.portfolio.config.PostHogProperties;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.model.ChatModelOption;
 import com.kevinmazali.portfolio.model.chat.ChatProvider;
-import com.kevinmazali.portfolio.model.experiment.CreatePhoenixDatasetRequest;
+import com.kevinmazali.portfolio.model.experiment.CreateEvalDatasetRequest;
+import com.kevinmazali.portfolio.model.experiment.EvalDatasetSummary;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunDetailResponse;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunSummaryResponse;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus;
-import com.kevinmazali.portfolio.model.experiment.PhoenixDatasetSummary;
 import com.kevinmazali.portfolio.model.experiment.RunExperimentRequest;
 import com.kevinmazali.portfolio.service.ChatModelCatalog;
 import com.kevinmazali.portfolio.service.ExperimentService;
-import com.kevinmazali.portfolio.service.PhoenixDatasetService;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -27,11 +30,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,8 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ExperimentController.class)
-@EnableConfigurationProperties({ AskRateLimitProperties.class, ExperimentRunRateLimitProperties.class })
-@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
+@EnableConfigurationProperties({AskRateLimitProperties.class, ExperimentRunRateLimitProperties.class})
+@Import({WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class})
 class ExperimentControllerTest {
 
   @Autowired
@@ -58,13 +56,10 @@ class ExperimentControllerTest {
   private ExperimentService experimentService;
 
   @MockBean
-  private PhoenixDatasetService phoenixDatasetService;
-
-  @MockBean
   private ChatModelCatalog chatModelCatalog;
 
   @MockBean
-  private PhoenixProperties phoenixProperties;
+  private PostHogProperties postHogProperties;
 
   @Test
   void runsRequiresAuthentication() throws Exception {
@@ -81,7 +76,7 @@ class ExperimentControllerTest {
             "Run A",
             "ds",
             "gpt-5.4-mini",
-            "gpt-5.4-mini",
+            "claude-haiku-4-5-20251001",
             ExperimentRunStatus.COMPLETED,
             3,
             0.9,
@@ -100,24 +95,26 @@ class ExperimentControllerTest {
 
   @Test
   @WithMockUser(roles = "ADMIN")
-  void configExposesPhoenixFlags() throws Exception {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(phoenixProperties.getBaseUrl()).thenReturn("http://localhost:6006");
+  void configExposesPosthogFlags() throws Exception {
+    when(postHogProperties.isCaptureConfigured()).thenReturn(true);
+    when(postHogProperties.getHost()).thenReturn("https://eu.i.posthog.com");
 
     mockMvc.perform(get("/admin/tools/experiments/config"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.phoenixConfigured").value(true))
-        .andExpect(jsonPath("$.phoenixBaseUrl").value("http://localhost:6006"));
+        .andExpect(jsonPath("$.posthogConfigured").value(true))
+        .andExpect(jsonPath("$.posthogHost").value("https://eu.i.posthog.com"));
   }
 
   @Test
   @WithMockUser(roles = "ADMIN")
-  void datasetsReturns503WhenPhoenixDisabled() throws Exception {
-    when(phoenixDatasetService.isEnabled()).thenReturn(false);
+  void listDatasetsReturnsOk() throws Exception {
+    when(experimentService.listEvalDatasets()).thenReturn(List.of(
+        new EvalDatasetSummary("1", "My DS", 3)));
 
     mockMvc.perform(get("/admin/tools/experiments/datasets"))
-        .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.error").exists());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value("1"))
+        .andExpect(jsonPath("$[0].exampleCount").value(3));
   }
 
   @Test
@@ -161,103 +158,73 @@ class ExperimentControllerTest {
     mockMvc.perform(post("/admin/tools/experiments/run")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(new RunExperimentRequest(
-                "ds-1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null))))
+                "1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null))))
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.runId").value(7));
   }
 
   @Test
   @WithMockUser(roles = "ADMIN")
-  void listDatasetsReturnsOkWhenPhoenixEnabled() throws Exception {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(experimentService.listPhoenixDatasets()).thenReturn(List.of(
-        new PhoenixDatasetSummary("id-1", "My DS", 3)));
-
-    mockMvc.perform(get("/admin/tools/experiments/datasets"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].id").value("id-1"))
-        .andExpect(jsonPath("$[0].exampleCount").value(3));
-  }
-
-  @Test
-  @WithMockUser(roles = "ADMIN")
-  void listDatasetsReturns502WhenListFails() throws Exception {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(experimentService.listPhoenixDatasets()).thenThrow(new RuntimeException("boom"));
-
-    mockMvc.perform(get("/admin/tools/experiments/datasets"))
-        .andExpect(status().isBadGateway())
-        .andExpect(jsonPath("$.error", containsString("Phoenix list failed")));
-  }
-
-  @Test
-  @WithMockUser(roles = "ADMIN")
   void deleteDatasetReturnsNoContent() throws Exception {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-
-    mockMvc.perform(delete("/admin/tools/experiments/datasets/ds-1"))
+    mockMvc.perform(delete("/admin/tools/experiments/datasets/1"))
         .andExpect(status().isNoContent());
 
-    verify(experimentService).deletePhoenixDataset("ds-1");
+    verify(experimentService).deleteEvalDataset("1");
   }
 
   @Test
   @WithMockUser(roles = "ADMIN")
-  void deleteDatasetReturns502WhenDeleteFails() throws Exception {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    org.mockito.Mockito.doThrow(new RuntimeException("nope")).when(experimentService).deletePhoenixDataset("x");
+  void deleteDatasetReturns400WhenDeleteFails() throws Exception {
+    org.mockito.Mockito.doThrow(new RuntimeException("nope")).when(experimentService).deleteEvalDataset("x");
 
     mockMvc.perform(delete("/admin/tools/experiments/datasets/x"))
-        .andExpect(status().isBadGateway())
-        .andExpect(jsonPath("$.error", containsString("Phoenix delete failed")));
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error", containsString("Delete failed")));
   }
 
   @Test
   @WithMockUser(roles = "ADMIN")
   void createDatasetReturnsCreated() throws Exception {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(experimentService.createPhoenixDataset(any(CreatePhoenixDatasetRequest.class)))
-        .thenReturn(new PhoenixDatasetSummary("new-id", "n", 1));
+    when(experimentService.createEvalDataset(any(CreateEvalDatasetRequest.class)))
+        .thenReturn(new EvalDatasetSummary("1", "n", 1));
 
     mockMvc.perform(post("/admin/tools/experiments/datasets")
             .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(new CreatePhoenixDatasetRequest(
+            .content(objectMapper.writeValueAsString(new CreateEvalDatasetRequest(
                 "n",
                 "d",
-                List.of(new CreatePhoenixDatasetRequest.DatasetExampleInput("q?", "ref"))))))
+                List.of(new CreateEvalDatasetRequest.DatasetExampleInput("q?", "ref"))))))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.id").value("new-id"));
+        .andExpect(jsonPath("$.id").value("1"));
   }
 
   @Test
   @WithMockUser(roles = "ADMIN")
   void createDatasetReturns400OnValidationError() throws Exception {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(experimentService.createPhoenixDataset(any(CreatePhoenixDatasetRequest.class)))
+    when(experimentService.createEvalDataset(any(CreateEvalDatasetRequest.class)))
         .thenThrow(new IllegalArgumentException("examples required"));
 
     mockMvc.perform(post("/admin/tools/experiments/datasets")
             .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(new CreatePhoenixDatasetRequest("n", null, List.of()))))
+            .content(objectMapper.writeValueAsString(new CreateEvalDatasetRequest("n", null, List.of()))))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.error").value("examples required"));
   }
 
   @Test
   @WithMockUser(roles = "ADMIN")
-  void createDatasetReturns502OnUnexpectedError() throws Exception {
-    when(phoenixDatasetService.isEnabled()).thenReturn(true);
-    when(experimentService.createPhoenixDataset(any(CreatePhoenixDatasetRequest.class)))
+  void createDatasetReturns500OnUnexpectedError() throws Exception {
+    when(experimentService.createEvalDataset(any(CreateEvalDatasetRequest.class)))
         .thenThrow(new RuntimeException("upstream"));
 
     mockMvc.perform(post("/admin/tools/experiments/datasets")
             .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(new CreatePhoenixDatasetRequest(
+            .content(objectMapper.writeValueAsString(new CreateEvalDatasetRequest(
                 "n",
                 null,
-                List.of(new CreatePhoenixDatasetRequest.DatasetExampleInput("q", null))))))
-        .andExpect(status().isBadGateway())
-        .andExpect(jsonPath("$.error", containsString("Phoenix create failed")));
+                List.of(new CreateEvalDatasetRequest.DatasetExampleInput("q", null))))))
+        .andExpect(status().isInternalServerError())
+        .andExpect(jsonPath("$.error").value("upstream"));
   }
 
   @Test
@@ -267,10 +234,10 @@ class ExperimentControllerTest {
         5L,
         "Run",
         "ds",
-        "phx",
-        "http://p",
+        1L,
+        "https://eu.i.posthog.com",
         "gpt-5.4-mini",
-        "gpt-5.4-mini",
+        "claude-haiku-4-5-20251001",
         ExperimentRunStatus.COMPLETED,
         2,
         0.9,
@@ -307,7 +274,7 @@ class ExperimentControllerTest {
             "S",
             "ds",
             "gpt-5.4-mini",
-            "gpt-5.4-mini",
+            "claude-haiku-4-5-20251001",
             ExperimentRunStatus.RUNNING,
             1,
             null,
@@ -341,7 +308,7 @@ class ExperimentControllerTest {
     mockMvc.perform(post("/admin/tools/experiments/run")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(new RunExperimentRequest(
-                "ds-1", "n", null, "gpt-5.4-mini", "gpt-5.4-mini", null))))
+                "1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null))))
         .andExpect(status().isInternalServerError())
         .andExpect(jsonPath("$.error").value("internal"));
   }
