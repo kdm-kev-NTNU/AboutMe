@@ -40,6 +40,7 @@ const sections = computed(() => {
           'Når du bruker chat-funksjonen, sendes meldingene dine til en tjeneste som bruker en språkmodell (for eksempel OpenAI) for å generere svar.',
           'Unngå å sende sensitive personopplysninger, helseopplysninger, passord eller annet du ikke ønsker å dele med en ekstern leverandør.',
           'Behandlingen skjer for å levere funksjonen du ber om. Oppbevaring og logger avhenger av hvordan backend er konfigurert; kontakt eier ved spørsmål.',
+          'Tekst og filer som inngår i kunnskapsbasen for AI-svar, lastes inn via eiers administrerte dokumentpipeline. Råfangst fra eventuelle fremtidige samtale- eller stemmeverktøy inngår ikke automatisk i den basen uten egen, kontrollert behandling og opplasting.',
         ],
       },
       {
@@ -91,6 +92,7 @@ const sections = computed(() => {
         'When you use the chat feature, your messages are sent to a service that uses a language model (for example OpenAI) to generate replies.',
         'Do not send sensitive personal data, health information, passwords, or anything you do not want shared with an external provider.',
         'Processing is performed to deliver the functionality you request. Retention and logging depend on how the backend is configured; contact the owner if you have questions.',
+        'Text and files that power the AI knowledge base are ingested through the owner’s controlled document pipeline. Raw capture from any future conversational or voice tools is not automatically included in that base without separate, controlled processing and upload.',
       ],
     },
     {
