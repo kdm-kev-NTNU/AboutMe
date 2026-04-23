@@ -45,6 +45,9 @@ class OpenAIServiceImplTest {
   private OpenAiChatModel openAiChatModel;
 
   @Mock
+  private ObjectProvider<OpenAiChatModel> openAiChatModelProvider;
+
+  @Mock
   private VectorStore vectorStore;
 
   @Mock
@@ -64,6 +67,7 @@ class OpenAIServiceImplTest {
 
   @BeforeEach
   void setUp() {
+    when(openAiChatModelProvider.getIfAvailable()).thenReturn(openAiChatModel);
     when(promptVersionService.loadRagPrompt(anyString()))
         .thenReturn("Input: {input}\nDocs:\n{documents}");
     lenient().doNothing().when(aiCircuitBreaker).assertClosed();
@@ -77,7 +81,7 @@ class OpenAIServiceImplTest {
     AiBudgetProperties budgetProps = new AiBudgetProperties();
     retrievalProperties = new RetrievalProperties();
     openAIServiceImpl = new OpenAIServiceImpl(
-        openAiChatModel,
+        openAiChatModelProvider,
         anthropicChatModelProvider,
         vectorStore,
         "gpt-5.4-mini",
@@ -122,7 +126,7 @@ class OpenAIServiceImplTest {
             candidates.isEmpty() ? List.of() : List.of(candidates.get(candidates.size() - 1));
     OpenAIServiceImpl svc =
         new OpenAIServiceImpl(
-            openAiChatModel,
+            openAiChatModelProvider,
             anthropicChatModelProvider,
             vectorStore,
             "gpt-5.4-mini",

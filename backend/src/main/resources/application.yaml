@@ -25,6 +25,7 @@ spring:
     openai:
       api-key: ${OPENAI_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
       chat:
+        enabled: ${OPENAI_CHAT_ENABLED:false}
         api-key: ${OPENAI_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
         options:
           model: gpt-5.4-mini
