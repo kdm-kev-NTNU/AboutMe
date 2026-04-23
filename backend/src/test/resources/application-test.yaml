@@ -30,9 +30,6 @@ portfolio:
       enabled: false
   chat:
     default-model-id: gpt-5.4-mini
-  phoenix:
-    base-url: ""
-    api-key: ""
 
 logging:
   level:
@@ -42,10 +39,3 @@ logging:
 management:
   tracing:
     enabled: false
-  otlp:
-    tracing:
-      export:
-        enabled: false
-    metrics:
-      export:
-        enabled: false
