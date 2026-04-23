@@ -53,8 +53,6 @@ WORKDIR /app
 
 RUN mkdir -p data/docs
 
-RUN touch .env
-
 COPY --from=build /app/target/*.jar app.jar
 COPY --from=rerank-model /export/out /app/rerank
 
