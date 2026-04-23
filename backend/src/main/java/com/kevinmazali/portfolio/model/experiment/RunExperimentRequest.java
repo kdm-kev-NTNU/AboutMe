@@ -5,9 +5,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 /**
  * Request body to start an eval experiment run.
  */
-@Schema(description = "Start experiment on a Phoenix dataset")
+@Schema(description = "Start experiment on an eval dataset")
 public record RunExperimentRequest(
-    @Schema(description = "Phoenix dataset Global ID", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Eval dataset id (numeric string)", requiredMode = Schema.RequiredMode.REQUIRED)
     String datasetId,
     @Schema(description = "Human-readable dataset name (for display)")
     String datasetName,
