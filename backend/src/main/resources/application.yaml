@@ -1,5 +1,6 @@
 spring:
   config:
+    # Load optional .env as properties (repo root or backend/)
     import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:backend/.env[.properties]
   application:
     name: aboutme-backend
@@ -10,23 +11,24 @@ spring:
   ai:
     vectorstore:
       pgvector:
-        # HNSW/IVFFlat index max dimension is ~2000 in pgvector; embeddings are 3072 → exact search (no ANN index).
+        # Embedding dimensions must match spring.ai.openai.embedding.options.dimensions; re-ingest if you change either.
+        # 3072 exceeds pgvector HNSW/IVFFlat limits here → index-type NONE (exact search).
         index-type: NONE
         distance-type: COSINE_DISTANCE
         dimensions: 3072
         initialize-schema: true
-        # When true, validation runs before first-time DDL; an empty database can fail first startup on some managed Postgres setups.
+        # Managed Postgres: schema validation can fail on empty DB before first DDL.
         schema-validation: false
         schema-name: public
         table-name: vector_store
-        # Chunk ids are content-hash based strings (not UUIDs).
         id-type: TEXT
     openai:
-      api-key: ${OPENAI_API_KEY}
+      api-key: ${OPENAI_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
       chat:
+        enabled: ${OPENAI_CHAT_ENABLED:false}
+        api-key: ${OPENAI_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
         options:
           model: gpt-5.4-mini
-          # Limit completion tokens per response
           max-completion-tokens: ${portfolio.ai.limits.chat-max-completion-tokens:400}
       embedding:
         options:
@@ -43,9 +45,10 @@ spring:
         log-prompt: true
         log-completion: true
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/aboutme}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    # Compose / manual: set SPRING_DATASOURCE_* . Railway Postgres: link service → PG* vars (used when SPRING_* unset).
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:aboutme}}
+    username: ${SPRING_DATASOURCE_USERNAME:${PGUSER:postgres}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${PGPASSWORD:postgres}}
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
@@ -90,7 +93,6 @@ portfolio:
       enabled: true
       monthly-limit-usd: 50.00
       warn-fraction: 0.80
-      # Every minute (UTC); aligns with default check cadence for global spend
       check-cron: "0 * * * * *"
   ask-rate-limit:
     enabled: true
@@ -101,29 +103,41 @@ portfolio:
   experiments:
     run-rate-limit:
       enabled: true
-      capacity: 10
+      capacity: 30
       window-seconds: 60
+    dataset-generate-rate-limit:
+      enabled: true
+      capacity: 15
+      window-seconds: 300
   chat:
-    # Used when the client omits "model" on POST /ask
     default-model-id: gpt-5.4-mini
-  phoenix:
-    base-url: ${PHOENIX_BASE_URL:}
-    api-key: ${PHOENIX_API_KEY:}
+  retrieval:
+    # Optional ONNX rerank; Docker image sets paths under /app/rerank (see backend/Dockerfile).
+    rerank-enabled: false
+    onnx-model-path: ""
+    tokenizer-path: ""
+    vector-top-k: 40
+    candidate-limit: 40
+    context-top-k: 40
+    rerank-batch-size: 8
+    max-passage-chars: 2000
+    max-sequence-length: 256
   posthog:
     enabled: ${POSTHOG_ENABLED:false}
     api-key: ${POSTHOG_API_KEY:}
     host: ${POSTHOG_HOST:https://eu.i.posthog.com}
+    feature-flag-keys:
+      - aboutme_rag_feature_flags
+    feature-flags-timeout-ms: 2000
   sanitizer:
     enabled: ${SANITIZER_ENABLED:true}
     redaction-format: "{{{REDACTED-%t}}}"
 
 sfg:
   aiapp:
-    # Explicit classpath seeds (used by startup + admin reseed); dir scan is fallback when this is empty.
     documentsToLoad:
       - classpath:/static/seed/portfolio-seed.md
     documentsToLoadDir: file:./data/docs/
-    # When true, startup seeding re-ingests even if chunks already exist for the same content_hash
     forceReindex: false
 logging:
   level:
@@ -150,24 +164,4 @@ management:
       probability: 1.0
   metrics:
     tags:
-      # Correlate Micrometer metrics (including ai.*) with traces in Phoenix/Arize
       application: ${spring.application.name}
-  otlp:
-    tracing:
-      # Opt-in OTLP: set OTLP_EXPORT_ENABLED=true plus PHOENIX_OTLP_ENDPOINT and PHOENIX_API_KEY (Bearer) for Phoenix/Arize.
-      export:
-        enabled: ${OTLP_EXPORT_ENABLED:false}
-      endpoint: ${PHOENIX_OTLP_ENDPOINT:http://localhost:4317}
-      transport: grpc
-      headers:
-        authorization: Bearer ${PHOENIX_API_KEY:}
-    metrics:
-      export:
-        # Opt-in OTLP metrics (HTTP/protobuf) to Phoenix or an OTel collector; traces above use gRPC on 4317 by default.
-        # Self-hosted collector often exposes metrics on 4318. Arize Cloud may use a different ingest URL — set PHOENIX_OTLP_METRICS_URL.
-        enabled: ${OTLP_METRICS_EXPORT_ENABLED:false}
-        url: ${PHOENIX_OTLP_METRICS_URL:http://localhost:4318/v1/metrics}
-        step: 1m
-        headers:
-          authorization: Bearer ${PHOENIX_API_KEY:}
-

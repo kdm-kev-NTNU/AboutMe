@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * One persisted experiment: RAG over a Phoenix dataset with LLM-as-judge scores.
+ * One persisted experiment: RAG over an eval dataset with LLM-as-judge scores.
  */
 @Getter
 @Setter
@@ -46,11 +46,8 @@ public class ExperimentRun {
   @Column(nullable = false, length = 512)
   private String datasetName;
 
-  @Column(length = 256)
-  private String phoenixDatasetId;
-
-  @Column(length = 512)
-  private String phoenixBaseUrl;
+  @Column(name = "eval_dataset_id")
+  private Long evalDatasetId;
 
   @Column(nullable = false, length = 128)
   private String generatorModel;

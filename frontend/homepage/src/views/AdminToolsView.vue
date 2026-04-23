@@ -106,10 +106,11 @@ onMounted(() => {
             class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)] hover:border-gray-300 transition-colors"
           >
             <RouterLink to="/admin/experiments" class="block group">
-              <span class="text-base font-semibold text-blue-600 group-hover:underline">Experiments (Phoenix)</span>
+              <span class="text-base font-semibold text-blue-600 group-hover:underline">Experiments</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">
-                Kjør RAG-eval mot datasett i Arize Phoenix (Railway/lokal), LLM-as-judge (faithfulness, relevance,
-                correctness, conciseness), og se aggregerte scorer lagret i MySQL, inspirert av Piscada eval-steg 2.
+                Kjør RAG-eval mot eval-datasett i PostgreSQL, LLM-as-judge (faithfulness, relevance, correctness,
+                conciseness), og se aggregerte scorer i databasen; valgfritt PostHog for LLM-hendelser, inspirert av Piscada
+                eval-steg 2.
               </p>
             </RouterLink>
           </li>

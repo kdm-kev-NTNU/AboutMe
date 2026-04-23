@@ -38,7 +38,7 @@ const videoSection = computed(() =>
 		? {
 				heading: 'Hva vi har jobbet med',
 				description:
-					'I videoen under forklarer jeg og samarbeidspartneren min kort hva vi har jobbet med de siste månedene i forbindelse med bacheloroppgaven og det tilhørende prosjektet.',
+					'I videoen under forklarer jeg og samarbeidspartneren min kort hva vi har jobbet med de siste månedene i forbindelse med bacheloroppgaven og det tilhørende prosjektet. Videoen er satt sammen med Claude Design og ElevenLabs for tale.',
 				badge: 'Demo',
         iframeTitle: 'YouTube-video om bachelorprosjektet',
 				watchLabel: 'Åpne på YouTube (ny fane)',
@@ -46,7 +46,7 @@ const videoSection = computed(() =>
 		: {
 				heading: 'What we have been working on',
 				description:
-					'In the video below, my collaboration partner and I explain what we have been working on over the past few months as part of the bachelor thesis and related project.',
+					'In the video below, my collaboration partner and I explain what we have been working on over the past few months as part of the bachelor thesis and related project. The visuals were put together with Claude Design, and the voice is from ElevenLabs.',
 				badge: 'Demo',
         iframeTitle: "YouTube video about the bachelor's thesis project",
 				watchLabel: 'Watch on YouTube (opens in a new tab)',
@@ -68,7 +68,7 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 					category: 'Ferdigheter',
 					title: 'Det jeg har lært',
 					body: [
-						'Jeg har jobbet tett med API-design, dokumentpipelines, vektorlagring og evaluering av språkmodeller — områder som direkte gjenbrukes i porteføljen.',
+						'Jeg har jobbet tett med API-design, dokumentpipelines, vektorlagring og evaluering av språkmodeller: områder som direkte gjenbrukes i porteføljen.',
 						'Samarbeid med veileder og team hos Piscada har også trent meg i å scope arbeid, dokumentere beslutninger og levere i iterasjoner.',
 					],
 				},
@@ -95,7 +95,7 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 					category: 'Skills',
 					title: 'What I took away',
 					body: [
-						'I worked closely with API design, document pipelines, vector storage, and evaluation of language models — areas that map directly onto this portfolio.',
+						'I worked closely with API design, document pipelines, vector storage, and evaluation of language models: areas that map directly onto this portfolio.',
 						'Collaboration with supervisors and the team at Piscada also trained me to scope work, document decisions, and ship in iterations.',
 					],
 				},

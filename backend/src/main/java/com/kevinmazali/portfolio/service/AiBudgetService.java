@@ -2,13 +2,12 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.exception.BudgetExceededException;
+import com.kevinmazali.portfolio.model.analytics.AiGenerationAnalytics;
 import com.kevinmazali.portfolio.model.AiUsageRecord;
 import com.kevinmazali.portfolio.repository.AiUsageRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
-import io.micrometer.tracing.Span;
-import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
@@ -37,20 +36,16 @@ public class AiBudgetService {
   private final AiUsageRepository usageRepository;
   private final MeterRegistry meterRegistry;
   @Nullable
-  private final Tracer tracer;
-  @Nullable
   private final PostHogLlmService postHogLlmService;
 
   public AiBudgetService(
       AiBudgetProperties properties,
       AiUsageRepository usageRepository,
       MeterRegistry meterRegistry,
-      @Autowired(required = false) @Nullable Tracer tracer,
       @Autowired(required = false) @Nullable PostHogLlmService postHogLlmService) {
     this.properties = properties;
     this.usageRepository = usageRepository;
     this.meterRegistry = meterRegistry;
-    this.tracer = tracer;
     this.postHogLlmService = postHogLlmService;
   }
 
@@ -92,7 +87,15 @@ public class AiBudgetService {
       int promptTokens,
       int completionTokens,
       boolean anonymous) {
-    recordUsage(userIdentifier, modelId, promptTokens, completionTokens, anonymous, null, null);
+    recordUsage(
+        userIdentifier,
+        modelId,
+        promptTokens,
+        completionTokens,
+        anonymous,
+        null,
+        null,
+        AiGenerationAnalytics.empty());
   }
 
   /**
@@ -110,6 +113,31 @@ public class AiBudgetService {
       boolean anonymous,
       @Nullable Double latencySeconds,
       @Nullable String generationSpanName) {
+    recordUsage(
+        userIdentifier,
+        modelId,
+        promptTokens,
+        completionTokens,
+        anonymous,
+        latencySeconds,
+        generationSpanName,
+        AiGenerationAnalytics.empty());
+  }
+
+  /**
+   * Same as {@link #recordUsage(String, String, int, int, boolean, Double, String)} with rich PostHog payload
+   * (input/output/context, trace ids).
+   */
+  @Transactional
+  public void recordUsage(
+      String userIdentifier,
+      String modelId,
+      int promptTokens,
+      int completionTokens,
+      boolean anonymous,
+      @Nullable Double latencySeconds,
+      @Nullable String generationSpanName,
+      @Nullable AiGenerationAnalytics analytics) {
     BigDecimal cost = estimateCostUsd(modelId, promptTokens, completionTokens);
     AiUsageRecord row = new AiUsageRecord();
     row.setUserIdentifier(userIdentifier != null ? userIdentifier : "unknown");
@@ -135,10 +163,16 @@ public class AiBudgetService {
         .register(meterRegistry)
         .increment(cost.doubleValue());
 
-    tagCurrentSpanForPhoenix(modelId, cost, promptTokens, completionTokens);
-
     schedulePostHogGenerationCapture(
-        userIdentifier, modelId, promptTokens, completionTokens, anonymous, cost, latencySeconds, generationSpanName);
+        userIdentifier,
+        modelId,
+        promptTokens,
+        completionTokens,
+        anonymous,
+        cost,
+        latencySeconds,
+        generationSpanName,
+        analytics != null ? analytics : AiGenerationAnalytics.empty());
 
     if (userIdentifier == null || !userIdentifier.startsWith("system:")) {
       detectSpendSpike(userIdentifier != null ? userIdentifier : "unknown", anonymous);
@@ -153,7 +187,8 @@ public class AiBudgetService {
       boolean anonymous,
       BigDecimal cost,
       @Nullable Double latencySeconds,
-      @Nullable String generationSpanName) {
+      @Nullable String generationSpanName,
+      AiGenerationAnalytics analytics) {
     PostHogLlmService sink = postHogLlmService;
     if (sink == null || !sink.isEnabled()) {
       return;
@@ -162,7 +197,15 @@ public class AiBudgetService {
     Runnable task =
         () ->
             sink.captureGenerationAsync(
-                uid, modelId, promptTokens, completionTokens, cost, anonymous, latencySeconds, generationSpanName);
+                uid,
+                modelId,
+                promptTokens,
+                completionTokens,
+                cost,
+                anonymous,
+                latencySeconds,
+                generationSpanName,
+                analytics);
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
       TransactionSynchronizationManager.registerSynchronization(
           new TransactionSynchronization() {
@@ -179,24 +222,6 @@ public class AiBudgetService {
   /** Identifier used for LLM-as-judge traffic (tracked globally, no per-user budget). */
   public static String systemEvaluatorUserId() {
     return SYSTEM_EVALUATOR;
-  }
-
-  /**
-   * Adds attributes to the active Micrometer/OTel span (when present) so Phoenix/Arize traces
-   * show the latest LLM usage slice for this request thread.
-   */
-  private void tagCurrentSpanForPhoenix(String modelId, BigDecimal cost, int promptTokens, int completionTokens) {
-    if (tracer == null) {
-      return;
-    }
-    Span span = tracer.currentSpan();
-    if (span == null) {
-      return;
-    }
-    span.tag("ai.model", modelId != null ? modelId : "");
-    span.tag("ai.usage.estimated_cost_usd", cost.toPlainString());
-    span.tag("ai.usage.prompt_tokens", Integer.toString(Math.max(0, promptTokens)));
-    span.tag("ai.usage.completion_tokens", Integer.toString(Math.max(0, completionTokens)));
   }
 
   private void detectSpendSpike(String userIdentifier, boolean anonymous) {

@@ -475,12 +475,15 @@ describe('Admin CRUD views (integration-style)', () => {
         const url =
           typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
         if (url.includes('/api/admin/tools/experiments/config')) {
-          return new Response(JSON.stringify({ phoenixConfigured: true, phoenixBaseUrl: 'https://px.test' }), {
+          return new Response(JSON.stringify({ posthogConfigured: true, posthogHost: 'https://eu.i.posthog.com' }), {
             status: 200,
             headers: headersJson,
           })
         }
-        if (url.includes('/api/admin/tools/experiments/datasets')) {
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
           return new Response(JSON.stringify([{ id: 'ds1', name: 'Demo', exampleCount: 3 }]), {
             status: 200,
             headers: headersJson,
@@ -523,12 +526,15 @@ describe('Admin CRUD views (integration-style)', () => {
         const url =
           typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
         if (url.includes('/api/admin/tools/experiments/config')) {
-          return new Response(JSON.stringify({ phoenixConfigured: true, phoenixBaseUrl: 'https://px.test' }), {
+          return new Response(JSON.stringify({ posthogConfigured: true, posthogHost: 'https://eu.i.posthog.com' }), {
             status: 200,
             headers: headersJson,
           })
         }
-        if (url.includes('/api/admin/tools/experiments/datasets')) {
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
           return new Response(JSON.stringify([{ id: 'ds1', name: 'Demo', exampleCount: 1 }]), {
             status: 200,
             headers: headersJson,
@@ -557,12 +563,12 @@ describe('Admin CRUD views (integration-style)', () => {
       expect(wrapper.text()).toContain('RAG-experiments')
     })
 
-    const selects = wrapper.findAll('select')
-    expect(selects.length).toBeGreaterThanOrEqual(3)
-    const genSelect = selects[1]
-    const evSelect = selects[2]
+    const genSelect = wrapper.find('[data-testid="exp-generator-select"]')
+    const evSelect = wrapper.find('[data-testid="exp-evaluator-select"]')
+    expect(genSelect.exists()).toBe(true)
+    expect(evSelect.exists()).toBe(true)
 
-    expect(genSelect.element.value).toBe('o1')
+    expect((genSelect.element as HTMLSelectElement).value).toBe('o1')
     expect(evSelect.findAll('option')).toHaveLength(1)
     expect(evSelect.findAll('option')[0]!.text()).toContain('A1')
 
@@ -574,20 +580,23 @@ describe('Admin CRUD views (integration-style)', () => {
     expect(labels.some((t) => t.includes('O2'))).toBe(true)
   })
 
-  it('AdminExperimentsView shows dataset error when Phoenix list fails', async () => {
+  it('AdminExperimentsView shows dataset error when list fails', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url =
           typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
         if (url.includes('/api/admin/tools/experiments/config')) {
-          return new Response(JSON.stringify({ phoenixConfigured: true, phoenixBaseUrl: 'https://px' }), {
+          return new Response(JSON.stringify({ posthogConfigured: false, posthogHost: '' }), {
             status: 200,
             headers: headersJson,
           })
         }
-        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/datasets/')) {
-          return new Response(JSON.stringify({ error: 'Phoenix nede' }), { status: 500, headers: headersJson })
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
+          return new Response(JSON.stringify({ error: 'Database utilgjengelig' }), { status: 500, headers: headersJson })
         }
         if (url.includes('/api/admin/tools/experiments/models')) {
           return new Response(
@@ -610,7 +619,7 @@ describe('Admin CRUD views (integration-style)', () => {
     const wrapper = mountAdmin(AdminExperimentsView)
     await flushPromises()
     await vi.waitFor(() => {
-      expect(wrapper.text()).toContain('Phoenix nede')
+      expect(wrapper.text()).toContain('Database utilgjengelig')
     })
   })
 
@@ -676,8 +685,8 @@ describe('Admin CRUD views (integration-style)', () => {
     }
     const runDetail = {
       ...runSummary,
-      phoenixDatasetId: 'pd-1',
-      phoenixBaseUrl: 'https://px.example',
+      evalDatasetId: 1,
+      posthogHost: 'https://eu.i.posthog.com',
       results: [
         {
           id: 1,
@@ -702,12 +711,15 @@ describe('Admin CRUD views (integration-style)', () => {
         const url =
           typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
         if (url.includes('/api/admin/tools/experiments/config')) {
-          return new Response(JSON.stringify({ phoenixConfigured: true, phoenixBaseUrl: 'https://px.example' }), {
+          return new Response(JSON.stringify({ posthogConfigured: true, posthogHost: 'https://eu.i.posthog.com' }), {
             status: 200,
             headers: headersJson,
           })
         }
-        if (url.includes('/api/admin/tools/experiments/datasets') && !/\/datasets\//.test(url)) {
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
           return new Response(JSON.stringify([{ id: 'ds1', name: 'Demo', exampleCount: 1 }]), {
             status: 200,
             headers: headersJson,
@@ -741,7 +753,8 @@ describe('Admin CRUD views (integration-style)', () => {
     await runBtn!.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('0.812')
-    expect(wrapper.text()).toContain('Phoenix (datasett)')
+    expect(wrapper.text()).toContain('PostHog (LLM-observabilitet)')
+    expect(wrapper.text()).toContain('Eval-datasett-ID:')
     expect(wrapper.text()).toContain('Q?')
   })
 })

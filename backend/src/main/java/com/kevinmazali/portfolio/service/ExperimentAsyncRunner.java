@@ -2,21 +2,21 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.RagAnswer;
+import com.kevinmazali.portfolio.model.experiment.EvalDatasetExampleRow;
 import com.kevinmazali.portfolio.model.experiment.EvaluationScore;
 import com.kevinmazali.portfolio.model.experiment.ExperimentResult;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRun;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus;
-import com.kevinmazali.portfolio.model.experiment.PhoenixDatasetExample;
 import com.kevinmazali.portfolio.repository.ExperimentResultRepository;
 import com.kevinmazali.portfolio.repository.ExperimentRunRepository;
 import com.kevinmazali.portfolio.util.InputValidator;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
 
 /**
  * Runs {@link ExperimentRun} work off the HTTP thread (LLM + RAG per example).
@@ -27,19 +27,19 @@ public class ExperimentAsyncRunner {
 
   private final ExperimentRunRepository experimentRunRepository;
   private final ExperimentResultRepository experimentResultRepository;
-  private final PhoenixDatasetService phoenixDatasetService;
+  private final EvalDatasetService evalDatasetService;
   private final OpenAIService openAIService;
   private final EvaluatorService evaluatorService;
 
   public ExperimentAsyncRunner(
       ExperimentRunRepository experimentRunRepository,
       ExperimentResultRepository experimentResultRepository,
-      PhoenixDatasetService phoenixDatasetService,
+      EvalDatasetService evalDatasetService,
       OpenAIService openAIService,
       EvaluatorService evaluatorService) {
     this.experimentRunRepository = experimentRunRepository;
     this.experimentResultRepository = experimentResultRepository;
-    this.phoenixDatasetService = phoenixDatasetService;
+    this.evalDatasetService = evalDatasetService;
     this.openAIService = openAIService;
     this.evaluatorService = evaluatorService;
   }
@@ -63,12 +63,16 @@ public class ExperimentAsyncRunner {
     ExperimentRun run = experimentRunRepository.findById(runId)
         .orElseThrow(() -> new IllegalStateException("Run not found: " + runId));
 
-    List<PhoenixDatasetExample> examples = phoenixDatasetService.getExamples(run.getPhoenixDatasetId());
+    if (run.getEvalDatasetId() == null) {
+      throw new IllegalStateException("Run has no eval dataset id");
+    }
+    List<EvalDatasetExampleRow> examples =
+        evalDatasetService.getExamples(Long.toString(run.getEvalDatasetId()));
     int limit = run.getTotalExamples() != null ? run.getTotalExamples() : examples.size();
     if (limit <= 0) {
       limit = examples.size();
     }
-    List<PhoenixDatasetExample> slice = examples.subList(0, Math.min(limit, examples.size()));
+    List<EvalDatasetExampleRow> slice = examples.subList(0, Math.min(limit, examples.size()));
 
     List<Double> faith = new ArrayList<>();
     List<Double> rel = new ArrayList<>();
@@ -78,7 +82,7 @@ public class ExperimentAsyncRunner {
     String gen = run.getGeneratorModel();
     String judge = run.getEvaluatorModel();
 
-    for (PhoenixDatasetExample ex : slice) {
+    for (EvalDatasetExampleRow ex : slice) {
       String qRaw = ex.question() == null ? "" : ex.question();
       String q = InputValidator.sanitizeString(qRaw);
       if (!InputValidator.isValidQuestion(q)) {

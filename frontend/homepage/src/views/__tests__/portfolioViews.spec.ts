@@ -134,7 +134,7 @@ describe('portfolio views (smoke)', () => {
     expect(wrapper.text()).toContain('Videre arbeid og forbedringer')
     expect(wrapper.text()).toContain('under aktiv tilpasning')
     expect(wrapper.text()).toContain('Referanser (arXiv)')
-    expect(wrapper.text()).toContain('Lokal modell og Obsidian-journal')
+    expect(wrapper.text()).toContain('ElevenLabs stemmeagent: samle inn, så prosesserer jeg')
   })
 
   it('renders BachelorView in English with active adaptation messaging', async () => {

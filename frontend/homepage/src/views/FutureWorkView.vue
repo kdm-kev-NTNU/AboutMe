@@ -19,34 +19,31 @@ type SectionCopy = {
 const sectionsEn: SectionCopy[] = [
 	{
 		category: 'Personal',
-		title: 'Local model and Obsidian journal',
+		title: 'ElevenLabs voice agent: collect, then I process',
 		intro:
-			'I want a local model with my Obsidian journal as context, similar to a small journal-focused bot in the vault. The idea is to generate plain .txt drafts about me, not to publish the whole journal raw online.',
+			'Optional conversational capture (ElevenLabs) adds richer spoken detail than polished pages alone. Raw exports or transcripts are not public or in the vector store by default; I structure, trim, redact, and tune into notes or .txt drafts, upload through the document pipeline, then re-ingest and sanity-check retrieval before production chat. The arXiv links below support RAG indexing, retrieval, and evaluation—not choosing a voice vendor (that is a product decision). Purpose, consent, and minimisation for any capture channel follow applicable privacy law, not those papers.',
 		points: [
-			'Pick a local setup that fits my hardware and what I am comfortable sharing.',
-			'Feed the model curated journal context (themes, timelines, decisions) so it can write useful .txt drafts.',
-			'Read and trim each .txt while it still lives in that private loop.',
-		],
-		refs: [],
-	},
-	{
-		category: 'Pipeline',
-		title: 'From curated drafts to Kevin’s AI',
-		intro:
-			'After review, those .txt files should be curated and sanitized, then ingested into the same document corpus the portfolio RAG stack already searches, so Kevin’s AI can ground answers in them.',
-		points: [
-			'Keep the hand-off as simple .txt files (or convert to whatever shape ingestion expects) and upload through the existing document pipeline and admin tools.',
-			'Apply the same hygiene as the rest of the app: PII redaction, tone, and versioning before anything lands in the corpus.',
-			'Re-ingest with clear provenance, then sanity-check retrieval on the new chunks before they power live chat.',
+			'Collect with clear purpose, consent, and boundaries on what is stored.',
+			'Personally process raw material before anything is ingestible or visitor-facing.',
+			'Upload curated artefacts via the admin document pipeline.',
+			'Re-ingest and verify retrieval on new chunks before they power Kevin’s AI in live chat.',
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang et al.: Searching for Best Practices in Retrieval-Augmented Generation (arXiv:2407.01219, EMNLP 2024)',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 			{
-				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
+				label: 'Gao et al.: Retrieval-Augmented Generation for Large Language Models: A Survey (arXiv:2312.10997, Dec 2023 preprint; often cited as “2024” elsewhere)',
 				href: 'https://arxiv.org/abs/2312.10997',
+			},
+			{
+				label: 'Abbasiantaeb et al.: Conversational Gold — evaluating with human gold nuggets (arXiv:2503.09902)',
+				href: 'https://arxiv.org/abs/2503.09902',
+			},
+			{
+				label: 'Retrieval Augmented Generation Evaluation in the Era of Large Language Models: A Comprehensive Survey (arXiv:2504.14891)',
+				href: 'https://arxiv.org/abs/2504.14891',
 			},
 		],
 	},
@@ -88,21 +85,6 @@ const sectionsEn: SectionCopy[] = [
 		],
 	},
 	{
-		category: 'Retrieval',
-		title: 'Adaptive retrieval strategies',
-		intro:
-			'Today the assistant always retrieves a fixed slice of the corpus. Selective retrieval can cut latency when the model already knows the answer and improve focus when extra evidence is required.',
-		points: [
-			'Let the system decide when to retrieve, skip retrieval, or retrieve again after a first draft, using patterns inspired by self-reflective RAG that critique their own need for evidence.',
-		],
-		refs: [
-			{
-				label: 'Asai et al. (2023): Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
-				href: 'https://arxiv.org/abs/2310.11511',
-			},
-		],
-	},
-	{
 		category: 'Analytics',
 		title: 'Query analysis and corpus maintenance',
 		intro:
@@ -140,34 +122,31 @@ const sectionsEn: SectionCopy[] = [
 const sectionsNo: SectionCopy[] = [
 	{
 		category: 'Personlig',
-		title: 'Lokal modell og Obsidian-journal',
+		title: 'ElevenLabs stemmeagent: samle inn, så prosesserer jeg',
 		intro:
-			'Jeg vil bruke en lokal modell med Obsidian-journalen som kontekst, omtrent som en enkel «journal-bot» i vaulten. Målet er å lage .txt-filer om meg selv, uten å legge ut hele journalen rått på nett.',
+			'Valgfri samtalefangst (ElevenLabs) gir rikere muntlig detalj enn polerte sider alene. Rå eksport eller transkripsjon er verken offentlig eller i vektorlageret som standard; jeg strukturerer, korter, sladder og finjusterer til notater eller .txt-utkast, laster opp via dokumentpipelinen, og kjører re-ingest og retrieval-sjekk før produksjonschat. arXiv-referansene under støtter indeksering, henting og evaluering i RAG — ikke valg av stemmeleverandør (det er et produktvalg). Formål, samtykke og dataminimering for eventuelt innsamlingsledd følger personvernregelverk, ikke artiklene.',
 		points: [
-			'Finne en lokal løsning som passer maskinen og personvernbehovet mitt.',
-			'Gi modellen kuratert journalinnhold (tema, tidslinjer, valg) så den kan skrive nyttige .txt-utkast.',
-			'Lese gjennom og trimme hver .txt mens den fortsatt bare lever i det private løpet mitt.',
-		],
-		refs: [],
-	},
-	{
-		category: 'Pipeline',
-		title: 'Fra kuraterte utkast til Kevin sin AI',
-		intro:
-			'Etter gjennomgang skal .txt-filene kurateres og saniteres, og deretter inn i dokumentkorpuset som RAG-løsningen allerede henter fra, slik at Kevin sin AI kan bruke dem som kontekst.',
-		points: [
-			'Beholde overleveringen som enkle .txt-filer (eller konvertere til formatet ingest forventer) og laste opp via dokumentpipelinen og admin som finnes i dag.',
-			'Samme hygiene som ellers i appen: PII, tone og versjonering før noe havner i korpuset.',
-			'Re-ingest med tydelig proveniens, deretter en rask sjekk av retrieval mot nye chunks før de brukes i live chat.',
+			'Samle inn med tydelig formål, samtykke og grenser for hva som lagres.',
+			'Prosesser råmateriale selv før noe kan ingestes eller vises for besøkende.',
+			'Last opp kuraterte filer via admin og dokumentpipelinen.',
+			'Re-ingest og verifiser retrieval på nye chunks før de driver Kevin sin AI i live chat.',
 		],
 		refs: [
 			{
-				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
+				label: 'Wang m.fl.: Searching for Best Practices in Retrieval-Augmented Generation (arXiv:2407.01219, EMNLP 2024)',
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 			{
-				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
+				label: 'Gao m.fl.: Retrieval-Augmented Generation for Large Language Models: A Survey (arXiv:2312.10997, des. 2023; ofte sitert som «2024» andre steder)',
 				href: 'https://arxiv.org/abs/2312.10997',
+			},
+			{
+				label: 'Abbasiantaeb m.fl.: Conversational Gold — evaluering med menneskelige gull-nugger (arXiv:2503.09902)',
+				href: 'https://arxiv.org/abs/2503.09902',
+			},
+			{
+				label: 'Retrieval Augmented Generation Evaluation in the Era of Large Language Models: A Comprehensive Survey (arXiv:2504.14891)',
+				href: 'https://arxiv.org/abs/2504.14891',
 			},
 		],
 	},
@@ -175,7 +154,7 @@ const sectionsNo: SectionCopy[] = [
 		category: 'Retrieval',
 		title: 'Forbedringer i retrieval-pipelinen',
 		intro:
-			'Den eksisterende RAG-løsningen embedder dokumenter, lagrer vektorer og kjører likhetssøk før generering. Neste steg handler ofte om bedre rangering og bedre innbyrdes samsvar mellom spørsmål og dokumenter – ikke om å bytte ut hele arkitekturen.',
+			'Den eksisterende RAG-løsningen embedder dokumenter, lagrer vektorer og kjører likhetssøk før generering. Neste steg handler ofte om bedre rangering og bedre innbyrdes samsvar mellom spørsmål og dokumenter, ikke om å bytte ut hele arkitekturen.',
 		points: [
 			'Legg inn en reranking-fase (f.eks. monoT5-lignende krysskodere) oppå vektorsøk for å sortere treffene semantisk og redusere støy i kontekstvinduet.',
 			'Test domenetilpassede eller finjusterte embeddings slik at brukerspørsmål treffer chunk-representasjonene mer stabilt, særlig ved fagterminologi.',
@@ -205,21 +184,6 @@ const sectionsNo: SectionCopy[] = [
 			{
 				label: 'Willard & Louf (2023): Efficient Guided Generation for Large Language Models',
 				href: 'https://arxiv.org/abs/2307.09702',
-			},
-		],
-	},
-	{
-		category: 'Retrieval',
-		title: 'Adaptive retrieval-strategier',
-		intro:
-			'I dag hentes alltid et fast utsnitt av korpuset. Selektiv retrieval kan kutte latency når modellen allerede kan svare, og skjerpe fokus når ekstra evidens trengs.',
-		points: [
-			'La systemet avgjøre når det skal hente, hoppe over retrieval, eller hente på nytt etter et første utkast, inspirert av selvreflekterende RAG som vurderer eget behov for evidens.',
-		],
-		refs: [
-			{
-				label: 'Asai et al. (2023): Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection',
-				href: 'https://arxiv.org/abs/2310.11511',
 			},
 		],
 	},
