@@ -82,6 +82,24 @@ Spring Security protects admin routes; public **`POST /ask`** is rate-limited. P
 
 **Privacy:** conversations may be stored for troubleshooting and improvement. Do not send secrets. **RAG chunks and embeddings** live in PostgreSQL (`vector_store`); protect that data like any PII-bearing store. **AI output** can be wrong; verify anything important.
 
+## Knowledge pipeline (capture → curate → RAG)
+
+Optional **conversational capture** (for example a voice UI such as ElevenLabs) is a **product choice** for richer spoken input; academic RAG work does not prescribe that layer. **Raw exports or transcripts are not public or in the vector store by default.** The operator **structures, trims, redacts, and tunes** content into drafts, uploads through the **admin document pipeline**, then **re-embeds and checks retrieval** before curated chunks power document-grounded chat.
+
+**What the papers cover:** corpus preparation, chunking, indexing, retrieval, and evaluation—not voice vendors. Primary references:
+
+- [Wang et al., *Searching for Best Practices in Retrieval-Augmented Generation* (arXiv:2407.01219)](https://arxiv.org/abs/2407.01219) — empirical RAG component choices and evaluation (EMNLP 2024).
+- [Gao et al., *Retrieval-Augmented Generation for Large Language Models: A Survey* (arXiv:2312.10997)](https://arxiv.org/abs/2312.10997) — Dec 2023 preprint; widely cited as “2024” in secondary sources.
+
+**Human-grounded evaluation (also arXiv):**
+
+- [Abbasiantaeb et al., *Conversational Gold* — human gold nuggets (arXiv:2503.09902)](https://arxiv.org/abs/2503.09902).
+- [*Retrieval Augmented Generation Evaluation in the Era of Large Language Models: A Comprehensive Survey* (arXiv:2504.14891)](https://arxiv.org/abs/2504.14891).
+
+**Practice guides (not peer-reviewed):** [AWS — securing the RAG ingestion pipeline](https://aws.amazon.com/blogs/security/securing-the-rag-ingestion-pipeline-filtering-mechanisms/), [Anyscale — RAG data ingestion strategies](https://docs.anyscale.com/rag/quality-improvement/data-ingestion-strategies).
+
+**Privacy:** purpose limitation, consent, and minimisation for any capture channel follow applicable law (for example GDPR), not the RAG literature above. On-site copy also lives under **Future work** in the Vue app (`frontend/homepage/src/views/FutureWorkView.vue`).
+
 ## Feedback
 
 The project is under active development; some edge cases may remain. Feedback and suggestions: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)
