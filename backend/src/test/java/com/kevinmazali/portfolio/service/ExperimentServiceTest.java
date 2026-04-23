@@ -91,7 +91,6 @@ class ExperimentServiceTest {
         .thenReturn(List.of(new EvalDatasetExampleRow("What?", "Ref")));
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4_MINI)).thenReturn(true);
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.CLAUDE_HAIKU_4_5)).thenReturn(true);
-    when(postHogProperties.getHost()).thenReturn("https://eu.i.posthog.com");
 
     ExperimentRun saved = ExperimentRun.builder()
         .id(42L)
