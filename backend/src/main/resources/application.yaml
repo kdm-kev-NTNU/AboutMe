@@ -121,9 +121,6 @@ portfolio:
     rerank-batch-size: 8
     max-passage-chars: 2000
     max-sequence-length: 256
-  phoenix:
-    base-url: ${PHOENIX_BASE_URL:}
-    api-key: ${PHOENIX_API_KEY:}
   posthog:
     enabled: ${POSTHOG_ENABLED:false}
     api-key: ${POSTHOG_API_KEY:}
@@ -165,24 +162,5 @@ management:
       probability: 1.0
   metrics:
     tags:
-      # Correlate Micrometer metrics (including ai.*) with traces in Phoenix/Arize
       application: ${spring.application.name}
-  otlp:
-    tracing:
-      # Opt-in OTLP: set OTLP_EXPORT_ENABLED=true plus PHOENIX_OTLP_ENDPOINT and PHOENIX_API_KEY (Bearer) for Phoenix/Arize.
-      export:
-        enabled: ${OTLP_EXPORT_ENABLED:false}
-      endpoint: ${PHOENIX_OTLP_ENDPOINT:http://localhost:4317}
-      transport: grpc
-      headers:
-        authorization: Bearer ${PHOENIX_API_KEY:}
-    metrics:
-      export:
-        # Opt-in OTLP metrics (HTTP/protobuf) to Phoenix or an OTel collector; traces above use gRPC on 4317 by default.
-        # Self-hosted collector often exposes metrics on 4318. Arize Cloud may use a different ingest URL — set PHOENIX_OTLP_METRICS_URL.
-        enabled: ${OTLP_METRICS_EXPORT_ENABLED:false}
-        url: ${PHOENIX_OTLP_METRICS_URL:http://localhost:4318/v1/metrics}
-        step: 1m
-        headers:
-          authorization: Bearer ${PHOENIX_API_KEY:}
 
