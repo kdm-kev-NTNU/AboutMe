@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
+import com.kevinmazali.portfolio.model.analytics.AiGenerationAnalytics;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
 import com.kevinmazali.portfolio.model.experiment.EvaluationScore;
@@ -167,7 +168,7 @@ public class EvaluatorService {
         }
       };
       double latencySec = (System.nanoTime() - startNs) / 1_000_000_000.0;
-      recordEvaluatorUsage(model.modelId(), chatResponse, latencySec);
+      recordEvaluatorUsage(model.modelId(), chatResponse, latencySec, instructions);
       String text = chatResponse.getResult().getOutput().getText();
       return parseScoreJson(text);
     } catch (AiCircuitOpenException e) {
@@ -203,7 +204,8 @@ public class EvaluatorService {
     }
   }
 
-  private void recordEvaluatorUsage(String modelId, ChatResponse chatResponse, double latencySeconds) {
+  private void recordEvaluatorUsage(
+      String modelId, ChatResponse chatResponse, double latencySeconds, String judgeInput) {
     int prompt = 0;
     int completion = 0;
     if (chatResponse != null && chatResponse.getMetadata() != null) {
@@ -213,6 +215,12 @@ public class EvaluatorService {
         completion = safeTokenCount(u.getCompletionTokens());
       }
     }
+    String out =
+        chatResponse != null && chatResponse.getResult() != null && chatResponse.getResult().getOutput() != null
+            ? chatResponse.getResult().getOutput().getText()
+            : "";
+    AiGenerationAnalytics analytics =
+        AiGenerationAnalytics.empty().withTexts(judgeInput, out, null);
     aiBudgetService.recordUsage(
         AiBudgetService.systemEvaluatorUserId(),
         modelId,
@@ -220,7 +228,8 @@ public class EvaluatorService {
         completion,
         false,
         latencySeconds,
-        "llm_judge");
+        "llm_judge",
+        analytics);
   }
 
   private static int safeTokenCount(Number n) {
