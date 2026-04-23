@@ -16,7 +16,10 @@ import com.kevinmazali.portfolio.util.AiRequestContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -326,9 +329,20 @@ public class OpenAIServiceImpl implements OpenAIService {
     if (messages == null || messages.isEmpty()) {
       return "";
     }
-    return messages.stream()
-        .map(m -> m.getContent() != null ? m.getContent() : "")
-        .collect(Collectors.joining("\n---\n"));
+    return messages.stream().map(OpenAIServiceImpl::messageToPlainText).collect(Collectors.joining("\n---\n"));
+  }
+
+  private static String messageToPlainText(Message m) {
+    if (m instanceof UserMessage um) {
+      return um.getText() != null ? um.getText() : "";
+    }
+    if (m instanceof SystemMessage sm) {
+      return sm.getText() != null ? sm.getText() : "";
+    }
+    if (m instanceof AssistantMessage am) {
+      return am.getText() != null ? am.getText() : "";
+    }
+    return m != null ? m.toString() : "";
   }
 
   private static String truncateOutput(String text, int maxChars) {
