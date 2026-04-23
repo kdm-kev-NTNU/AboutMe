@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.PostHogProperties;
 import com.kevinmazali.portfolio.config.SecurityConfig;
@@ -10,12 +11,16 @@ import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.model.ChatModelOption;
 import com.kevinmazali.portfolio.model.chat.ChatProvider;
 import com.kevinmazali.portfolio.model.experiment.CreateEvalDatasetRequest;
+import com.kevinmazali.portfolio.model.experiment.DatasetGenerationStatus;
+import com.kevinmazali.portfolio.model.experiment.DatasetGenerationStatusResponse;
 import com.kevinmazali.portfolio.model.experiment.EvalDatasetSummary;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunDetailResponse;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunSummaryResponse;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus;
+import com.kevinmazali.portfolio.model.experiment.GenerateDatasetRequest;
 import com.kevinmazali.portfolio.model.experiment.RunExperimentRequest;
 import com.kevinmazali.portfolio.service.ChatModelCatalog;
+import com.kevinmazali.portfolio.service.DatasetGenerationService;
 import com.kevinmazali.portfolio.service.ExperimentService;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -42,7 +47,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ExperimentController.class)
-@EnableConfigurationProperties({AskRateLimitProperties.class, ExperimentRunRateLimitProperties.class})
+@EnableConfigurationProperties({
+  AskRateLimitProperties.class,
+  ExperimentRunRateLimitProperties.class,
+  DatasetGenerateRateLimitProperties.class
+})
 @Import({WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class})
 class ExperimentControllerTest {
 
@@ -57,6 +66,9 @@ class ExperimentControllerTest {
 
   @MockBean
   private ChatModelCatalog chatModelCatalog;
+
+  @MockBean
+  private DatasetGenerationService datasetGenerationService;
 
   @MockBean
   private PostHogProperties postHogProperties;
@@ -311,5 +323,62 @@ class ExperimentControllerTest {
                 "1", "n", null, "gpt-5.4-mini", "claude-haiku-4-5-20251001", null))))
         .andExpect(status().isInternalServerError())
         .andExpect(jsonPath("$.error").value("internal"));
+  }
+
+  @Test
+  @WithMockUser(roles = "ADMIN")
+  void generateDatasetReturnsAccepted() throws Exception {
+    when(datasetGenerationService.startGeneration(any(GenerateDatasetRequest.class))).thenReturn(42L);
+
+    mockMvc.perform(post("/admin/tools/experiments/datasets/generate")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(new GenerateDatasetRequest(
+                "My DS", "", null, "gpt-5.4-mini", 1, null, null))))
+        .andExpect(status().isAccepted())
+        .andExpect(jsonPath("$.generationId").value(42))
+        .andExpect(jsonPath("$.status").value(DatasetGenerationStatus.RUNNING));
+  }
+
+  @Test
+  @WithMockUser(roles = "ADMIN")
+  void generateDatasetReturns400OnIllegalArgument() throws Exception {
+    when(datasetGenerationService.startGeneration(any(GenerateDatasetRequest.class)))
+        .thenThrow(new IllegalArgumentException("bad"));
+
+    mockMvc.perform(post("/admin/tools/experiments/datasets/generate")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(new GenerateDatasetRequest(
+                "n", null, null, "gpt-5.4-mini", null, null, null))))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @WithMockUser(roles = "ADMIN")
+  void generationStatusReturnsOk() throws Exception {
+    when(datasetGenerationService.getGenerationStatus(7L))
+        .thenReturn(
+            Optional.of(
+                new DatasetGenerationStatusResponse(
+                    7L,
+                    DatasetGenerationStatus.COMPLETED,
+                    3,
+                    "99",
+                    null,
+                    OffsetDateTime.parse("2026-04-19T10:00:00Z").toString(),
+                    OffsetDateTime.parse("2026-04-19T10:05:00Z").toString())));
+
+    mockMvc.perform(get("/admin/tools/experiments/datasets/generate/7/status"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COMPLETED"))
+        .andExpect(jsonPath("$.resultDatasetId").value("99"));
+  }
+
+  @Test
+  @WithMockUser(roles = "ADMIN")
+  void generationStatusReturns404WhenMissing() throws Exception {
+    when(datasetGenerationService.getGenerationStatus(1L)).thenReturn(Optional.empty());
+
+    mockMvc.perform(get("/admin/tools/experiments/datasets/generate/1/status"))
+        .andExpect(status().isNotFound());
   }
 }

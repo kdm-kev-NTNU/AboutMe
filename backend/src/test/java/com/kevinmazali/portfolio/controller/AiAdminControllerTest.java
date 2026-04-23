@@ -4,6 +4,7 @@ import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.AiKillSwitchProperties;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
@@ -34,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EnableConfigurationProperties({
     AskRateLimitProperties.class,
     ExperimentRunRateLimitProperties.class,
+    DatasetGenerateRateLimitProperties.class,
     AiBudgetProperties.class,
     AiKillSwitchProperties.class
 })

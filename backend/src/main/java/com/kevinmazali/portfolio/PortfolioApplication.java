@@ -4,6 +4,7 @@ import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.AiKillSwitchProperties;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.PostHogProperties;
 import com.kevinmazali.portfolio.config.RetrievalProperties;
@@ -24,6 +25,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     AiKillSwitchProperties.class,
     AskRateLimitProperties.class,
     ExperimentRunRateLimitProperties.class,
+    DatasetGenerateRateLimitProperties.class,
     PostHogProperties.class,
     RetrievalProperties.class
 })

@@ -10,6 +10,7 @@ import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
 import com.kevinmazali.portfolio.service.ChatModelCatalog;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
 import com.kevinmazali.portfolio.exception.BudgetExceededException;
@@ -38,7 +39,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-5.4-mini")
-@EnableConfigurationProperties({ AskRateLimitProperties.class, ExperimentRunRateLimitProperties.class })
+@EnableConfigurationProperties({
+  AskRateLimitProperties.class,
+  ExperimentRunRateLimitProperties.class,
+  DatasetGenerateRateLimitProperties.class
+})
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class, GlobalApiExceptionHandler.class })
 class QuestionControllerTest {
 

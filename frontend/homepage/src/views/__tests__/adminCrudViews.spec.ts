@@ -480,7 +480,10 @@ describe('Admin CRUD views (integration-style)', () => {
             headers: headersJson,
           })
         }
-        if (url.includes('/api/admin/tools/experiments/datasets')) {
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
           return new Response(JSON.stringify([{ id: 'ds1', name: 'Demo', exampleCount: 3 }]), {
             status: 200,
             headers: headersJson,
@@ -528,7 +531,10 @@ describe('Admin CRUD views (integration-style)', () => {
             headers: headersJson,
           })
         }
-        if (url.includes('/api/admin/tools/experiments/datasets')) {
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
           return new Response(JSON.stringify([{ id: 'ds1', name: 'Demo', exampleCount: 1 }]), {
             status: 200,
             headers: headersJson,
@@ -557,10 +563,10 @@ describe('Admin CRUD views (integration-style)', () => {
       expect(wrapper.text()).toContain('RAG-experiments')
     })
 
-    const selects = wrapper.findAll('select')
-    expect(selects.length).toBeGreaterThanOrEqual(3)
-    const genSelect = selects[1]
-    const evSelect = selects[2]
+    const genSelect = wrapper.find('[data-testid="exp-generator-select"]')
+    const evSelect = wrapper.find('[data-testid="exp-evaluator-select"]')
+    expect(genSelect.exists()).toBe(true)
+    expect(evSelect.exists()).toBe(true)
 
     expect(genSelect.element.value).toBe('o1')
     expect(evSelect.findAll('option')).toHaveLength(1)
@@ -586,7 +592,10 @@ describe('Admin CRUD views (integration-style)', () => {
             headers: headersJson,
           })
         }
-        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/datasets/')) {
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
           return new Response(JSON.stringify({ error: 'Database utilgjengelig' }), { status: 500, headers: headersJson })
         }
         if (url.includes('/api/admin/tools/experiments/models')) {
@@ -707,7 +716,10 @@ describe('Admin CRUD views (integration-style)', () => {
             headers: headersJson,
           })
         }
-        if (url.includes('/api/admin/tools/experiments/datasets') && !/\/datasets\//.test(url)) {
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
           return new Response(JSON.stringify([{ id: 'ds1', name: 'Demo', exampleCount: 1 }]), {
             status: 200,
             headers: headersJson,
