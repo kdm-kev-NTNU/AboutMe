@@ -15,6 +15,17 @@ export default defineConfig({
     // DevTools breaks Vitest server bootstrap (configureServer rpc); keep for `vite dev` only.
     ...(process.env.VITEST ? [] : [vueDevTools()]),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/dompurify')) {
+            return 'dompurify'
+          }
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

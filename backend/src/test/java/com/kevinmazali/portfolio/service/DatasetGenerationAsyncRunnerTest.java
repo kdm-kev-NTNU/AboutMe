@@ -17,7 +17,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
