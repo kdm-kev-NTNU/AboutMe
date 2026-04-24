@@ -16,6 +16,12 @@ updates:
     directory: "/backend"
     schedule:
       interval: "weekly"
+    groups:
+      # Keep parent BOM + native tokenizer bumps in one PR (fewer merge/rebase churn).
+      backend-platform-and-ml:
+        patterns:
+          - "org.springframework.boot:spring-boot-starter-parent"
+          - "ai.djl.huggingface:tokenizers"
 
   - package-ecosystem: "github-actions"
     directory: "/"
