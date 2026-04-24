@@ -154,7 +154,10 @@ function pickCrossFamilyEvaluatorId(all: ChatModelOption[], genId: string): stri
 
 function syncEvaluatorToCrossFamily() {
   const all = models.value
-  if (!all.length) return
+  if (!all.length) {
+    evaluatorModel.value = ''
+    return
+  }
   const gen = all.find((m) => m.id === generatorModel.value)
   const ev = all.find((m) => m.id === evaluatorModel.value)
   if (!gen || !ev || gen.provider === ev.provider) {
@@ -162,11 +165,25 @@ function syncEvaluatorToCrossFamily() {
     if (nextId) evaluatorModel.value = nextId
     else evaluatorModel.value = ''
   }
+  const list = evaluatorModels.value
+  if (!list.length) {
+    evaluatorModel.value = ''
+    return
+  }
+  const currentOk = list.some((m) => m.id === evaluatorModel.value)
+  if (!evaluatorModel.value || !currentOk) {
+    const nextId = pickCrossFamilyEvaluatorId(all, generatorModel.value)
+    evaluatorModel.value = nextId ?? list[0].id
+  }
 }
 
-watch(generatorModel, () => {
-  syncEvaluatorToCrossFamily()
-})
+watch(
+  () => [models.value, generatorModel.value] as const,
+  () => {
+    syncEvaluatorToCrossFamily()
+  },
+  { flush: 'post' },
+)
 
 function formatScore(v: number | null | undefined) {
   if (v == null || Number.isNaN(v)) return '–'
@@ -647,7 +664,7 @@ onUnmounted(() => {
           type="button"
           class="mt-4 text-sm font-medium px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           @click="startRun"
-          :disabled="runBusy || !crossFamilyPairAvailable || !evaluatorModel"
+          :disabled="runBusy || modelsLoading"
         >
           Start experiment
         </button>
