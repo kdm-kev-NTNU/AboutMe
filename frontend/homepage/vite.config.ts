@@ -12,7 +12,8 @@ export default defineConfig({
     vue(),
     tailwindcss(),
     vueJsx(),
-    vueDevTools(),
+    // DevTools breaks Vitest server bootstrap (configureServer rpc); keep for `vite dev` only.
+    ...(process.env.VITEST ? [] : [vueDevTools()]),
   ],
   resolve: {
     alias: {
