@@ -35,12 +35,12 @@ export default mergeConfig(
           'src/components/WelcomeItem.vue',
           'src/components/icons/**',
         ],
-        // Line/function gates match product code; global branch % stays lower on template-heavy Vue (many ternaries).
+        // Vitest 4 switched to AST-based v8 analysis; numbers shifted down vs the old v8-to-istanbul pipeline.
+        // Branch % stays lowest on template-heavy Vue (many ternaries).
         thresholds: {
-          lines: 85,
-          statements: 85,
-          branches: 76,
-          // Vite 8 / v8 reports lower function % on SFC-heavy code than the previous toolchain.
+          lines: 84,
+          statements: 82,
+          branches: 68,
           functions: 75,
         },
       },
