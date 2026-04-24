@@ -1,6 +1,6 @@
 package com.kevinmazali.portfolio.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.PostHogProperties;
 import com.sun.net.httpserver.HttpServer;
 import java.io.OutputStream;
