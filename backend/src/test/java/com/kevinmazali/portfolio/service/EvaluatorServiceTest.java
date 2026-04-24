@@ -1,6 +1,6 @@
 package com.kevinmazali.portfolio.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.model.experiment.EvaluationScore;
 import org.junit.jupiter.api.BeforeEach;

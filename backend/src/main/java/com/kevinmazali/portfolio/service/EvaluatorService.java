@@ -1,7 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.model.analytics.AiGenerationAnalytics;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;

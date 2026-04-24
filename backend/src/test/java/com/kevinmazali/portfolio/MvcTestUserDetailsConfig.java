@@ -7,7 +7,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 
 /**
- * In-memory users for {@link org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest}
+ * In-memory users for {@link org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest}
  * slices that {@link com.kevinmazali.portfolio.config.SecurityConfig} imports; the main app uses
  * {@link com.kevinmazali.portfolio.security.JpaUserDetailsService} instead.
  */
