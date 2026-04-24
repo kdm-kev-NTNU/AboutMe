@@ -7,7 +7,7 @@ import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.controller.AuthController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import com.kevinmazali.portfolio.config.SecurityConfig;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -23,14 +23,14 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = AuthController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class)
+@WebMvcTest(controllers = AuthController.class)
 @TestPropertySource(properties = "portfolio.login-rate-limit.enabled=true")
 @EnableConfigurationProperties({
   AskRateLimitProperties.class,
   ExperimentRunRateLimitProperties.class,
   DatasetGenerateRateLimitProperties.class
 })
-@Import(WebConfig.class)
+@Import({WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class})
 class LoginRateLimitFilterTest {
 
 	@Autowired

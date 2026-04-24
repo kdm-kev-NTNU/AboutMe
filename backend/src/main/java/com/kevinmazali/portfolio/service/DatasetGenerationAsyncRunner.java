@@ -1,7 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
@@ -22,7 +22,6 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -406,8 +405,7 @@ public class DatasetGenerationAsyncRunner {
     String q = findKeyInsensitive(obj, "question");
     String a = findKeyInsensitive(obj, "answer");
     if (q == null || a == null) {
-      for (Iterator<String> it = obj.fieldNames(); it.hasNext(); ) {
-        String field = it.next();
+      for (String field : obj.propertyNames()) {
         JsonNode v = obj.get(field);
         if (v != null && v.isObject()) {
           q = findKeyInsensitive(v, "question");
@@ -428,9 +426,7 @@ public class DatasetGenerationAsyncRunner {
   }
 
   private static String findKeyInsensitive(JsonNode obj, String wanted) {
-    Iterator<String> names = obj.fieldNames();
-    while (names.hasNext()) {
-      String k = names.next();
+    for (String k : obj.propertyNames()) {
       if (k != null && k.equalsIgnoreCase(wanted)) {
         JsonNode v = obj.get(k);
         return v == null || v.isNull() ? null : v.asText();
