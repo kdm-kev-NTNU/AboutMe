@@ -519,6 +519,53 @@ describe('Admin CRUD views (integration-style)', () => {
     expect(wrapper.text()).toContain('Velg et datasett.')
   })
 
+  it('AdminExperimentsView binds evaluator after models load without manual select change', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+        if (url.includes('/api/admin/tools/experiments/config')) {
+          return new Response(JSON.stringify({ posthogConfigured: true, posthogHost: 'https://eu.i.posthog.com' }), {
+            status: 200,
+            headers: headersJson,
+          })
+        }
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/models')) {
+          return new Response(
+            JSON.stringify([
+              { id: 'gpt-test', label: 'Test', provider: 'OPENAI' },
+              { id: 'claude-judge', label: 'Judge', provider: 'ANTHROPIC' },
+            ]),
+            { status: 200, headers: headersJson },
+          )
+        }
+        if (url.includes('/api/admin/tools/experiments/runs')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        return new Response('{}', { status: 404, headers: headersJson })
+      }),
+    )
+
+    const wrapper = mountAdmin(AdminExperimentsView)
+    await flushPromises()
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('RAG-experiments')
+    })
+
+    const evSelect = wrapper.find('[data-testid="exp-evaluator-select"]')
+    expect((evSelect.element as HTMLSelectElement).value).toBe('claude-judge')
+
+    const startBtn = wrapper.findAll('button').find((b) => b.text().includes('Start experiment'))
+    expect(startBtn?.attributes('disabled')).toBeUndefined()
+  })
+
   it('AdminExperimentsView evaluator dropdown only lists models from the other provider', async () => {
     vi.stubGlobal(
       'fetch',
