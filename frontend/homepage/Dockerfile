@@ -1,13 +1,11 @@
 # Build stage
 FROM node:22-alpine AS builder
 
-# Enable corepack and prepare pnpm
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
-
 WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json ./
+ENV CYPRESS_INSTALL_BINARY=0
 RUN npm ci
 
 # Copy source and build
