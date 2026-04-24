@@ -5,8 +5,11 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
-      # Dependabot currently cannot apply the security update for uuid here
-      # because Cypress transitively constrains @cypress/request -> uuid@^8.3.2.
+      # uuid is a transitive dev dep via @cypress/request (^8.3.2).
+      # Overridden to ^14.0.0 in package.json so lockfile resolves >=14.0.0
+      # (patched for GHSA-w5hq-g745-h8pq per uuidjs/uuid v14.0.0 release).
+      # Ignored here so Dependabot does not try to bump the declared range
+      # while Cypress still lists uuid@^8; npm overrides apply at install time.
       - dependency-name: "uuid"
 
   - package-ecosystem: "maven"
