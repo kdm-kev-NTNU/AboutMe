@@ -7,6 +7,8 @@ vi.mock('posthog-js', () => ({
     opt_in_capturing: vi.fn(),
     opt_out_capturing: vi.fn(),
     reset: vi.fn(),
+    startSessionRecording: vi.fn(),
+    stopSessionRecording: vi.fn(),
     get_explicit_consent_status: vi.fn(() => undefined),
   },
 }))
@@ -79,6 +81,7 @@ describe('posthog-consent', () => {
 
     expect(initializePosthogSdk).toHaveBeenCalled()
     expect(posthog.opt_in_capturing).toHaveBeenCalled()
+    expect(posthog.startSessionRecording).toHaveBeenCalled()
     expect(handler).toHaveBeenCalled()
   })
 
@@ -97,6 +100,7 @@ describe('posthog-consent', () => {
 
     applyStoredTrackingConsent()
 
+    expect(posthog.stopSessionRecording).toHaveBeenCalled()
     expect(posthog.opt_out_capturing).toHaveBeenCalled()
     expect(posthog.reset).toHaveBeenCalled()
   })
@@ -111,6 +115,7 @@ describe('posthog-consent', () => {
     expect(record.source).toBe('banner_accept_all')
     expect(record.policyVersion).toBe(PRIVACY_POLICY_VERSION)
     expect(posthog.opt_in_capturing).toHaveBeenCalled()
+    expect(posthog.startSessionRecording).toHaveBeenCalled()
   })
 
   it('persists denied analytics on grantNecessaryCookiesOnly', () => {
@@ -127,6 +132,7 @@ describe('posthog-consent', () => {
     const record = JSON.parse(localStorageMock[COOKIE_CONSENT_RECORD_KEY])
     expect(record.analytics).toBe(false)
     expect(record.source).toBe('banner_reject')
+    expect(posthog.stopSessionRecording).toHaveBeenCalledTimes(1)
     expect(posthog.opt_out_capturing).toHaveBeenCalledTimes(1)
     expect(posthog.reset).toHaveBeenCalledTimes(1)
   })
@@ -139,6 +145,7 @@ describe('posthog-consent', () => {
     expect(hasAnalyticsConsent()).toBe(true)
     expect(isCookieBannerDismissed()).toBe(true)
     expect(posthog.opt_in_capturing).toHaveBeenCalledTimes(1)
+    expect(posthog.startSessionRecording).toHaveBeenCalledTimes(1)
     expect(handler).toHaveBeenCalledTimes(1)
   })
 
