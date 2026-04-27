@@ -114,12 +114,22 @@ function activatePosthogAnalytics(): void {
   if (!env.enabled) return
   if (!initializePosthogSdk({ key: env.key, host: env.host })) return
   posthog.opt_in_capturing()
+  try {
+    posthog.startSessionRecording?.()
+  } catch {
+    // ignore if recorder unavailable
+  }
   activationHandler?.()
 }
 
 function deactivatePosthogAnalytics(): void {
   if (!isPosthogEnabled()) return
   if (!isPosthogSdkInitialized()) return
+  try {
+    posthog.stopSessionRecording?.()
+  } catch {
+    // ignore if recorder unavailable
+  }
   posthog.opt_out_capturing()
   posthog.reset()
 }
