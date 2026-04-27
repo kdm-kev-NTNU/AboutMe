@@ -42,8 +42,8 @@ const analyticsLabel = computed(() =>
 )
 const analyticsHelp = computed(() =>
   langStore.language === 'no'
-    ? `Hjelper oss å forstå bruk av siden (aggregert). Behandles etter personvernerklæringen (versjon ${PRIVACY_POLICY_VERSION}).`
-    : `Helps us understand site usage in aggregate. Governed by the privacy policy (version ${PRIVACY_POLICY_VERSION}).`,
+    ? `Hjelper oss å forstå bruk av siden (aggregert), inkludert anonymiserte sesjonsopptak. Alle skjemafelt maskeres automatisk. Behandles etter personvernerklæringen (versjon ${PRIVACY_POLICY_VERSION}).`
+    : `Helps us understand site usage in aggregate, including anonymized session recordings. All form inputs are automatically masked. Governed by the privacy policy (version ${PRIVACY_POLICY_VERSION}).`,
 )
 const saveLabel = computed(() => (langStore.language === 'no' ? 'Lagre valg' : 'Save choices'))
 const cancelLabel = computed(() => (langStore.language === 'no' ? 'Avbryt' : 'Cancel'))

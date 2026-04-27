@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
+import { useLangStore } from '@/stores/lang'
 import CookieConsentBanner from '../CookieConsentBanner.vue'
 import {
   grantAllCookies,
@@ -51,6 +52,20 @@ describe('CookieConsentBanner', () => {
     const wrapper = mountBanner()
     await nextTick()
     expect(wrapper.find('[role="region"]').exists()).toBe(true)
+  })
+
+  it('mentions session recordings in English banner copy', async () => {
+    useLangStore().setLanguage('en')
+    const wrapper = mountBanner()
+    await nextTick()
+    expect(wrapper.text()).toContain('anonymized session recordings')
+  })
+
+  it('mentions session recordings in Norwegian banner copy', async () => {
+    useLangStore().setLanguage('no')
+    const wrapper = mountBanner()
+    await nextTick()
+    expect(wrapper.text()).toContain('anonymisert opptak av sesjoner')
   })
 
   it('does not render when consent was previously recorded', async () => {
