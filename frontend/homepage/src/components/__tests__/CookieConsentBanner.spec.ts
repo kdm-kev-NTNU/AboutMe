@@ -61,6 +61,13 @@ describe('CookieConsentBanner', () => {
     expect(wrapper.text()).toContain('anonymized session recordings')
   })
 
+  it('mentions session recordings in Norwegian banner copy', async () => {
+    useLangStore().setLanguage('no')
+    const wrapper = mountBanner()
+    await nextTick()
+    expect(wrapper.text()).toContain('anonymisert opptak av sesjoner')
+  })
+
   it('does not render when consent was previously recorded', async () => {
     vi.mocked(isCookieBannerDismissed).mockReturnValue(true)
     const wrapper = mountBanner()
