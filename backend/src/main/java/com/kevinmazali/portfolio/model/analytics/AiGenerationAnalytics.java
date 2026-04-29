@@ -57,7 +57,8 @@ public record AiGenerationAnalytics(
         experimentProperties != null ? experimentProperties : Collections.emptyMap());
   }
 
-  public AiGenerationAnalytics withError(boolean error, @Nullable String errorMessage, @Nullable Integer httpStatus) {
+  public AiGenerationAnalytics withError(
+      boolean error, @Nullable String errorMessage, @Nullable Integer httpStatus) {
     return new AiGenerationAnalytics(
         inputText,
         outputText,
@@ -111,5 +112,22 @@ public record AiGenerationAnalytics(
         errorMessage,
         httpStatus,
         props != null ? props : Collections.emptyMap());
+  }
+
+  public AiGenerationAnalytics withBaseUrl(@Nullable String baseUrl) {
+    return new AiGenerationAnalytics(
+        inputText,
+        outputText,
+        contextText,
+        spanId,
+        parentSpanId,
+        rootTraceId,
+        traceName,
+        conversationId,
+        baseUrl,
+        error,
+        errorMessage,
+        httpStatus,
+        experimentProperties != null ? experimentProperties : Collections.emptyMap());
   }
 }
