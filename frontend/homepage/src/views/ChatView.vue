@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import MessagesArea from '@/views/MessagesArea.vue'
-import { ChatModelOptionProvider } from '@/api/generated/portfolio'
+import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
 import {
   POSTHOG_CHAT_EVENTS,
   POSTHOG_FEATURE_FLAGS,
@@ -195,18 +195,11 @@ async function send(text: string) {
     // Refresh registered property in case the user cleared chat.
     registerAnalyticsProperties({ conversation_id: conversationId })
 
-    const r = await fetch('/api/ask', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Conversation-Id': conversationId,
-      },
-      body: JSON.stringify(payload),
+    const r = await askQuestion(payload, {
+      headers: { 'X-Conversation-Id': conversationId },
     })
     if (r.status === 200) {
-      const data = (await r.json()) as { answer?: unknown }
-      const answerText = typeof data.answer === 'string' ? data.answer : ''
-      state.messages.push({ role: 'assistant', text: answerText, isNew: true })
+      state.messages.push({ role: 'assistant', text: r.data.answer, isNew: true })
       captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_RECEIVED, {
         http_status: 200,
         model_id: modelId,
@@ -215,13 +208,9 @@ async function send(text: string) {
       })
       return
     }
-    let errData: unknown = undefined
-    try {
-      errData = await r.json()
-    } catch {
-      // ignore non-json
-    }
-    const sc = r.status
+    const err = r as { status: number; data: unknown }
+    const sc = err.status
+    const errData = err.data
     if (sc === 429) {
       captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
         http_status: sc,
