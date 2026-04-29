@@ -26,8 +26,10 @@ class InputValidatorTest {
 	}
 
 	@Test
-	void isValidQuestionAcceptsLettersNumbersPunctuationAndWhitespace() {
+	void isValidQuestionAcceptsLettersNumbersPunctuationSymbolsAndWhitespace() {
 		assertTrue(InputValidator.isValidQuestion("Hello, world 123, «test»?"));
+		assertTrue(InputValidator.isValidQuestion("2+2?"));
+		assertTrue(InputValidator.isValidQuestion("Cost is ~€10 (or $11)."));
 	}
 
 	@Test
