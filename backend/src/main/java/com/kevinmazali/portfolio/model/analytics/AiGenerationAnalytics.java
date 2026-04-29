@@ -166,9 +166,11 @@ public record AiGenerationAnalytics(
 
   public AiGenerationAnalytics withBaseUrl(@Nullable String baseUrl) {
     return new AiGenerationAnalytics(
+        userQuestion,
         inputText,
         outputText,
         contextText,
+        contextDocumentCount,
         spanId,
         parentSpanId,
         rootTraceId,
