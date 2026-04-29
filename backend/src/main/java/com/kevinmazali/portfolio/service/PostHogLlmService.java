@@ -138,6 +138,12 @@ public class PostHogLlmService {
     if (analytics.contextText() != null && !analytics.contextText().isBlank()) {
       b.property("$ai_context", truncate(analytics.contextText(), MAX_AI_CONTEXT_CHARS));
     }
+    if (analytics.userQuestion() != null && !analytics.userQuestion().isBlank()) {
+      b.property("ask_question", truncate(analytics.userQuestion(), MAX_AI_BODY_CHARS));
+    }
+    if (analytics.contextDocumentCount() != null) {
+      b.property("rag_doc_count", Math.max(0, analytics.contextDocumentCount()));
+    }
     if (analytics.baseUrl() != null && !analytics.baseUrl().isBlank()) {
       b.property("$ai_base_url", analytics.baseUrl());
     }
