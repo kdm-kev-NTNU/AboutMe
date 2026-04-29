@@ -148,6 +148,8 @@ class PostHogLlmServiceTest {
             null,
             null,
             null,
+            null,
+            null,
             "https://api.openai.com/v1",
             false,
             null,
