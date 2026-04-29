@@ -8,8 +8,8 @@ import java.util.regex.Pattern;
  */
 public class InputValidator {
     
-    /** Letters, numbers, punctuation, and spaces only (no raw control characters). */
-    private static final Pattern SAFE_STRING_PATTERN = Pattern.compile("^[\\p{L}\\p{N}\\p{P}\\p{Z}]*$");
+    /** Letters, numbers, punctuation, symbols (incl math), and spaces only (no raw control characters). */
+    private static final Pattern SAFE_STRING_PATTERN = Pattern.compile("^[\\p{L}\\p{N}\\p{P}\\p{S}\\p{Z}]*$");
     
     private static final int MAX_QUESTION_LENGTH = 3000;
     private static final int MAX_FEEDBACK_LENGTH = 4000;
