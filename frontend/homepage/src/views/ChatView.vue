@@ -15,13 +15,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import MessagesArea from '@/views/MessagesArea.vue'
-import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
+import { ChatModelOptionProvider } from '@/api/generated/portfolio'
 import {
   POSTHOG_CHAT_EVENTS,
   POSTHOG_FEATURE_FLAGS,
   captureAnalyticsEvent,
   getFeatureFlag,
+  registerAnalyticsProperties,
 } from '@/lib/posthog-sdk'
+import {
+  getOrCreateChatConversationId,
+  resetChatConversationId,
+} from '@/lib/chat-telemetry'
 
 // RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
@@ -124,6 +129,7 @@ const clearChat = () => {
   state.messages = []
   errorText.value = ''
   input.value = ''
+  resetChatConversationId()
   void router.replace({ name: 'chat', query: {} })
 }
 
@@ -171,9 +177,11 @@ async function send(text: string) {
   const ffVariant = getFeatureFlag(ffKey)
   const ffProp =
     ffVariant !== undefined ? { [`$feature/${ffKey}`]: ffVariant } : {}
+  const conversationId = getOrCreateChatConversationId()
   captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ASK_SUBMITTED, {
     prompt_length: text.trim().length,
     model_id: modelId,
+    conversation_id: conversationId,
     ...ffProp,
   })
   try {
@@ -184,22 +192,41 @@ async function send(text: string) {
     if (chatModelStore.selectedModelId) {
       payload.model = chatModelStore.selectedModelId
     }
-    const r = await askQuestion(payload)
+    // Refresh registered property in case the user cleared chat.
+    registerAnalyticsProperties({ conversation_id: conversationId })
+
+    const r = await fetch('/api/ask', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Conversation-Id': conversationId,
+      },
+      body: JSON.stringify(payload),
+    })
     if (r.status === 200) {
-      state.messages.push({ role: 'assistant', text: r.data.answer, isNew: true })
+      const data = (await r.json()) as { answer?: unknown }
+      const answerText = typeof data.answer === 'string' ? data.answer : ''
+      state.messages.push({ role: 'assistant', text: answerText, isNew: true })
       captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_RECEIVED, {
         http_status: 200,
         model_id: modelId,
+        conversation_id: conversationId,
         ...ffProp,
       })
       return
     }
-    const err = r as { status: number; data: unknown }
-    const sc = err.status
+    let errData: unknown = undefined
+    try {
+      errData = await r.json()
+    } catch {
+      // ignore non-json
+    }
+    const sc = r.status
     if (sc === 429) {
       captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
         http_status: sc,
         model_id: modelId,
+        conversation_id: conversationId,
         ...ffProp,
       })
       errorText.value = 'For mange forespørsler. Vent litt før du prøver igjen.'
@@ -209,30 +236,34 @@ async function send(text: string) {
       captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
         http_status: sc,
         model_id: modelId,
+        conversation_id: conversationId,
         ...ffProp,
       })
-      errorText.value = readApiError(err.data) ?? GENERIC_ASK_ERROR
+      errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
       return
     }
     if (sc === 400 || sc === 503) {
       captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
         http_status: sc,
         model_id: modelId,
+        conversation_id: conversationId,
         ...ffProp,
       })
-      errorText.value = readApiError(err.data) ?? GENERIC_ASK_ERROR
+      errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
       return
     }
     captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
       http_status: sc,
       model_id: modelId,
+      conversation_id: conversationId,
       ...ffProp,
     })
-    errorText.value = readApiError(err.data) ?? GENERIC_ASK_ERROR
+    errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
   } catch {
     captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
       http_status: 0,
       model_id: modelId,
+      conversation_id: conversationId,
       ...ffProp,
     })
     errorText.value = 'Nettverksfeil. Prøv igjen.'
@@ -270,16 +301,19 @@ onMounted(async () => {
     showInfoPopup.value = true
   }
 
-  const conversationId = route.query.conversationId as string
+  const conversationId = getOrCreateChatConversationId()
+  registerAnalyticsProperties({ conversation_id: conversationId })
 
-  if (conversationId) {
-    loadConversation(conversationId)
+  const conversationIdParam = route.query.conversationId as string
+
+  if (conversationIdParam) {
+    loadConversation(conversationIdParam)
   } else {
     loadMessagesFromStorage()
   }
 
   const q = (route.query.q as string) || ''
-  if (q && !conversationId) {
+  if (q && !conversationIdParam) {
     input.value = q
     // Home page passes ?q=: auto-send once so the user does not need a second click on /chat.
     send(q)
@@ -444,4 +478,3 @@ onMounted(async () => {
     </div>
   </main>
 </template>
-
