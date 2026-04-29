@@ -94,3 +94,12 @@ export function onFeatureFlagsReady(callback: () => void): void {
     callback()
   }
 }
+
+export function registerAnalyticsProperties(properties: Record<string, unknown>): void {
+  if (!sdkInitialized) return
+  try {
+    posthog.register(properties)
+  } catch {
+    // ignore
+  }
+}
