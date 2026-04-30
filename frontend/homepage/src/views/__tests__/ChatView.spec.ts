@@ -3,7 +3,13 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import ChatView from '../ChatView.vue'
-import { askQuestion, listChatModels, type askQuestionResponse } from '@/api/generated/portfolio'
+import {
+  askQuestion,
+  listChatModels,
+  ChatModelOptionProvider,
+  ChatModelTag,
+  type askQuestionResponse,
+} from '@/api/generated/portfolio'
 import { useLangStore } from '@/stores/lang'
 import { useChatModelStore } from '@/stores/model'
 
@@ -79,6 +85,35 @@ describe('ChatView', () => {
     await flushPromises()
     return { wrapper, router, pinia }
   }
+
+  it('shows model FAST / Reasoning labels and defaults to a FAST model', async () => {
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'gpt-5.4',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'GPT-5.4',
+          tags: [ChatModelTag.REASONING],
+        },
+        {
+          id: 'gpt-5.4-mini',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'GPT-5.4 mini',
+          tags: [ChatModelTag.FAST],
+        },
+      ],
+      headers: new Headers(),
+    })
+    const { wrapper } = await mountChat({})
+    await flushPromises()
+    const sel = wrapper.find('#chat-model-select')
+    expect(sel.exists()).toBe(true)
+    const opts = sel.findAll('option')
+    expect(opts.some((o) => o.text().includes('Fast'))).toBe(true)
+    expect(opts.some((o) => o.text().includes('Reasoning'))).toBe(true)
+    expect((sel.element as HTMLSelectElement).value).toBe('gpt-5.4-mini')
+  })
 
   it('shows English error when prompt exceeds max length', async () => {
     const { wrapper } = await mountChat({})

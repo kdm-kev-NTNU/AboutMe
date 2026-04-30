@@ -29,7 +29,7 @@ public class ChatModelCatalog {
     boolean anthropic = hasApiKey("spring.ai.anthropic.api-key");
     return Arrays.stream(SupportedChatModel.values())
         .filter(m -> m.provider() == ChatProvider.OPENAI ? openai : anthropic)
-        .map(m -> new ChatModelOption(m.modelId(), m.provider(), m.label()))
+        .map(m -> new ChatModelOption(m.modelId(), m.provider(), m.label(), m.tags()))
         .toList();
   }
 
