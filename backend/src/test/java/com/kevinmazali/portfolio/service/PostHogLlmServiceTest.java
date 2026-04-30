@@ -9,14 +9,17 @@ import io.micrometer.tracing.Span;
 import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -95,6 +98,32 @@ class PostHogLlmServiceTest {
   }
 
   @Test
+  void captureGenerationSync_setsSessionIdOutputChoicesAndStructuredInput() {
+    PostHogInterface client = mock(PostHogInterface.class);
+    AiGenerationAnalytics analytics =
+        AiGenerationAnalytics.empty()
+            .withTrace("gen-span", null, "root-trace", "rag_ask", "sess-abc")
+            .withInputMessages(
+                List.of(Map.of("role", "system", "content", "sys"), Map.of("role", "user", "content", "hi")),
+                "assistant reply",
+                null);
+    try (MockedStatic<PostHog> ph = mockStatic(PostHog.class)) {
+      ph.when(() -> PostHog.with(any(PostHogConfig.class))).thenReturn(client);
+      PostHogLlmService svc = new PostHogLlmService(configuredProperties(), null);
+      svc.captureGenerationSync("u1", "gpt-5", 3, 4, BigDecimal.ONE, false, 0.5, "rag_completion", analytics);
+      @SuppressWarnings("unchecked")
+      ArgumentCaptor<com.posthog.server.PostHogCaptureOptions> cap =
+          ArgumentCaptor.forClass(com.posthog.server.PostHogCaptureOptions.class);
+      verify(client).capture(eq("u1"), eq("$ai_generation"), cap.capture());
+      Map<String, Object> props = cap.getValue().getProperties();
+      assertEquals("sess-abc", props.get("$ai_session_id"));
+      assertNotNull(props.get("$ai_input"));
+      assertNotNull(props.get("$ai_output_choices"));
+      svc.shutdown();
+    }
+  }
+
+  @Test
   void captureGenerationSync_resolvesTraceFromTracerWhenZeroTraceId() {
     PostHogInterface client = mock(PostHogInterface.class);
     Tracer tracer = mock(Tracer.class);
@@ -125,6 +154,30 @@ class PostHogLlmServiceTest {
   }
 
   @Test
+  void captureTraceSync_sendsAiTrace() {
+    PostHogInterface client = mock(PostHogInterface.class);
+    try (MockedStatic<PostHog> ph = mockStatic(PostHog.class)) {
+      ph.when(() -> PostHog.with(any(PostHogConfig.class))).thenReturn(client);
+      PostHogLlmService svc = new PostHogLlmService(configuredProperties(), null);
+      svc.captureTraceSync("user-1", "tid-1", "sid-1", "rag_ask", 2.5, true, "boom", false);
+      verify(client).capture(eq("user-1"), eq("$ai_trace"), any());
+      svc.shutdown();
+    }
+  }
+
+  @Test
+  void captureSpanSync_sendsAiSpan() {
+    PostHogInterface client = mock(PostHogInterface.class);
+    try (MockedStatic<PostHog> ph = mockStatic(PostHog.class)) {
+      ph.when(() -> PostHog.with(any(PostHogConfig.class))).thenReturn(client);
+      PostHogLlmService svc = new PostHogLlmService(configuredProperties(), null);
+      svc.captureSpanSync("user-1", "tid-1", "sid-1", "span-1", "tid-1", "rag_retrieval", 0.3, false, false);
+      verify(client).capture(eq("user-1"), eq("$ai_span"), any());
+      svc.shutdown();
+    }
+  }
+
+  @Test
   void shutdown_swallowsCloseException() {
     PostHogInterface client = mock(PostHogInterface.class);
     doThrow(new RuntimeException("close failed")).when(client).close();
@@ -138,23 +191,7 @@ class PostHogLlmServiceTest {
   @Test
   void captureGenerationSync_includesBaseUrlWhenSet() {
     PostHogInterface client = mock(PostHogInterface.class);
-    AiGenerationAnalytics analytics =
-        new AiGenerationAnalytics(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            "https://api.openai.com/v1",
-            false,
-            null,
-            null,
-            Collections.emptyMap());
+    AiGenerationAnalytics analytics = AiGenerationAnalytics.empty().withBaseUrl("https://api.openai.com/v1");
     try (MockedStatic<PostHog> ph = mockStatic(PostHog.class)) {
       ph.when(() -> PostHog.with(any(PostHogConfig.class))).thenReturn(client);
       PostHogLlmService svc = new PostHogLlmService(configuredProperties(), null);
