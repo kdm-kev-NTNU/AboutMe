@@ -56,7 +56,17 @@ export interface ChatModelOption {
   id?: string;
   provider?: ChatModelOptionProvider;
   label?: string;
+  /** Capability tags (e.g. FAST vs REASONING) */
+  tags?: ChatModelTag[];
 }
+
+export type ChatModelTag = typeof ChatModelTag[keyof typeof ChatModelTag];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ChatModelTag = {
+  FAST: 'FAST',
+  REASONING: 'REASONING',
+} as const;
 
 export type ChatModelOptionProvider = typeof ChatModelOptionProvider[keyof typeof ChatModelOptionProvider];
 

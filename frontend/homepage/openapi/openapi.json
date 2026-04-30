@@ -83,8 +83,16 @@
         "properties": {
           "id": { "type": "string" },
           "provider": { "$ref": "#/components/schemas/ChatModelOptionProvider" },
-          "label": { "type": "string" }
+          "label": { "type": "string" },
+          "tags": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ModelTag" }
+          }
         }
+      },
+      "ModelTag": {
+        "type": "string",
+        "enum": ["FAST", "REASONING"]
       },
       "ChatModelOptionProvider": {
         "type": "string",

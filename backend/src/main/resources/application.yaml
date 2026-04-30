@@ -38,7 +38,7 @@ spring:
       api-key: ${ANTHROPIC_API_KEY:}
       chat:
         options:
-          model: claude-sonnet-4-6
+          model: claude-haiku-4-5-20251001
           max-tokens: ${portfolio.ai.limits.chat-max-completion-tokens:400}
     chat:
       observations:
@@ -77,10 +77,16 @@ portfolio:
       spike-hourly-multiplier: 5.0
       anon-identity-salt: ${AI_BUDGET_ANON_SALT:portfolio-ai-budget}
       models:
+        gpt-5.4-nano:
+          input-per-million-usd: 0.05
+          output-per-million-usd: 0.20
         gpt-5.4-mini:
           input-per-million-usd: 0.15
           output-per-million-usd: 0.60
         gpt-5.4:
+          input-per-million-usd: 2.50
+          output-per-million-usd: 10.00
+        gpt-5.5:
           input-per-million-usd: 2.50
           output-per-million-usd: 10.00
         claude-haiku-4-5-20251001:
@@ -89,6 +95,9 @@ portfolio:
         claude-sonnet-4-6:
           input-per-million-usd: 3.00
           output-per-million-usd: 15.00
+        claude-opus-4-7:
+          input-per-million-usd: 5.00
+          output-per-million-usd: 25.00
     kill-switch:
       enabled: true
       monthly-limit-usd: 50.00
