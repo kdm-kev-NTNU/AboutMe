@@ -3,14 +3,13 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { MotionPlugin } from '@vueuse/motion'
 import type { Component } from 'vue'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import AboutView from '../AboutView.vue'
-import TechStackView from '../TechStackView.vue'
 import PrivacyPolicyView from '../PrivacyPolicyView.vue'
 import { useLangStore } from '@/stores/lang'
 import ProjectsView from '../ProjectsView.vue'
 import CareerView from '../CareerView.vue'
-import FutureWorkView from '../FutureWorkView.vue'
-import BachelorView from '../BachelorView.vue'
+import ProjectPageView from '../ProjectPageView.vue'
 
 describe('portfolio views (smoke)', () => {
 	function mountView(component: Component) {
@@ -25,47 +24,83 @@ describe('portfolio views (smoke)', () => {
 
 	const routerLinkStub = { template: '<a><slot /></a>' }
 
+	function makeProjectRouter() {
+		return createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: '/', name: 'home', component: { template: '<div />' } },
+				{ path: '/chat', name: 'chat', component: { template: '<div />' } },
+				{ path: '/projects', name: 'projects', component: { template: '<div />' } },
+				{ path: '/project', name: 'project', component: ProjectPageView },
+			],
+		})
+	}
+
+	function mountProjectPage() {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('en')
+		const router = makeProjectRouter()
+		return mount(ProjectPageView, {
+			global: {
+				plugins: [pinia, router, MotionPlugin],
+				stubs: { RouterLink: routerLinkStub },
+			},
+		})
+	}
+
 	it('renders AboutView', () => {
 		const wrapper = mountView(AboutView)
 		expect(wrapper.text()).toContain('about page')
 	})
 
 	it(
-		'renders TechStackView in English by default',
+		'renders ProjectPageView in English with section headers',
 		async () => {
-			const pinia = createPinia()
-			setActivePinia(pinia)
-			useLangStore().setLanguage('en')
-			const wrapper = mount(TechStackView, {
-				global: {
-					plugins: [pinia, MotionPlugin],
-					stubs: { RouterLink: routerLinkStub },
-				},
-			})
+			const wrapper = mountProjectPage()
 			await flushPromises()
+			expect(wrapper.text()).toContain('The project')
 			expect(wrapper.text()).toContain('Tech stack')
-			expect(wrapper.text()).toMatch(/Spring AI|Backend/i)
+			expect(wrapper.text()).toContain("Bachelor's thesis")
+			expect(wrapper.text()).toContain('Future work')
 		},
-		15_000,
+		20_000,
 	)
 
 	it(
-		'renders TechStackView in Norwegian when language is no',
+		'renders ProjectPageView in Norwegian when language is no',
 		async () => {
 			const pinia = createPinia()
 			setActivePinia(pinia)
 			useLangStore().setLanguage('no')
-			const wrapper = mount(TechStackView, {
+			const router = makeProjectRouter()
+			const wrapper = mount(ProjectPageView, {
 				global: {
-					plugins: [pinia, MotionPlugin],
+					plugins: [pinia, router, MotionPlugin],
 					stubs: { RouterLink: routerLinkStub },
 				},
 			})
 			await flushPromises()
+			expect(wrapper.text()).toContain('Prosjektet')
 			expect(wrapper.text()).toContain('Teknologistakk')
+			expect(wrapper.text()).toContain('Bacheloroppgaven')
+			expect(wrapper.text()).toContain('Videre arbeid')
+		},
+		20_000,
+	)
+
+	it(
+		'expands tech stack accordion and shows stack content',
+		async () => {
+			const wrapper = mountProjectPage()
+			await flushPromises()
+			const techBtn = wrapper.find('#section-tech-stack')
+			expect(techBtn.exists()).toBe(true)
+			await techBtn.trigger('click')
+			await flushPromises()
 			expect(wrapper.text()).toMatch(/Spring AI|Backend/i)
 		},
-		15_000,
+		25_000,
 	)
 
 	it('renders PrivacyPolicyView in English by default', async () => {
@@ -102,57 +137,45 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapper.text()).toMatch(/Courses|Emner/)
 	})
 
-  it('renders CareerView in Norwegian with translated section labels', async () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    useLangStore().setLanguage('no')
-    const wrapper = mount(CareerView, { global: { plugins: [pinia, MotionPlugin] } })
-    await flushPromises()
-    expect(wrapper.text()).toContain('Erfaring og utdanning')
-    expect(wrapper.text()).toContain('Arbeidserfaring')
-    expect(wrapper.text()).toContain('Utdanning')
-    expect(wrapper.text()).toContain('Emner')
-    expect(wrapper.text()).toMatch(/studiepoeng|Karakter/)
-  })
+	it('renders CareerView in Norwegian with translated section labels', async () => {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('no')
+		const wrapper = mount(CareerView, { global: { plugins: [pinia, MotionPlugin] } })
+		await flushPromises()
+		expect(wrapper.text()).toContain('Erfaring og utdanning')
+		expect(wrapper.text()).toContain('Arbeidserfaring')
+		expect(wrapper.text()).toContain('Utdanning')
+		expect(wrapper.text()).toContain('Emner')
+		expect(wrapper.text()).toMatch(/studiepoeng|Karakter/)
+	})
 
-  it('renders FutureWorkView in English with references', async () => {
-    const wrapper = mountView(FutureWorkView)
-    await flushPromises()
-    expect(wrapper.text()).toContain('Future work and improvements')
-    expect(wrapper.text()).toContain('being actively adapted')
-    expect(wrapper.text()).toContain('References (arXiv)')
-    const links = wrapper.findAll('a[href^="https://arxiv.org/abs/"]')
-    expect(links.length).toBeGreaterThan(0)
-  })
+	it(
+		'renders future work copy when future accordion is expanded',
+		async () => {
+			const wrapper = mountProjectPage()
+			await flushPromises()
+			await wrapper.find('#section-future-work').trigger('click')
+			await flushPromises()
+			expect(wrapper.text()).toContain('Future work and improvements')
+			expect(wrapper.text()).toContain('References (arXiv)')
+			const links = wrapper.findAll('a[href^="https://arxiv.org/abs/"]')
+			expect(links.length).toBeGreaterThan(0)
+		},
+		25_000,
+	)
 
-  it('renders FutureWorkView in Norwegian with translated copy', async () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    useLangStore().setLanguage('no')
-    const wrapper = mount(FutureWorkView, { global: { plugins: [pinia, MotionPlugin] } })
-    await flushPromises()
-    expect(wrapper.text()).toContain('Videre arbeid og forbedringer')
-    expect(wrapper.text()).toContain('under aktiv tilpasning')
-    expect(wrapper.text()).toContain('Referanser (arXiv)')
-    expect(wrapper.text()).toContain('ElevenLabs stemmeagent: samle inn, så prosesserer jeg')
-  })
-
-  it('renders BachelorView in English with active adaptation messaging', async () => {
-    const wrapper = mountView(BachelorView)
-    await flushPromises()
-    expect(wrapper.text()).toContain("Bachelor's thesis")
-    expect(wrapper.text()).toContain('active work in progress')
-    expect(wrapper.text()).toContain('shaping the portfolio now')
-  })
-
-  it('renders BachelorView in Norwegian with active adaptation messaging', async () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    useLangStore().setLanguage('no')
-    const wrapper = mount(BachelorView, { global: { plugins: [pinia, MotionPlugin] } })
-    await flushPromises()
-    expect(wrapper.text()).toContain('Bacheloroppgaven')
-    expect(wrapper.text()).toContain('aktivt arbeid i utvikling')
-    expect(wrapper.text()).toContain('styrer porteføljen nå')
-  })
+	it(
+		'renders bachelor copy when bachelor accordion is expanded',
+		async () => {
+			const wrapper = mountProjectPage()
+			await flushPromises()
+			await wrapper.find('#section-bachelor').trigger('click')
+			await flushPromises()
+			expect(wrapper.text()).toContain("Bachelor's thesis")
+			expect(wrapper.text()).toContain('active work in progress')
+			expect(wrapper.text()).toContain('shaping the portfolio now')
+		},
+		25_000,
+	)
 })

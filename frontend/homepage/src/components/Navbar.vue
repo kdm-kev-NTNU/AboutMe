@@ -32,9 +32,7 @@ const getButtonText = (key: string) => {
     home: { en: 'Home', no: 'Hjem' },
     projects: { en: 'Projects', no: 'Prosjekter' },
     career: { en: 'Career', no: 'Karriere' },
-    bachelor: { en: 'Bachelor', no: 'Bachelor' },
-    techStack: { en: 'Tech stack', no: 'Teknologistakk' },
-    futureWork: { en: 'Future work', no: 'Videre arbeid' },
+    project: { en: 'The project', no: 'Prosjektet' },
   }
   return texts[key][langStore.language]
 }
@@ -45,9 +43,7 @@ const getButtonWidth = () => {
     getButtonText('home'),
     getButtonText('projects'),
     getButtonText('career'),
-    getButtonText('bachelor'),
-    getButtonText('techStack'),
-    getButtonText('futureWork'),
+    getButtonText('project'),
   ]
 
   // Estimate width based on character count (roughly 8px per character for this font size)
@@ -61,9 +57,7 @@ const getIndicatorPosition = () => {
   if (isActive('home')) return { transform: 'translateX(0px)', opacity: '1' }
   if (isActive('projects')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
   if (isActive('career')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
-  if (isActive('bachelor')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
-  if (isActive('tech-stack')) return { transform: `translateX(${buttonWidth * 4}px)`, opacity: '1' }
-  if (isActive('future-work')) return { transform: `translateX(${buttonWidth * 5}px)`, opacity: '1' }
+  if (isActive('project')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
   return { transform: 'translateX(0px)', opacity: '0' }
 }
 
@@ -156,28 +150,12 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
             {{ getButtonText('career') }}
           </RouterLink>
           <RouterLink
-            to="/bachelor"
+            to="/project"
             role="menuitem"
-            :class="[mobileLinkBase, isActive('bachelor') ? mobileLinkActive : mobileLinkInactive]"
+            :class="[mobileLinkBase, isActive('project') ? mobileLinkActive : mobileLinkInactive]"
             @click="closeMenu"
           >
-            {{ getButtonText('bachelor') }}
-          </RouterLink>
-          <RouterLink
-            to="/tech-stack"
-            role="menuitem"
-            :class="[mobileLinkBase, isActive('tech-stack') ? mobileLinkActive : mobileLinkInactive]"
-            @click="closeMenu"
-          >
-            {{ getButtonText('techStack') }}
-          </RouterLink>
-          <RouterLink
-            to="/future-work"
-            role="menuitem"
-            :class="[mobileLinkBase, isActive('future-work') ? mobileLinkActive : mobileLinkInactive]"
-            @click="closeMenu"
-          >
-            {{ getButtonText('futureWork') }}
+            {{ getButtonText('project') }}
           </RouterLink>
         </div>
       </Transition>
@@ -211,25 +189,11 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
           {{ getButtonText('career') }}
         </RouterLink>
         <RouterLink
-          to="/bachelor"
-          :class="getButtonClasses('bachelor')"
+          to="/project"
+          :class="getButtonClasses('project')"
           :style="{ width: getButtonWidth() + 'px' }"
         >
-          {{ getButtonText('bachelor') }}
-        </RouterLink>
-        <RouterLink
-          to="/tech-stack"
-          :class="getButtonClasses('tech-stack')"
-          :style="{ width: getButtonWidth() + 'px' }"
-        >
-          {{ getButtonText('techStack') }}
-        </RouterLink>
-        <RouterLink
-          to="/future-work"
-          :class="getButtonClasses('future-work')"
-          :style="{ width: getButtonWidth() + 'px' }"
-        >
-          {{ getButtonText('futureWork') }}
+          {{ getButtonText('project') }}
         </RouterLink>
       </div>
     </div>

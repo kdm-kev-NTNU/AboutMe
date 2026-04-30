@@ -31,7 +31,7 @@ portfolio:
     kill-switch:
       enabled: false
   chat:
-    default-model-id: gpt-5.4-mini
+    default-model-id: gpt-5.5
 
 logging:
   level:
