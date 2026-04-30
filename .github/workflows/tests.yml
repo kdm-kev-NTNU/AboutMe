@@ -11,6 +11,16 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      run_model_validation:
+        description: 'Run live model validation against real APIs'
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    # Weekly Sunday 06:00 UTC — validate model IDs are still accepted by providers.
+    - cron: '0 6 * * 0'
 
 permissions:
   contents: read
@@ -78,4 +88,34 @@ jobs:
           path: |
             frontend/homepage/test-results
             frontend/homepage/coverage
+          if-no-files-found: ignore
+
+  model-validation:
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_model_validation)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+          cache-dependency-path: backend/pom.xml
+      - name: Live model validation (OpenAI + Anthropic)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: ./mvnw -B test -Dgroups=live -Dtest=LiveModelValidationIT
+      - name: Upload validation results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: model-validation-reports
+          path: backend/target/surefire-reports
           if-no-files-found: ignore
