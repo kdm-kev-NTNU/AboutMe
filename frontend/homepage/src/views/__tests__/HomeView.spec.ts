@@ -19,7 +19,7 @@ describe('HomeView', () => {
 				{ path: '/', name: 'home', component: HomeView },
 				{ path: '/chat', name: 'chat', component: { template: '<div>chat</div>' } },
 				{ path: '/feedback', name: 'feedback', component: { template: '<div>feedback</div>' } },
-				{ path: '/future-work', name: 'future-work', component: { template: '<div>future-work</div>' } },
+				{ path: '/project', name: 'project', component: { template: '<div>project</div>' } },
 			],
 		})
 	}
@@ -161,7 +161,7 @@ describe('HomeView', () => {
 			},
 		})
 		await flushPromises()
-		const futureLink = wrapper.get('a[href="/future-work"]')
+		const futureLink = wrapper.get('a[href="/project#future-work"]')
 		expect(futureLink.text()).toContain('Future work and improvements')
 	})
 })

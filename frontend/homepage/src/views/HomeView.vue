@@ -250,7 +250,7 @@ function submitQuick() {
         </section>
 
         <RouterLink
-          to="/future-work"
+          to="/project#future-work"
           class="group flex w-full max-w-2xl items-center justify-center gap-1 rounded-xl border border-blue-200/80 bg-white/90 px-4 py-3 text-center text-sm font-medium text-blue-800 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-blue-300 hover:bg-white hover:shadow-md hover:shadow-blue-500/10"
           :aria-label="futureWorkHomeLink.ariaLabel"
         >

@@ -49,14 +49,17 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				redirect: '/career',
 			},
 			{
+				path: '/project',
+				name: 'project',
+				component: () => import('../views/ProjectPageView.vue'),
+			},
+			{
 				path: '/bachelor',
-				name: 'bachelor',
-				component: () => import('../views/BachelorView.vue'),
+				redirect: { path: '/project', hash: '#bachelor' },
 			},
 			{
 				path: '/tech-stack',
-				name: 'tech-stack',
-				component: () => import('../views/TechStackView.vue'),
+				redirect: { path: '/project', hash: '#tech-stack' },
 			},
 			{
 				path: '/feedback',
@@ -75,8 +78,7 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 			},
 			{
 				path: '/future-work',
-				name: 'future-work',
-				component: () => import('../views/FutureWorkView.vue'),
+				redirect: { path: '/project', hash: '#future-work' },
 			},
 			{
 				path: '/admin/tools',

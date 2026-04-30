@@ -5,6 +5,7 @@ import {
   ChatModelOptionProvider,
   ChatModelTag,
 } from '@/api/generated/portfolio'
+import { useAuthStore } from '@/stores/auth'
 
 // Mirrors backend allow-list: only models returned by GET /chat/models are selectable in the UI.
 const MODEL_STORAGE_KEY = 'chatSelectedModel'
@@ -61,11 +62,14 @@ export const useChatModelStore = defineStore('chatModel', {
       this.persistModelId()
     },
 
-    /** Switch UI to a provider and pick the first FAST model when available, else first listed. */
+    /** Switch UI to a provider: signed-in users prefer REASONING; anonymous prefer FAST (premium gate). */
     selectFirstForProvider(p: ChatProvider) {
       const list = this.modelsForProvider(p)
-      const fast = list.find((m) => m.tags?.includes(ChatModelTag.FAST))
-      const pick = fast ?? list[0]
+      useAuthStore().restore()
+      const authed = Boolean(useAuthStore().basicToken)
+      const pick = authed
+        ? list.find((m) => m.tags?.includes(ChatModelTag.REASONING)) ?? list[0]
+        : list.find((m) => m.tags?.includes(ChatModelTag.FAST)) ?? list[0]
       if (pick?.id) {
         this.setSelectedModelId(pick.id)
       }
@@ -82,8 +86,11 @@ export const useChatModelStore = defineStore('chatModel', {
         // ignore
       }
       if (this.models.length > 0) {
-        const fast = this.models.find((m) => m.tags?.includes(ChatModelTag.FAST))
-        const first = fast ?? this.models[0]
+        useAuthStore().restore()
+        const authed = Boolean(useAuthStore().basicToken)
+        const first = authed
+          ? this.models.find((m) => m.tags?.includes(ChatModelTag.REASONING)) ?? this.models[0]
+          : this.models.find((m) => m.tags?.includes(ChatModelTag.FAST)) ?? this.models[0]
         if (first.id) {
           this.selectedModelId = first.id
           this.persistModelId()
