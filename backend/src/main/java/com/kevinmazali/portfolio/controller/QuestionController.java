@@ -26,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 /**
  * REST controller exposing the question answering endpoint.
@@ -66,7 +67,9 @@ public class QuestionController {
             content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/ask")
-    public ResponseEntity<?> askQuestion(@RequestBody Question question) {
+    public ResponseEntity<?> askQuestion(
+        @RequestBody Question question,
+        @RequestHeader(value = "X-Conversation-Id", required = false) String conversationId) {
         if (question.question() == null || question.question().isBlank()) {
             return ResponseEntity.badRequest().body(new ApiError("Question cannot be empty"));
         }
@@ -92,7 +95,7 @@ public class QuestionController {
 
         requestLogService.save("/ask", "POST", sanitizedQuestion, null);
 
-        Question sanitizedQuestionObj = new Question(sanitizedQuestion, effectiveModelId);
+        Question sanitizedQuestionObj = new Question(sanitizedQuestion, effectiveModelId, conversationId);
         try {
             Answer answer = openAIService.getAnswer(sanitizedQuestionObj);
             requestLogService.save("/ask:response", "POST", answer.answer(), null);

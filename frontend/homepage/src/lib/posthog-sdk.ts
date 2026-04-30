@@ -46,7 +46,11 @@ export function initializePosthogSdk(config?: Partial<PosthogConfig>): boolean {
     capture_pageview: false,
     autocapture: false,
     persistence: 'localStorage',
-    disable_session_recording: true,
+    disable_session_recording: false,
+    session_recording: {
+      maskAllInputs: true,
+      maskTextSelector: '[data-ph-mask]',
+    },
   })
 
   sdkInitialized = true
@@ -88,5 +92,14 @@ export function onFeatureFlagsReady(callback: () => void): void {
     posthog.onFeatureFlags(callback)
   } catch {
     callback()
+  }
+}
+
+export function registerAnalyticsProperties(properties: Record<string, unknown>): void {
+  if (!sdkInitialized) return
+  try {
+    posthog.register(properties)
+  } catch {
+    // ignore
   }
 }

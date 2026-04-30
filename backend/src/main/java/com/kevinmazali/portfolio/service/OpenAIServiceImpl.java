@@ -115,7 +115,10 @@ public class OpenAIServiceImpl implements OpenAIService {
     String budgetUserId = AiRequestContext.budgetUserIdentifier(aiBudgetProperties);
     boolean anonymous = AiRequestContext.isAnonymousInteractiveUser();
 
-    String conversationId = "rag:" + UUID.randomUUID();
+    String conversationId = question.conversationId();
+    if (conversationId == null || conversationId.isBlank()) {
+      conversationId = "rag:" + UUID.randomUUID();
+    }
     postHogTraceContext.beginTrace("rag_ask", conversationId);
     try {
       return getAnswerWithDocumentsInner(question, model, budgetUserId, anonymous);
@@ -193,6 +196,8 @@ public class OpenAIServiceImpl implements OpenAIService {
             anonymous,
             "rag_completion",
             joinedContext,
+            question.question(),
+            documents.size(),
             phFeatureProps);
     String answerText = response.getResult().getOutput().getText();
     answerText = truncateOutput(answerText, aiLimitsProperties.getMaxOutputChars());
@@ -235,6 +240,8 @@ public class OpenAIServiceImpl implements OpenAIService {
       boolean anonymous,
       String generationSpanName,
       @org.springframework.lang.Nullable String posthogContextDocuments,
+      @org.springframework.lang.Nullable String userQuestion,
+      @org.springframework.lang.Nullable Integer contextDocumentCount,
       Map<String, Object> posthogFeatureProps) {
     PostHogTraceContext.ActiveSpan span = postHogTraceContext.startSpan();
     try {
@@ -257,10 +264,12 @@ public class OpenAIServiceImpl implements OpenAIService {
                   span.rootTraceId(),
                   span.traceName(),
                   span.conversationId())
+              .withUserQuestion(userQuestion)
               .withTexts(
                   promptContentsAsString(basePrompt),
                   outputText,
                   "rag_completion".equals(generationSpanName) ? posthogContextDocuments : null)
+              .withContextDocumentCount(contextDocumentCount)
               .withExperimentProps(flags);
       aiBudgetService.recordUsage(
           budgetUserId,
@@ -322,7 +331,7 @@ public class OpenAIServiceImpl implements OpenAIService {
           .create(Map.of("sys", sys, "q", original));
       ChatResponse r =
           invokeManagedChat(
-              model, base, budgetUserId, anonymous, "query_expansion", null, posthogFeatureProps);
+              model, base, budgetUserId, anonymous, "query_expansion", null, original, null, posthogFeatureProps);
       String json = r.getResult().getOutput().getText();
 
       String en = extractJsonValue(json, "en");
