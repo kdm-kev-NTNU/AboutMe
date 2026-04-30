@@ -224,7 +224,7 @@ describe('useChatModelStore', () => {
       headers: new Headers(),
     })
     await Promise.all([a, b])
-    expect(store.models).toHaveLength(1)
+    expect(store.models).toHaveLength(2)
     expect(store.selectedModelId).toBe('x')
   })
 
