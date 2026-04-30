@@ -35,12 +35,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -66,6 +66,8 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final PostHogTraceContext postHogTraceContext;
   @org.springframework.lang.Nullable
   private final PostHogFeatureFlagService postHogFeatureFlagService;
+  @org.springframework.lang.Nullable
+  private final PostHogLlmService postHogLlmService;
 
   public OpenAIServiceImpl(
       ObjectProvider<OpenAiChatModel> openAiChatModel,
@@ -80,7 +82,8 @@ public class OpenAIServiceImpl implements OpenAIService {
       DocumentReranker documentReranker,
       RetrievalProperties retrievalProperties,
       PostHogTraceContext postHogTraceContext,
-      @Autowired(required = false) @org.springframework.lang.Nullable PostHogFeatureFlagService postHogFeatureFlagService) {
+      @Autowired(required = false) @org.springframework.lang.Nullable PostHogFeatureFlagService postHogFeatureFlagService,
+      @Autowired(required = false) @org.springframework.lang.Nullable PostHogLlmService postHogLlmService) {
     this.openAiChatModel = openAiChatModel;
     this.anthropicChatModel = anthropicChatModel;
     this.vectorStore = vectorStore;
@@ -94,6 +97,7 @@ public class OpenAIServiceImpl implements OpenAIService {
     this.retrievalProperties = retrievalProperties;
     this.postHogTraceContext = postHogTraceContext;
     this.postHogFeatureFlagService = postHogFeatureFlagService;
+    this.postHogLlmService = postHogLlmService;
   }
 
   @Override
@@ -130,78 +134,145 @@ public class OpenAIServiceImpl implements OpenAIService {
   private RagAnswer getAnswerWithDocumentsInner(
       Question question, SupportedChatModel model, String budgetUserId, boolean anonymous) {
 
-    Map<String, Object> phFeatureProps = Collections.emptyMap();
-    PostHogFeatureFlagService ffSvc = postHogFeatureFlagService;
-    if (ffSvc != null && ffSvc.isEnabled()) {
-      phFeatureProps = ffSvc.resolveForDistinctId(budgetUserId);
+    long traceStartNs = System.nanoTime();
+    boolean traceFailed = false;
+    String traceErrorMsg = null;
+    try {
+      Map<String, Object> phFeatureProps = Collections.emptyMap();
+      PostHogFeatureFlagService ffSvc = postHogFeatureFlagService;
+      if (ffSvc != null && ffSvc.isEnabled()) {
+        phFeatureProps = ffSvc.resolveForDistinctId(budgetUserId);
+      }
+
+      List<String> queries =
+          expandQueryToLanguages(question.question(), model, budgetUserId, anonymous, phFeatureProps);
+
+      int vectorTopK = Math.max(1, retrievalProperties.getVectorTopK());
+      int candidateCap = Math.max(1, retrievalProperties.getCandidateLimit());
+      int contextTopK = Math.max(1, retrievalProperties.getContextTopK());
+
+      long retrievalStartNs = System.nanoTime();
+      String retrievalSpanId = UUID.randomUUID().toString();
+
+      List<Document> merged = queries.stream()
+          .flatMap(q -> {
+            try {
+              String queryText = q == null ? "" : q;
+              List<Document> results = vectorStore.similaritySearch(
+                  SearchRequest.builder()
+                      .query(queryText)
+                      .topK(vectorTopK)
+                      .build()
+              );
+              return results.stream();
+            } catch (Exception ex) {
+              log.warn("similaritySearch failed for a query variant: {}", ex.getMessage());
+              return Stream.empty();
+            }
+          })
+          .toList();
+
+      List<Document> candidates = dedupePreserveOrder(merged).stream()
+          .limit(candidateCap)
+          .toList();
+
+      List<Document> documents =
+          documentReranker.rerank(question.question(), candidates, contextTopK);
+
+      double retrievalLatencySec = (System.nanoTime() - retrievalStartNs) / 1_000_000_000.0;
+      captureRagRetrievalSpanIfEnabled(budgetUserId, anonymous, retrievalSpanId, retrievalLatencySec);
+
+      log.debug(
+          "RAG retrieval: merged={} dedupCapped={} contextTopK={} finalDocs={}",
+          merged.size(),
+          candidates.size(),
+          contextTopK,
+          documents.size());
+
+      List<String> contentList = documents.stream().map(Document::getText).toList();
+      String providerName = switch (model.provider()) {
+        case OPENAI -> "openai";
+        case ANTHROPIC -> "anthropic";
+      };
+      String ragPromptTemplate = promptVersionService.loadRagPrompt(providerName);
+      PromptTemplate promptTemplate = new PromptTemplate(ragPromptTemplate);
+      Prompt basePrompt = promptTemplate.create(Map.of(
+          "input", question.question(),
+          "documents", String.join("\n", contentList)
+      ));
+
+      String joinedContext = String.join("\n---\n", contentList);
+      ChatResponse response =
+          invokeManagedChat(
+              model,
+              basePrompt,
+              budgetUserId,
+              anonymous,
+              "rag_completion",
+              joinedContext,
+              question.question(),
+              documents.size(),
+              phFeatureProps);
+      String answerText = response.getResult().getOutput().getText();
+      answerText = truncateOutput(answerText, aiLimitsProperties.getMaxOutputChars());
+      return new RagAnswer(answerText, contentList);
+    } catch (RuntimeException e) {
+      traceFailed = true;
+      traceErrorMsg = e.getMessage();
+      throw e;
+    } finally {
+      captureRagTraceSummaryIfEnabled(
+          budgetUserId, anonymous, traceStartNs, traceFailed, traceErrorMsg);
     }
+  }
 
-    List<String> queries =
-        expandQueryToLanguages(question.question(), model, budgetUserId, anonymous, phFeatureProps);
+  private void captureRagRetrievalSpanIfEnabled(
+      String budgetUserId, boolean anonymous, String retrievalSpanId, double latencySec) {
+    PostHogLlmService ph = postHogLlmService;
+    if (ph == null || !ph.isEnabled()) {
+      return;
+    }
+    String traceId = postHogTraceContext.rootTraceId();
+    String sessionId = postHogTraceContext.conversationId();
+    if (traceId == null || traceId.isBlank()) {
+      return;
+    }
+    ph.captureSpanAsync(
+        budgetUserId,
+        traceId,
+        sessionId,
+        retrievalSpanId,
+        traceId,
+        "rag_retrieval",
+        latencySec,
+        false,
+        anonymous);
+  }
 
-    int vectorTopK = Math.max(1, retrievalProperties.getVectorTopK());
-    int candidateCap = Math.max(1, retrievalProperties.getCandidateLimit());
-    int contextTopK = Math.max(1, retrievalProperties.getContextTopK());
-
-    List<Document> merged = queries.stream()
-        .flatMap(q -> {
-          try {
-            String queryText = q == null ? "" : q;
-            List<Document> results = vectorStore.similaritySearch(
-                SearchRequest.builder()
-                    .query(queryText)
-                    .topK(vectorTopK)
-                    .build()
-            );
-            return results.stream();
-          } catch (Exception ex) {
-            log.warn("similaritySearch failed for a query variant: {}", ex.getMessage());
-            return Stream.empty();
-          }
-        })
-        .toList();
-
-    List<Document> candidates = dedupePreserveOrder(merged).stream()
-        .limit(candidateCap)
-        .toList();
-
-    List<Document> documents =
-        documentReranker.rerank(question.question(), candidates, contextTopK);
-
-    log.debug(
-        "RAG retrieval: merged={} dedupCapped={} contextTopK={} finalDocs={}",
-        merged.size(),
-        candidates.size(),
-        contextTopK,
-        documents.size());
-
-    List<String> contentList = documents.stream().map(Document::getText).toList();
-    String providerName = switch (model.provider()) {
-      case OPENAI -> "openai";
-      case ANTHROPIC -> "anthropic";
-    };
-    String ragPromptTemplate = promptVersionService.loadRagPrompt(providerName);
-    PromptTemplate promptTemplate = new PromptTemplate(ragPromptTemplate);
-    Prompt basePrompt = promptTemplate.create(Map.of(
-        "input", question.question(),
-        "documents", String.join("\n", contentList)
-    ));
-
-    String joinedContext = String.join("\n---\n", contentList);
-    ChatResponse response =
-        invokeManagedChat(
-            model,
-            basePrompt,
-            budgetUserId,
-            anonymous,
-            "rag_completion",
-            joinedContext,
-            question.question(),
-            documents.size(),
-            phFeatureProps);
-    String answerText = response.getResult().getOutput().getText();
-    answerText = truncateOutput(answerText, aiLimitsProperties.getMaxOutputChars());
-    return new RagAnswer(answerText, contentList);
+  private void captureRagTraceSummaryIfEnabled(
+      String budgetUserId,
+      boolean anonymous,
+      long traceStartNs,
+      boolean failed,
+      @org.springframework.lang.Nullable String errorMessage) {
+    PostHogLlmService ph = postHogLlmService;
+    if (ph == null || !ph.isEnabled()) {
+      return;
+    }
+    String traceId = postHogTraceContext.rootTraceId();
+    if (traceId == null || traceId.isBlank()) {
+      return;
+    }
+    double totalSec = (System.nanoTime() - traceStartNs) / 1_000_000_000.0;
+    ph.captureTraceAsync(
+        budgetUserId,
+        traceId,
+        postHogTraceContext.conversationId(),
+        postHogTraceContext.traceName(),
+        totalSec,
+        failed,
+        errorMessage,
+        anonymous);
   }
 
   private static List<Document> dedupePreserveOrder(List<Document> merged) {
@@ -265,8 +336,8 @@ public class OpenAIServiceImpl implements OpenAIService {
                   span.traceName(),
                   span.conversationId())
               .withUserQuestion(userQuestion)
-              .withTexts(
-                  promptContentsAsString(basePrompt),
+              .withInputMessages(
+                  promptToInputMessages(basePrompt),
                   outputText,
                   "rag_completion".equals(generationSpanName) ? posthogContextDocuments : null)
               .withContextDocumentCount(contextDocumentCount)
@@ -368,25 +439,28 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
   }
 
-  private static String promptContentsAsString(Prompt prompt) {
+  private static List<Map<String, String>> promptToInputMessages(Prompt prompt) {
     List<Message> messages = prompt.getInstructions();
     if (messages == null || messages.isEmpty()) {
-      return "";
+      return List.of();
     }
-    return messages.stream().map(OpenAIServiceImpl::messageToPlainText).collect(Collectors.joining("\n---\n"));
+    List<Map<String, String>> rows = new ArrayList<>();
+    for (Message m : messages) {
+      if (m instanceof UserMessage um) {
+        rows.add(Map.of("role", "user", "content", textOrEmpty(um.getText())));
+      } else if (m instanceof SystemMessage sm) {
+        rows.add(Map.of("role", "system", "content", textOrEmpty(sm.getText())));
+      } else if (m instanceof AssistantMessage am) {
+        rows.add(Map.of("role", "assistant", "content", textOrEmpty(am.getText())));
+      } else if (m != null) {
+        rows.add(Map.of("role", "user", "content", m.toString()));
+      }
+    }
+    return List.copyOf(rows);
   }
 
-  private static String messageToPlainText(Message m) {
-    if (m instanceof UserMessage um) {
-      return um.getText() != null ? um.getText() : "";
-    }
-    if (m instanceof SystemMessage sm) {
-      return sm.getText() != null ? sm.getText() : "";
-    }
-    if (m instanceof AssistantMessage am) {
-      return am.getText() != null ? am.getText() : "";
-    }
-    return m != null ? m.toString() : "";
+  private static String textOrEmpty(@org.springframework.lang.Nullable String t) {
+    return t != null ? t : "";
   }
 
   private static String truncateOutput(String text, int maxChars) {

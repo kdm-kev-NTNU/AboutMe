@@ -10,6 +10,9 @@ import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import jakarta.annotation.PreDestroy;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -19,8 +22,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 /**
- * Sends {@code $ai_generation} events to PostHog for LLM analytics (tokens, cost, latency, input/output, trace
- * hierarchy). Runs capture asynchronously; disabled when {@link PostHogProperties#isCaptureConfigured()} is false.
+ * Sends PostHog LLM analytics events: {@code $ai_generation}, {@code $ai_trace}, {@code $ai_span}. Runs capture
+ * asynchronously; disabled when {@link PostHogProperties#isCaptureConfigured()} is false.
  */
 @Slf4j
 @Service
@@ -82,6 +85,56 @@ public class PostHogLlmService {
         });
   }
 
+  /** Fire-and-forget {@code $ai_trace} (end-of-flow summary for a logical trace). */
+  public void captureTraceAsync(
+      String distinctId,
+      String traceId,
+      @Nullable String sessionId,
+      @Nullable String traceName,
+      double latencySeconds,
+      boolean error,
+      @Nullable String errorMessage,
+      boolean anonymous) {
+    if (client == null) {
+      return;
+    }
+    String id = distinctId != null && !distinctId.isBlank() ? distinctId : "unknown";
+    CompletableFuture.runAsync(
+        () -> {
+          try {
+            captureTraceSync(id, traceId, sessionId, traceName, latencySeconds, error, errorMessage, anonymous);
+          } catch (Exception e) {
+            log.warn("PostHog $ai_trace capture failed: {}", e.getMessage());
+          }
+        });
+  }
+
+  /** Fire-and-forget {@code $ai_span} (e.g. retrieval, tool steps). */
+  public void captureSpanAsync(
+      String distinctId,
+      String traceId,
+      @Nullable String sessionId,
+      String spanId,
+      @Nullable String parentSpanId,
+      String spanName,
+      double latencySeconds,
+      boolean error,
+      boolean anonymous) {
+    if (client == null) {
+      return;
+    }
+    String id = distinctId != null && !distinctId.isBlank() ? distinctId : "unknown";
+    CompletableFuture.runAsync(
+        () -> {
+          try {
+            captureSpanSync(
+                id, traceId, sessionId, spanId, parentSpanId, spanName, latencySeconds, error, anonymous);
+          } catch (Exception e) {
+            log.warn("PostHog $ai_span capture failed: {}", e.getMessage());
+          }
+        });
+  }
+
   void captureGenerationSync(
       String distinctId,
       String modelId,
@@ -120,20 +173,33 @@ public class PostHogLlmService {
         ? analytics.spanId()
         : UUID.randomUUID().toString();
     b.property("$ai_span_id", sid);
-    if (analytics.parentSpanId() != null && !analytics.parentSpanId().isBlank()) {
-      b.property("$ai_parent_id", analytics.parentSpanId());
+
+    String parentForPh = analytics.parentSpanId();
+    boolean syntheticTrace =
+        analytics.spanId() != null
+            && analytics.rootTraceId() != null
+            && analytics.spanId().equals(analytics.rootTraceId());
+    if ((parentForPh == null || parentForPh.isBlank())
+        && analytics.rootTraceId() != null
+        && !analytics.rootTraceId().isBlank()
+        && !syntheticTrace) {
+      parentForPh = traceId;
     }
-    if (analytics.traceName() != null && !analytics.traceName().isBlank()) {
-      b.property("$ai_trace_name", analytics.traceName());
+    if (parentForPh != null && !parentForPh.isBlank()) {
+      b.property("$ai_parent_id", parentForPh);
     }
     if (analytics.conversationId() != null && !analytics.conversationId().isBlank()) {
-      b.property("$ai_conversation_id", analytics.conversationId());
+      b.property("$ai_session_id", analytics.conversationId());
     }
-    if (analytics.inputText() != null && !analytics.inputText().isBlank()) {
-      b.property("$ai_input", truncate(analytics.inputText(), MAX_AI_BODY_CHARS));
+    List<Map<String, Object>> inputRows = buildAiInputMessages(analytics.inputMessages());
+    if (!inputRows.isEmpty()) {
+      b.property("$ai_input", inputRows);
     }
     if (analytics.outputText() != null && !analytics.outputText().isBlank()) {
-      b.property("$ai_output", truncate(analytics.outputText(), MAX_AI_BODY_CHARS));
+      String out = truncate(analytics.outputText(), MAX_AI_BODY_CHARS);
+      b.property(
+          "$ai_output_choices",
+          List.of(outputChoiceMap("assistant", out)));
     }
     if (analytics.contextText() != null && !analytics.contextText().isBlank()) {
       b.property("$ai_context", truncate(analytics.contextText(), MAX_AI_CONTEXT_CHARS));
@@ -167,6 +233,107 @@ public class PostHogLlmService {
     }
 
     ph.capture(id, "$ai_generation", b.build());
+  }
+
+  void captureTraceSync(
+      String distinctId,
+      String traceId,
+      @Nullable String sessionId,
+      @Nullable String traceName,
+      double latencySeconds,
+      boolean error,
+      @Nullable String errorMessage,
+      boolean anonymous) {
+    PostHogInterface ph = client;
+    if (ph == null || traceId == null || traceId.isBlank()) {
+      return;
+    }
+    String id = distinctId != null && !distinctId.isBlank() ? distinctId : "unknown";
+    PostHogCaptureOptions.Builder b = PostHogCaptureOptions.builder()
+        .property("$ai_trace_id", traceId)
+        .property("$ai_span_name", traceName != null && !traceName.isBlank() ? traceName : "trace")
+        .property("$ai_is_error", error);
+    if (sessionId != null && !sessionId.isBlank()) {
+      b.property("$ai_session_id", sessionId);
+    }
+    if (!Double.isNaN(latencySeconds) && latencySeconds >= 0) {
+      b.property("$ai_latency", latencySeconds);
+    }
+    if (errorMessage != null && !errorMessage.isBlank()) {
+      b.property("$ai_error", truncate(errorMessage, 4_000));
+    }
+    if (anonymous || id.startsWith("anon:") || id.startsWith("system:")) {
+      b.property("$process_person_profile", false);
+    }
+    ph.capture(id, "$ai_trace", b.build());
+  }
+
+  void captureSpanSync(
+      String distinctId,
+      String traceId,
+      @Nullable String sessionId,
+      String spanId,
+      @Nullable String parentSpanId,
+      String spanName,
+      double latencySeconds,
+      boolean error,
+      boolean anonymous) {
+    PostHogInterface ph = client;
+    if (ph == null || traceId == null || traceId.isBlank() || spanId == null || spanId.isBlank()) {
+      return;
+    }
+    String id = distinctId != null && !distinctId.isBlank() ? distinctId : "unknown";
+    PostHogCaptureOptions.Builder b = PostHogCaptureOptions.builder()
+        .property("$ai_trace_id", traceId)
+        .property("$ai_span_id", spanId)
+        .property("$ai_span_name", spanName != null && !spanName.isBlank() ? spanName : "span")
+        .property("$ai_is_error", error);
+    if (sessionId != null && !sessionId.isBlank()) {
+      b.property("$ai_session_id", sessionId);
+    }
+    if (parentSpanId != null && !parentSpanId.isBlank()) {
+      b.property("$ai_parent_id", parentSpanId);
+    }
+    if (!Double.isNaN(latencySeconds) && latencySeconds >= 0) {
+      b.property("$ai_latency", latencySeconds);
+    }
+    if (anonymous || id.startsWith("anon:") || id.startsWith("system:")) {
+      b.property("$process_person_profile", false);
+    }
+    ph.capture(id, "$ai_span", b.build());
+  }
+
+  private static Map<String, Object> outputChoiceMap(String role, String content) {
+    Map<String, Object> m = new LinkedHashMap<>();
+    m.put("role", role);
+    m.put("content", content);
+    return m;
+  }
+
+  private static List<Map<String, Object>> buildAiInputMessages(List<Map<String, String>> messages) {
+    if (messages == null || messages.isEmpty()) {
+      return List.of();
+    }
+    List<Map<String, Object>> rows = new ArrayList<>();
+    int remaining = MAX_AI_CONTEXT_CHARS;
+    for (Map<String, String> m : messages) {
+      if (remaining <= 0) {
+        break;
+      }
+      String role = m.getOrDefault("role", "user");
+      String content = m.getOrDefault("content", "");
+      int cap = Math.min(MAX_AI_BODY_CHARS, remaining);
+      String piece = truncate(content, cap);
+      if (piece.length() > remaining) {
+        piece = truncate(piece, remaining);
+      }
+      Map<String, Object> row = new LinkedHashMap<>();
+      row.put("role", role);
+      row.put("content", piece);
+      rows.add(row);
+      remaining -= piece.length();
+    }
+    return rows;
   }
 
   private String resolveTraceId(@Nullable String explicitRoot) {
