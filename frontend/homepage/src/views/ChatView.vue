@@ -15,7 +15,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import MessagesArea from '@/views/MessagesArea.vue'
-import { askQuestion, ChatModelOptionProvider } from '@/api/generated/portfolio'
+import {
+  askQuestion,
+  ChatModelOptionProvider,
+  ChatModelTag,
+  type ChatModelOption,
+} from '@/api/generated/portfolio'
 import {
   POSTHOG_CHAT_EVENTS,
   POSTHOG_FEATURE_FLAGS,
@@ -55,6 +60,19 @@ const modelsForActiveProvider = computed(() => {
   const p = chatModelStore.activeProvider
   if (!p) return chatModelStore.models
   return chatModelStore.modelsForProvider(p)
+})
+
+/** Human-readable tag suffix for the model dropdown (FAST / REASONING). */
+const formatModelTags = computed(() => (m: ChatModelOption) => {
+  const tags = m.tags ?? []
+  if (tags.length === 0) return ''
+  const no = language.value === 'no'
+  const parts = tags.map((t) => {
+    if (t === ChatModelTag.FAST) return no ? 'Rask' : 'Fast'
+    if (t === ChatModelTag.REASONING) return no ? 'Resonnering' : 'Reasoning'
+    return String(t)
+  })
+  return ` — ${parts.join(', ')}`
 })
 
 const selectedModelId = computed({
@@ -439,7 +457,7 @@ onMounted(async () => {
               class="w-full rounded-xl border border-blue-200/70 bg-white/90 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-300/80 focus:outline-none disabled:opacity-50"
             >
               <option v-for="m in modelsForActiveProvider" :key="m.id" :value="m.id">
-                {{ m.label }} ({{ m.provider }})
+                {{ m.label }} ({{ m.provider }}){{ formatModelTags(m) }}
               </option>
             </select>
           </div>

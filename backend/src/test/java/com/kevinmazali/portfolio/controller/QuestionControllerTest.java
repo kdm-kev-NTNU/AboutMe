@@ -104,6 +104,20 @@ class QuestionControllerTest {
 	}
 
 	@Test
+	void askAcceptsAdditionalAllowListedModel() throws Exception {
+		when(openAIService.getAnswer(any(Question.class))).thenReturn(new Answer("ok"));
+
+		mockMvc.perform(post("/ask")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"question\":\"Ping\",\"model\":\"gpt-5.4-nano\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.answer").value("ok"));
+
+		verify(openAIService).getAnswer(argThat(q ->
+			"Ping".equals(q.question()) && "gpt-5.4-nano".equals(q.model())));
+	}
+
+	@Test
 	void askRejectsUnknownModel() throws Exception {
 		mockMvc.perform(post("/ask")
 				.contentType(MediaType.APPLICATION_JSON)
