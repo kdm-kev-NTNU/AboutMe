@@ -21,6 +21,7 @@ class PostHogTraceContextTest {
   void beginTrace_setsRootAndUsesDefaultTraceNameWhenNull() {
     ctx.beginTrace(null, "conv-1");
     assertEquals("trace", ctx.traceName());
+    // Used as PostHog $ai_session_id on LLM analytics events
     assertEquals("conv-1", ctx.conversationId());
     assertNotNull(ctx.rootTraceId());
     ctx.setExperimentRunId(99L);

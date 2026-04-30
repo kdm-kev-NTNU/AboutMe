@@ -93,6 +93,7 @@ class OpenAIServiceImplTest {
         new PassThroughDocumentReranker(),
         retrievalProperties,
         new PostHogTraceContext(),
+        null,
         null);
   }
 
@@ -138,6 +139,7 @@ class OpenAIServiceImplTest {
             reranker,
             retrievalProperties,
             new PostHogTraceContext(),
+            null,
             null);
 
     when(vectorStore.similaritySearch(any(SearchRequest.class)))
