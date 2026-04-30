@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { listChatModels, ChatModelOptionProvider } from '@/api/generated/portfolio'
+import { listChatModels, ChatModelOptionProvider, ChatModelTag } from '@/api/generated/portfolio'
 import { isChatProvider, useChatModelStore } from '../model'
 
 vi.mock('@/api/generated/portfolio', async (importOriginal) => {
@@ -121,6 +121,28 @@ describe('useChatModelStore', () => {
     expect(store.selectedModelId).toBe('only')
   })
 
+  it('applyInitialSelection prefers FAST when multiple models and no storage', () => {
+    const store = useChatModelStore()
+    store.$patch({
+      models: [
+        {
+          id: 'r',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'R',
+          tags: [ChatModelTag.REASONING],
+        },
+        {
+          id: 'f',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'F',
+          tags: [ChatModelTag.FAST],
+        },
+      ],
+    })
+    store.applyInitialSelection()
+    expect(store.selectedModelId).toBe('f')
+  })
+
   it('selectFirstForProvider sets first model id for provider', () => {
     const store = useChatModelStore()
     store.$patch({
@@ -131,6 +153,28 @@ describe('useChatModelStore', () => {
     })
     store.selectFirstForProvider(ChatModelOptionProvider.OPENAI)
     expect(store.selectedModelId).toBe('o2')
+  })
+
+  it('selectFirstForProvider prefers FAST when reasoning model is listed first', () => {
+    const store = useChatModelStore()
+    store.$patch({
+      models: [
+        {
+          id: 'slow',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'S',
+          tags: [ChatModelTag.REASONING],
+        },
+        {
+          id: 'fast',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'F',
+          tags: [ChatModelTag.FAST],
+        },
+      ],
+    })
+    store.selectFirstForProvider(ChatModelOptionProvider.OPENAI)
+    expect(store.selectedModelId).toBe('fast')
   })
 
   it('selectFirstForProvider does nothing when list empty', () => {
@@ -163,11 +207,24 @@ describe('useChatModelStore', () => {
     expect(listChatModels).toHaveBeenCalledTimes(1)
     resolveFn!({
       status: 200,
-      data: [{ id: 'x', provider: ChatModelOptionProvider.OPENAI, label: 'X' }],
+      data: [
+        {
+          id: 'y',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'Y',
+          tags: [ChatModelTag.REASONING],
+        },
+        {
+          id: 'x',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'X',
+          tags: [ChatModelTag.FAST],
+        },
+      ],
       headers: new Headers(),
     })
     await Promise.all([a, b])
-    expect(store.models).toHaveLength(1)
+    expect(store.models).toHaveLength(2)
     expect(store.selectedModelId).toBe('x')
   })
 

@@ -3,6 +3,7 @@ import {
   listChatModels,
   type ChatModelOption,
   ChatModelOptionProvider,
+  ChatModelTag,
 } from '@/api/generated/portfolio'
 
 // Mirrors backend allow-list: only models returned by GET /chat/models are selectable in the UI.
@@ -60,11 +61,13 @@ export const useChatModelStore = defineStore('chatModel', {
       this.persistModelId()
     },
 
-    /** Switch UI to a provider and pick its first available model. */
+    /** Switch UI to a provider and pick the first FAST model when available, else first listed. */
     selectFirstForProvider(p: ChatProvider) {
       const list = this.modelsForProvider(p)
-      if (list.length > 0 && list[0].id) {
-        this.setSelectedModelId(list[0].id)
+      const fast = list.find((m) => m.tags?.includes(ChatModelTag.FAST))
+      const pick = fast ?? list[0]
+      if (pick?.id) {
+        this.setSelectedModelId(pick.id)
       }
     },
 
@@ -79,7 +82,8 @@ export const useChatModelStore = defineStore('chatModel', {
         // ignore
       }
       if (this.models.length > 0) {
-        const first = this.models[0]
+        const fast = this.models.find((m) => m.tags?.includes(ChatModelTag.FAST))
+        const first = fast ?? this.models[0]
         if (first.id) {
           this.selectedModelId = first.id
           this.persistModelId()

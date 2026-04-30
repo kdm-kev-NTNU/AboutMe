@@ -10,6 +10,7 @@ import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.model.ChatModelOption;
 import com.kevinmazali.portfolio.model.chat.ChatProvider;
+import com.kevinmazali.portfolio.model.chat.ModelTag;
 import com.kevinmazali.portfolio.model.experiment.CreateEvalDatasetRequest;
 import com.kevinmazali.portfolio.model.experiment.DatasetGenerationStatus;
 import com.kevinmazali.portfolio.model.experiment.DatasetGenerationStatusResponse;
@@ -23,6 +24,7 @@ import com.kevinmazali.portfolio.service.ChatModelCatalog;
 import com.kevinmazali.portfolio.service.DatasetGenerationService;
 import com.kevinmazali.portfolio.service.ExperimentService;
 import java.time.OffsetDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -139,7 +141,7 @@ class ExperimentControllerTest {
   @WithMockUser(roles = "ADMIN")
   void modelsEndpointReturnsCatalogForAdmin() throws Exception {
     when(chatModelCatalog.listAvailableModels()).thenReturn(List.of(
-        new ChatModelOption("gpt-5.4-mini", ChatProvider.OPENAI, "GPT-5.4 mini")));
+        new ChatModelOption("gpt-5.4-mini", ChatProvider.OPENAI, "GPT-5.4 mini", EnumSet.of(ModelTag.FAST))));
 
     mockMvc.perform(get("/admin/tools/experiments/models"))
         .andExpect(status().isOk())
