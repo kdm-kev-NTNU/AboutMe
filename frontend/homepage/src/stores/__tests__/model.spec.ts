@@ -17,6 +17,13 @@ describe('isChatProvider', () => {
   })
 })
 
+function setSessionAuth() {
+  sessionStorage.setItem(
+    'auth',
+    JSON.stringify({ username: 'u', role: 'USER', basicToken: 'dGVzdA==' }),
+  )
+}
+
 describe('useChatModelStore', () => {
   beforeEach(() => {
     sessionStorage.clear()
@@ -121,7 +128,7 @@ describe('useChatModelStore', () => {
     expect(store.selectedModelId).toBe('only')
   })
 
-  it('applyInitialSelection prefers FAST when multiple models and no storage', () => {
+  it('applyInitialSelection prefers FAST when anonymous and multiple models', () => {
     const store = useChatModelStore()
     store.$patch({
       models: [
@@ -143,6 +150,29 @@ describe('useChatModelStore', () => {
     expect(store.selectedModelId).toBe('f')
   })
 
+  it('applyInitialSelection prefers REASONING when signed in and multiple models', () => {
+    setSessionAuth()
+    const store = useChatModelStore()
+    store.$patch({
+      models: [
+        {
+          id: 'r',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'R',
+          tags: [ChatModelTag.REASONING],
+        },
+        {
+          id: 'f',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'F',
+          tags: [ChatModelTag.FAST],
+        },
+      ],
+    })
+    store.applyInitialSelection()
+    expect(store.selectedModelId).toBe('r')
+  })
+
   it('selectFirstForProvider sets first model id for provider', () => {
     const store = useChatModelStore()
     store.$patch({
@@ -155,7 +185,7 @@ describe('useChatModelStore', () => {
     expect(store.selectedModelId).toBe('o2')
   })
 
-  it('selectFirstForProvider prefers FAST when reasoning model is listed first', () => {
+  it('selectFirstForProvider prefers FAST when anonymous and reasoning is listed first', () => {
     const store = useChatModelStore()
     store.$patch({
       models: [
@@ -175,6 +205,29 @@ describe('useChatModelStore', () => {
     })
     store.selectFirstForProvider(ChatModelOptionProvider.OPENAI)
     expect(store.selectedModelId).toBe('fast')
+  })
+
+  it('selectFirstForProvider prefers REASONING when signed in', () => {
+    setSessionAuth()
+    const store = useChatModelStore()
+    store.$patch({
+      models: [
+        {
+          id: 'slow',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'S',
+          tags: [ChatModelTag.REASONING],
+        },
+        {
+          id: 'fast',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'F',
+          tags: [ChatModelTag.FAST],
+        },
+      ],
+    })
+    store.selectFirstForProvider(ChatModelOptionProvider.OPENAI)
+    expect(store.selectedModelId).toBe('slow')
   })
 
   it('selectFirstForProvider does nothing when list empty', () => {
@@ -226,6 +279,31 @@ describe('useChatModelStore', () => {
     await Promise.all([a, b])
     expect(store.models).toHaveLength(2)
     expect(store.selectedModelId).toBe('x')
+  })
+
+  it('ensureModelsLoaded prefers REASONING when signed in', async () => {
+    setSessionAuth()
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'y',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'Y',
+          tags: [ChatModelTag.REASONING],
+        },
+        {
+          id: 'x',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'X',
+          tags: [ChatModelTag.FAST],
+        },
+      ],
+      headers: new Headers(),
+    })
+    const store = useChatModelStore()
+    await store.ensureModelsLoaded()
+    expect(store.selectedModelId).toBe('y')
   })
 
   it('ensureModelsLoaded skips body when status not 200', async () => {

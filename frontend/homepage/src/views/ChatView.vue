@@ -89,15 +89,15 @@ const popupCopy = computed(() =>
     ? {
         title: 'Porteføljen er i aktiv tilpasning',
         body: 'Denne chatten og kunnskapsgrunnlaget justeres fortløpende ut fra det jeg lærer i bacheloroppgaven. Svarene blir derfor gradvis mer presise over tid.',
-        recommendation: 'Vil du se hva som tilpasses nå? Besøk bachelor-siden for kontekst og status.',
-        bachelorCta: 'Se bachelorkontekst og status',
+        recommendation: 'Vil du se hva som tilpasses nå? Besøk prosjektsiden for kontekst og status.',
+        bachelorCta: 'Åpne prosjektsiden',
         dismiss: 'Forstått',
       }
     : {
         title: 'The portfolio is being actively adapted',
         body: "This chat and its knowledge base are being continuously adjusted based on what I'm learning in my bachelor's thesis. Replies will therefore become progressively more precise over time.",
-        recommendation: 'Want to see what is currently being adapted? Visit the bachelor page for context and status.',
-        bachelorCta: 'See bachelor context and status',
+        recommendation: 'Want to see what is currently being adapted? Visit the project page for context and status.',
+        bachelorCta: 'Open the project page',
         dismiss: 'Got it',
       },
 )
@@ -341,7 +341,7 @@ onMounted(async () => {
         </p>
         <DialogFooter class="flex-col gap-2 sm:flex-row sm:justify-end">
           <Button as-child variant="outline">
-            <RouterLink :to="{ name: 'bachelor' }">{{ popupCopy.bachelorCta }}</RouterLink>
+            <RouterLink :to="{ name: 'project', hash: '#bachelor' }">{{ popupCopy.bachelorCta }}</RouterLink>
           </Button>
           <Button type="button" @click="dismissInfoPopup">{{ popupCopy.dismiss }}</Button>
         </DialogFooter>

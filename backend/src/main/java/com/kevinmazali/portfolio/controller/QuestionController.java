@@ -11,6 +11,7 @@ import com.kevinmazali.portfolio.exception.PremiumModelForbiddenException;
 import com.kevinmazali.portfolio.service.ChatModelCatalog;
 import com.kevinmazali.portfolio.service.OpenAIService;
 import com.kevinmazali.portfolio.service.RequestLogService;
+import com.kevinmazali.portfolio.util.AiRequestContext;
 import com.kevinmazali.portfolio.util.InputValidator;
 import com.kevinmazali.portfolio.util.LlmClientDiagnostics;
 import io.swagger.v3.oas.annotations.Operation;
@@ -80,9 +81,18 @@ public class QuestionController {
 
         String sanitizedQuestion = InputValidator.sanitizeString(question.question());
 
-        String effectiveModelId = (question.model() == null || question.model().isBlank())
+        String rawModelId = (question.model() == null || question.model().isBlank())
             ? defaultChatModelId
             : question.model().trim();
+
+        String effectiveModelId = rawModelId;
+        if ((question.model() == null || question.model().isBlank())
+            && AiRequestContext.isAnonymousInteractiveUser()) {
+            effectiveModelId = SupportedChatModel.fromModelId(rawModelId)
+                .filter(SupportedChatModel::requiresAuthenticationForPublicChat)
+                .map(m -> SupportedChatModel.GPT_5_4_MINI.modelId())
+                .orElse(rawModelId);
+        }
 
         var selected = SupportedChatModel.fromModelId(effectiveModelId);
         if (selected.isEmpty()) {

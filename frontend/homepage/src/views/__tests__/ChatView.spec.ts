@@ -30,7 +30,7 @@ describe('ChatView', () => {
       history: createMemoryHistory(),
       routes: [
         { path: '/', name: 'home', component: HomeStub },
-        { path: '/bachelor', name: 'bachelor', component: HomeStub },
+        { path: '/project', name: 'project', component: HomeStub },
         { path: '/chat', name: 'chat', component: ChatView },
       ],
     })
@@ -86,7 +86,7 @@ describe('ChatView', () => {
     return { wrapper, router, pinia }
   }
 
-  it('shows model FAST / Reasoning labels and defaults to a FAST model', async () => {
+  it('shows model FAST / Reasoning labels and defaults to a FAST model when anonymous', async () => {
     vi.mocked(listChatModels).mockResolvedValue({
       status: 200,
       data: [
@@ -113,6 +113,35 @@ describe('ChatView', () => {
     expect(opts.some((o) => o.text().includes('Fast'))).toBe(true)
     expect(opts.some((o) => o.text().includes('Reasoning'))).toBe(true)
     expect((sel.element as HTMLSelectElement).value).toBe('gpt-5.4-mini')
+  })
+
+  it('defaults to a REASONING model when signed in', async () => {
+    sessionStorage.setItem(
+      'auth',
+      JSON.stringify({ username: 'u', role: 'USER', basicToken: 'dGVzdA==' }),
+    )
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'gpt-5.4',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'GPT-5.4',
+          tags: [ChatModelTag.REASONING],
+        },
+        {
+          id: 'gpt-5.4-mini',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'GPT-5.4 mini',
+          tags: [ChatModelTag.FAST],
+        },
+      ],
+      headers: new Headers(),
+    })
+    const { wrapper } = await mountChat({})
+    await flushPromises()
+    const sel = wrapper.find('#chat-model-select')
+    expect((sel.element as HTMLSelectElement).value).toBe('gpt-5.4')
   })
 
   it('shows English error when prompt exceeds max length', async () => {

@@ -1,6 +1,6 @@
 /**
  * Chat model catalog e2e tests.
- * Covers: catalog load, tag display, FAST default, per-model selection,
+ * Covers: catalog load, tag display, anonymous FAST default, per-model selection,
  * provider switching round-trip, and per-model chat submission.
  */
 
@@ -29,7 +29,7 @@ describe('Chat model catalog', () => {
     cy.window().then((win) => win.sessionStorage.clear())
   })
 
-  it('loads models with tags, defaults to FAST, and switches provider subset', () => {
+  it('loads models with tags, defaults to FAST when anonymous, and switches provider subset', () => {
     stubFullCatalog()
     cy.visit('/chat')
 

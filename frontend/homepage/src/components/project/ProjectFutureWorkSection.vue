@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useLangStore } from '../stores/lang'
+import { useLangStore } from '@/stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
@@ -256,19 +256,8 @@ const referencesHeading = computed(() =>
 </script>
 
 <template>
-	<main class="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-slate-100 relative">
-		<div class="absolute inset-0 pointer-events-none">
-			<div
-				class="absolute top-0 left-0 w-full h-full"
-				style="
-					background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-						radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-						radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
-				"
-			></div>
-		</div>
-
-		<div class="relative z-10 mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+	<div class="relative pb-8">
+		<div class="relative z-10 mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
 			<h1
 				class="text-3xl font-bold mb-4 text-center bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x"
 			>
@@ -337,7 +326,7 @@ const referencesHeading = computed(() =>
 				</Card>
 			</div>
 		</div>
-	</main>
+	</div>
 </template>
 
 <style scoped>
