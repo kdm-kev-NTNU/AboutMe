@@ -1,7 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, type Ref } from 'vue'
+import { computed, inject, onMounted, onUnmounted, ref, type Ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+type ProjectSectionNav = {
+	openBachelor: () => void
+}
+const sectionNav = inject<ProjectSectionNav | null>('projectSectionNav', null)
+const router = useRouter()
+
+function onReadMoreBachelor() {
+	if (sectionNav) {
+		sectionNav.openBachelor()
+		return
+	}
+	void router.push({ path: '/project', hash: '#section-bachelor' })
+}
 import { useIntersectionObserver } from '@vueuse/core'
-import { useLangStore } from '../stores/lang'
+import { useLangStore } from '@/stores/lang'
 import { Badge } from '@/components/ui/badge'
 import {
   Cpu,
@@ -236,12 +251,11 @@ const sectionsIntro = computed(() =>
 
 const footerText = computed(() =>
   isNo.value
-    ? 'Mer om oppgaven og retningen finner du under bachelor. Full brukerhistorier og krav ligger i avtale og veiledning med oppdragsgiver.'
-    : 'More about the thesis and direction is on the bachelor page. Full user stories and requirements live in agreements and supervision with the industry partner.',
+    ? 'Mer om oppgaven og retningen finner du i bachelor-seksjonen på denne siden. Full brukerhistorier og krav ligger i avtale og veiledning med oppdragsgiver.'
+    : 'More about the thesis and direction is in the Bachelor section on this page. Full user stories and requirements live in agreements and supervision with the industry partner.',
 )
 
 const footerHome = computed(() => (isNo.value ? 'Til forsiden' : 'Back to home'))
-const footerBachelor = computed(() => (isNo.value ? 'Bacheloroppgaven' : 'Bachelor thesis'))
 
 const sections = computed<Section[]>(() => {
   if (isNo.value) {
@@ -291,7 +305,7 @@ const sections = computed<Section[]>(() => {
           'Ved henting utvides brukerens spørsmål til både norsk og engelsk, slik at treff i dokumenter på begge språk blir lettere å få med.',
           'PostgreSQL med pgvector kjører i Docker sammen med resten av stakken, som gjør det enkelt å få opp et konsistent miljø lokalt og i deploy.',
           'Fangst → kuratér → ingest → verifiser: valgfritt samtaleinnslag (f.eks. stemmeleverandør) er et produktvalg for rikere råmateriale; det som faktisk indekseres, er kuraterte dokumenter via admin-pipelinen. Faglitteratur om RAG dekker indeksering, chunking, retrieval og evaluering — ikke valg av stemme-UI.',
-          'Primærkilder (arXiv): https://arxiv.org/abs/2407.01219 (Wang m.fl., EMNLP 2024), https://arxiv.org/abs/2312.10997 (Gao m.fl., oversikt, des. 2023). Menneskeforankret eval: https://arxiv.org/abs/2503.09902, https://arxiv.org/abs/2504.14891. Utdypet flyt og praksislenker står i rot-README og på siden «Videre arbeid».',
+          'Primærkilder (arXiv): https://arxiv.org/abs/2407.01219 (Wang m.fl., EMNLP 2024), https://arxiv.org/abs/2312.10997 (Gao m.fl., oversikt, des. 2023). Menneskeforankret eval: https://arxiv.org/abs/2503.09902, https://arxiv.org/abs/2504.14891. Utdypet flyt og praksislenker står i rot-README og i seksjonen «Videre arbeid» på denne siden.',
         ],
         icon: Database,
         category: 'ai',
@@ -390,7 +404,7 @@ const sections = computed<Section[]>(() => {
         'At retrieval time the user question is expanded into Norwegian and English so documents in either language are easier to surface.',
         'PostgreSQL with pgvector runs in Docker alongside the rest of the stack, which makes it easy to spin up a consistent environment locally and in deployment.',
         'Capture → curate → ingest → verify: optional conversational capture (for example a voice vendor) is a product choice for richer raw material; what gets indexed is curated content through the admin pipeline. RAG literature covers indexing, chunking, retrieval, and evaluation—not the voice UI choice.',
-        'Primary arXiv sources: https://arxiv.org/abs/2407.01219 (Wang et al., EMNLP 2024), https://arxiv.org/abs/2312.10997 (Gao et al., survey, Dec 2023). Human-grounded evaluation: https://arxiv.org/abs/2503.09902, https://arxiv.org/abs/2504.14891. The root README and the Future work page spell out the flow and practice links.',
+        'Primary arXiv sources: https://arxiv.org/abs/2407.01219 (Wang et al., EMNLP 2024), https://arxiv.org/abs/2312.10997 (Gao et al., survey, Dec 2023). Human-grounded evaluation: https://arxiv.org/abs/2503.09902, https://arxiv.org/abs/2504.14891. The root README and the Future work section on this page spell out the flow and practice links.',
       ],
       icon: Database,
       category: 'ai',
@@ -463,7 +477,7 @@ function sectionIconWrapClass(cat: Category): string {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-20">
+  <div class="project-tech-stack-root">
     <div class="max-w-5xl mx-auto px-4 py-10 lg:py-14">
       <header
         class="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 p-8 shadow-lg shadow-slate-900/5 backdrop-blur-sm lg:p-10"
@@ -509,12 +523,13 @@ function sectionIconWrapClass(cat: Category): string {
                 {{ contextParagraph }}
               </p>
               <p>
-                <RouterLink
-                  to="/bachelor"
+                <button
+                  type="button"
                   class="text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                  @click="onReadMoreBachelor"
                 >
                   {{ contextLinkLabel }}
-                </RouterLink>
+                </button>
               </p>
             </div>
           </div>
@@ -660,12 +675,6 @@ function sectionIconWrapClass(cat: Category): string {
             class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
           >
             {{ footerHome }}
-          </RouterLink>
-          <RouterLink
-            to="/bachelor"
-            class="inline-flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-5 py-2.5 text-sm font-semibold text-blue-900 shadow-sm transition hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-          >
-            {{ footerBachelor }}
           </RouterLink>
         </div>
       </footer>

@@ -14,9 +14,8 @@ describe('application router (index)', () => {
 		expect(names.has('home')).toBe(true)
 		expect(names.has('chat')).toBe(true)
 		expect(names.has('privacy-policy')).toBe(true)
-		expect(names.has('future-work')).toBe(true)
+		expect(names.has('project')).toBe(true)
 		expect(names.has('career')).toBe(true)
-		expect(names.has('bachelor')).toBe(true)
 		expect(names.has('admin-tools')).toBe(true)
 		expect(names.has('admin-experiments')).toBe(true)
 	})
@@ -27,22 +26,32 @@ describe('application router (index)', () => {
 		expect(router.currentRoute.value.name).toBe('privacy-policy')
 	})
 
-	it('navigates to lazy-loaded bachelor route', async () => {
+	it('redirects legacy bachelor path to project with bachelor hash', async () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/bachelor')
-		expect(router.currentRoute.value.name).toBe('bachelor')
+		expect(router.currentRoute.value.path).toBe('/project')
+		expect(router.currentRoute.value.hash).toBe('#bachelor')
+		expect(router.currentRoute.value.name).toBe('project')
 	})
 
-	it('navigates to lazy-loaded tech-stack route', async () => {
+	it('redirects legacy tech-stack path to project with tech-stack hash', async () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/tech-stack')
-		expect(router.currentRoute.value.name).toBe('tech-stack')
+		expect(router.currentRoute.value.path).toBe('/project')
+		expect(router.currentRoute.value.hash).toBe('#tech-stack')
 	})
 
-	it('navigates to lazy-loaded future-work route', async () => {
+	it('redirects legacy future-work path to project with future-work hash', async () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/future-work')
-		expect(router.currentRoute.value.name).toBe('future-work')
+		expect(router.currentRoute.value.path).toBe('/project')
+		expect(router.currentRoute.value.hash).toBe('#future-work')
+	})
+
+	it('navigates to lazy-loaded project route', async () => {
+		const router = createPortfolioRouter({ useMemoryHistory: true })
+		await router.push('/project')
+		expect(router.currentRoute.value.name).toBe('project')
 	})
 
 	it('redirects legacy work-experience and education paths to career', async () => {

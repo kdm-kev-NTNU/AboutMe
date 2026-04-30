@@ -23,6 +23,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -38,7 +39,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-5.4-mini")
+@WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-5.5")
 @EnableConfigurationProperties({
   AskRateLimitProperties.class,
   ExperimentRunRateLimitProperties.class,
@@ -101,6 +102,21 @@ class QuestionControllerTest {
 		verify(requestLogService).save(eq("/ask:response"), eq("POST"), eq("ok"), isNull());
 		verify(openAIService, times(1)).getAnswer(argThat(q ->
 			"What is your name?".equals(q.question()) && "gpt-5.4-mini".equals(q.model())));
+	}
+
+	@Test
+	@WithMockUser(username = "user", roles = "USER")
+	void askUsesConfiguredDefaultModelWhenAuthenticatedAndModelOmitted() throws Exception {
+		when(openAIService.getAnswer(any(Question.class))).thenReturn(new Answer("ok"));
+
+		mockMvc.perform(post("/ask")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"question\":\"What is your name?\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.answer").value("ok"));
+
+		verify(openAIService, times(1)).getAnswer(argThat(q ->
+			"What is your name?".equals(q.question()) && "gpt-5.5".equals(q.model())));
 	}
 
 	@Test

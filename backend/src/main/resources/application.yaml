@@ -28,7 +28,7 @@ spring:
         enabled: ${OPENAI_CHAT_ENABLED:false}
         api-key: ${OPENAI_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
         options:
-          model: gpt-5.4-mini
+          model: gpt-5.5
           max-completion-tokens: ${portfolio.ai.limits.chat-max-completion-tokens:400}
       embedding:
         options:
@@ -119,7 +119,7 @@ portfolio:
       capacity: 15
       window-seconds: 300
   chat:
-    default-model-id: gpt-5.4-mini
+    default-model-id: gpt-5.5
   retrieval:
     # Optional ONNX rerank; Docker image sets paths under /app/rerank (see backend/Dockerfile).
     rerank-enabled: false

@@ -98,7 +98,7 @@ Optional **conversational capture** (for example a voice UI such as ElevenLabs) 
 
 **Practice guides (not peer-reviewed):** [AWS — securing the RAG ingestion pipeline](https://aws.amazon.com/blogs/security/securing-the-rag-ingestion-pipeline-filtering-mechanisms/), [Anyscale — RAG data ingestion strategies](https://docs.anyscale.com/rag/quality-improvement/data-ingestion-strategies).
 
-**Privacy:** purpose limitation, consent, and minimisation for any capture channel follow applicable law (for example GDPR), not the RAG literature above. On-site copy also lives under **Future work** in the Vue app (`frontend/homepage/src/views/FutureWorkView.vue`).
+**Privacy:** purpose limitation, consent, and minimisation for any capture channel follow applicable law (for example GDPR), not the RAG literature above. On-site copy also lives under **The project** → **Future work** in the Vue app (`frontend/homepage/src/views/ProjectPageView.vue` and `frontend/homepage/src/components/project/ProjectFutureWorkSection.vue`).
 
 ## Feedback
 

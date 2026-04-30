@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useLangStore } from '../stores/lang'
+import { useLangStore } from '@/stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { GraduationCap, Sparkles, Link2 } from 'lucide-vue-next'
@@ -78,7 +78,7 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 					body: [
 						'Nettsiden er et levende arbeidsrom der jeg kontinuerlig tester og justerer ideer fra bacheloroppgaven.',
 						'Det betyr at både innhold, prioriteringer og AI-atferd kan endres i iterasjoner etter hvert som jeg lærer mer.',
-						'Du finner mer teknisk detalj på siden Teknologistakk, og en forskningsforankret roadmap på Videre arbeid.',
+						'Mer teknisk detalj finner du i seksjonen Teknologistakk på denne siden, og en forskningsforankret roadmap under Videre arbeid.',
 					],
 				},
 			]
@@ -105,7 +105,7 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 					body: [
 						'The site is a living workspace where I continuously test and adjust ideas from the bachelor thesis.',
 						'This means content, priorities, and AI behavior can change in iterations as I keep learning.',
-						'For more technical depth, see Tech stack; for a research-backed roadmap, see Future work.',
+						'For more technical depth, expand the Tech stack section on this page; for a research-backed roadmap, see Future work below.',
 					],
 				},
 			],
@@ -113,19 +113,8 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 </script>
 
 <template>
-	<main class="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-slate-100 relative pb-16">
-		<div class="absolute inset-0 pointer-events-none">
-			<div
-				class="absolute top-0 left-0 w-full h-full"
-				style="
-					background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-						radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-						radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
-				"
-			></div>
-		</div>
-
-		<div class="relative z-10 mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+	<div class="relative pb-8">
+		<div class="relative z-10 mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
 			<!-- Hero -->
 			<div
 				v-motion
@@ -235,7 +224,7 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 				</Card>
 			</div>
 		</div>
-	</main>
+	</div>
 </template>
 
 <style scoped>
