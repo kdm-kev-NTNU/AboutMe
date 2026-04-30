@@ -1,7 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="K">
+  <defs>
+    <linearGradient id="k" x1="18" y1="14" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E8EDF5"/>
+    </linearGradient>
+  </defs>
   <rect width="64" height="64" rx="14" fill="#0B0F17"/>
+  <!-- Proven K topology: full stem; balanced upper/lower arms -->
   <path
-    d="M20 16h8v14.3L39.7 16H50L35.8 31.3 51 48H40.4L28 34.2V48h-8V16z"
-    fill="#FFFFFF"
+    fill="url(#k)"
+    d="M19 14h7v14L40 14h9L34 31 50 50h-8L27 35v15h-8V14z"
+    shape-rendering="geometricPrecision"
   />
 </svg>
