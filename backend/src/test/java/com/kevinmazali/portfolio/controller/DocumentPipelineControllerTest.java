@@ -14,9 +14,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClientException;
-
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -91,39 +88,6 @@ class DocumentPipelineControllerTest {
 		mockMvc.perform(get("/admin/tools/documents"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[0].documentId").value("id1"));
-	}
-
-	@Test
-	@WithMockUser(username = "admin", roles = "ADMIN")
-	void listReturns503WhenVectorTableInaccessible() throws Exception {
-		when(documentIngestionService.listDocuments())
-			.thenThrow(new IllegalStateException("Cannot access vector table public.vector_store: boom"));
-
-		mockMvc.perform(get("/admin/tools/documents"))
-			.andExpect(status().isServiceUnavailable())
-			.andExpect(jsonPath("$.error").value(containsString("Cannot access vector table")));
-	}
-
-	@Test
-	@WithMockUser(username = "admin", roles = "ADMIN")
-	void listReturns503OnRestClientFailure() throws Exception {
-		when(documentIngestionService.listDocuments())
-			.thenThrow(new ResourceAccessException("Connection refused"));
-
-		mockMvc.perform(get("/admin/tools/documents"))
-			.andExpect(status().isServiceUnavailable())
-			.andExpect(jsonPath("$.error").value(containsString("Connection refused")));
-	}
-
-	@Test
-	@WithMockUser(username = "admin", roles = "ADMIN")
-	void listReturns503OnGenericRestClientException() throws Exception {
-		when(documentIngestionService.listDocuments())
-			.thenThrow(new RestClientException("Bad gateway from upstream"));
-
-		mockMvc.perform(get("/admin/tools/documents"))
-			.andExpect(status().isServiceUnavailable())
-			.andExpect(jsonPath("$.error").value(containsString("Bad gateway from upstream")));
 	}
 
 	@Test

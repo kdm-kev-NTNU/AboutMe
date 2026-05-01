@@ -12,7 +12,8 @@ function safeUuidV4(): string {
 export function getOrCreateChatConversationId(): string {
   try {
     const existing = localStorage.getItem(CHAT_CONVERSATION_ID_KEY)
-    if (existing && existing.trim()) return existing
+    const trimmed = existing?.trim()
+    if (trimmed) return trimmed
     const created = safeUuidV4()
     localStorage.setItem(CHAT_CONVERSATION_ID_KEY, created)
     return created

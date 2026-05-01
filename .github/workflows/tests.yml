@@ -4,7 +4,7 @@
 # Green means: backend ./mvnw verify (tests + JaCoCo check); frontend npm ci,
 #   type-check, lint:ci (eslint, no autofix), unit tests with coverage thresholds.
 # Semgrep runs in a separate workflow (.github/workflows/semgrep.yml).
-# Cypress e2e is intentionally not in this gate (run locally or add a manual/nightly workflow).
+# Cypress e2e is not in the PR gate; it runs weekly (Sunday 07:00 UTC) and on manual dispatch.
 name: Tests
 
 on:
@@ -18,9 +18,16 @@ on:
         required: false
         type: boolean
         default: false
+      run_frontend_e2e:
+        description: 'Run Cypress E2E (preview build + headless browser)'
+        required: false
+        type: boolean
+        default: false
   schedule:
     # Weekly Sunday 06:00 UTC — validate model IDs are still accepted by providers.
     - cron: '0 6 * * 0'
+    # Weekly Sunday 07:00 UTC — Cypress E2E against production bundle (no backend required for stubbed specs).
+    - cron: '0 7 * * 0'
 
 permissions:
   contents: read
@@ -90,9 +97,41 @@ jobs:
             frontend/homepage/coverage
           if-no-files-found: ignore
 
+  frontend-e2e:
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 7 * * 0') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_frontend_e2e)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: frontend/homepage
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/homepage/package-lock.json
+      - name: Install dependencies (includes Cypress binary)
+        run: npm ci
+      - name: Build production bundle
+        run: npm run build-only
+      - name: Cypress E2E
+        run: npm run test:e2e
+      - name: Upload Cypress videos on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cypress-artifacts
+          path: |
+            frontend/homepage/cypress/videos
+            frontend/homepage/cypress/screenshots
+          if-no-files-found: ignore
+
   model-validation:
     if: >-
-      github.event_name == 'schedule' ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 6 * * 0') ||
       (github.event_name == 'workflow_dispatch' && inputs.run_model_validation)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
