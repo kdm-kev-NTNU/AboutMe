@@ -28,6 +28,7 @@ import {
   promptVersionsNames,
   promptVersionsSeed,
 } from '@/api/generated/portfolio'
+import type { adminDocumentsListResponse, listChatModelsResponse } from '@/api/generated/portfolio'
 
 const headersJson = new Headers({ 'Content-Type': 'application/json' })
 
@@ -325,9 +326,9 @@ describe('Admin CRUD views (integration-style)', () => {
   it('AdminQuestionSuggestionsView shows auth error when documents list returns 401', async () => {
     vi.mocked(adminDocumentsList).mockResolvedValue({
       status: 401,
-      data: {},
+      data: [],
       headers: headersJson,
-    })
+    } as unknown as adminDocumentsListResponse)
     vi.mocked(listChatModels).mockResolvedValue({ status: 200, data: [], headers: headersJson })
 
     const wrapper = mountAdmin(AdminQuestionSuggestionsView)
@@ -344,9 +345,9 @@ describe('Admin CRUD views (integration-style)', () => {
     })
     vi.mocked(listChatModels).mockResolvedValue({
       status: 503,
-      data: null,
+      data: [],
       headers: headersJson,
-    })
+    } as unknown as listChatModelsResponse)
 
     const wrapper = mountAdmin(AdminQuestionSuggestionsView)
     await flushPromises()
@@ -367,7 +368,7 @@ describe('Admin CRUD views (integration-style)', () => {
     })
     vi.mocked(adminDocumentsQuestionSuggestions).mockResolvedValue({
       status: 400,
-      data: { message: 'Corpus too small' },
+      data: { error: 'Corpus too small' },
       headers: headersJson,
     })
 
