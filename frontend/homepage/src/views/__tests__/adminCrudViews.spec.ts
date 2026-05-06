@@ -1,18 +1,22 @@
+import { nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import AdminChunksView from '../AdminChunksView.vue'
+import AdminQuestionSuggestionsView from '../AdminQuestionSuggestionsView.vue'
 import AdminPipelineView from '../AdminPipelineView.vue'
 import AdminPromptsView from '../AdminPromptsView.vue'
 import AdminExperimentsView from '../AdminExperimentsView.vue'
 import {
   adminDocumentsChunks,
+  adminDocumentsChunksExport,
   adminDocumentsCollections,
   adminDocumentsDelete,
   adminDocumentsFiles,
   adminDocumentsIngestByPath,
   adminDocumentsList,
+  adminDocumentsQuestionSuggestions,
   adminDocumentsReseed,
   healthChroma,
   listChatModels,
@@ -36,6 +40,8 @@ vi.mock('@/api/generated/portfolio', async (importOriginal) => {
     adminDocumentsCollections: vi.fn(),
     adminDocumentsFiles: vi.fn(),
     adminDocumentsChunks: vi.fn(),
+    adminDocumentsChunksExport: vi.fn(),
+    adminDocumentsQuestionSuggestions: vi.fn(),
     adminDocumentsReseed: vi.fn(),
     adminDocumentsUpload: vi.fn(),
     adminDocumentsIngestByPath: vi.fn(),
@@ -192,6 +198,81 @@ describe('Admin CRUD views (integration-style)', () => {
     await flushPromises()
     const backArg = vi.mocked(adminDocumentsChunks).mock.calls.at(-1)?.[0] as { offset?: number }
     expect(backArg).toMatchObject({ offset: 0 })
+  })
+
+  it('AdminChunksView downloads chunk JSON export', async () => {
+    vi.mocked(adminDocumentsChunksExport).mockResolvedValue({
+      status: 200,
+      data: {
+        exportedAt: '2026-01-01T00:00:00Z',
+        collectionName: 'vector_store',
+        documentId: null,
+        totalChunks: 1,
+        chunks: [{ id: 'c1', documentTitle: 'x', chunkIndex: 0, text: 'hi', metadata: {} }],
+      },
+      headers: headersJson,
+    })
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+
+    const wrapper = mountAdmin(AdminChunksView)
+    await flushPromises()
+
+    const dlBtn = wrapper.findAll('button').find((b) => b.text().includes('Last ned JSON'))
+    expect(dlBtn).toBeTruthy()
+    await dlBtn!.trigger('click')
+    await flushPromises()
+
+    expect(adminDocumentsChunksExport).toHaveBeenCalledWith({ documentId: undefined })
+    expect(clickSpy).toHaveBeenCalled()
+    clickSpy.mockRestore()
+  })
+
+  it('AdminQuestionSuggestionsView generates suggestions from current chunks', async () => {
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [{ id: 'm1', label: 'Test', provider: 'OPENAI' }],
+      headers: headersJson,
+    })
+    vi.mocked(adminDocumentsQuestionSuggestions).mockResolvedValue({
+      status: 200,
+      data: { suggestions: ['Spørsmål 1'], modelUsed: 'm1' },
+      headers: headersJson,
+    })
+
+    const wrapper = mountAdmin(AdminQuestionSuggestionsView)
+    await flushPromises()
+
+    const submitBtn = wrapper.findAll('button').find((b) => b.text().includes('Generer forslag'))
+    expect(submitBtn).toBeTruthy()
+    await submitBtn!.trigger('click')
+    await flushPromises()
+
+    expect(adminDocumentsQuestionSuggestions).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Spørsmål 1')
+  })
+
+  it('AdminQuestionSuggestionsView blocks uploaded-json mode without payload', async () => {
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [{ id: 'm1', label: 'Test', provider: 'OPENAI' }],
+      headers: headersJson,
+    })
+
+    const wrapper = mountAdmin(AdminQuestionSuggestionsView)
+    await flushPromises()
+
+    const el = wrapper.get('[data-testid="suggestion-source"]').element as HTMLSelectElement
+    el.value = 'uploadedJson'
+    el.dispatchEvent(new Event('change'))
+    await nextTick()
+    await flushPromises()
+
+    const submitBtn = wrapper.findAll('button').find((b) => b.text().includes('Generer forslag'))
+    await submitBtn!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toMatch(/Lim inn eller last opp chunk-JSON/)
+    expect(adminDocumentsQuestionSuggestions).not.toHaveBeenCalled()
   })
 
   it('AdminPipelineView completes reseed when confirmed', async () => {

@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
   adminDocumentsChunks,
+  adminDocumentsChunksExport,
   adminDocumentsCollections,
   adminDocumentsList,
   type VectorStoreInfoResponse,
@@ -20,6 +21,8 @@ const chromaInfo = ref<VectorStoreInfoResponse | null>(null)
 const chunksData = ref<ChunkListResponse | null>(null)
 const chunksBusy = ref(false)
 const chunkError = ref('')
+const exportBusy = ref(false)
+const exportError = ref('')
 const chunkDocumentFilter = ref('')
 const chunkLimit = ref(25)
 const chunkOffset = ref(0)
@@ -120,6 +123,39 @@ function chunkNext() {
   void loadChunks()
 }
 
+function triggerJsonDownload(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: 'application/json;charset=utf-8',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function downloadChunksExport() {
+  exportBusy.value = true
+  exportError.value = ''
+  try {
+    const res = await adminDocumentsChunksExport({
+      documentId: chunkDocumentFilter.value.trim() || undefined,
+    })
+    if (res.status !== 200 || !res.data) {
+      throw new Error(formatHttpError(res.status, res.data))
+    }
+    const trimmed = chunkDocumentFilter.value.trim()
+    const safe =
+      trimmed.length > 0 ? trimmed.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 48) : 'all'
+    triggerJsonDownload(res.data, `portfolio-chunks-${safe}.json`)
+  } catch (e: unknown) {
+    exportError.value = e instanceof Error ? e.message : 'Ukjent feil'
+  } finally {
+    exportBusy.value = false
+  }
+}
+
 function toggleChunkExpand(id: string | undefined) {
   if (!id) return
   expandedChunkId.value = expandedChunkId.value === id ? null : id
@@ -155,6 +191,10 @@ onMounted(() => {
     >
       <RouterLink to="/" class="text-blue-600 hover:underline">Hjem</RouterLink>
       <RouterLink to="/admin/tools" class="text-blue-600 hover:underline">Internal tools</RouterLink>
+      <span class="text-gray-500">/</span>
+      <RouterLink to="/admin/question-suggestions" class="text-blue-600 hover:underline">
+        Spørsmålsforslag
+      </RouterLink>
       <span class="text-gray-500">/</span>
       <strong class="text-gray-900">Chunk viewer</strong>
     </nav>
@@ -245,7 +285,16 @@ onMounted(() => {
           >
             {{ chunksBusy ? 'Laster…' : 'Hent chunks' }}
           </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+            :disabled="exportBusy || chunksBusy"
+            @click="downloadChunksExport"
+          >
+            {{ exportBusy ? 'Eksporterer…' : 'Last ned JSON (chunks)' }}
+          </button>
         </div>
+        <p v-if="exportError" class="mt-3 text-sm text-red-700">{{ exportError }}</p>
       </section>
 
       <p

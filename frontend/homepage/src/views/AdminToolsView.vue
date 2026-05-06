@@ -94,6 +94,17 @@ onMounted(() => {
           <li
             class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)] hover:border-gray-300 transition-colors"
           >
+            <RouterLink to="/admin/question-suggestions" class="block group">
+              <span class="text-base font-semibold text-blue-600 group-hover:underline">Spørsmålsforslag (LLM)</span>
+              <p class="text-sm text-gray-600 mt-2 leading-relaxed">
+                Last ned chunk-JSON eller bruk direkte fra databasen; få forslag til standard chat-spørsmål basert på
+                konteksten.
+              </p>
+            </RouterLink>
+          </li>
+          <li
+            class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)] hover:border-gray-300 transition-colors"
+          >
             <RouterLink to="/admin/prompts" class="block group">
               <span class="text-base font-semibold text-blue-600 group-hover:underline">Prompt versions</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">
