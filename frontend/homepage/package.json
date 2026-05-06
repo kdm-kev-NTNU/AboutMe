@@ -19,7 +19,7 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "api:pull": "node scripts/fetch-openapi.mjs",
-    "api:generate": "orval --config orval.config.ts",
+    "api:generate": "npx --no-install orval --config orval.config.ts",
     "lint": "eslint . --fix",
     "lint:ci": "eslint . --max-warnings 0",
     "format": "prettier --write src/"
