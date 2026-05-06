@@ -18,7 +18,7 @@ import MessagesArea from '@/views/MessagesArea.vue'
 import {
   askQuestion,
   ChatModelOptionProvider,
-  ChatModelTag,
+  ModelTag,
   type ChatModelOption,
 } from '@/api/generated/portfolio'
 import { captureProductAnalyticsEvent } from '@/lib/analytics'
@@ -69,8 +69,8 @@ const formatModelTags = computed(() => (m: ChatModelOption) => {
   if (tags.length === 0) return ''
   const no = language.value === 'no'
   const parts = tags.map((t) => {
-    if (t === ChatModelTag.FAST) return no ? 'Rask' : 'Fast'
-    if (t === ChatModelTag.REASONING) return no ? 'Resonnering' : 'Reasoning'
+    if (t === ModelTag.FAST) return no ? 'Rask' : 'Fast'
+    if (t === ModelTag.REASONING) return no ? 'Resonnering' : 'Reasoning'
     return String(t)
   })
   return ` — ${parts.join(', ')}`
