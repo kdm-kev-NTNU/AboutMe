@@ -56,14 +56,14 @@ export interface ChatModelOption {
   id?: string;
   provider?: ChatModelOptionProvider;
   label?: string;
-  /** Capability tags (e.g. FAST vs REASONING) */
-  tags?: ChatModelTag[];
+  tags?: ModelTag[];
 }
 
-export type ChatModelTag = typeof ChatModelTag[keyof typeof ChatModelTag];
+export type ModelTag = typeof ModelTag[keyof typeof ModelTag];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ChatModelTag = {
+export const ModelTag = {
   FAST: 'FAST',
   REASONING: 'REASONING',
 } as const;
@@ -136,6 +136,34 @@ export interface ChunkListResponse {
   limit?: number;
   offset?: number;
   chunks?: ChunkItem[];
+}
+
+export interface ChunkExportResponse {
+  exportedAt?: string;
+  collectionName?: string;
+  /** @nullable */
+  documentId?: string | null;
+  totalChunks?: number;
+  chunks?: ChunkItem[];
+}
+
+export interface DefaultQuestionSuggestionRequest {
+  /** currentChunks or uploadedJson */
+  source: string;
+  /** @nullable */
+  documentId?: string | null;
+  /** @nullable */
+  chunksJson?: string | null;
+  model: string;
+  /** @nullable */
+  maxQuestions?: number | null;
+  /** @nullable */
+  language?: string | null;
+}
+
+export interface DefaultQuestionSuggestionResponse {
+  suggestions?: string[];
+  modelUsed?: string;
 }
 
 export interface PathIngestRequest {
@@ -240,6 +268,10 @@ export type AdminDocumentsUploadBody = {
 export type AdminDocumentsUploadBatchBody = {
   files: Blob[];
   force?: boolean;
+};
+
+export type AdminDocumentsChunksExportParams = {
+documentId?: string;
 };
 
 export type AdminDocumentsChunksParams = {
@@ -449,7 +481,7 @@ export const listChatModels = async ( options?: RequestInit): Promise<listChatMo
 
 
 /**
- * @summary Vector store health (legacy /health/chroma path)
+ * @summary Vector store health (legacy /health/chroma)
  */
 export type healthChromaResponse200 = {
   data: VectorStoreHealthResponse
@@ -710,6 +742,49 @@ export const adminDocumentsList = async ( options?: RequestInit): Promise<adminD
 
 
 /**
+ * @summary Export all chunks in the active collection
+ */
+export type adminDocumentsChunksExportResponse200 = {
+  data: ChunkExportResponse
+  status: 200
+}
+    
+export type adminDocumentsChunksExportResponseSuccess = (adminDocumentsChunksExportResponse200) & {
+  headers: Headers;
+};
+;
+
+export type adminDocumentsChunksExportResponse = (adminDocumentsChunksExportResponseSuccess)
+
+export const getAdminDocumentsChunksExportUrl = (params?: AdminDocumentsChunksExportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/admin/tools/documents/chunks/export?${stringifiedParams}` : `/admin/tools/documents/chunks/export`
+}
+
+export const adminDocumentsChunksExport = async (params?: AdminDocumentsChunksExportParams, options?: RequestInit): Promise<adminDocumentsChunksExportResponse> => {
+  
+  return customFetch<adminDocumentsChunksExportResponse>(getAdminDocumentsChunksExportUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
  * @summary List chunks in the active collection
  */
 export type adminDocumentsChunksResponse200 = {
@@ -753,7 +828,51 @@ export const adminDocumentsChunks = async (params?: AdminDocumentsChunksParams, 
 
 
 /**
- * @summary List vector store collections (pgvector table summary)
+ * @summary Suggest default chatbot starter questions from chunks
+ */
+export type adminDocumentsQuestionSuggestionsResponse200 = {
+  data: DefaultQuestionSuggestionResponse
+  status: 200
+}
+
+export type adminDocumentsQuestionSuggestionsResponse400 = {
+  data: ApiError
+  status: 400
+}
+    
+export type adminDocumentsQuestionSuggestionsResponseSuccess = (adminDocumentsQuestionSuggestionsResponse200) & {
+  headers: Headers;
+};
+export type adminDocumentsQuestionSuggestionsResponseError = (adminDocumentsQuestionSuggestionsResponse400) & {
+  headers: Headers;
+};
+
+export type adminDocumentsQuestionSuggestionsResponse = (adminDocumentsQuestionSuggestionsResponseSuccess | adminDocumentsQuestionSuggestionsResponseError)
+
+export const getAdminDocumentsQuestionSuggestionsUrl = () => {
+
+
+  
+
+  return `/admin/tools/documents/question-suggestions`
+}
+
+export const adminDocumentsQuestionSuggestions = async (defaultQuestionSuggestionRequest: DefaultQuestionSuggestionRequest, options?: RequestInit): Promise<adminDocumentsQuestionSuggestionsResponse> => {
+  
+  return customFetch<adminDocumentsQuestionSuggestionsResponse>(getAdminDocumentsQuestionSuggestionsUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      defaultQuestionSuggestionRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List vector store (pgvector table summary)
  */
 export type adminDocumentsCollectionsResponse200 = {
   data: VectorStoreInfoResponse
