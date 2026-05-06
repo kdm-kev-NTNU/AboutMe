@@ -27,7 +27,10 @@ function stubCatalogAndAsk(askStatus: number, askBody: object) {
 
 describe('Chat e2e flow', () => {
   beforeEach(() => {
-    cy.window().then((win) => win.sessionStorage.clear())
+    cy.window().then((win) => {
+      win.sessionStorage.clear()
+      win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
+    })
   })
 
   it('sends a question and receives a rendered answer', () => {
