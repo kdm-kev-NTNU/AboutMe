@@ -141,6 +141,12 @@ portfolio:
   sanitizer:
     enabled: ${SANITIZER_ENABLED:true}
     redaction-format: "{{{REDACTED-%t}}}"
+  # Copy vector_store from Railway (or any remote Postgres) into the local primary DB. Disabled by default; see application-prod.yaml.
+  sync:
+    enabled: ${SYNC_ENABLED:false}
+    source-url: ${SYNC_SOURCE_URL:}
+    source-username: ${SYNC_SOURCE_USERNAME:}
+    source-password: ${SYNC_SOURCE_PASSWORD:}
 
 sfg:
   aiapp:

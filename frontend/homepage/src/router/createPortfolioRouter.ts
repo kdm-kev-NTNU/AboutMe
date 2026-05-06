@@ -99,6 +99,12 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				component: () => import('../views/AdminChunksView.vue'),
 			},
 			{
+				path: '/admin/question-suggestions',
+				name: 'admin-question-suggestions',
+				meta: { requiresAdmin: true },
+				component: () => import('../views/AdminQuestionSuggestionsView.vue'),
+			},
+			{
 				path: '/admin/prompts',
 				name: 'admin-prompts',
 				meta: { requiresAdmin: true },

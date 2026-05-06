@@ -4,6 +4,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.SanitizerProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
+import com.kevinmazali.portfolio.model.ChunkExportResponse;
 import com.kevinmazali.portfolio.model.ChunkItem;
 import com.kevinmazali.portfolio.model.ChunkListResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
@@ -437,6 +438,28 @@ public class DocumentIngestionService implements ApplicationRunner {
   }
 
   private static final int CHUNK_LIST_MAX_LIMIT = 200;
+
+  /** Paginates through {@link #getChunks(String, int, int)} and returns every chunk row for export. */
+  public ChunkExportResponse exportChunks(@Nullable String documentId) {
+    ensureVectorTableAccessible();
+    List<ChunkItem> all = new ArrayList<>();
+    int offset = 0;
+    while (true) {
+      ChunkListResponse page = getChunks(documentId, CHUNK_LIST_MAX_LIMIT, offset);
+      if (page.chunks().isEmpty()) {
+        break;
+      }
+      all.addAll(page.chunks());
+      if (page.chunks().size() < CHUNK_LIST_MAX_LIMIT) {
+        break;
+      }
+      offset += CHUNK_LIST_MAX_LIMIT;
+    }
+    String tableLabel = pgVectorStoreProperties.getTableName();
+    String trimmedDoc = documentId == null ? "" : documentId.trim();
+    String docField = trimmedDoc.isEmpty() ? null : trimmedDoc;
+    return new ChunkExportResponse(Instant.now(), tableLabel, docField, all.size(), all);
+  }
 
   public ChunkListResponse getChunks(@Nullable String documentId, int limit, int offset) {
     ensureVectorTableAccessible();

@@ -2,7 +2,10 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.SecurityConfig;
+import com.kevinmazali.portfolio.config.SyncProperties;
+import com.kevinmazali.portfolio.service.DefaultQuestionSuggestionService;
 import com.kevinmazali.portfolio.service.DocumentIngestionService;
+import com.kevinmazali.portfolio.service.VectorStoreSyncService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -32,6 +35,15 @@ class DocumentPipelineControllerAdviceTest {
 
   @MockitoBean
   private DocumentIngestionService documentIngestionService;
+
+  @MockitoBean
+  private DefaultQuestionSuggestionService defaultQuestionSuggestionService;
+
+  @MockitoBean
+  private VectorStoreSyncService vectorStoreSyncService;
+
+  @MockitoBean
+  private SyncProperties syncProperties;
 
   @Test
   @WithMockUser(username = "admin", roles = "ADMIN")
