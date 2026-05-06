@@ -12,8 +12,9 @@ export default defineConfig({
     vue(),
     tailwindcss(),
     vueJsx(),
-    // DevTools breaks Vitest server bootstrap (configureServer rpc); keep for `vite dev` only.
-    ...(process.env.VITEST ? [] : [vueDevTools()]),
+    // DevTools breaks Vitest server bootstrap (configureServer rpc). Some Vite versions also
+    // crash `vite dev` with vue-devtools (rpc undefined). Enable with VUE_DEVTOOLS=1 when it works.
+    ...(process.env.VITEST || process.env.VUE_DEVTOOLS !== '1' ? [] : [vueDevTools()]),
   ],
   build: {
     rollupOptions: {

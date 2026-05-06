@@ -11,8 +11,8 @@ vi.mock('@/lib/posthog-consent', async () => {
   const actual = await vi.importActual<typeof import('@/lib/posthog-consent')>('@/lib/posthog-consent')
   return {
     ...actual,
-    saveAnalyticsConsent: vi.fn(),
-    hasAnalyticsConsent: vi.fn(() => false),
+    saveGranularConsent: vi.fn(),
+    getConsentRecord: vi.fn(() => null),
   }
 })
 
@@ -22,7 +22,7 @@ describe('CookieConsentSettingsModal', () => {
     useLangStore().setLanguage('en')
     cookieSettingsOpen.value = false
     vi.clearAllMocks()
-    vi.mocked(posthogConsent.hasAnalyticsConsent).mockReturnValue(false)
+    vi.mocked(posthogConsent.getConsentRecord).mockReturnValue(null)
   })
 
   function mountModal() {
@@ -47,23 +47,35 @@ describe('CookieConsentSettingsModal', () => {
     expect(dialog.exists()).toBe(true)
     expect(dialog.text()).toContain('Cookies and analytics')
     expect(dialog.text()).toContain('Necessary')
+    expect(dialog.text()).toContain('Pageview tracking')
+    expect(dialog.text()).toContain('Session recordings')
   })
 
-  it('save calls saveAnalyticsConsent and closes', async () => {
+  it('save calls saveGranularConsent and closes', async () => {
     const wrapper = mountModal()
     cookieSettingsOpen.value = true
     await nextTick()
     await flushPromises()
 
-    const analytics = wrapper.find('input[type="checkbox"]:not([disabled])')
-    await analytics.setValue(true)
+    const optionalBoxes = wrapper.findAll('input[type="checkbox"]:not([disabled])')
+    expect(optionalBoxes.length).toBe(4)
+    await optionalBoxes[0].setValue(true)
+    await optionalBoxes[1].setValue(true)
 
     const saveBtn = wrapper.findAll('button').find((b) => b.text().includes('Save choices'))
     expect(saveBtn).toBeDefined()
     await saveBtn!.trigger('click')
     await nextTick()
 
-    expect(posthogConsent.saveAnalyticsConsent).toHaveBeenCalledWith(true, 'settings')
+    expect(posthogConsent.saveGranularConsent).toHaveBeenCalledWith(
+      {
+        pageviews: true,
+        sessionRecording: true,
+        errorTracking: false,
+        featureFlags: false,
+      },
+      'settings',
+    )
     expect(cookieSettingsOpen.value).toBe(false)
   })
 

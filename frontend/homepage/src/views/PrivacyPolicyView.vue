@@ -7,7 +7,7 @@ const isNo = computed(() => langStore.language === 'no')
 
 const title = computed(() => (isNo.value ? 'Personvernerklæring' : 'Privacy Policy'))
 const lastUpdated = computed(() =>
-  isNo.value ? 'Sist oppdatert: april 2026' : 'Last updated: April 2026',
+  isNo.value ? 'Sist oppdatert: mai 2026' : 'Last updated: May 2026',
 )
 
 const sections = computed(() => {
@@ -29,9 +29,9 @@ const sections = computed(() => {
       {
         heading: '3. Informasjonskapsler og samtykke',
         paragraphs: [
-          'Nettstedet bruker PostHog for analyse og innsikt i hvordan sider og funksjoner brukes.',
-          'Analyse-cookies og lokal lagring brukes bare hvis du samtykker via samtykkebanneret.',
-          'Du kan når som helst åpne «Informasjonskapsler» i bunnteksten for å endre eller trekke tilbake samtykke.',
+          'Nettstedet bruker PostHog for analyse når du samtykker. Du kan velge hver kategori for seg: sidevisninger (navigasjon), valgfritt sesjonsopptak (anonymiserte replays med maskerte skjemafelt), feilsporing i nettleseren, samt funksjonsflagg og eksperimenter (f.eks. A/B-testing).',
+          'Teknisk lagring knyttet til disse valgene skjer i nettleseren (for eksempel lokalt lager) i tråd med innstillingene du lagrer.',
+          'Du kan når som helst åpne «Informasjonskapsler» i bunnteksten for å endre eller trekke tilbake samtykke per kategori.',
         ],
       },
       {
@@ -81,9 +81,9 @@ const sections = computed(() => {
     {
       heading: '3. Cookies and consent',
       paragraphs: [
-        'The Site uses PostHog analytics to understand how pages and features are used.',
-        'Analytics cookies and local storage are only used if you grant consent in the cookie banner.',
-        'You can open «Cookie Settings» in the footer at any time to change or withdraw consent.',
+        'The Site uses PostHog for analytics when you consent. You can choose each category separately: pageview tracking (navigation), optional session replay (anonymized replays with masked form fields), in-browser error reporting, and feature flags / experiments (for example A/B tests).',
+        'Technical storage related to these choices may be kept in your browser (for example local storage) according to the preferences you save.',
+        'You can open «Cookie Settings» in the footer at any time to change or withdraw consent by category.',
       ],
     },
     {

@@ -12,18 +12,29 @@ vi.mock('../posthog-consent', async () => {
   const actual = await vi.importActual<typeof import('../posthog-consent')>('../posthog-consent')
   return {
     ...actual,
-    hasAnalyticsConsent: vi.fn(() => true),
+    hasPageviewConsent: vi.fn(() => true),
+    hasErrorTrackingConsent: vi.fn(() => true),
     isPosthogEnabled: vi.fn(() => true),
   }
 })
 
 vi.mock('../posthog-sdk', () => ({
   isPosthogSdkInitialized: vi.fn(() => true),
+  captureAnalyticsEvent: vi.fn(),
 }))
 
-import { captureClientException, trackEvent } from '../analytics'
-import { __setPosthogTestEnv, hasAnalyticsConsent, isPosthogEnabled } from '../posthog-consent'
-import { isPosthogSdkInitialized } from '../posthog-sdk'
+import {
+  captureClientException,
+  captureProductAnalyticsEvent,
+  trackEvent,
+} from '../analytics'
+import {
+  __setPosthogTestEnv,
+  hasErrorTrackingConsent,
+  hasPageviewConsent,
+  isPosthogEnabled,
+} from '../posthog-consent'
+import { captureAnalyticsEvent, isPosthogSdkInitialized } from '../posthog-sdk'
 
 describe('analytics helpers', () => {
   beforeEach(() => {
@@ -37,22 +48,34 @@ describe('analytics helpers', () => {
       }
     ).captureException = vi.fn()
     vi.mocked(isPosthogEnabled).mockReturnValue(true)
-    vi.mocked(hasAnalyticsConsent).mockReturnValue(true)
+    vi.mocked(hasPageviewConsent).mockReturnValue(true)
+    vi.mocked(hasErrorTrackingConsent).mockReturnValue(true)
     vi.mocked(isPosthogSdkInitialized).mockReturnValue(true)
   })
 
-  it('tracks events when analytics is ready', () => {
+  it('tracks events when pageview consent is ready', () => {
     trackEvent('cta_click', { label: 'hero' })
     expect(posthog.capture).toHaveBeenCalledWith('cta_click', { label: 'hero' })
   })
 
-  it('does not track events when consent is missing', () => {
-    vi.mocked(hasAnalyticsConsent).mockReturnValue(false)
+  it('does not track events when pageview consent is missing', () => {
+    vi.mocked(hasPageviewConsent).mockReturnValue(false)
     trackEvent('cta_click')
     expect(posthog.capture).not.toHaveBeenCalled()
   })
 
-  it('captures exceptions when analytics is ready', () => {
+  it('captureProductAnalyticsEvent forwards via SDK when ready', () => {
+    captureProductAnalyticsEvent('portfolio_chat_ask_submitted', { x: 1 })
+    expect(captureAnalyticsEvent).toHaveBeenCalledWith('portfolio_chat_ask_submitted', { x: 1 })
+  })
+
+  it('does not capture product events when pageview consent is missing', () => {
+    vi.mocked(hasPageviewConsent).mockReturnValue(false)
+    captureProductAnalyticsEvent('portfolio_chat_ask_submitted')
+    expect(captureAnalyticsEvent).not.toHaveBeenCalled()
+  })
+
+  it('captures exceptions when error-tracking consent is ready', () => {
     const err = new Error('boom')
     captureClientException(err)
     expect(posthog.captureException).toHaveBeenCalledWith(err)
@@ -69,15 +92,24 @@ describe('analytics helpers', () => {
     })
   })
 
+  it('does not capture exceptions when error-tracking consent is missing', () => {
+    vi.mocked(hasErrorTrackingConsent).mockReturnValue(false)
+    captureClientException(new Error('boom'))
+    expect(posthog.captureException).not.toHaveBeenCalled()
+  })
+
   it('does nothing when analytics is not enabled or initialized', () => {
     vi.mocked(isPosthogEnabled).mockReturnValue(false)
-    vi.mocked(hasAnalyticsConsent).mockReturnValue(true)
+    vi.mocked(hasPageviewConsent).mockReturnValue(true)
+    vi.mocked(hasErrorTrackingConsent).mockReturnValue(true)
     vi.mocked(isPosthogSdkInitialized).mockReturnValue(true)
 
     trackEvent('cta_click')
+    captureProductAnalyticsEvent('x')
     captureClientException(new Error('boom'))
 
     expect(posthog.capture).not.toHaveBeenCalled()
     expect(posthog.captureException).not.toHaveBeenCalled()
+    expect(captureAnalyticsEvent).not.toHaveBeenCalled()
   })
 })
