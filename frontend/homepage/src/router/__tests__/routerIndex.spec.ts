@@ -93,6 +93,9 @@ describe('application router (index)', () => {
 		await router.push('/admin/chunks')
 		expect(router.currentRoute.value.name).toBe('admin-chunks')
 
+		await router.push('/admin/question-suggestions')
+		expect(router.currentRoute.value.name).toBe('admin-question-suggestions')
+
 		await router.push('/admin/prompts')
 		expect(router.currentRoute.value.name).toBe('admin-prompts')
 
