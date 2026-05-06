@@ -54,18 +54,20 @@ describe('CookieConsentBanner', () => {
     expect(wrapper.find('[role="region"]').exists()).toBe(true)
   })
 
-  it('mentions session recordings in English banner copy', async () => {
+  it('mentions customization and session replay in English banner copy', async () => {
     useLangStore().setLanguage('en')
     const wrapper = mountBanner()
     await nextTick()
-    expect(wrapper.text()).toContain('anonymized session recordings')
+    expect(wrapper.text()).toContain('session replay')
+    expect(wrapper.text()).toContain('Customize')
   })
 
-  it('mentions session recordings in Norwegian banner copy', async () => {
+  it('mentions customization in Norwegian banner copy', async () => {
     useLangStore().setLanguage('no')
     const wrapper = mountBanner()
     await nextTick()
-    expect(wrapper.text()).toContain('anonymisert opptak av sesjoner')
+    expect(wrapper.text()).toContain('sesjonsopptak')
+    expect(wrapper.text()).toContain('Tilpass')
   })
 
   it('does not render when consent was previously recorded', async () => {

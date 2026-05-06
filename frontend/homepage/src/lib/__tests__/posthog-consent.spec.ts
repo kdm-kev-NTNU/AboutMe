@@ -23,17 +23,33 @@ import {
   grantAllCookies,
   grantNecessaryCookiesOnly,
   rejectOptionalCookies,
-  saveAnalyticsConsent,
+  saveGranularConsent,
   getConsentRecord,
   hasAnalyticsConsent,
+  hasPageviewConsent,
   isCookieBannerDismissed,
   isPosthogEnabled,
   COOKIE_CONSENT_RECORD_KEY,
+  CONSENT_RECORD_KEY_V1,
   PRIVACY_POLICY_VERSION,
   registerPosthogActivationHandler,
   __setPosthogTestEnv,
 } from '../posthog-consent'
 import { initializePosthogSdk, isPosthogSdkInitialized } from '../posthog-sdk'
+
+const fullGrant = {
+  pageviews: true,
+  sessionRecording: true,
+  errorTracking: true,
+  featureFlags: true,
+}
+
+const fullDeny = {
+  pageviews: false,
+  sessionRecording: false,
+  errorTracking: false,
+  featureFlags: false,
+}
 
 describe('posthog-consent', () => {
   let localStorageMock: Record<string, string>
@@ -63,12 +79,12 @@ describe('posthog-consent', () => {
     })
   })
 
-  it('activates analytics when stored consent is granted', () => {
+  it('activates analytics when stored consent grants all categories', () => {
     localStorage.setItem(
       COOKIE_CONSENT_RECORD_KEY,
       JSON.stringify({
         dismissed: true,
-        analytics: true,
+        ...fullGrant,
         policyVersion: PRIVACY_POLICY_VERSION,
         updatedAt: new Date().toISOString(),
         source: 'banner_accept_all',
@@ -79,10 +95,42 @@ describe('posthog-consent', () => {
     registerPosthogActivationHandler(handler)
     applyStoredTrackingConsent()
 
-    expect(initializePosthogSdk).toHaveBeenCalled()
+    expect(initializePosthogSdk).toHaveBeenCalledWith({
+      key: 'phc_123',
+      host: 'https://eu.i.posthog.com',
+      disableSessionRecording: false,
+    })
     expect(posthog.opt_in_capturing).toHaveBeenCalled()
     expect(posthog.startSessionRecording).toHaveBeenCalled()
     expect(handler).toHaveBeenCalled()
+  })
+
+  it('initializes with session recording disabled when only pageviews are granted', () => {
+    localStorage.setItem(
+      COOKIE_CONSENT_RECORD_KEY,
+      JSON.stringify({
+        dismissed: true,
+        pageviews: true,
+        sessionRecording: false,
+        errorTracking: false,
+        featureFlags: false,
+        policyVersion: PRIVACY_POLICY_VERSION,
+        updatedAt: new Date().toISOString(),
+        source: 'settings',
+      }),
+    )
+
+    registerPosthogActivationHandler(vi.fn())
+    applyStoredTrackingConsent()
+
+    expect(initializePosthogSdk).toHaveBeenCalledWith({
+      key: 'phc_123',
+      host: 'https://eu.i.posthog.com',
+      disableSessionRecording: true,
+    })
+    expect(posthog.opt_in_capturing).toHaveBeenCalled()
+    expect(posthog.stopSessionRecording).toHaveBeenCalled()
+    expect(posthog.startSessionRecording).not.toHaveBeenCalled()
   })
 
   it('deactivates analytics when stored consent is denied', () => {
@@ -91,7 +139,7 @@ describe('posthog-consent', () => {
       COOKIE_CONSENT_RECORD_KEY,
       JSON.stringify({
         dismissed: true,
-        analytics: false,
+        ...fullDeny,
         policyVersion: PRIVACY_POLICY_VERSION,
         updatedAt: new Date().toISOString(),
         source: 'banner_necessary_only',
@@ -111,7 +159,8 @@ describe('posthog-consent', () => {
     grantAllCookies('banner_accept_all')
 
     const record = JSON.parse(localStorageMock[COOKIE_CONSENT_RECORD_KEY])
-    expect(record.analytics).toBe(true)
+    expect(record.pageviews).toBe(true)
+    expect(record.sessionRecording).toBe(true)
     expect(record.source).toBe('banner_accept_all')
     expect(record.policyVersion).toBe(PRIVACY_POLICY_VERSION)
     expect(posthog.opt_in_capturing).toHaveBeenCalled()
@@ -121,7 +170,7 @@ describe('posthog-consent', () => {
   it('persists denied analytics on grantNecessaryCookiesOnly', () => {
     grantNecessaryCookiesOnly('banner_necessary_only')
     const record = JSON.parse(localStorageMock[COOKIE_CONSENT_RECORD_KEY])
-    expect(record.analytics).toBe(false)
+    expect(record.pageviews).toBe(false)
     expect(localStorageMock).toHaveProperty(COOKIE_CONSENT_RECORD_KEY)
   })
 
@@ -130,22 +179,31 @@ describe('posthog-consent', () => {
     rejectOptionalCookies('banner_reject')
 
     const record = JSON.parse(localStorageMock[COOKIE_CONSENT_RECORD_KEY])
-    expect(record.analytics).toBe(false)
+    expect(record.pageviews).toBe(false)
     expect(record.source).toBe('banner_reject')
     expect(posthog.stopSessionRecording).toHaveBeenCalledTimes(1)
     expect(posthog.opt_out_capturing).toHaveBeenCalledTimes(1)
     expect(posthog.reset).toHaveBeenCalledTimes(1)
   })
 
-  it('saveAnalyticsConsent stores and applies true choice', () => {
+  it('saveGranularConsent stores and applies partial choices', () => {
     const handler = vi.fn()
     registerPosthogActivationHandler(handler)
-    saveAnalyticsConsent(true, 'settings')
+    saveGranularConsent(
+      {
+        pageviews: true,
+        sessionRecording: false,
+        errorTracking: true,
+        featureFlags: false,
+      },
+      'settings',
+    )
 
     expect(hasAnalyticsConsent()).toBe(true)
+    expect(hasPageviewConsent()).toBe(true)
     expect(isCookieBannerDismissed()).toBe(true)
     expect(posthog.opt_in_capturing).toHaveBeenCalledTimes(1)
-    expect(posthog.startSessionRecording).toHaveBeenCalledTimes(1)
+    expect(posthog.stopSessionRecording).toHaveBeenCalled()
     expect(handler).toHaveBeenCalledTimes(1)
   })
 
@@ -153,7 +211,8 @@ describe('posthog-consent', () => {
     vi.mocked(posthog.get_explicit_consent_status).mockReturnValue('granted')
 
     const record = getConsentRecord()
-    expect(record?.analytics).toBe(true)
+    expect(record?.pageviews).toBe(true)
+    expect(record?.sessionRecording).toBe(true)
     expect(record?.source).toBe('legacy_migration')
   })
 
@@ -161,8 +220,28 @@ describe('posthog-consent', () => {
     localStorage.setItem('posthog_tracking_consent', 'denied')
 
     const record = getConsentRecord()
-    expect(record?.analytics).toBe(false)
+    expect(record?.pageviews).toBe(false)
     expect(record?.source).toBe('legacy_migration')
+  })
+
+  it('migrates v1 record with analytics true to full granular grant', () => {
+    localStorage.setItem(
+      CONSENT_RECORD_KEY_V1,
+      JSON.stringify({
+        dismissed: true,
+        analytics: true,
+        policyVersion: '2026-04-22',
+        updatedAt: new Date().toISOString(),
+        source: 'banner_accept_all',
+      }),
+    )
+
+    const record = getConsentRecord()
+    expect(record?.pageviews).toBe(true)
+    expect(record?.sessionRecording).toBe(true)
+    expect(record?.errorTracking).toBe(true)
+    expect(record?.featureFlags).toBe(true)
+    expect(localStorageMock[COOKIE_CONSENT_RECORD_KEY]).toBeDefined()
   })
 
   it('isPosthogEnabled reflects env override state', () => {
