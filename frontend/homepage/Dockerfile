@@ -4,9 +4,9 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json ./
+COPY package.json ./
 ENV CYPRESS_INSTALL_BINARY=0
-RUN npm ci
+RUN npm install --ignore-scripts && npm rebuild
 
 # Copy source and build
 COPY . .
