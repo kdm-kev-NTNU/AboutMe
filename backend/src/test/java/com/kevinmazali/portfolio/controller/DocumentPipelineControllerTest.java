@@ -2,13 +2,16 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.SecurityConfig;
+import com.kevinmazali.portfolio.config.SyncProperties;
 import com.kevinmazali.portfolio.model.ChunkExportResponse;
 import com.kevinmazali.portfolio.model.ChunkItem;
 import com.kevinmazali.portfolio.model.DefaultQuestionSuggestionResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
+import com.kevinmazali.portfolio.model.VectorStoreSyncResult;
 import com.kevinmazali.portfolio.service.DefaultQuestionSuggestionService;
 import com.kevinmazali.portfolio.service.DocumentIngestionService;
+import com.kevinmazali.portfolio.service.VectorStoreSyncService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -54,6 +57,12 @@ class DocumentPipelineControllerTest {
 
 	@MockitoBean
 	private DefaultQuestionSuggestionService defaultQuestionSuggestionService;
+
+	@MockitoBean
+	private VectorStoreSyncService vectorStoreSyncService;
+
+	@MockitoBean
+	private SyncProperties syncProperties;
 
 	@Test
 	@WithMockUser(username = "admin", roles = "ADMIN")
@@ -220,6 +229,48 @@ class DocumentPipelineControllerTest {
 			.andExpect(jsonPath("$.modelUsed").value("test-model"));
 
 		verify(defaultQuestionSuggestionService).suggest(any());
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void syncFromRemoteReturns403WhenDisabled() throws Exception {
+		when(syncProperties.isEnabled()).thenReturn(false);
+
+		mockMvc.perform(post("/admin/tools/documents/sync-from-remote").param("clean", "true"))
+			.andExpect(status().isForbidden());
+
+		verify(vectorStoreSyncService, never()).syncFromRemote(org.mockito.ArgumentMatchers.anyBoolean());
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void syncFromRemoteReturns400WhenUrlMissing() throws Exception {
+		when(syncProperties.isEnabled()).thenReturn(true);
+		when(syncProperties.getSourceUrl()).thenReturn("  ");
+		when(syncProperties.getSourceUsername()).thenReturn("u");
+
+		mockMvc.perform(post("/admin/tools/documents/sync-from-remote"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error").value(containsString("Sync source URL")));
+
+		verify(vectorStoreSyncService, never()).syncFromRemote(org.mockito.ArgumentMatchers.anyBoolean());
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void syncFromRemoteDelegatesToService() throws Exception {
+		when(syncProperties.isEnabled()).thenReturn(true);
+		when(syncProperties.getSourceUrl()).thenReturn("jdbc:postgresql://h:5432/db");
+		when(syncProperties.getSourceUsername()).thenReturn("u");
+		when(vectorStoreSyncService.syncFromRemote(true))
+			.thenReturn(new VectorStoreSyncResult(3L, 12L, "h:5432/db", true));
+
+		mockMvc.perform(post("/admin/tools/documents/sync-from-remote").param("clean", "true"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.rowsSynced").value(3))
+			.andExpect(jsonPath("$.truncatedLocalFirst").value(true));
+
+		verify(vectorStoreSyncService).syncFromRemote(true);
 	}
 
 	@Test
