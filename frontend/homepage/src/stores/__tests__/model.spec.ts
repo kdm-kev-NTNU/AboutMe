@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { listChatModels, ChatModelOptionProvider, ChatModelTag } from '@/api/generated/portfolio'
+import { listChatModels, ChatModelOptionProvider, ModelTag } from '@/api/generated/portfolio'
 import { isChatProvider, useChatModelStore } from '../model'
 
 vi.mock('@/api/generated/portfolio', async (importOriginal) => {
@@ -136,13 +136,13 @@ describe('useChatModelStore', () => {
           id: 'r',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'R',
-          tags: [ChatModelTag.REASONING],
+          tags: [ModelTag.REASONING],
         },
         {
           id: 'f',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'F',
-          tags: [ChatModelTag.FAST],
+          tags: [ModelTag.FAST],
         },
       ],
     })
@@ -159,13 +159,13 @@ describe('useChatModelStore', () => {
           id: 'r',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'R',
-          tags: [ChatModelTag.REASONING],
+          tags: [ModelTag.REASONING],
         },
         {
           id: 'f',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'F',
-          tags: [ChatModelTag.FAST],
+          tags: [ModelTag.FAST],
         },
       ],
     })
@@ -193,13 +193,13 @@ describe('useChatModelStore', () => {
           id: 'slow',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'S',
-          tags: [ChatModelTag.REASONING],
+          tags: [ModelTag.REASONING],
         },
         {
           id: 'fast',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'F',
-          tags: [ChatModelTag.FAST],
+          tags: [ModelTag.FAST],
         },
       ],
     })
@@ -216,13 +216,13 @@ describe('useChatModelStore', () => {
           id: 'slow',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'S',
-          tags: [ChatModelTag.REASONING],
+          tags: [ModelTag.REASONING],
         },
         {
           id: 'fast',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'F',
-          tags: [ChatModelTag.FAST],
+          tags: [ModelTag.FAST],
         },
       ],
     })
@@ -265,13 +265,13 @@ describe('useChatModelStore', () => {
           id: 'y',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'Y',
-          tags: [ChatModelTag.REASONING],
+          tags: [ModelTag.REASONING],
         },
         {
           id: 'x',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'X',
-          tags: [ChatModelTag.FAST],
+          tags: [ModelTag.FAST],
         },
       ],
       headers: new Headers(),
@@ -290,13 +290,13 @@ describe('useChatModelStore', () => {
           id: 'y',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'Y',
-          tags: [ChatModelTag.REASONING],
+          tags: [ModelTag.REASONING],
         },
         {
           id: 'x',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'X',
-          tags: [ChatModelTag.FAST],
+          tags: [ModelTag.FAST],
         },
       ],
       headers: new Headers(),
