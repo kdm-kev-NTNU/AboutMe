@@ -151,6 +151,15 @@
           }
         }
       },
+      "VectorStoreSyncResult": {
+        "type": "object",
+        "properties": {
+          "rowsSynced": { "type": "integer", "format": "int64" },
+          "durationMs": { "type": "integer", "format": "int64" },
+          "sourceHostMasked": { "type": "string" },
+          "truncatedLocalFirst": { "type": "boolean" }
+        }
+      },
       "ChunkItem": {
         "type": "object",
         "properties": {
@@ -173,6 +182,44 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/ChunkItem" }
           }
+        }
+      },
+      "ChunkExportResponse": {
+        "type": "object",
+        "properties": {
+          "exportedAt": { "type": "string", "format": "date-time" },
+          "collectionName": { "type": "string" },
+          "documentId": { "type": "string", "nullable": true },
+          "totalChunks": { "type": "integer", "format": "int64" },
+          "chunks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChunkItem" }
+          }
+        }
+      },
+      "DefaultQuestionSuggestionRequest": {
+        "type": "object",
+        "required": ["source", "model"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "currentChunks or uploadedJson"
+          },
+          "documentId": { "type": "string", "nullable": true },
+          "chunksJson": { "type": "string", "nullable": true },
+          "model": { "type": "string" },
+          "maxQuestions": { "type": "integer", "format": "int32", "nullable": true },
+          "language": { "type": "string", "nullable": true }
+        }
+      },
+      "DefaultQuestionSuggestionResponse": {
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "modelUsed": { "type": "string" }
         }
       },
       "PathIngestRequest": {
@@ -599,6 +646,32 @@
         }
       }
     },
+    "/admin/tools/documents/chunks/export": {
+      "get": {
+        "tags": ["Admin documents"],
+        "summary": "Export all chunks in the active collection",
+        "operationId": "adminDocumentsChunksExport",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChunkExportResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/tools/documents/chunks": {
       "get": {
         "tags": ["Admin documents"],
@@ -631,6 +704,40 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ChunkListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/documents/question-suggestions": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Suggest default chatbot starter questions from chunks",
+        "operationId": "adminDocumentsQuestionSuggestions",
+        "security": [{ "basicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DefaultQuestionSuggestionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DefaultQuestionSuggestionResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
               }
             }
           }
@@ -673,6 +780,42 @@
               }
             }
           }
+        }
+      }
+    },
+    "/admin/tools/documents/sync-from-remote": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Sync vector_store from remote Postgres into local DB",
+        "operationId": "adminDocumentsSyncFromRemote",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          {
+            "name": "clean",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false },
+            "description": "When true, TRUNCATE local vector_store before upsert"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VectorStoreSyncResult" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          },
+          "403": { "description": "Sync disabled" }
         }
       }
     },

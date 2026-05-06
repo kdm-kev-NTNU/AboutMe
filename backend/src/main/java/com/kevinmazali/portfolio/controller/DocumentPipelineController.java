@@ -1,12 +1,19 @@
 package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.config.OpenApiConfig;
+import com.kevinmazali.portfolio.model.ChunkExportResponse;
 import com.kevinmazali.portfolio.model.ChunkListResponse;
+import com.kevinmazali.portfolio.model.DefaultQuestionSuggestionRequest;
+import com.kevinmazali.portfolio.model.DefaultQuestionSuggestionResponse;
 import com.kevinmazali.portfolio.model.VectorStoreInfoResponse;
+import com.kevinmazali.portfolio.model.VectorStoreSyncResult;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
 import com.kevinmazali.portfolio.model.PathIngestRequest;
+import com.kevinmazali.portfolio.config.SyncProperties;
+import com.kevinmazali.portfolio.service.DefaultQuestionSuggestionService;
 import com.kevinmazali.portfolio.service.DocumentIngestionService;
+import com.kevinmazali.portfolio.service.VectorStoreSyncService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -17,6 +24,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,6 +58,9 @@ public class DocumentPipelineController {
       "pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
 
   private final DocumentIngestionService documentIngestionService;
+  private final DefaultQuestionSuggestionService defaultQuestionSuggestionService;
+  private final VectorStoreSyncService vectorStoreSyncService;
+  private final SyncProperties syncProperties;
 
   @Operation(summary = "Upload and ingest a document")
   @ApiResponses({
@@ -153,6 +165,18 @@ public class DocumentPipelineController {
     return documentIngestionService.listDocuments();
   }
 
+  @Operation(summary = "Export all chunks in the active collection (JSON)",
+      description = "Full listing for download; optional documentId filters by content hash.")
+  @ApiResponse(responseCode = "200",
+      content = @Content(schema = @Schema(implementation = ChunkExportResponse.class)))
+  @GetMapping("/chunks/export")
+  public ChunkExportResponse exportChunks(
+      @Parameter(description = "Filter by document_id (content hash)")
+      @RequestParam(value = "documentId", required = false) String documentId
+  ) {
+    return documentIngestionService.exportChunks(documentId);
+  }
+
   @Operation(summary = "List chunks in the active collection",
       description = "Paginated; optional documentId filters by content hash (document_id in metadata).")
   @ApiResponse(responseCode = "200",
@@ -167,6 +191,19 @@ public class DocumentPipelineController {
       @RequestParam(value = "offset", defaultValue = "0") int offset
   ) {
     return documentIngestionService.getChunks(documentId, limit, offset);
+  }
+
+  @Operation(summary = "Suggest default chatbot starter questions from chunks (LLM)")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "OK",
+          content = @Content(schema = @Schema(implementation = DefaultQuestionSuggestionResponse.class))),
+      @ApiResponse(responseCode = "400", description = "Invalid request")
+  })
+  @PostMapping(value = "/question-suggestions", consumes = MediaType.APPLICATION_JSON_VALUE)
+  public DefaultQuestionSuggestionResponse questionSuggestions(
+      @RequestBody DefaultQuestionSuggestionRequest body
+  ) {
+    return defaultQuestionSuggestionService.suggest(body);
   }
 
   @Operation(summary = "Delete document by id")
@@ -191,6 +228,35 @@ public class DocumentPipelineController {
   @GetMapping("/collections")
   public VectorStoreInfoResponse collections() {
     return documentIngestionService.describeCollections();
+  }
+
+  @Operation(summary = "Sync vector_store from remote Postgres into local DB",
+      description = "Requires portfolio.sync.enabled and JDBC source settings (e.g. Railway). Copies id, content, metadata, embedding.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Sync finished",
+          content = @Content(schema = @Schema(implementation = VectorStoreSyncResult.class))),
+      @ApiResponse(responseCode = "400", description = "Missing or invalid sync configuration",
+          content = @Content(schema = @Schema(implementation = com.kevinmazali.portfolio.model.ApiError.class))),
+      @ApiResponse(responseCode = "403", description = "Sync feature disabled")
+  })
+  @PostMapping("/sync-from-remote")
+  public VectorStoreSyncResult syncFromRemote(
+      @Parameter(description = "When true, TRUNCATE local vector_store before upserting remote rows")
+      @RequestParam(value = "clean", defaultValue = "false") boolean clean
+  ) {
+    if (!syncProperties.isEnabled()) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+          "Vector store sync is disabled. Set SYNC_ENABLED=true and remote JDBC env vars in backend/.env for local use.");
+    }
+    String url = syncProperties.getSourceUrl() == null ? "" : syncProperties.getSourceUrl().trim();
+    if (url.isBlank()) {
+      throw new IllegalArgumentException("Sync source URL is not configured (SYNC_SOURCE_URL / portfolio.sync.source-url).");
+    }
+    String user = syncProperties.getSourceUsername() == null ? "" : syncProperties.getSourceUsername().trim();
+    if (user.isBlank()) {
+      throw new IllegalArgumentException("Sync source username is not configured (SYNC_SOURCE_USERNAME).");
+    }
+    return vectorStoreSyncService.syncFromRemote(clean);
   }
 
   /**

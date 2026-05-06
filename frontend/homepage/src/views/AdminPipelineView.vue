@@ -9,6 +9,7 @@ import {
   adminDocumentsIngestByPath,
   adminDocumentsList,
   adminDocumentsReseed,
+  adminDocumentsSyncFromRemote,
   adminDocumentsUpload,
   adminDocumentsUploadBatch,
   type VectorStoreInfoResponse,
@@ -42,8 +43,20 @@ const pathIngestResults = ref<IngestionResult[]>([])
 const reseedBusy = ref(false)
 const reseedMessage = ref('')
 
+const syncClean = ref(true)
+const syncBusy = ref(false)
+const syncMessage = ref('')
+
 function formatHttpError(status: number, data: unknown): string {
   if (status === 401) return 'Ikke autorisert (logg inn som admin)'
+  if (status === 403) {
+    if (data && typeof data === 'object') {
+      const o = data as Record<string, unknown>
+      if (typeof o.detail === 'string' && o.detail) return o.detail
+      if (typeof o.message === 'string' && o.message) return o.message
+    }
+    return 'Ikke tillatt (403) — f.eks. synk deaktivert på serveren'
+  }
   if (data && typeof data === 'object') {
     const o = data as Record<string, unknown>
     if (typeof o.error === 'string' && o.error) return o.error
@@ -66,6 +79,39 @@ async function loadData() {
     chromaInfo.value = cRes.data
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Ukjent feil'
+  }
+}
+
+async function syncFromRailway() {
+  if (
+    !confirm(
+      syncClean.value
+        ? 'Tømme lokal vector_store og kopiere alle rader fra Railway (SYNC_* i backend/.env)?'
+        : 'Kopiere/oppdatere rader fra Railway inn i lokal vector_store uten å tømme tabellen først?',
+    )
+  ) {
+    return
+  }
+  syncBusy.value = true
+  syncMessage.value = ''
+  error.value = ''
+  try {
+    const r = await adminDocumentsSyncFromRemote({ clean: syncClean.value })
+    if (r.status === 200) {
+      const d = r.data
+      syncMessage.value = `Synket ${d.rowsSynced ?? 0} rader på ${d.durationMs ?? '?'} ms (${d.sourceHostMasked ?? 'ukjent vert'}).`
+      await loadData()
+      return
+    }
+    if (r.status === 400 && r.data && typeof r.data === 'object') {
+      const o = r.data as { error?: string }
+      throw new Error(o.error ?? 'Ugyldig forespørsel')
+    }
+    throw new Error(formatHttpError(r.status, r.data))
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Ukjent feil'
+  } finally {
+    syncBusy.value = false
   }
 }
 
@@ -272,10 +318,13 @@ onMounted(() => {
 
     <main class="mx-auto max-w-xl px-4 pt-8">
       <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Document pipeline</h1>
-      <p class="text-sm text-gray-600 mb-6 leading-relaxed">
+        <p class="text-sm text-gray-600 mb-6 leading-relaxed">
         Last opp og indekser dokumenter til PostgreSQL med pgvector (Spring AI). Krever admin-innlogging. For å inspisere
         chunks og metadata, gå til
         <RouterLink to="/admin/chunks" class="text-blue-600 hover:underline">Chunk viewer</RouterLink>.
+        Synk fra Railway krever <code class="font-mono text-[11px] bg-gray-100 px-1 rounded">SYNC_ENABLED=true</code> og
+        JDBC-variabler i <code class="font-mono text-[11px] bg-gray-100 px-1 rounded">backend/.env</code> (se
+        <code class="font-mono text-[11px]">.env.example</code>).
       </p>
 
       <!-- Vector store summary card -->
@@ -299,11 +348,11 @@ onMounted(() => {
           </ul>
         </div>
         <p v-else class="text-gray-500 text-sm">Laster…</p>
-        <div class="mt-4 flex flex-wrap gap-2">
+        <div class="mt-4 flex flex-wrap gap-2 items-center">
           <button
             type="button"
             class="px-3 py-2 text-sm rounded-md border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
-            :disabled="busy || reseedBusy"
+            :disabled="busy || reseedBusy || syncBusy"
             @click="loadData"
           >
             Oppdater
@@ -311,12 +360,28 @@ onMounted(() => {
           <button
             type="button"
             class="px-3 py-2 text-sm rounded-md border border-amber-200 bg-amber-50 hover:bg-amber-100 cursor-pointer disabled:opacity-50"
-            :disabled="busy || reseedBusy"
+            :disabled="busy || reseedBusy || syncBusy"
             @click="reseedClasspath"
           >
             {{ reseedBusy ? 'Re-seeder…' : 'Re-seed seed-dokumenter' }}
           </button>
+          <span class="text-gray-300 hidden sm:inline">|</span>
+          <label class="flex items-center gap-2 text-xs text-gray-700">
+            <input v-model="syncClean" type="checkbox" class="rounded border-gray-300" />
+            Tøm lokal tabell før synk
+          </label>
+          <button
+            type="button"
+            class="px-3 py-2 text-sm rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 cursor-pointer disabled:opacity-50"
+            :disabled="busy || reseedBusy || syncBusy"
+            @click="syncFromRailway"
+          >
+            {{ syncBusy ? 'Synker…' : 'Synk fra Railway' }}
+          </button>
         </div>
+        <p v-if="syncMessage" class="mt-2 text-sm text-blue-800 rounded-md bg-blue-50/80 px-2 py-1.5">
+          {{ syncMessage }}
+        </p>
         <p v-if="reseedMessage" class="mt-2 text-sm text-green-700 rounded-md bg-green-50/80 px-2 py-1.5">
           {{ reseedMessage }}
         </p>

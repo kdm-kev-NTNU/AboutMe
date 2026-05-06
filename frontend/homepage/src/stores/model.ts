@@ -3,7 +3,7 @@ import {
   listChatModels,
   type ChatModelOption,
   ChatModelOptionProvider,
-  ChatModelTag,
+  ModelTag,
 } from '@/api/generated/portfolio'
 import { useAuthStore } from '@/stores/auth'
 
@@ -68,8 +68,8 @@ export const useChatModelStore = defineStore('chatModel', {
       useAuthStore().restore()
       const authed = Boolean(useAuthStore().basicToken)
       const pick = authed
-        ? list.find((m) => m.tags?.includes(ChatModelTag.REASONING)) ?? list[0]
-        : list.find((m) => m.tags?.includes(ChatModelTag.FAST)) ?? list[0]
+        ? list.find((m) => m.tags?.includes(ModelTag.REASONING)) ?? list[0]
+        : list.find((m) => m.tags?.includes(ModelTag.FAST)) ?? list[0]
       if (pick?.id) {
         this.setSelectedModelId(pick.id)
       }
@@ -89,8 +89,8 @@ export const useChatModelStore = defineStore('chatModel', {
         useAuthStore().restore()
         const authed = Boolean(useAuthStore().basicToken)
         const first = authed
-          ? this.models.find((m) => m.tags?.includes(ChatModelTag.REASONING)) ?? this.models[0]
-          : this.models.find((m) => m.tags?.includes(ChatModelTag.FAST)) ?? this.models[0]
+          ? this.models.find((m) => m.tags?.includes(ModelTag.REASONING)) ?? this.models[0]
+          : this.models.find((m) => m.tags?.includes(ModelTag.FAST)) ?? this.models[0]
         if (first.id) {
           this.selectedModelId = first.id
           this.persistModelId()

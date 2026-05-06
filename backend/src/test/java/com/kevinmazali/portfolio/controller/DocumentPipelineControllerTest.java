@@ -2,9 +2,16 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.SecurityConfig;
+import com.kevinmazali.portfolio.config.SyncProperties;
+import com.kevinmazali.portfolio.model.ChunkExportResponse;
+import com.kevinmazali.portfolio.model.ChunkItem;
+import com.kevinmazali.portfolio.model.DefaultQuestionSuggestionResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
+import com.kevinmazali.portfolio.model.VectorStoreSyncResult;
+import com.kevinmazali.portfolio.service.DefaultQuestionSuggestionService;
 import com.kevinmazali.portfolio.service.DocumentIngestionService;
+import com.kevinmazali.portfolio.service.VectorStoreSyncService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -15,7 +22,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -24,6 +33,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -44,6 +54,15 @@ class DocumentPipelineControllerTest {
 
 	@MockitoBean
 	private DocumentIngestionService documentIngestionService;
+
+	@MockitoBean
+	private DefaultQuestionSuggestionService defaultQuestionSuggestionService;
+
+	@MockitoBean
+	private VectorStoreSyncService vectorStoreSyncService;
+
+	@MockitoBean
+	private SyncProperties syncProperties;
 
 	@Test
 	@WithMockUser(username = "admin", roles = "ADMIN")
@@ -175,6 +194,83 @@ class DocumentPipelineControllerTest {
 				.content("{\"paths\":[]}"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$[0].message").value("No paths provided"));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void exportChunksDelegatesToService() throws Exception {
+		when(documentIngestionService.exportChunks(any())).thenReturn(
+			new ChunkExportResponse(
+				Instant.parse("2026-01-01T00:00:00Z"),
+				"vector_store",
+				null,
+				1L,
+				List.of(new ChunkItem("c1", "f.pdf", 0, "hello", Map.of()))));
+
+		mockMvc.perform(get("/admin/tools/documents/chunks/export"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalChunks").value(1))
+			.andExpect(jsonPath("$.chunks[0].id").value("c1"));
+
+		verify(documentIngestionService).exportChunks(isNull());
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void questionSuggestionsDelegatesToService() throws Exception {
+		when(defaultQuestionSuggestionService.suggest(any()))
+			.thenReturn(new DefaultQuestionSuggestionResponse(List.of("Q?"), "test-model"));
+
+		mockMvc.perform(post("/admin/tools/documents/question-suggestions")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"source\":\"currentChunks\",\"model\":\"test-model\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.suggestions[0]").value("Q?"))
+			.andExpect(jsonPath("$.modelUsed").value("test-model"));
+
+		verify(defaultQuestionSuggestionService).suggest(any());
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void syncFromRemoteReturns403WhenDisabled() throws Exception {
+		when(syncProperties.isEnabled()).thenReturn(false);
+
+		mockMvc.perform(post("/admin/tools/documents/sync-from-remote").param("clean", "true"))
+			.andExpect(status().isForbidden());
+
+		verify(vectorStoreSyncService, never()).syncFromRemote(org.mockito.ArgumentMatchers.anyBoolean());
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void syncFromRemoteReturns400WhenUrlMissing() throws Exception {
+		when(syncProperties.isEnabled()).thenReturn(true);
+		when(syncProperties.getSourceUrl()).thenReturn("  ");
+		when(syncProperties.getSourceUsername()).thenReturn("u");
+
+		mockMvc.perform(post("/admin/tools/documents/sync-from-remote"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error").value(containsString("Sync source URL")));
+
+		verify(vectorStoreSyncService, never()).syncFromRemote(org.mockito.ArgumentMatchers.anyBoolean());
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void syncFromRemoteDelegatesToService() throws Exception {
+		when(syncProperties.isEnabled()).thenReturn(true);
+		when(syncProperties.getSourceUrl()).thenReturn("jdbc:postgresql://h:5432/db");
+		when(syncProperties.getSourceUsername()).thenReturn("u");
+		when(vectorStoreSyncService.syncFromRemote(true))
+			.thenReturn(new VectorStoreSyncResult(3L, 12L, "h:5432/db", true));
+
+		mockMvc.perform(post("/admin/tools/documents/sync-from-remote").param("clean", "true"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.rowsSynced").value(3))
+			.andExpect(jsonPath("$.truncatedLocalFirst").value(true));
+
+		verify(vectorStoreSyncService).syncFromRemote(true);
 	}
 
 	@Test

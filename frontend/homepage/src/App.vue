@@ -13,7 +13,13 @@ import { openCookieSettings } from './lib/cookie-settings-state'
 const langStore = useLangStore()
 const route = useRoute()
 
-const adminRouteNames = new Set(['admin-tools', 'admin-pipeline', 'admin-chunks', 'admin-prompts'])
+const adminRouteNames = new Set([
+  'admin-tools',
+  'admin-pipeline',
+  'admin-chunks',
+  'admin-question-suggestions',
+  'admin-prompts',
+])
 const showPublicPageHeader = computed(() => !adminRouteNames.has(String(route.name ?? '')))
 
 const privacyLabel = computed(() => (langStore.language === 'no' ? 'Personvernerklæring' : 'Privacy Policy'))
