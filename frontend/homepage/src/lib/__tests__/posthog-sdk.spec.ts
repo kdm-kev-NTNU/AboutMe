@@ -54,6 +54,24 @@ describe('posthog-sdk', () => {
     expect(isPosthogSdkInitialized()).toBe(true)
   })
 
+  it('passes disable_session_recording when disableSessionRecording is true', async () => {
+    const posthog = (await import('posthog-js')).default
+    vi.resetModules()
+    const { initializePosthogSdk } = await import('../posthog-sdk')
+
+    expect(
+      initializePosthogSdk({
+        key: 'phc_x',
+        host: 'https://eu.i.posthog.com',
+        disableSessionRecording: true,
+      }),
+    ).toBe(true)
+
+    expect(posthog.init).toHaveBeenCalledWith('phc_x', expect.objectContaining({
+      disable_session_recording: true,
+    }))
+  })
+
   it('captureAnalyticsEvent is a no-op before init', async () => {
     const { captureAnalyticsEvent } = await import('../posthog-sdk')
     captureAnalyticsEvent('portfolio_chat_ask_submitted', { x: 1 })
