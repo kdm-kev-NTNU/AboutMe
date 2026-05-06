@@ -48,22 +48,6 @@ const sectionsEn: SectionCopy[] = [
 		],
 	},
 	{
-		category: 'Retrieval',
-		title: 'Retrieval pipeline improvements',
-		intro:
-			'The current RAG stack already embeds documents, stores vectors, and runs similarity search before generation. The next incremental gains typically come from ranking quality and embedding alignment, not from replacing the whole architecture.',
-		points: [
-			'Add a reranking stage (e.g. monoT5-style cross-encoders) on top of vector search results to reorder chunks by semantic relevance and reduce noise in the context window.',
-			'Experiment with domain-adapted or fine-tuned embeddings so user questions match chunk representations more reliably, especially when terminology is specialized.',
-		],
-		refs: [
-			{
-				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
-				href: 'https://arxiv.org/abs/2407.01219',
-			},
-		],
-	},
-	{
 		category: 'Generation',
 		title: 'Output consistency and reproducibility',
 		intro:
@@ -97,23 +81,6 @@ const sectionsEn: SectionCopy[] = [
 			{
 				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
-			},
-		],
-	},
-	{
-		category: 'Operations',
-		title: 'Continuous model lifecycle management',
-		intro:
-			'Multiple chat models and prompt versions already coexist. Formalizing evaluation makes upgrades safe instead of anecdotal.',
-		points: [
-			'Run structured benchmarks (quality, cost, latency, stability) before flipping defaults, reusing the experiments and prompt-version workflows in the admin area.',
-			'Version retrieval settings alongside prompts so embeddings, top-k, and model IDs stay in sync across releases.',
-			'Track determinism: stabilize retrieval parameters and decoding choices so analytical answers remain auditable over time.',
-		],
-		refs: [
-			{
-				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
-				href: 'https://arxiv.org/abs/2312.10997',
 			},
 		],
 	},
@@ -151,22 +118,6 @@ const sectionsNo: SectionCopy[] = [
 		],
 	},
 	{
-		category: 'Retrieval',
-		title: 'Forbedringer i retrieval-pipelinen',
-		intro:
-			'Den eksisterende RAG-løsningen embedder dokumenter, lagrer vektorer og kjører likhetssøk før generering. Neste steg handler ofte om bedre rangering og bedre innbyrdes samsvar mellom spørsmål og dokumenter, ikke om å bytte ut hele arkitekturen.',
-		points: [
-			'Legg inn en reranking-fase (f.eks. monoT5-lignende krysskodere) oppå vektorsøk for å sortere treffene semantisk og redusere støy i kontekstvinduet.',
-			'Test domenetilpassede eller finjusterte embeddings slik at brukerspørsmål treffer chunk-representasjonene mer stabilt, særlig ved fagterminologi.',
-		],
-		refs: [
-			{
-				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
-				href: 'https://arxiv.org/abs/2407.01219',
-			},
-		],
-	},
-	{
 		category: 'Generering',
 		title: 'Konsistens og reproduserbarhet i svar',
 		intro:
@@ -200,23 +151,6 @@ const sectionsNo: SectionCopy[] = [
 			{
 				label: 'Wang et al. (2024): Searching for Best Practices in Retrieval-Augmented Generation',
 				href: 'https://arxiv.org/abs/2407.01219',
-			},
-		],
-	},
-	{
-		category: 'Drift',
-		title: 'Kontinuerlig modell-livssyklus',
-		intro:
-			'Flere chatmodeller og promptversjoner finnes allerede. Strukturert evaluering gjør oppgraderinger trygge i stedet for anekdotiske.',
-		points: [
-			'Kjør benchmarks (kvalitet, kost, latency, stabilitet) før standardvalg endres, og gjenbruk eksperiment- og promptversjonsflyten i admin.',
-			'Versjoner retrieval-innstillinger sammen med promptene slik at embeddings, top-k og modell-ID-er henger sammen på tvers av releaser.',
-			'Følg determinisme: stabiliser retrieval-parametre og dekoding slik at analytiske svar forblir etterprøvbare over tid.',
-		],
-		refs: [
-			{
-				label: 'Gao et al. (2024): Retrieval-Augmented Generation for Large Language Models: A Survey',
-				href: 'https://arxiv.org/abs/2312.10997',
 			},
 		],
 	},
