@@ -130,7 +130,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: ./mvnw -B test -Dgroups=live -Dtest=LiveModelValidationIT
+        run: ./mvnw -B test -DexcludedGroups= -Dtest=LiveModelValidationIT
       - name: Upload validation results
         if: always()
         uses: actions/upload-artifact@v7
