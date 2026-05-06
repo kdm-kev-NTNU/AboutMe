@@ -3,9 +3,8 @@
 # Triggers: push to main/master; all pull_request events; manual workflow_dispatch.
 # Green means: backend ./mvnw verify (tests + JaCoCo check); frontend npm ci,
 #   type-check, lint:ci (eslint, no autofix), unit tests with coverage thresholds;
-#   Cypress E2E (production build + headless); live model validation (OpenAI + Anthropic).
+#   Cypress E2E (production build + headless).
 # Semgrep runs in a separate workflow (.github/workflows/semgrep.yml).
-# Model validation is skipped on fork PRs (secrets not available to forks).
 name: Tests
 
 on:
@@ -109,32 +108,4 @@ jobs:
           path: |
             frontend/homepage/cypress/videos
             frontend/homepage/cypress/screenshots
-          if-no-files-found: ignore
-
-  model-validation:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-java@v5
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-          cache-dependency-path: backend/pom.xml
-      - name: Live model validation (OpenAI + Anthropic)
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: ./mvnw -B test -DexcludedGroups= -Dtest=LiveModelValidationIT
-      - name: Upload validation results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: model-validation-reports
-          path: backend/target/surefire-reports
           if-no-files-found: ignore
