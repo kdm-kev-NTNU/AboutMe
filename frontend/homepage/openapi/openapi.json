@@ -151,6 +151,15 @@
           }
         }
       },
+      "VectorStoreSyncResult": {
+        "type": "object",
+        "properties": {
+          "rowsSynced": { "type": "integer", "format": "int64" },
+          "durationMs": { "type": "integer", "format": "int64" },
+          "sourceHostMasked": { "type": "string" },
+          "truncatedLocalFirst": { "type": "boolean" }
+        }
+      },
       "ChunkItem": {
         "type": "object",
         "properties": {
@@ -771,6 +780,42 @@
               }
             }
           }
+        }
+      }
+    },
+    "/admin/tools/documents/sync-from-remote": {
+      "post": {
+        "tags": ["Admin documents"],
+        "summary": "Sync vector_store from remote Postgres into local DB",
+        "operationId": "adminDocumentsSyncFromRemote",
+        "security": [{ "basicAuth": [] }],
+        "parameters": [
+          {
+            "name": "clean",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false },
+            "description": "When true, TRUNCATE local vector_store before upsert"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VectorStoreSyncResult" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          },
+          "403": { "description": "Sync disabled" }
         }
       }
     },
