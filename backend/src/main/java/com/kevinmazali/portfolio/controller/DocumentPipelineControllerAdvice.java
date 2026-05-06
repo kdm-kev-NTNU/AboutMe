@@ -16,6 +16,12 @@ import org.springframework.web.client.RestClientException;
 @RequiredArgsConstructor
 public class DocumentPipelineControllerAdvice {
 
+  /** Validation errors from admin document routes (bad filters, JSON, model id). */
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ApiError> illegalArgument(IllegalArgumentException ex) {
+    return ResponseEntity.badRequest().body(new ApiError(ex.getMessage()));
+  }
+
   /** Misconfiguration or unexpected empty state from the ingestion service. */
   @ExceptionHandler(IllegalStateException.class)
   public ResponseEntity<ApiError> illegalState(IllegalStateException ex) {
