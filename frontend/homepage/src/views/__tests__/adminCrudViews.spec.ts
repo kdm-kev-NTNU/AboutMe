@@ -18,6 +18,7 @@ import {
   adminDocumentsList,
   adminDocumentsQuestionSuggestions,
   adminDocumentsReseed,
+  adminDocumentsSyncFromRemote,
   healthChroma,
   listChatModels,
   promptVersionsActivate,
@@ -43,6 +44,7 @@ vi.mock('@/api/generated/portfolio', async (importOriginal) => {
     adminDocumentsChunksExport: vi.fn(),
     adminDocumentsQuestionSuggestions: vi.fn(),
     adminDocumentsReseed: vi.fn(),
+    adminDocumentsSyncFromRemote: vi.fn(),
     adminDocumentsUpload: vi.fn(),
     adminDocumentsIngestByPath: vi.fn(),
     adminDocumentsDelete: vi.fn(),
@@ -275,6 +277,126 @@ describe('Admin CRUD views (integration-style)', () => {
     expect(adminDocumentsQuestionSuggestions).not.toHaveBeenCalled()
   })
 
+  it('AdminQuestionSuggestionsView generates from uploaded JSON', async () => {
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [{ id: 'm1', label: 'Test', provider: 'OPENAI' }],
+      headers: headersJson,
+    })
+    vi.mocked(adminDocumentsList).mockResolvedValue({
+      status: 200,
+      data: [],
+      headers: headersJson,
+    })
+    vi.mocked(adminDocumentsQuestionSuggestions).mockResolvedValue({
+      status: 200,
+      data: { suggestions: ['From JSON?'], modelUsed: 'm1' },
+      headers: headersJson,
+    })
+
+    const wrapper = mountAdmin(AdminQuestionSuggestionsView)
+    await flushPromises()
+
+    const sourceEl = wrapper.get('[data-testid="suggestion-source"]').element as HTMLSelectElement
+    sourceEl.value = 'uploadedJson'
+    sourceEl.dispatchEvent(new Event('change'))
+    await nextTick()
+    await flushPromises()
+
+    const ta = wrapper.find('textarea')
+    await ta.setValue(
+      '{"chunks":[{"id":"c1","documentTitle":"d","chunkIndex":0,"text":"body","metadata":{}}]}',
+    )
+
+    const submitBtn = wrapper.findAll('button').find((b) => b.text().includes('Generer forslag'))
+    await submitBtn!.trigger('click')
+    await flushPromises()
+
+    expect(adminDocumentsQuestionSuggestions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'uploadedJson',
+        chunksJson: expect.stringContaining('"chunks"'),
+        model: 'm1',
+      }),
+    )
+    expect(wrapper.text()).toContain('From JSON?')
+  })
+
+  it('AdminQuestionSuggestionsView shows auth error when documents list returns 401', async () => {
+    vi.mocked(adminDocumentsList).mockResolvedValue({
+      status: 401,
+      data: {},
+      headers: headersJson,
+    })
+    vi.mocked(listChatModels).mockResolvedValue({ status: 200, data: [], headers: headersJson })
+
+    const wrapper = mountAdmin(AdminQuestionSuggestionsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toMatch(/Ikke autorisert/)
+  })
+
+  it('AdminQuestionSuggestionsView shows error when models request fails', async () => {
+    vi.mocked(adminDocumentsList).mockResolvedValue({
+      status: 200,
+      data: [],
+      headers: headersJson,
+    })
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 503,
+      data: null,
+      headers: headersJson,
+    })
+
+    const wrapper = mountAdmin(AdminQuestionSuggestionsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toMatch(/Kunne ikke hente modeller/)
+  })
+
+  it('AdminQuestionSuggestionsView surfaces 400 message from API', async () => {
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [{ id: 'm1', label: 'Test', provider: 'OPENAI' }],
+      headers: headersJson,
+    })
+    vi.mocked(adminDocumentsList).mockResolvedValue({
+      status: 200,
+      data: [],
+      headers: headersJson,
+    })
+    vi.mocked(adminDocumentsQuestionSuggestions).mockResolvedValue({
+      status: 400,
+      data: { message: 'Corpus too small' },
+      headers: headersJson,
+    })
+
+    const wrapper = mountAdmin(AdminQuestionSuggestionsView)
+    await flushPromises()
+
+    const submitBtn = wrapper.findAll('button').find((b) => b.text().includes('Generer forslag'))
+    await submitBtn!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Corpus too small')
+  })
+
+  it('AdminQuestionSuggestionsView disables submit when no model is available', async () => {
+    vi.mocked(listChatModels).mockResolvedValue({ status: 200, data: [], headers: headersJson })
+    vi.mocked(adminDocumentsList).mockResolvedValue({
+      status: 200,
+      data: [{ documentId: 'x', filename: 'a.pdf', chunkCount: 1 }],
+      headers: headersJson,
+    })
+
+    const wrapper = mountAdmin(AdminQuestionSuggestionsView)
+    await flushPromises()
+
+    const submitBtn = wrapper.findAll('button').find((b) => b.text().includes('Generer forslag'))
+    expect(submitBtn!.attributes('disabled')).toBeDefined()
+    expect(adminDocumentsQuestionSuggestions).not.toHaveBeenCalled()
+  })
+
   it('AdminPipelineView completes reseed when confirmed', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     vi.mocked(adminDocumentsReseed).mockResolvedValue({
@@ -299,6 +421,32 @@ describe('Admin CRUD views (integration-style)', () => {
     await flushPromises()
 
     expect(wrapper.text()).toMatch(/Reseed ferdig/)
+  })
+
+  it('AdminPipelineView syncs from Railway when confirmed', async () => {
+    setupListAndCollections()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    vi.mocked(adminDocumentsSyncFromRemote).mockResolvedValue({
+      status: 200,
+      data: {
+        rowsSynced: 42,
+        durationMs: 1500,
+        sourceHostMasked: 'db.example:5432/mydb',
+      },
+      headers: headersJson,
+    })
+
+    const wrapper = mountAdmin(AdminPipelineView)
+    await flushPromises()
+
+    const syncBtn = wrapper.findAll('button').find((b) => b.text().includes('Synk fra Railway'))
+    expect(syncBtn).toBeTruthy()
+    await syncBtn!.trigger('click')
+    await flushPromises()
+
+    expect(adminDocumentsSyncFromRemote).toHaveBeenCalledWith({ clean: true })
+    expect(wrapper.text()).toMatch(/Synket 42 rader/)
+    expect(wrapper.text()).toMatch(/db\.example:5432\/mydb/)
   })
 
   it('AdminPipelineView shows message when upload has no files', async () => {
