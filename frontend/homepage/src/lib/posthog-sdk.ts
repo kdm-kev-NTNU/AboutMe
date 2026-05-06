@@ -5,6 +5,11 @@ let sdkInitialized = false
 type PosthogConfig = {
   key: string
   host: string
+  /**
+   * When true, PostHog session replay is disabled at init (opt-out of session recording category).
+   * When false/undefined, replay is allowed at SDK config level (may still stop/start via consent).
+   */
+  disableSessionRecording?: boolean
 }
 
 function resolveConfig(config?: Partial<PosthogConfig>): PosthogConfig | null {
@@ -14,6 +19,7 @@ function resolveConfig(config?: Partial<PosthogConfig>): PosthogConfig | null {
   return {
     key,
     host: (config?.host ?? 'https://eu.i.posthog.com').trim() || 'https://eu.i.posthog.com',
+    disableSessionRecording: config?.disableSessionRecording === true,
   }
 }
 
@@ -46,7 +52,7 @@ export function initializePosthogSdk(config?: Partial<PosthogConfig>): boolean {
     capture_pageview: false,
     autocapture: false,
     persistence: 'localStorage',
-    disable_session_recording: false,
+    disable_session_recording: resolved.disableSessionRecording === true,
     session_recording: {
       maskAllInputs: true,
       maskTextSelector: '[data-ph-mask]',

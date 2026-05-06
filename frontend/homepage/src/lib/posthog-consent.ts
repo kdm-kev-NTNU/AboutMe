@@ -1,10 +1,17 @@
 import posthog from 'posthog-js'
 import { initializePosthogSdk, isPosthogSdkInitialized } from './posthog-sdk'
 
-export const PRIVACY_POLICY_VERSION = '2026-04-22'
+export const PRIVACY_POLICY_VERSION = '2026-05-06'
 
-export const CONSENT_RECORD_KEY = 'aboutme_cookie_consent_v1'
+/** Legacy key (v1: single `analytics` boolean). Still read for migration. */
+export const CONSENT_RECORD_KEY_V1 = 'aboutme_cookie_consent_v1'
+
+/** Current consent storage key (granular categories). */
+export const CONSENT_RECORD_KEY = 'aboutme_cookie_consent_v2'
+
+/** @deprecated Use CONSENT_RECORD_KEY — kept for tests and imports. */
 export const COOKIE_CONSENT_RECORD_KEY = CONSENT_RECORD_KEY
+
 const LEGACY_POSTHOG_FLAG = 'posthog_tracking_consent'
 
 export type ConsentSource =
@@ -14,12 +21,26 @@ export type ConsentSource =
   | 'settings'
   | 'legacy_migration'
 
-export type CookieConsentRecord = {
+export type GranularConsentFlags = {
+  pageviews: boolean
+  sessionRecording: boolean
+  errorTracking: boolean
+  featureFlags: boolean
+}
+
+export type CookieConsentRecord = GranularConsentFlags & {
+  dismissed: boolean
+  policyVersion: string
+  updatedAt: string
+  source: ConsentSource
+}
+
+type CookieConsentRecordV1 = {
   dismissed: boolean
   analytics: boolean
   policyVersion: string
   updatedAt: string
-  source: ConsentSource
+  source: ConsentSource | string
 }
 
 type TrackingConsent = 'granted' | 'denied' | null
@@ -53,16 +74,52 @@ export function isPosthogEnabled(): boolean {
   return getPosthogEnv().enabled
 }
 
+function anyOptionalConsent(record: CookieConsentRecord): boolean {
+  return (
+    record.pageviews ||
+    record.sessionRecording ||
+    record.errorTracking ||
+    record.featureFlags
+  )
+}
+
+export function hasAnalyticsConsent(): boolean {
+  const record = getConsentRecord()
+  return record?.dismissed === true && anyOptionalConsent(record)
+}
+
+export function hasPageviewConsent(): boolean {
+  const record = getConsentRecord()
+  return record?.dismissed === true && record.pageviews === true
+}
+
+export function hasSessionRecordingConsent(): boolean {
+  const record = getConsentRecord()
+  return record?.dismissed === true && record.sessionRecording === true
+}
+
+export function hasErrorTrackingConsent(): boolean {
+  const record = getConsentRecord()
+  return record?.dismissed === true && record.errorTracking === true
+}
+
+export function hasFeatureFlagConsent(): boolean {
+  const record = getConsentRecord()
+  return record?.dismissed === true && record.featureFlags === true
+}
+
 export function getConsentRecord(): CookieConsentRecord | null {
-  return readConsentRecord() ?? migrateLegacyConsent()
+  const v2 = readConsentRecordV2()
+  if (v2) return v2
+
+  const fromV1 = readAndMigrateV1()
+  if (fromV1) return fromV1
+
+  return migrateLegacyConsent()
 }
 
 export function isCookieBannerDismissed(): boolean {
   return getConsentRecord()?.dismissed === true
-}
-
-export function hasAnalyticsConsent(): boolean {
-  return getConsentRecord()?.analytics === true
 }
 
 export function registerPosthogActivationHandler(handler: () => void): void {
@@ -75,50 +132,108 @@ export function applyStoredTrackingConsent(): void {
   const record = getConsentRecord()
   if (!record?.dismissed) return
 
-  if (record.analytics) {
-    activatePosthogAnalytics()
-  } else {
-    deactivatePosthogAnalytics()
-  }
+  syncPosthogWithRecord(record)
 }
 
 export function grantAllCookies(source: ConsentSource = 'banner_accept_all'): void {
-  persistDecision(true, source)
-  activatePosthogAnalytics()
+  persistGranularDecision(
+    {
+      pageviews: true,
+      sessionRecording: true,
+      errorTracking: true,
+      featureFlags: true,
+    },
+    source,
+  )
+  syncPosthogWithRecord(getConsentRecord()!)
 }
 
 export function grantNecessaryCookiesOnly(source: ConsentSource = 'banner_necessary_only'): void {
-  persistDecision(false, source)
+  persistGranularDecision(
+    {
+      pageviews: false,
+      sessionRecording: false,
+      errorTracking: false,
+      featureFlags: false,
+    },
+    source,
+  )
   deactivatePosthogAnalytics()
 }
 
 export function rejectOptionalCookies(source: ConsentSource = 'banner_reject'): void {
-  persistDecision(false, source)
+  persistGranularDecision(
+    {
+      pageviews: false,
+      sessionRecording: false,
+      errorTracking: false,
+      featureFlags: false,
+    },
+    source,
+  )
   deactivatePosthogAnalytics()
 }
 
+export function saveGranularConsent(
+  flags: GranularConsentFlags,
+  source: ConsentSource = 'settings',
+): void {
+  persistGranularDecision(flags, source)
+  syncPosthogWithRecord(getConsentRecord()!)
+}
+
+/** @deprecated Use saveGranularConsent — retained for transitional callers if any. */
 export function saveAnalyticsConsent(
   analytics: boolean,
   source: ConsentSource = 'settings',
 ): void {
-  persistDecision(analytics, source)
-  if (analytics) {
-    activatePosthogAnalytics()
-  } else {
-    deactivatePosthogAnalytics()
-  }
+  saveGranularConsent(
+    {
+      pageviews: analytics,
+      sessionRecording: analytics,
+      errorTracking: analytics,
+      featureFlags: analytics,
+    },
+    source,
+  )
 }
 
-function activatePosthogAnalytics(): void {
+function syncPosthogWithRecord(record: CookieConsentRecord): void {
   const env = getPosthogEnv()
   if (!env.enabled) return
-  if (!initializePosthogSdk({ key: env.key, host: env.host })) return
-  posthog.opt_in_capturing()
-  try {
-    posthog.startSessionRecording?.()
-  } catch {
-    // ignore if recorder unavailable
+
+  if (!anyOptionalConsent(record)) {
+    deactivatePosthogAnalytics()
+    return
   }
+
+  /** Pass true when user opted out of session recording (maps to PostHog `disable_session_recording`). */
+  const disableSessionRecordingAtInit = !record.sessionRecording
+  if (
+    !initializePosthogSdk({
+      key: env.key,
+      host: env.host,
+      disableSessionRecording: disableSessionRecordingAtInit,
+    })
+  )
+    return
+
+  posthog.opt_in_capturing()
+
+  if (record.sessionRecording) {
+    try {
+      posthog.startSessionRecording?.()
+    } catch {
+      // ignore if recorder unavailable
+    }
+  } else {
+    try {
+      posthog.stopSessionRecording?.()
+    } catch {
+      // ignore
+    }
+  }
+
   activationHandler?.()
 }
 
@@ -134,37 +249,82 @@ function deactivatePosthogAnalytics(): void {
   posthog.reset()
 }
 
-function persistDecision(analytics: boolean, source: ConsentSource): void {
+function persistGranularDecision(flags: GranularConsentFlags, source: ConsentSource): void {
   const now = new Date().toISOString()
   const record: CookieConsentRecord = {
     dismissed: true,
-    analytics,
+    ...flags,
     policyVersion: PRIVACY_POLICY_VERSION,
     updatedAt: now,
     source,
   }
   writeConsentRecord(record)
-  writeLegacyConsentFlag(analytics ? 'granted' : 'denied')
+  writeLegacyConsentFlag(anyOptionalConsent(record) ? 'granted' : 'denied')
 }
 
-function readConsentRecord(): CookieConsentRecord | null {
+function readConsentRecordV2(): CookieConsentRecord | null {
   try {
     const raw = localStorage.getItem(CONSENT_RECORD_KEY)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as CookieConsentRecord
-    if (
-      typeof parsed.dismissed === 'boolean' &&
-      typeof parsed.analytics === 'boolean' &&
-      typeof parsed.policyVersion === 'string' &&
-      typeof parsed.updatedAt === 'string' &&
-      typeof parsed.source === 'string'
-    ) {
-      return parsed
-    }
+    const parsed = JSON.parse(raw) as unknown
+    if (!isCookieConsentRecord(parsed)) return null
+    return parsed
   } catch {
-    // ignore parse errors and treat as no record
+    return null
   }
-  return null
+}
+
+function readAndMigrateV1(): CookieConsentRecord | null {
+  try {
+    const raw = localStorage.getItem(CONSENT_RECORD_KEY_V1)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as unknown
+    if (!isV1Record(parsed)) return null
+
+    const all = parsed.analytics
+    const record: CookieConsentRecord = {
+      dismissed: parsed.dismissed,
+      pageviews: all,
+      sessionRecording: all,
+      errorTracking: all,
+      featureFlags: all,
+      policyVersion: PRIVACY_POLICY_VERSION,
+      updatedAt: new Date().toISOString(),
+      source: 'legacy_migration',
+    }
+    writeConsentRecord(record)
+    writeLegacyConsentFlag(all ? 'granted' : 'denied')
+    return record
+  } catch {
+    return null
+  }
+}
+
+function isV1Record(parsed: unknown): parsed is CookieConsentRecordV1 {
+  if (!parsed || typeof parsed !== 'object') return false
+  const p = parsed as Record<string, unknown>
+  return (
+    typeof p.dismissed === 'boolean' &&
+    typeof p.analytics === 'boolean' &&
+    typeof p.policyVersion === 'string' &&
+    typeof p.updatedAt === 'string' &&
+    typeof p.source === 'string'
+  )
+}
+
+function isCookieConsentRecord(parsed: unknown): parsed is CookieConsentRecord {
+  if (!parsed || typeof parsed !== 'object') return false
+  const p = parsed as Record<string, unknown>
+  return (
+    typeof p.dismissed === 'boolean' &&
+    typeof p.pageviews === 'boolean' &&
+    typeof p.sessionRecording === 'boolean' &&
+    typeof p.errorTracking === 'boolean' &&
+    typeof p.featureFlags === 'boolean' &&
+    typeof p.policyVersion === 'string' &&
+    typeof p.updatedAt === 'string' &&
+    typeof p.source === 'string'
+  )
 }
 
 function writeConsentRecord(record: CookieConsentRecord): void {
@@ -193,10 +353,14 @@ function migrateLegacyConsent(): CookieConsentRecord | null {
   const legacy = readLegacyPosthogConsent()
   if (!legacy) return null
 
+  const all = legacy === 'granted'
   const now = new Date().toISOString()
   const record: CookieConsentRecord = {
     dismissed: true,
-    analytics: legacy === 'granted',
+    pageviews: all,
+    sessionRecording: all,
+    errorTracking: all,
+    featureFlags: all,
     policyVersion: PRIVACY_POLICY_VERSION,
     updatedAt: now,
     source: 'legacy_migration',
