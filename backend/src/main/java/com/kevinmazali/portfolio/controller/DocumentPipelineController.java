@@ -1,11 +1,15 @@
 package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.config.OpenApiConfig;
+import com.kevinmazali.portfolio.model.ChunkExportResponse;
 import com.kevinmazali.portfolio.model.ChunkListResponse;
+import com.kevinmazali.portfolio.model.DefaultQuestionSuggestionRequest;
+import com.kevinmazali.portfolio.model.DefaultQuestionSuggestionResponse;
 import com.kevinmazali.portfolio.model.VectorStoreInfoResponse;
 import com.kevinmazali.portfolio.model.DocumentListEntry;
 import com.kevinmazali.portfolio.model.IngestionResult;
 import com.kevinmazali.portfolio.model.PathIngestRequest;
+import com.kevinmazali.portfolio.service.DefaultQuestionSuggestionService;
 import com.kevinmazali.portfolio.service.DocumentIngestionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,6 +53,7 @@ public class DocumentPipelineController {
       "pdf", "docx", "doc", "txt", "md", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg");
 
   private final DocumentIngestionService documentIngestionService;
+  private final DefaultQuestionSuggestionService defaultQuestionSuggestionService;
 
   @Operation(summary = "Upload and ingest a document")
   @ApiResponses({
@@ -153,6 +158,18 @@ public class DocumentPipelineController {
     return documentIngestionService.listDocuments();
   }
 
+  @Operation(summary = "Export all chunks in the active collection (JSON)",
+      description = "Full listing for download; optional documentId filters by content hash.")
+  @ApiResponse(responseCode = "200",
+      content = @Content(schema = @Schema(implementation = ChunkExportResponse.class)))
+  @GetMapping("/chunks/export")
+  public ChunkExportResponse exportChunks(
+      @Parameter(description = "Filter by document_id (content hash)")
+      @RequestParam(value = "documentId", required = false) String documentId
+  ) {
+    return documentIngestionService.exportChunks(documentId);
+  }
+
   @Operation(summary = "List chunks in the active collection",
       description = "Paginated; optional documentId filters by content hash (document_id in metadata).")
   @ApiResponse(responseCode = "200",
@@ -167,6 +184,19 @@ public class DocumentPipelineController {
       @RequestParam(value = "offset", defaultValue = "0") int offset
   ) {
     return documentIngestionService.getChunks(documentId, limit, offset);
+  }
+
+  @Operation(summary = "Suggest default chatbot starter questions from chunks (LLM)")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "OK",
+          content = @Content(schema = @Schema(implementation = DefaultQuestionSuggestionResponse.class))),
+      @ApiResponse(responseCode = "400", description = "Invalid request")
+  })
+  @PostMapping(value = "/question-suggestions", consumes = MediaType.APPLICATION_JSON_VALUE)
+  public DefaultQuestionSuggestionResponse questionSuggestions(
+      @RequestBody DefaultQuestionSuggestionRequest body
+  ) {
+    return defaultQuestionSuggestionService.suggest(body);
   }
 
   @Operation(summary = "Delete document by id")
