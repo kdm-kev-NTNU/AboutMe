@@ -22,6 +22,7 @@ describe('Core frontend flows', () => {
 
   it('redirects unauthenticated user away from admin area', () => {
     cy.visit('/admin/tools', { failOnStatusCode: false })
+    cy.url().should('not.include', '/admin')
     cy.location('pathname').should('eq', '/')
   })
 })
