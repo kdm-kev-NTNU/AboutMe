@@ -11,18 +11,18 @@ describe('Core frontend flows', () => {
   it('loads the home page and shows hero content', () => {
     cy.visit('/')
     cy.get('h1').should('contain.text', 'Kevin')
-    cy.contains('button, a', /chat with Kevin|go to chat/i).should('exist')
+    cy.contains('button', /send/i).should('exist')
   })
 
   it('opens and uses chat flow entry points', () => {
     cy.visit('/chat')
-    cy.get('h1').should('contain.text', 'Chat with Kevin')
+    cy.get('h1').should('contain.text', "Kevin's AI")
     cy.get('textarea, input').first().should('exist')
   })
 
   it('redirects unauthenticated user away from admin area', () => {
-    cy.visit('/admin', { failOnStatusCode: false })
-    cy.url().should('include', '/chat')
+    cy.visit('/admin/tools', { failOnStatusCode: false })
+    cy.location('pathname').should('eq', '/')
     cy.contains(/admin|internal tools/i).should('not.exist')
   })
 })
