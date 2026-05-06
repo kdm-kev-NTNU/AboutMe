@@ -21,13 +21,14 @@ import {
   ChatModelTag,
   type ChatModelOption,
 } from '@/api/generated/portfolio'
+import { captureProductAnalyticsEvent } from '@/lib/analytics'
 import {
   POSTHOG_CHAT_EVENTS,
   POSTHOG_FEATURE_FLAGS,
-  captureAnalyticsEvent,
   getFeatureFlag,
   registerAnalyticsProperties,
 } from '@/lib/posthog-sdk'
+import { hasFeatureFlagConsent, hasPageviewConsent } from '@/lib/posthog-consent'
 import {
   getOrCreateChatConversationId,
   resetChatConversationId,
@@ -192,11 +193,11 @@ async function send(text: string) {
   input.value = ''
   const modelId = chatModelStore.selectedModelId ?? null
   const ffKey = POSTHOG_FEATURE_FLAGS.CHAT_REPLY_EXPERIMENT
-  const ffVariant = getFeatureFlag(ffKey)
+  const ffVariant = hasFeatureFlagConsent() ? getFeatureFlag(ffKey) : undefined
   const ffProp =
     ffVariant !== undefined ? { [`$feature/${ffKey}`]: ffVariant } : {}
   const conversationId = getOrCreateChatConversationId()
-  captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ASK_SUBMITTED, {
+  captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ASK_SUBMITTED, {
     prompt_length: text.trim().length,
     model_id: modelId,
     conversation_id: conversationId,
@@ -211,14 +212,16 @@ async function send(text: string) {
       payload.model = chatModelStore.selectedModelId
     }
     // Refresh registered property in case the user cleared chat.
-    registerAnalyticsProperties({ conversation_id: conversationId })
+    if (hasPageviewConsent()) {
+      registerAnalyticsProperties({ conversation_id: conversationId })
+    }
 
     const r = await askQuestion(payload, {
       headers: { 'X-Conversation-Id': conversationId },
     })
     if (r.status === 200) {
       state.messages.push({ role: 'assistant', text: r.data.answer, isNew: true })
-      captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_RECEIVED, {
+      captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_RECEIVED, {
         http_status: 200,
         model_id: modelId,
         conversation_id: conversationId,
@@ -230,7 +233,7 @@ async function send(text: string) {
     const sc = err.status
     const errData = err.data
     if (sc === 429) {
-      captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+      captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
         http_status: sc,
         model_id: modelId,
         conversation_id: conversationId,
@@ -240,7 +243,7 @@ async function send(text: string) {
       return
     }
     if (sc === 403) {
-      captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+      captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
         http_status: sc,
         model_id: modelId,
         conversation_id: conversationId,
@@ -250,7 +253,7 @@ async function send(text: string) {
       return
     }
     if (sc === 400 || sc === 503) {
-      captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+      captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
         http_status: sc,
         model_id: modelId,
         conversation_id: conversationId,
@@ -259,7 +262,7 @@ async function send(text: string) {
       errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
       return
     }
-    captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+    captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
       http_status: sc,
       model_id: modelId,
       conversation_id: conversationId,
@@ -267,7 +270,7 @@ async function send(text: string) {
     })
     errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
   } catch {
-    captureAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
+    captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
       http_status: 0,
       model_id: modelId,
       conversation_id: conversationId,
@@ -309,7 +312,9 @@ onMounted(async () => {
   }
 
   const conversationId = getOrCreateChatConversationId()
-  registerAnalyticsProperties({ conversation_id: conversationId })
+  if (hasPageviewConsent()) {
+    registerAnalyticsProperties({ conversation_id: conversationId })
+  }
 
   const conversationIdParam = route.query.conversationId as string
 

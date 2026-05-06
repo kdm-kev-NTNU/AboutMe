@@ -20,8 +20,8 @@ const bannerTitle = computed(() =>
 )
 const bannerBody = computed(() =>
   isNo.value
-    ? 'Jeg bruker PostHog for å forstå hvordan nettsiden brukes, inkludert anonymisert opptak av sesjoner. Du kan velge nødvendige, akseptere alle eller avvise valgfri analyse.'
-    : 'I use PostHog to understand how the site is used, including anonymized session recordings. You can allow necessary only, accept all, or reject optional analytics.',
+    ? 'Jeg bruker PostHog for analyse (sidevisninger, valgfritt sesjonsopptak, feilsporing og eksperimenter). Du kan godta alle, bare nødvendige, avslå valgfritt — eller trykke Tilpass for å velge hver kategori.'
+    : 'I use PostHog for analytics (page views, optional session replay, error tracking, and experiments). You can accept all, necessary only, reject optional tracking — or tap Customize to choose each category.',
 )
 const acceptAllLabel = computed(() => (isNo.value ? 'Godta alle' : 'Accept all'))
 const necessaryOnlyLabel = computed(() =>
