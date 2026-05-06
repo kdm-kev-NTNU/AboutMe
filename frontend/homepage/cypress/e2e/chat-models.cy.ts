@@ -26,7 +26,10 @@ function stubFullCatalog() {
 
 describe('Chat model catalog', () => {
   beforeEach(() => {
-    cy.window().then((win) => win.sessionStorage.clear())
+    cy.window().then((win) => {
+      win.sessionStorage.clear()
+      win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
+    })
   })
 
   it('loads models with tags, defaults to FAST when anonymous, and switches provider subset', () => {
