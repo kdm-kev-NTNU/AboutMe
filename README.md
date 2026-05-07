@@ -1,12 +1,12 @@
 # AboutMe
 
-Portfolio web app with a document-grounded AI chat (RAG). The UI supports Norwegian and English. Stack: **Vue 3**, **Spring Boot**, and **PostgreSQL with pgvector** (relational data and embeddings in one database). **PostHog** can receive `$ai_generation` events from the backend when enabled, alongside consent-gated frontend analytics.
+Portfolio web app with a document-grounded AI chat (RAG). The UI supports Norwegian and English. Stack: **Vue 3** (Vite 8), **Spring Boot 4.x** with **Spring AI 2.0.x** (BOM), and **PostgreSQL with pgvector** (relational data and embeddings in one database). **PostHog** can receive `$ai_generation` events from the backend when enabled, alongside consent-gated frontend analytics.
 
 ## Repository layout
 
 | Path | What |
 |------|------|
-| `backend/` | Spring Boot API (RAG, auth, admin document pipeline) |
+| `backend/` | Spring Boot 4.x API (Spring AI 2.x, RAG, auth, admin document pipeline) |
 | `frontend/homepage/` | Vue 3 SPA: [frontend/homepage/README.md](frontend/homepage/README.md) for npm scripts and Orval |
 | `scripts/dev.ps1` | Windows: Docker for infra, then opens API + Vite in separate terminals |
 | `docker-compose.yml` | PostgreSQL (pgvector), backend, Nginx frontend |
@@ -59,7 +59,9 @@ Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `bac
 
 **Usually required:** `OPENAI_API_KEY`, PostgreSQL user/password (defaults align with Compose: `postgres` / `postgres`), `PORT` for the API (default **8080**).
 
-**Common optional:** `ANTHROPIC_API_KEY`, PostHog backend LLM capture (`POSTHOG_ENABLED`, `POSTHOG_API_KEY`, `POSTHOG_HOST`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`. Details and comments live in `.env.example`.
+**Common optional:** `ANTHROPIC_API_KEY`, PostHog backend LLM capture (`POSTHOG_ENABLED`, `POSTHOG_API_KEY`, `POSTHOG_HOST`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`, `SANITIZER_ENABLED`, `AI_BUDGET_ANON_SALT`. Details and comments live in `.env.example`.
+
+**AI usage budgeting:** The backend tracks estimated LLM spend (per-model rates in [backend/src/main/resources/application.yaml](backend/src/main/resources/application.yaml) under `portfolio.ai.budget`) with daily/monthly caps for authenticated and anonymous users, a spike guard, and an optional kill switch. Override defaults with `PORTFOLIO_AI_BUDGET_*` style env vars (Spring relaxed binding) if you deploy with different limits; set `AI_BUDGET_ANON_SALT` to a stable secret in production so anonymous budget keys stay consistent across restarts.
 
 ## Tests
 
@@ -84,19 +86,19 @@ Spring Security protects admin routes; public **`POST /ask`** is rate-limited. P
 
 ## Knowledge pipeline (capture → curate → RAG)
 
-Optional **conversational capture** (for example a voice UI such as ElevenLabs) is a **product choice** for richer spoken input; academic RAG work does not prescribe that layer. **Raw exports or transcripts are not public or in the vector store by default.** The operator **structures, trims, redacts, and tunes** content into drafts, uploads through the **admin document pipeline**, then **re-embeds and checks retrieval** before curated chunks power document-grounded chat.
+Optional **conversational capture** (for example a voice UI such as ElevenLabs) is a **product choice** for richer spoken input. Academic RAG papers do not tell you to add that layer. **Raw exports or transcripts are not public or in the vector store by default.** The operator **structures, trims, redacts, and tunes** content into drafts, uploads through the **admin document pipeline**, then **re-embeds and checks retrieval** before curated chunks power document-grounded chat.
 
-**What the papers cover:** corpus preparation, chunking, indexing, retrieval, and evaluation—not voice vendors. Primary references:
+**What the papers cover:** corpus preparation, chunking, indexing, retrieval, and evaluation, not voice vendors. Primary references:
 
-- [Wang et al., *Searching for Best Practices in Retrieval-Augmented Generation* (arXiv:2407.01219)](https://arxiv.org/abs/2407.01219) — empirical RAG component choices and evaluation (EMNLP 2024).
-- [Gao et al., *Retrieval-Augmented Generation for Large Language Models: A Survey* (arXiv:2312.10997)](https://arxiv.org/abs/2312.10997) — Dec 2023 preprint; widely cited as “2024” in secondary sources.
+- [Wang et al., *Searching for Best Practices in Retrieval-Augmented Generation* (arXiv:2407.01219)](https://arxiv.org/abs/2407.01219): empirical RAG component choices and evaluation (EMNLP 2024).
+- [Gao et al., *Retrieval-Augmented Generation for Large Language Models: A Survey* (arXiv:2312.10997)](https://arxiv.org/abs/2312.10997): Dec 2023 preprint; widely cited as “2024” in secondary sources.
 
 **Human-grounded evaluation (also arXiv):**
 
-- [Abbasiantaeb et al., *Conversational Gold* — human gold nuggets (arXiv:2503.09902)](https://arxiv.org/abs/2503.09902).
+- [Abbasiantaeb et al., *Conversational Gold*: human gold nuggets (arXiv:2503.09902)](https://arxiv.org/abs/2503.09902).
 - [*Retrieval Augmented Generation Evaluation in the Era of Large Language Models: A Comprehensive Survey* (arXiv:2504.14891)](https://arxiv.org/abs/2504.14891).
 
-**Practice guides (not peer-reviewed):** [AWS — securing the RAG ingestion pipeline](https://aws.amazon.com/blogs/security/securing-the-rag-ingestion-pipeline-filtering-mechanisms/), [Anyscale — RAG data ingestion strategies](https://docs.anyscale.com/rag/quality-improvement/data-ingestion-strategies).
+**Practice guides (not peer-reviewed):** [AWS: securing the RAG ingestion pipeline](https://aws.amazon.com/blogs/security/securing-the-rag-ingestion-pipeline-filtering-mechanisms/), [Anyscale: RAG data ingestion strategies](https://docs.anyscale.com/rag/quality-improvement/data-ingestion-strategies).
 
 **Privacy:** purpose limitation, consent, and minimisation for any capture channel follow applicable law (for example GDPR), not the RAG literature above. On-site copy also lives under **The project** → **Future work** in the Vue app (`frontend/homepage/src/views/ProjectPageView.vue` and `frontend/homepage/src/components/project/ProjectFutureWorkSection.vue`).
 

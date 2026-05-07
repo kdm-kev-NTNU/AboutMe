@@ -30,7 +30,7 @@ let choices := event.properties.$ai_output_choices
 return choices != null and size(choices) > 0 and length(choices[1].content) > 0
 ```
 
-(Indexing may be `choices[0]` in your Hog runtime—use **evaluation-test-hog** in MCP to validate.)
+(Indexing may be `choices[0]` in your Hog runtime; use **evaluation-test-hog** in MCP to validate.)
 
 ### 3. Output token budget
 
@@ -69,16 +69,16 @@ Use **LLM judge** only for fuzzy quality checks; requires org **AI data processi
 
 ## MCP workflow (when PostHog MCP is connected)
 
-1. `evaluations-get` — list existing evals to avoid duplicates.
-2. `evaluation-test-hog` — dry-run Hog source on recent `$ai_generation` events.
-3. `evaluation-create` — promote tested Hog or create LLM judge with `model_configuration`.
-4. `llm-analytics-evaluation-summary-create` — review pass/fail patterns over time.
+1. `evaluations-get`: list existing evals to avoid duplicates.
+2. `evaluation-test-hog`: dry-run Hog source on recent `$ai_generation` events.
+3. `evaluation-create`: promote tested Hog or create LLM judge with `model_configuration`.
+4. `llm-analytics-evaluation-summary-create`: review pass/fail patterns over time.
 
 ## REST / script (same API as MCP)
 
 If the PostHog MCP server is unavailable, use the [PostHog LLM analytics API](https://posthog.com/docs/api/llm-analytics): `GET/POST /api/environments/:project_id/evaluations/`, `POST .../evaluations/test_hog/`. Authenticate with a **Personal API key** (`evaluation:read`, `evaluation:write`), not the capture `POSTHOG_API_KEY`.
 
-From the repo root (set env vars first — see [.env.example](../.env.example)):
+From the repo root (set env vars first; see [.env.example](../.env.example)):
 
 ```powershell
 ./scripts/posthog-llm-evaluations-setup.ps1

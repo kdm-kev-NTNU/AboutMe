@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Ensures {@link SupportedChatModel} and the {@code portfolio.ai.budget.models}
- * YAML block stay in sync. Pure unit test — no Spring context, runs in the fast CI gate.
+ * YAML block stay in sync. Pure unit test: no Spring context, runs in the fast CI gate.
  */
 class BudgetModelConsistencyTest {
 
