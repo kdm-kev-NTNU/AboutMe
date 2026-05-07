@@ -1,4 +1,6 @@
 # Build and push backend + frontend images to Docker Hub using Docker Build Cloud.
+# Backend uses Dockerfile.publish: JAR is built on the runner (Maven cache) and passed via BuildKit
+# context "jar" so Docker Build Cloud does not run Maven per platform (avoids Maven Central 429).
 # Triggers: push to main, semver tags v*.*.*, manual workflow_dispatch.
 #
 # Repo Settings → Secrets and variables → Actions:
@@ -19,8 +21,30 @@ jobs:
   backend:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v6
+      # Build JAR once on the runner (Maven cache) instead of inside multi-arch Docker Build Cloud,
+      # avoiding Maven Central rate limits (429) when amd64 + arm64 resolve deps in parallel.
+      - uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+          cache-dependency-path: backend/pom.xml
+      - name: Maven package (skip tests)
+        env:
+          MAVEN_OPTS: "-Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.retryHandler.requestSentEnabled=true -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 -Daether.connector.http.retryHandler.count=5"
+        run: ./mvnw -B --no-transfer-progress clean package -DskipTests=true -Dmaven.test.skip=true -Dmaven.compiler.fork=true -Dmaven.compiler.maxmem=512m
+      - name: Prepare JAR context for Docker build
+        id: jarctx
+        run: |
+          JAR_CTX="${RUNNER_TEMP}/aboutme-backend-jar"
+          mkdir -p "${JAR_CTX}"
+          cp target/*.jar "${JAR_CTX}/"
+          echo "path=${JAR_CTX}" >> "${GITHUB_OUTPUT}"
       - uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKER_ACCOUNT }}
@@ -41,7 +65,9 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           context: ./backend
-          file: ./backend/Dockerfile
+          file: ./backend/Dockerfile.publish
+          build-contexts: |
+            jar=${{ steps.jarctx.outputs.path }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
