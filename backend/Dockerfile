@@ -44,10 +44,18 @@ RUN set -eux; \
 # Build stage
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
+# Survive transient Maven Central 429s during concurrent multi-platform (amd64 + arm64)
+# Buildx runs by retrying transfers and reusing the HTTP connection pool.
+ENV MAVEN_OPTS="-Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.retryHandler.requestSentEnabled=true -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 -Daether.connector.http.retryHandler.count=5"
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Cache /root/.m2/repository across builds and share it across concurrent multi-arch
+# builds (sharing=locked) so we don't re-download every dependency per platform and
+# stampede Maven Central into rate limiting.
+RUN --mount=type=cache,id=aboutme-m2,target=/root/.m2/repository,sharing=locked \
+    mvn -B --no-transfer-progress dependency:go-offline
 COPY src ./src
-RUN mvn clean package -DskipTests -Dmaven.test.skip=true -Dmaven.compiler.fork=true -Dmaven.compiler.maxmem=512m
+RUN --mount=type=cache,id=aboutme-m2,target=/root/.m2/repository,sharing=locked \
+    mvn -B --no-transfer-progress clean package -DskipTests -Dmaven.test.skip=true -Dmaven.compiler.fork=true -Dmaven.compiler.maxmem=512m
 
 # Production stage
 FROM eclipse-temurin:21-jre
