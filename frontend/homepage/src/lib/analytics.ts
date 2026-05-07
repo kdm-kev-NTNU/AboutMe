@@ -20,7 +20,7 @@ export function trackEvent(event: string, properties?: Record<string, unknown>):
 }
 
 /**
- * Custom / product events (e.g. chat funnel) — requires pageview-style analytics consent.
+ * Custom / product events (e.g. chat funnel) need pageview-style analytics consent.
  * PostHog pageviews are gated separately in `posthog-app-hooks`.
  */
 export function captureProductAnalyticsEvent(

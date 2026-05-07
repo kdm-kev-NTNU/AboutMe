@@ -22,12 +22,8 @@ import {
   Cpu,
   Server,
   Globe,
-  Database,
-  Eye,
-  Container,
   BrainCircuit,
   Layers,
-  Workflow,
   MonitorSmartphone,
   BookOpen,
 } from 'lucide-vue-next'
@@ -37,7 +33,7 @@ const isNo = computed(() => langStore.language === 'no')
 
 const title = computed(() => (isNo.value ? 'Teknologistakk' : 'Tech stack'))
 const lastUpdated = computed(() =>
-  isNo.value ? 'Sist oppdatert: april 2026' : 'Last updated: April 2026',
+  isNo.value ? 'Sist oppdatert: mai 2026' : 'Last updated: May 2026',
 )
 
 const headerBadge = computed(() =>
@@ -46,14 +42,14 @@ const headerBadge = computed(() =>
 
 const headerSubtitle = computed(() =>
   isNo.value
-    ? 'Sporbarhet fra bacheloroppgave og produktkontekst til konkrete teknologivalg i denne porteføljen, uten å erstatte full dokumentasjon i rapporten.'
-    : 'Traceability from the bachelor thesis and product context to the concrete technology choices in this portfolio, without replacing full documentation in the report.',
+    ? 'Kort oversikt over arkitektur og hovedvalg. Detaljer og kilder finner du i README og bachelor-seksjonen.'
+    : 'A short overview of architecture and main choices. Details and sources live in the README and the Bachelor section.',
 )
 
 const contextParagraph = computed(() =>
   isNo.value
-    ? 'Denne porteføljen utvikles aktivt som grunnlag for bacheloroppgave (IDATT2901) ved NTNU Trondheim, i samarbeid med Piscada AS. Prosjektet retter seg mot en AI-assistent som kan forklare energidata på naturlig språk og gi målrettede råd om energisparing i næringsbygg.'
-    : 'This portfolio is being actively developed as the foundation for a bachelor thesis (IDATT2901) at NTNU Trondheim, in collaboration with Piscada AS. The project focuses on an AI assistant that explains energy data in natural language and provides targeted energy-saving advice for commercial buildings.',
+    ? 'Utviklet som del av bacheloroppgave (IDATT2901, NTNU) med Piscada AS: en AI-assistent for energidata og sparing i næringsbygg.'
+    : 'Developed as part of a bachelor thesis (IDATT2901, NTNU) with Piscada AS: an AI assistant for energy data and savings in commercial buildings.',
 )
 
 const contextLinkLabel = computed(() =>
@@ -127,7 +123,7 @@ const pillarCards = computed(() =>
         {
           to: '/chat' as const,
           title: 'AI & RAG',
-          body: 'Spring AI 1.0.x, språkmodeller og RAG med PostgreSQL/pgvector; valgfri ONNX cross-encoder-reranking etter konfigurasjon.',
+          body: 'Spring AI mot OpenAI/Anthropic, dokumenter i PostgreSQL/pgvector (RAG).',
           cta: 'Åpne chat',
           icon: BrainCircuit,
           accentBorder: 'hover:border-blue-200',
@@ -138,7 +134,7 @@ const pillarCards = computed(() =>
         {
           to: '/projects' as const,
           title: 'Backend',
-          body: 'Spring Boot 3.5.x, sikkerhet, persistens og API mot klienten.',
+          body: 'Spring Boot 4, sikkerhet, JPA og REST mot SPA-en.',
           cta: 'Se prosjekter',
           icon: Server,
           accentBorder: 'hover:border-emerald-200',
@@ -149,7 +145,7 @@ const pillarCards = computed(() =>
         {
           to: '/' as const,
           title: 'Frontend',
-          body: 'Vue 3, Vite og komponentbibliotek i shadcn-stil.',
+          body: 'Vue 3, Vite 8, Tailwind og Reka UI (shadcn-stil).',
           cta: 'Til forsiden',
           icon: Globe,
           accentBorder: 'hover:border-sky-200',
@@ -162,7 +158,7 @@ const pillarCards = computed(() =>
         {
           to: '/chat' as const,
           title: 'AI & RAG',
-          body: 'Spring AI 1.0.x, language models, and RAG with PostgreSQL/pgvector; optional ONNX cross-encoder reranking when configured.',
+          body: 'Spring AI to OpenAI/Anthropic, documents in PostgreSQL/pgvector (RAG).',
           cta: 'Open chat',
           icon: BrainCircuit,
           accentBorder: 'hover:border-blue-200',
@@ -173,7 +169,7 @@ const pillarCards = computed(() =>
         {
           to: '/projects' as const,
           title: 'Backend',
-          body: 'Spring Boot 3.5.x, security, persistence, and APIs for the client.',
+          body: 'Spring Boot 4, security, JPA, and REST for the SPA.',
           cta: 'View projects',
           icon: Server,
           accentBorder: 'hover:border-emerald-200',
@@ -184,7 +180,7 @@ const pillarCards = computed(() =>
         {
           to: '/' as const,
           title: 'Frontend',
-          body: 'Vue 3, Vite, and shadcn-style UI components.',
+          body: 'Vue 3, Vite 8, Tailwind, and Reka UI (shadcn-style).',
           cta: 'Back to home',
           icon: Globe,
           accentBorder: 'hover:border-sky-200',
@@ -198,55 +194,39 @@ const pillarCards = computed(() =>
 const stackFront = computed(() =>
   isNo.value
     ? ([
-        'Vue 3, TypeScript, Vite 7',
-        'Pinia, Vue Router',
-        'Tailwind CSS 4, Reka UI (shadcn-stil), Lucide',
-        'VueUse (Core, Motion), markdown-it, DOMPurify',
-        'Orval, OpenAPI-generert fetch-klient',
-        'PostHog (posthog-js: samtykkestyrt analyse i nettleseren; eksperimenter i admin der konfigurert)',
+        'Vue 3, TypeScript, Vite 8 — Pinia, Vue Router, Tailwind 4, Reka UI',
+        'Orval-generert klient mot OpenAPI; PostHog i nettleseren når det er slått på',
       ] as const)
     : ([
-        'Vue 3, TypeScript, Vite 7',
-        'Pinia, Vue Router',
-        'Tailwind CSS 4, Reka UI (shadcn-style), Lucide',
-        'VueUse (Core, Motion), markdown-it, DOMPurify',
-        'Orval, OpenAPI-generated fetch client',
-        'PostHog (posthog-js: consent-gated browser analytics; admin experiments when configured)',
+        'Vue 3, TypeScript, Vite 8 — Pinia, Vue Router, Tailwind 4, Reka UI',
+        'Orval-generated client from OpenAPI; PostHog in the browser when enabled',
       ] as const),
 )
 
 const stackBack = computed(() =>
   isNo.value
     ? ([
-        'Java 21, Spring Boot 3.5.x, Spring Security, Spring Data JPA',
-        'PostgreSQL 17 med pgvector, Spring AI 1.0.x (BOM), Tika-dokumentlesing',
-        'Valgfri ONNX cross-encoder-reranking (ONNX Runtime, Hugging Face-tokenizers); konfigurasjonsstyrt, faller tilbake uten modell',
-        'Apache OpenNLP (NER m.m. i saniterings-/tekstflyt)',
-        'Actuator (helse, metrics, Prometheus-scrape), Micrometer; valgfri PostHog-server (Java) for $ai_generation og relatert analyse',
-        'Docker Compose, nginx (produksjonsbygg)',
-        'Bucket4j (rate limiting)',
+        'Java 21, Spring Boot 4, Spring AI 2 (BOM), Spring Security, JPA → PostgreSQL 17/pgvector',
+        'Innlesing og RAG-flyt i Spring AI; valgfri ONNX-rerank og OpenNLP der det trengs',
+        'Docker Compose (db + API + nginx), Actuator/Prometheus; Bucket4j på offentlige endepunkter',
       ] as const)
     : ([
-        'Java 21, Spring Boot 3.5.x, Spring Security, Spring Data JPA',
-        'PostgreSQL 17 with pgvector, Spring AI 1.0.x (BOM), Tika document reading',
-        'Optional ONNX cross-encoder reranking (ONNX Runtime, Hugging Face tokenizers); configuration-driven, pass-through without a model',
-        'Apache OpenNLP (NER etc. in sanitization / text flow)',
-        'Actuator (health, metrics, Prometheus scrape), Micrometer; optional PostHog server (Java) for `$ai_generation` and related analytics',
-        'Docker Compose, nginx (production build)',
-        'Bucket4j (rate limiting)',
+        'Java 21, Spring Boot 4, Spring AI 2 (BOM), Spring Security, JPA → PostgreSQL 17/pgvector',
+        'Ingestion and RAG in Spring AI; optional ONNX rerank and OpenNLP where needed',
+        'Docker Compose (db + API + nginx), Actuator/Prometheus; Bucket4j on public endpoints',
       ] as const),
 )
 
 const stackHeading = computed(() => (isNo.value ? 'Teknologistakk (kort)' : 'Tech stack (summary)'))
 
 const sectionsHeading = computed(() =>
-  isNo.value ? 'Valg og begrunnelse' : 'Choices and rationale',
+  isNo.value ? 'Hovedgrep' : 'Main ideas',
 )
 
 const sectionsIntro = computed(() =>
   isNo.value
-    ? 'Hver blokk beskriver hvordan teknologien brukes i porteføljen.'
-    : 'Each block describes how the technology is used in the portfolio.',
+    ? 'Fokus på det som faktisk bærer løsningen — resten ligger i kode og README.'
+    : 'Focus on what actually carries the solution; the rest lives in code and the README.',
 )
 
 const footerText = computed(() =>
@@ -261,199 +241,93 @@ const sections = computed<Section[]>(() => {
   if (isNo.value) {
     return [
       {
-        id: 'why',
-        heading: 'Hvorfor denne stakken?',
+        id: 'principle',
+        heading: 'Prinsipp',
         paragraphs: [
-          'Jeg prøver gjennomgående i prosjektet å finne en balanse mellom lettvinthet og funksjonalitet: løsninger som er enkle å jobbe med dag til dag, men som fortsatt gir nok struktur og kraft til å bygge noe som tåler litt vekst og endring.',
-          'Valgene under speiler det: modne rammeverk der det gir mening, og pragmatiske byggeklosser der det sparer tid uten å ofre det viktigste.',
+          'Modne rammer på server (Spring) der det lønner seg, og et moderne SPA-skall (Vue) som er raskt å endre. Målet er forutsigbar kode og en stakk som er enkel å kjøre lokalt og i produksjon.',
         ],
         icon: Layers,
         category: 'all',
         badges: [],
       },
       {
-        id: 'spring-ai',
-        heading: 'Spring AI',
+        id: 'ai-rag',
+        heading: 'KI og RAG',
         paragraphs: [
-          'Spring og Java brukes mye i enterprise-løsninger. Spring AI bygger videre på det økosystemet og gjør det naturlig å koble språkmodeller, dokumentflyt og vektorlagring inn i en Spring Boot-tjeneste. I denne porteføljen følger Spring AI-avhengigheter en 1.0.x-BOM med OpenAI-, Anthropic- og pgvector-startere.',
-          'Spring AI er et relativt nytt prosjekt, og jeg valgte det fordi jeg ønsket å følge med på hvordan integrasjonen mellom JVM-verdenen og AI utvikler seg, og for å lære det som sannsynligvis blir en vanlig sti for AI i Spring-baserte applikasjoner.',
-          'Chat går mot OpenAI eller Anthropic (Anthropic er tilgjengelig når API-nøkkel er konfigurert). Embeddings lagres i PostgreSQL med pgvector (OpenAI); standard chat-modell og modellvalg styres i konfigurasjon og kan velges fra klienten innenfor et trygt sett støttede modeller.',
+          'Spring AI 2 (BOM) kobler chat mot OpenAI og valgfritt Anthropic; embeddings og chunk-lagring ligger i PostgreSQL med pgvector. Dokumenter kommer inn via Spring AI (Tika der det trengs), og det som indekseres er kuratert via admin-flyten.',
+          'Henting støtter norsk og engelsk i samme spørsmål; valgfri ONNX-rerank og leverandørspesifikke prompt-maler finnes når man trenger finere kontroll.',
         ],
         icon: BrainCircuit,
         category: 'ai',
-        badges: ['Spring AI 1.0.x', 'OpenAI', 'Anthropic', 'Java 21'],
+        badges: ['Spring AI 2', 'pgvector', 'OpenAI', 'Anthropic'],
       },
       {
-        id: 'backend',
-        heading: 'Backend',
+        id: 'server-api',
+        heading: 'Backend og API',
         paragraphs: [
-          'Backend kjører på Spring Boot 3.5.x med Java 21. Jeg bruker Spring Security og Spring Data JPA mot PostgreSQL for persistens, og Bucket4j for enkel rate limiting der det trengs.',
-          'Apache OpenNLP brukes der det trengs i tekstbehandling og sanitering (for eksempel navngitte entiteter).',
-          'Det gir en kjent «batteries included»-opplevelse: god dokumentasjon, sterk typing og verktøy som passer godt når man vil at koden skal være forutsigbar over tid.',
+          'Spring Boot 4 på Java 21 med sikkerhet, JPA og Bucket4j på åpne endepunkter. OpenNLP inngår i sanitering der det er aktuelt.',
+          'REST er dokumentert med OpenAPI (SpringDoc); Vite proxier `/api` i utvikling, og Orval holder frontend-klienten i tråd med skjemaet.',
         ],
         icon: Server,
         category: 'backend',
-        badges: ['Spring Boot 3.5.x', 'Java 21', 'Spring Security', 'JPA', 'PostgreSQL', 'OpenNLP', 'Bucket4j'],
+        badges: ['Spring Boot 4', 'Java 21', 'OpenAPI', 'Orval'],
       },
       {
-        id: 'rag',
-        heading: 'RAG og vektorlagring',
+        id: 'client-ops',
+        heading: 'Klient og kjøring',
         paragraphs: [
-          'For RAG-lignende funksjonalitet bruker jeg PostgreSQL med pgvector som vektorbase, sammen med Spring AIs pgvector-integrasjon. Dokumenter kan leses inn via Tika-basert dokumentlesing i Spring AI.',
-          'Etter vektorhenting og sammenslåing kan kandidat-chunks valgfritt rerankes med en ONNX-basert cross-encoder og Hugging Face-tokenizers når modell- og tokenizer-stier er satt i konfigurasjon; ellers brukes pass-through uten ekstra inferens.',
-          'RAG-prompten er leverandørspesifikk og hentes fra versjonerte maler, slik at OpenAI og Anthropic kan tones litt ulikt uten å duplisere hele flyten.',
-          'Ved henting utvides brukerens spørsmål til både norsk og engelsk, slik at treff i dokumenter på begge språk blir lettere å få med.',
-          'PostgreSQL med pgvector kjører i Docker sammen med resten av stakken, som gjør det enkelt å få opp et konsistent miljø lokalt og i deploy.',
-          'Fangst → kuratér → ingest → verifiser: valgfritt samtaleinnslag (f.eks. stemmeleverandør) er et produktvalg for rikere råmateriale; det som faktisk indekseres, er kuraterte dokumenter via admin-pipelinen. Faglitteratur om RAG dekker indeksering, chunking, retrieval og evaluering — ikke valg av stemme-UI.',
-          'Primærkilder (arXiv): https://arxiv.org/abs/2407.01219 (Wang m.fl., EMNLP 2024), https://arxiv.org/abs/2312.10997 (Gao m.fl., oversikt, des. 2023). Menneskeforankret eval: https://arxiv.org/abs/2503.09902, https://arxiv.org/abs/2504.14891. Utdypet flyt og praksislenker står i rot-README og i seksjonen «Videre arbeid» på denne siden.',
-        ],
-        icon: Database,
-        category: 'ai',
-        badges: ['PostgreSQL', 'pgvector', 'Tika', 'Embeddings', 'Docker', 'ONNX (valgfritt)'],
-      },
-      {
-        id: 'frontend',
-        heading: 'Frontend',
-        paragraphs: [
-          'Frontend er bygget med Vue 3, Vite og TypeScript. Tilstand og ruter håndteres med Pinia og Vue Router, og UI er satt sammen med Tailwind CSS 4 (Vite-plugin) og komponenter i samme ånd som shadcn (Reka UI).',
-          'Målet er god utvikleropplevelse og raske iterasjoner, samtidig som resultatet holder seg ryddig og tilgjengelig.',
+          'Vue 3, Vite 8, TypeScript, Pinia, Tailwind 4 og Reka UI for UI og tilstand.',
+          'Docker Compose binder sammen Postgres, API og nginx-bygget frontend. Actuator og Prometheus gir grunnleggende innsyn; PostHog (nettleser og valgfritt serversporing) kan skrus på etter behov.',
         ],
         icon: Globe,
-        category: 'frontend',
-        badges: ['Vue 3', 'Vite', 'TypeScript', 'Pinia', 'Tailwind 4', 'Reka UI'],
-      },
-      {
-        id: 'api',
-        heading: 'API og integrasjon',
-        paragraphs: [
-          'REST-grensesnittet er dokumentert med OpenAPI via SpringDoc, med Swagger UI på backend. I lokal utvikling proxier Vite forespørsler under `/api` til Spring Boot, slik at SPA og API føles som én opprinnelse.',
-          'OpenAPI-skjemaet kan brukes til å generere en typesikker HTTP-klient i frontend med Orval, som holder klient og kontrakt i takt når API-et endrer seg.',
-        ],
-        icon: Workflow,
-        category: 'integration',
-        badges: ['OpenAPI', 'SpringDoc', 'Swagger', 'Orval'],
-      },
-      {
-        id: 'observability',
-        heading: 'Observabilitet',
-        paragraphs: [
-          'Backend eksponerer Spring Boot Actuator med blant annet helse, info og Prometheus-scrape for metrics via Micrometer.',
-          'LLM-kall (tokens, estimert kostnad, latens, kontekst) kan sendes som PostHog $ai_generation-hendelser via posthog-server (Java) når API-nøkkel og vert er satt, slik at serverside modellbruk kan sees i samme prosjekt som samtykkestyrt posthog-js i nettleseren.',
-          'Admin RAG-eval bruker eval-datasett i PostgreSQL og LLM-as-judge i egen kode; PostHogs LLM-observabilitet kompletterer med hendelser fra faktisk trafikk og evalueringer i PostHog-prosjektet.',
-          'Eksperiment- og admin-flater kan bruke PostHog-feature-flagg (resolver mot /decide) når nøkkel og vert er konfigurert, i tillegg til analyse og feilfangst i klienten.',
-        ],
-        icon: Eye,
         category: 'devops',
-        badges: ['Actuator', 'Prometheus', 'Micrometer', 'PostHog', 'Feature flags'],
-      },
-      {
-        id: 'runtime',
-        heading: 'Kjøring og drift',
-        paragraphs: [
-          'Applikasjonen orkestreres med Docker Compose: PostgreSQL (pgvector), Spring-backend og en nginx-basert frontend-container. Det gir et helhetlig bilde av hvordan tjenestene snakker sammen uten å måtte sette opp alt manuelt hver gang.',
-        ],
-        icon: Container,
-        category: 'devops',
-        badges: ['Docker Compose', 'PostgreSQL', 'pgvector', 'nginx'],
+        badges: ['Vue 3', 'Docker Compose', 'nginx', 'Actuator'],
       },
     ]
   }
   return [
     {
-      id: 'why',
-      heading: 'Why this stack?',
+      id: 'principle',
+      heading: 'Principle',
       paragraphs: [
-        'Across this project I try to balance ease of use with functionality: choices that stay pleasant to work with day to day, while still providing enough structure and power to build something that can grow and evolve.',
-        'The items below reflect that: mature frameworks where they earn their place, and pragmatic building blocks where they save time without giving up what matters most.',
+        'Mature server-side frameworks (Spring) where they pay off, and a modern Vue SPA that is quick to change. The goal is predictable code and a stack that is easy to run locally and in production.',
       ],
       icon: Layers,
       category: 'all',
       badges: [],
     },
     {
-      id: 'spring-ai',
-      heading: 'Spring AI',
+      id: 'ai-rag',
+      heading: 'AI and RAG',
       paragraphs: [
-        'Spring and Java are widely used in enterprise systems. Spring AI extends that ecosystem and makes it natural to wire language models, document flows, and vector storage into a Spring Boot service. In this portfolio the Spring AI dependencies follow a 1.0.x BOM with OpenAI, Anthropic, and pgvector starters.',
-        'Spring AI is a relatively new project, and I chose it because I want to follow how AI integration on the JVM evolves, and to learn what is likely to become a common path for AI in Spring-based applications.',
-        'Chat targets OpenAI or Anthropic (Anthropic is available when an API key is configured). Embeddings are stored in PostgreSQL with pgvector (OpenAI); the default chat model and model selection are configuration-driven, with the client choosing from a small allow-listed set of supported models.',
+        'Spring AI 2 (BOM) wires chat to OpenAI and optionally Anthropic; embeddings and chunk storage live in PostgreSQL with pgvector. Documents enter through Spring AI (Tika where needed), and what gets indexed is curated through the admin pipeline.',
+        'Retrieval spans Norwegian and English in one question; optional ONNX rerank and provider-specific prompt templates are there when you need finer control.',
       ],
       icon: BrainCircuit,
       category: 'ai',
-      badges: ['Spring AI 1.0.x', 'OpenAI', 'Anthropic', 'Java 21'],
+      badges: ['Spring AI 2', 'pgvector', 'OpenAI', 'Anthropic'],
     },
     {
-      id: 'backend',
-      heading: 'Backend',
+      id: 'server-api',
+      heading: 'Backend and API',
       paragraphs: [
-        'The backend runs on Spring Boot 3.5.x with Java 21. I use Spring Security and Spring Data JPA with PostgreSQL for persistence, and Bucket4j for straightforward rate limiting where needed.',
-        'Apache OpenNLP is used where needed for text processing and sanitization (for example named-entity recognition).',
-        'That combination provides a familiar batteries-included experience: solid documentation, strong typing, and tooling that fits well when you want the codebase to stay predictable over time.',
+        'Spring Boot 4 on Java 21 with security, JPA, and Bucket4j on public endpoints. OpenNLP participates in sanitization where relevant.',
+        'REST is documented with OpenAPI (SpringDoc); Vite proxies `/api` in development, and Orval keeps the frontend client aligned with the schema.',
       ],
       icon: Server,
       category: 'backend',
-      badges: ['Spring Boot 3.5.x', 'Java 21', 'Spring Security', 'JPA', 'PostgreSQL', 'OpenNLP', 'Bucket4j'],
+      badges: ['Spring Boot 4', 'Java 21', 'OpenAPI', 'Orval'],
     },
     {
-      id: 'rag',
-      heading: 'RAG and vector storage',
+      id: 'client-ops',
+      heading: 'Client and runtime',
       paragraphs: [
-        "For RAG-style features I use PostgreSQL with pgvector as the vector database, together with Spring AI's pgvector integration. Documents can be ingested using Spring AI's Tika-based document reader.",
-        'After vector retrieval and merge, candidate chunks can optionally be reranked with an ONNX cross-encoder and Hugging Face tokenizers when model and tokenizer paths are configured; otherwise the flow passes through without extra inference.',
-        'The RAG prompt is provider-specific and loaded from versioned templates, so OpenAI and Anthropic can be tuned slightly differently without duplicating the whole flow.',
-        'At retrieval time the user question is expanded into Norwegian and English so documents in either language are easier to surface.',
-        'PostgreSQL with pgvector runs in Docker alongside the rest of the stack, which makes it easy to spin up a consistent environment locally and in deployment.',
-        'Capture → curate → ingest → verify: optional conversational capture (for example a voice vendor) is a product choice for richer raw material; what gets indexed is curated content through the admin pipeline. RAG literature covers indexing, chunking, retrieval, and evaluation—not the voice UI choice.',
-        'Primary arXiv sources: https://arxiv.org/abs/2407.01219 (Wang et al., EMNLP 2024), https://arxiv.org/abs/2312.10997 (Gao et al., survey, Dec 2023). Human-grounded evaluation: https://arxiv.org/abs/2503.09902, https://arxiv.org/abs/2504.14891. The root README and the Future work section on this page spell out the flow and practice links.',
-      ],
-      icon: Database,
-      category: 'ai',
-      badges: ['PostgreSQL', 'pgvector', 'Tika', 'Embeddings', 'Docker', 'ONNX (optional)'],
-    },
-    {
-      id: 'frontend',
-      heading: 'Frontend',
-      paragraphs: [
-        'The frontend is built with Vue 3, Vite, and TypeScript. State and routing are handled with Pinia and Vue Router, and the UI is composed with Tailwind CSS 4 (Vite plugin) and components in the same spirit as shadcn (Reka UI).',
-        'The goal is a strong developer experience and fast iteration, while keeping the end result clean and accessible.',
+        'Vue 3, Vite 8, TypeScript, Pinia, Tailwind 4, and Reka UI for UI and state.',
+        'Docker Compose ties together Postgres, the API, and the nginx-built frontend. Actuator and Prometheus give basic insight; PostHog (browser and optional server-side capture) can be enabled as needed.',
       ],
       icon: Globe,
-      category: 'frontend',
-      badges: ['Vue 3', 'Vite', 'TypeScript', 'Pinia', 'Tailwind 4', 'Reka UI'],
-    },
-    {
-      id: 'api',
-      heading: 'API and integration',
-      paragraphs: [
-        'The REST API is documented with OpenAPI through SpringDoc, with Swagger UI served from the backend. In local development Vite proxies `/api` to Spring Boot so the SPA and API feel like a single origin.',
-        'The same OpenAPI schema can generate a typed HTTP client in the frontend with Orval, keeping the client and contract aligned as the API evolves.',
-      ],
-      icon: Workflow,
-      category: 'integration',
-      badges: ['OpenAPI', 'SpringDoc', 'Swagger', 'Orval'],
-    },
-    {
-      id: 'observability',
-      heading: 'Observability',
-      paragraphs: [
-        'The backend exposes Spring Boot Actuator including health, info, and a Prometheus scrape endpoint for metrics via Micrometer.',
-        'LLM calls (tokens, estimated cost, latency, context) can be sent as PostHog `$ai_generation` events through posthog-server (Java) when the API key and host are set, so server-side model usage can live in the same project as consent-gated posthog-js in the browser.',
-        'Admin RAG evaluation uses eval datasets in PostgreSQL and an in-app LLM-as-judge pipeline; PostHog LLM observability complements that with events from live traffic and evaluations in the PostHog project.',
-        'Experiment and admin views can use PostHog feature flags (resolved via `/decide`) when the key and host are configured, alongside analytics and client-side error capture.',
-      ],
-      icon: Eye,
       category: 'devops',
-      badges: ['Actuator', 'Prometheus', 'Micrometer', 'PostHog', 'Feature flags'],
-    },
-    {
-      id: 'runtime',
-      heading: 'Runtime and operations',
-      paragraphs: [
-        'The application is orchestrated with Docker Compose: PostgreSQL (pgvector), the Spring backend, and an nginx-served frontend container. That gives a coherent picture of how services talk to each other without manual setup every time.',
-      ],
-      icon: Container,
-      category: 'devops',
-      badges: ['Docker Compose', 'PostgreSQL', 'pgvector', 'nginx'],
+      badges: ['Vue 3', 'Docker Compose', 'nginx', 'Actuator'],
     },
   ]
 })

@@ -9,7 +9,7 @@ export const CONSENT_RECORD_KEY_V1 = 'aboutme_cookie_consent_v1'
 /** Current consent storage key (granular categories). */
 export const CONSENT_RECORD_KEY = 'aboutme_cookie_consent_v2'
 
-/** @deprecated Use CONSENT_RECORD_KEY — kept for tests and imports. */
+/** @deprecated Use CONSENT_RECORD_KEY; kept for tests and imports. */
 export const COOKIE_CONSENT_RECORD_KEY = CONSENT_RECORD_KEY
 
 const LEGACY_POSTHOG_FLAG = 'posthog_tracking_consent'
@@ -182,7 +182,7 @@ export function saveGranularConsent(
   syncPosthogWithRecord(getConsentRecord()!)
 }
 
-/** @deprecated Use saveGranularConsent — retained for transitional callers if any. */
+/** @deprecated Use saveGranularConsent; retained for transitional callers if any. */
 export function saveAnalyticsConsent(
   analytics: boolean,
   source: ConsentSource = 'settings',

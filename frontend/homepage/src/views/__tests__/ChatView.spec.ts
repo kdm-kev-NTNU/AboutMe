@@ -250,7 +250,7 @@ describe('ChatView', () => {
 
   it('shows updated first-time popup and saves versioned dismissal key', async () => {
     const { wrapper } = await mountChat({})
-    expect(wrapper.text()).toContain('The portfolio is being actively adapted')
+    expect(wrapper.text()).toContain('This portfolio keeps evolving')
 
     const dismissBtn = wrapper.findAll('button').find((b) => /got it/i.test(b.text()))
     expect(dismissBtn).toBeDefined()
@@ -262,6 +262,6 @@ describe('ChatView', () => {
   it('shows updated popup even when legacy dismissal key exists', async () => {
     localStorage.setItem('chatInfoPopupDismissed', 'true')
     const { wrapper } = await mountChat({})
-    expect(wrapper.text()).toContain('The portfolio is being actively adapted')
+    expect(wrapper.text()).toContain('This portfolio keeps evolving')
   })
 })
