@@ -10,7 +10,7 @@ Portfolio web app with a document-grounded AI chat (RAG). The UI supports Norweg
 | `frontend/homepage/` | Vue 3 SPA: [frontend/homepage/README.md](frontend/homepage/README.md) for npm scripts and Orval |
 | `scripts/dev.ps1` | Windows: Docker for infra, then opens API + Vite in separate terminals |
 | `docker-compose.yml` | PostgreSQL (pgvector), backend, Nginx frontend |
-| `.github/workflows/` | `tests.yml` (Maven verify + frontend unit coverage), `semgrep.yml` |
+| `.github/workflows/` | `tests.yml` (Maven verify + frontend unit coverage), `semgrep.yml`, `docker-publish.yml` (Docker Hub via Docker Build Cloud) |
 
 Seed documents for the vector store go in **`backend/data/docs/`** (gitignored). With hybrid dev, create that folder and add PDFs/DOCX/MD as needed.
 
@@ -52,6 +52,31 @@ Then:
 - Frontend: from `frontend/homepage/`, `npm install` and `npm run dev` → [http://localhost:5173](http://localhost:5173) (Vite proxies `/api` to port 8080)
 
 On Windows you can use **`.\scripts\dev.ps1`** after copying `.env.example` to `.env`. It starts the same infra and launches API + Vite.
+
+### Container images (Docker Hub)
+
+CI builds **multi-platform** (`linux/amd64`, `linux/arm64`) images with **Docker Build Cloud** and pushes them on pushes to `main`, semver tags `v*.*.*`, or manual **Actions → Docker publish → Run workflow**. Replace `<DOCKER_ACCOUNT>` with your Docker Hub username or org.
+
+**Pull (private repos require `docker login`):**
+
+```bash
+docker login
+docker pull <DOCKER_ACCOUNT>/aboutme-backend:latest
+docker pull <DOCKER_ACCOUNT>/aboutme-frontend:latest
+```
+
+**Hub:** open [hub.docker.com](https://hub.docker.com/) → Repositories → `aboutme-backend` / `aboutme-frontend`.
+
+**Use prebuilt images instead of local `build:`:** copy `docker-compose.yml` and replace the `backend` / `frontend` `build:` blocks with `image: <DOCKER_ACCOUNT>/aboutme-backend:latest` and `image: <DOCKER_ACCOUNT>/aboutme-frontend:latest` (keep `db` as-is). Pass runtime secrets the same way as local Compose (`backend/.env`, etc.).
+
+**GitHub Actions setup:** Repository → **Settings** → **Secrets and variables** → **Actions**
+
+- Variables: `DOCKER_ACCOUNT`, `CLOUD_BUILDER_NAME` (your Docker Build Cloud builder name).
+- Secrets: `DOCKER_ACCESS_TOKEN` (Hub PAT with read/write), `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST`, `VITE_POSTHOG_ENABLED` (optional; baked into the frontend at build time).
+
+**Verify after merge:** Actions → **Docker publish** → run workflow on `main`; confirm both jobs succeed, then `docker pull` both `:latest` tags and smoke-test with Compose using `image:` overrides.
+
+**If `docker pull` says `not found`:** the image is not on Hub under that name yet, or the tag differs. Check GitHub → **Actions** → **Docker publish** for a **green** run (merge the workflow file and set `DOCKER_ACCOUNT` / `CLOUD_BUILDER_NAME` / `DOCKER_ACCESS_TOKEN` first). Confirm the Hub username matches the repo variable (`kevindm1066/...` only works if `DOCKER_ACCOUNT` is `kevindm1066`). Until `:latest` exists, try `docker pull <DOCKER_ACCOUNT>/aboutme-backend:main` (branch tag from metadata-action).
 
 ## Configuration
 
