@@ -10,9 +10,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 # CPU wheels only; needed to load weights during optimum export.
-# Pin torch: unpinned installs can pull 2.6+ where ONNX symbols diverge from optimum's imports
+# Pin torch below 2.6: unpinned installs can pull 2.6+ where ONNX symbols diverge from optimum's imports
 # (e.g. ImportError: cannot import name '_attention_scale' from torch.onnx.symbolic_opset14).
-RUN pip install --no-cache-dir "torch==2.5.1+cpu" --index-url https://download.pytorch.org/whl/cpu
+# Use torch==2.5.1 (not 2.5.1+cpu): the PyTorch CPU index exposes different local-version tags per arch;
+# linux/arm64 lists 2.5.1 while amd64 may list 2.5.1+cpu, so an exact +cpu pin breaks multi-platform builds.
+RUN pip install --no-cache-dir "torch==2.5.1" --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir \
     "optimum[onnxruntime]>=1.23.0,<2" \
     "onnx>=1.16" \
