@@ -73,7 +73,7 @@ const formatModelTags = computed(() => (m: ChatModelOption) => {
     if (t === ChatModelTag.REASONING) return no ? 'Resonnering' : 'Reasoning'
     return String(t)
   })
-  return ` — ${parts.join(', ')}`
+  return ` (${parts.join(', ')})`
 })
 
 const selectedModelId = computed({
@@ -88,16 +88,16 @@ const showProviderToggle = computed(
 const popupCopy = computed(() =>
   language.value === 'no'
     ? {
-        title: 'Porteføljen er i aktiv tilpasning',
-        body: 'Denne chatten og kunnskapsgrunnlaget justeres fortløpende ut fra det jeg lærer i bacheloroppgaven. Svarene blir derfor gradvis mer presise over tid.',
-        recommendation: 'Vil du se hva som tilpasses nå? Besøk prosjektsiden for kontekst og status.',
+        title: 'Porteføljen oppdateres fortløpende',
+        body: 'Chatten og kunnskapsgrunnlaget endrer seg etter hvert som jeg lærer mer i bacheloroppgaven. Svarene blir gjerne mer treffsikre over tid.',
+        recommendation: 'Lurer du på hva som skjer akkurat nå? Ta en titt på prosjektsiden.',
         bachelorCta: 'Åpne prosjektsiden',
         dismiss: 'Forstått',
       }
     : {
-        title: 'The portfolio is being actively adapted',
-        body: "This chat and its knowledge base are being continuously adjusted based on what I'm learning in my bachelor's thesis. Replies will therefore become progressively more precise over time.",
-        recommendation: 'Want to see what is currently being adapted? Visit the project page for context and status.',
+        title: 'This portfolio keeps evolving',
+        body: "I'm updating this chat and its knowledge base as I learn more in my bachelor's thesis. Answers should get sharper over time.",
+        recommendation: 'Curious what I am working on? Check the project page.',
         bachelorCta: 'Open the project page',
         dismiss: 'Got it',
       },
