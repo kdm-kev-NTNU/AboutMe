@@ -1,12 +1,12 @@
 # AboutMe
 
-Portfolio web app with a document-grounded AI chat (RAG). The UI supports Norwegian and English. Stack: **Vue 3**, **Spring Boot**, and **PostgreSQL with pgvector** (relational data and embeddings in one database). **PostHog** can receive `$ai_generation` events from the backend when enabled, alongside consent-gated frontend analytics.
+Portfolio web app with a document-grounded AI chat (RAG). The UI supports Norwegian and English. Stack: **Vue 3** (Vite 8), **Spring Boot 4.x** with **Spring AI 2.0.x** (BOM), and **PostgreSQL with pgvector** (relational data and embeddings in one database). **PostHog** can receive `$ai_generation` events from the backend when enabled, alongside consent-gated frontend analytics.
 
 ## Repository layout
 
 | Path | What |
 |------|------|
-| `backend/` | Spring Boot API (RAG, auth, admin document pipeline) |
+| `backend/` | Spring Boot 4.x API (Spring AI 2.x, RAG, auth, admin document pipeline) |
 | `frontend/homepage/` | Vue 3 SPA: [frontend/homepage/README.md](frontend/homepage/README.md) for npm scripts and Orval |
 | `scripts/dev.ps1` | Windows: Docker for infra, then opens API + Vite in separate terminals |
 | `docker-compose.yml` | PostgreSQL (pgvector), backend, Nginx frontend |
@@ -59,7 +59,9 @@ Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `bac
 
 **Usually required:** `OPENAI_API_KEY`, PostgreSQL user/password (defaults align with Compose: `postgres` / `postgres`), `PORT` for the API (default **8080**).
 
-**Common optional:** `ANTHROPIC_API_KEY`, PostHog backend LLM capture (`POSTHOG_ENABLED`, `POSTHOG_API_KEY`, `POSTHOG_HOST`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`. Details and comments live in `.env.example`.
+**Common optional:** `ANTHROPIC_API_KEY`, PostHog backend LLM capture (`POSTHOG_ENABLED`, `POSTHOG_API_KEY`, `POSTHOG_HOST`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`, `SANITIZER_ENABLED`, `AI_BUDGET_ANON_SALT`. Details and comments live in `.env.example`.
+
+**AI usage budgeting:** The backend tracks estimated LLM spend (per-model rates in [backend/src/main/resources/application.yaml](backend/src/main/resources/application.yaml) under `portfolio.ai.budget`) with daily/monthly caps for authenticated and anonymous users, a spike guard, and an optional kill switch. Override defaults with `PORTFOLIO_AI_BUDGET_*` style env vars (Spring relaxed binding) if you deploy with different limits; set `AI_BUDGET_ANON_SALT` to a stable secret in production so anonymous budget keys stay consistent across restarts.
 
 ## Tests
 
