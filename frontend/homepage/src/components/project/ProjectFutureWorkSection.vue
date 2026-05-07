@@ -21,11 +21,11 @@ const sectionsEn: SectionCopy[] = [
 		category: 'Personal',
 		title: 'ElevenLabs voice agent: collect, then I process',
 		intro:
-			'Optional conversational capture (ElevenLabs) adds richer spoken detail than polished pages alone. Raw exports or transcripts are not public or in the vector store by default; I structure, trim, redact, and tune into notes or .txt drafts, upload through the document pipeline, then re-ingest and sanity-check retrieval before production chat. The arXiv links below support RAG indexing, retrieval, and evaluation—not choosing a voice vendor (that is a product decision). Purpose, consent, and minimisation for any capture channel follow applicable privacy law, not those papers.',
+			'Optional ElevenLabs capture adds spoken detail beyond polished pages alone. Raw exports or transcripts stay private and off the vector store by default. I turn them into notes or .txt drafts, upload through the document pipeline, then re-ingest and check retrieval before live chat. The arXiv links below are about RAG indexing, retrieval, and evaluation, not about picking a voice vendor (that is a product choice). Purpose, consent, and data minimisation follow privacy law, not those papers.',
 		points: [
 			'Collect with clear purpose, consent, and boundaries on what is stored.',
 			'Personally process raw material before anything is ingestible or visitor-facing.',
-			'Upload curated artefacts via the admin document pipeline.',
+			'Upload curated files through the admin document pipeline.',
 			'Re-ingest and verify retrieval on new chunks before they power Kevin’s AI in live chat.',
 		],
 		refs: [
@@ -38,7 +38,7 @@ const sectionsEn: SectionCopy[] = [
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 			{
-				label: 'Abbasiantaeb et al.: Conversational Gold — evaluating with human gold nuggets (arXiv:2503.09902)',
+				label: 'Abbasiantaeb et al.: Conversational Gold: evaluating with human gold nuggets (arXiv:2503.09902)',
 				href: 'https://arxiv.org/abs/2503.09902',
 			},
 			{
@@ -122,9 +122,9 @@ const sectionsEn: SectionCopy[] = [
 const sectionsNo: SectionCopy[] = [
 	{
 		category: 'Personlig',
-		title: 'ElevenLabs stemmeagent: samle inn, så prosesserer jeg',
+		title: 'ElevenLabs stemmeagent: først inn, så rydder jeg',
 		intro:
-			'Valgfri samtalefangst (ElevenLabs) gir rikere muntlig detalj enn polerte sider alene. Rå eksport eller transkripsjon er verken offentlig eller i vektorlageret som standard; jeg strukturerer, korter, sladder og finjusterer til notater eller .txt-utkast, laster opp via dokumentpipelinen, og kjører re-ingest og retrieval-sjekk før produksjonschat. arXiv-referansene under støtter indeksering, henting og evaluering i RAG — ikke valg av stemmeleverandør (det er et produktvalg). Formål, samtykke og dataminimering for eventuelt innsamlingsledd følger personvernregelverk, ikke artiklene.',
+			'Valgfri samtale via ElevenLabs gir mer muntlig detalj enn bare ferdig skrevne sider. Rå filer eller transkripsjoner er ikke offentlige eller i vektorlageret som standard. Jeg strukturerer, korter ned, redakterer og lager notater eller .txt-utkast, laster opp via dokumentpipelinen, og kjører re-ingest og sjekk av henting før produksjonschat. arXiv-referansene under handler om indeksering, henting og evaluering i RAG, ikke om hvilken stemmeleverandør jeg velger (det er et produktvalg). Formål, samtykke og dataminimering følger personvernregelverket, ikke artiklene.',
 		points: [
 			'Samle inn med tydelig formål, samtykke og grenser for hva som lagres.',
 			'Prosesser råmateriale selv før noe kan ingestes eller vises for besøkende.',
@@ -141,7 +141,7 @@ const sectionsNo: SectionCopy[] = [
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 			{
-				label: 'Abbasiantaeb m.fl.: Conversational Gold — evaluering med menneskelige gull-nugger (arXiv:2503.09902)',
+				label: 'Abbasiantaeb m.fl.: Conversational Gold: evaluering med menneskelige gull-nugger (arXiv:2503.09902)',
 				href: 'https://arxiv.org/abs/2503.09902',
 			},
 			{
@@ -229,7 +229,7 @@ const hero = computed(() =>
 		? {
 				title: 'Videre arbeid og forbedringer',
 				lead:
-					'Dette er en forskningsforankret roadmap for neste iterasjoner i en portefølje som er under aktiv tilpasning: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, samt promptversjoner.',
+					'En forskningsforankret roadmap for det som kommer videre: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, og promptversjoner. Porteføljen oppdateres fortløpende.',
 				contextBefore:
 					'Roadmapen viser hva jeg prioriterer mens jeg kontinuerlig tilpasser porteføljen med læring fra bacheloroppgaven (2026) hos Piscada AS i Trondheim og arbeid på ',
 				contextLinkText: 'Foresight AI',
@@ -239,7 +239,7 @@ const hero = computed(() =>
 		: {
 				title: 'Future work and improvements',
 				lead:
-					'A research-backed roadmap for the next iterations of a portfolio that is being actively adapted: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning.',
+					'A research-backed roadmap for what comes next: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning. This portfolio keeps evolving.',
 				contextBefore:
 					"This roadmap reflects what I prioritize while continuously adapting the portfolio based on learnings from my bachelor's thesis (2026) at Piscada AS in Trondheim and work on ",
 				contextLinkText: 'Foresight AI',

@@ -7,9 +7,9 @@
   Project ID: PostHog UI → Project settings → Project API key page (numeric project id in URL).
 
   Env vars:
-    POSTHOG_PERSONAL_API_KEY (required) — NOT the same as POSTHOG_API_KEY used for event capture
+    POSTHOG_PERSONAL_API_KEY (required); not the same as POSTHOG_API_KEY used for event capture
     POSTHOG_PROJECT_ID (required)
-    POSTHOG_APP_HOST (optional) — default derived from POSTHOG_HOST or https://eu.posthog.com
+    POSTHOG_APP_HOST (optional): default derived from POSTHOG_HOST or https://eu.posthog.com
 
 .EXAMPLE
   $env:POSTHOG_PERSONAL_API_KEY = "phx_..."
@@ -195,11 +195,11 @@ You are evaluating whether the assistant's answer is grounded in RAG context. Us
 '@
 
 Ensure-LlmJudge -Name "Answer addresses user question" `
-  -Description "LLM judge — relevance to user question (starts disabled)" `
+  -Description "LLM judge: relevance to user question (starts disabled)" `
   -Prompt $promptRelevance
 
 Ensure-LlmJudge -Name "RAG answer grounded in context" `
-  -Description "LLM judge — faithfulness to retrieved context (starts disabled)" `
+  -Description "LLM judge: faithfulness to retrieved context (starts disabled)" `
   -Prompt $promptFaithfulness
 
 Write-Host "`nDone. UI: $base/llm-analytics/evaluations" -ForegroundColor Cyan
