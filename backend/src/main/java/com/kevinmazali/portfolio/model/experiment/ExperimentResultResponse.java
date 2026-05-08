@@ -10,9 +10,11 @@ public record ExperimentResultResponse(
     Double relevance,
     Double correctness,
     Double conciseness,
+    Double languageConsistency,
     String faithfulnessExplanation,
     String relevanceExplanation,
     String correctnessExplanation,
-    String concisenessExplanation
+    String concisenessExplanation,
+    String languageConsistencyExplanation
 ) {
 }

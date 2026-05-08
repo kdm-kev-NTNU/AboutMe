@@ -142,6 +142,7 @@ public class ExperimentService {
         r.getMeanRelevance(),
         r.getMeanCorrectness(),
         r.getMeanConciseness(),
+        r.getMeanLanguageConsistency(),
         r.getErrorMessage(),
         r.getCreatedAt(),
         r.getCompletedAt());
@@ -165,6 +166,7 @@ public class ExperimentService {
         r.getMeanRelevance(),
         r.getMeanCorrectness(),
         r.getMeanConciseness(),
+        r.getMeanLanguageConsistency(),
         r.getErrorMessage(),
         r.getCreatedAt(),
         r.getCompletedAt(),
@@ -186,9 +188,11 @@ public class ExperimentService {
         row.getRelevance(),
         row.getCorrectness(),
         row.getConciseness(),
+        row.getLanguageConsistency(),
         row.getFaithfulnessExplanation(),
         row.getRelevanceExplanation(),
         row.getCorrectnessExplanation(),
-        row.getConcisenessExplanation());
+        row.getConcisenessExplanation(),
+        row.getLanguageConsistencyExplanation());
   }
 }

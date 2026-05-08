@@ -78,6 +78,7 @@ public class ExperimentAsyncRunner {
     List<Double> rel = new ArrayList<>();
     List<Double> corr = new ArrayList<>();
     List<Double> conc = new ArrayList<>();
+    List<Double> langCons = new ArrayList<>();
 
     String gen = run.getGeneratorModel();
     String judge = run.getEvaluatorModel();
@@ -99,6 +100,7 @@ public class ExperimentAsyncRunner {
       EvaluationScore r = evaluatorService.evaluateRelevance(judge, q, answer);
       EvaluationScore c = evaluatorService.evaluateCorrectness(judge, q, answer, ex.referenceText());
       EvaluationScore co = evaluatorService.evaluateConciseness(judge, q, answer);
+      EvaluationScore lc = evaluatorService.evaluateLanguageConsistency(judge, q, answer);
 
       if (!Double.isNaN(f.score())) {
         faith.add(f.score());
@@ -112,6 +114,9 @@ public class ExperimentAsyncRunner {
       if (!Double.isNaN(co.score())) {
         conc.add(co.score());
       }
+      if (!Double.isNaN(lc.score())) {
+        langCons.add(lc.score());
+      }
 
       ExperimentResult row = ExperimentResult.builder()
           .experimentRun(run)
@@ -123,10 +128,12 @@ public class ExperimentAsyncRunner {
           .relevance(Double.isNaN(r.score()) ? null : r.score())
           .correctness(Double.isNaN(c.score()) ? null : c.score())
           .conciseness(Double.isNaN(co.score()) ? null : co.score())
+          .languageConsistency(Double.isNaN(lc.score()) ? null : lc.score())
           .faithfulnessExplanation(f.explanation())
           .relevanceExplanation(r.explanation())
           .correctnessExplanation(c.explanation())
           .concisenessExplanation(co.explanation())
+          .languageConsistencyExplanation(lc.explanation())
           .build();
       experimentResultRepository.save(row);
     }
@@ -135,6 +142,7 @@ public class ExperimentAsyncRunner {
     run.setMeanRelevance(mean(rel));
     run.setMeanCorrectness(mean(corr));
     run.setMeanConciseness(mean(conc));
+    run.setMeanLanguageConsistency(mean(langCons));
     run.setStatus(ExperimentRunStatus.COMPLETED);
     run.setCompletedAt(OffsetDateTime.now());
     experimentRunRepository.save(run);
