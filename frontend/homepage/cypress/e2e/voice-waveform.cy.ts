@@ -22,6 +22,12 @@ describe('Voice waveform visual', () => {
     cy.intercept('POST', '**/transcribe', { statusCode: 200, body: { text: 'ok' } }).as('transcribePost')
   })
 
+  function assertRecordingWaveformCanvasReady() {
+    cy.get('[role="img"][aria-label="Audio level while recording"]').within(() => {
+      cy.get('canvas').should('have.prop', 'width').and('be.greaterThan', 0)
+    })
+  }
+
   it('shows waveform canvas while recording (screenshot)', () => {
     cy.visit('/', {
       onBeforeLoad(win) {
@@ -48,19 +54,18 @@ describe('Voice waveform visual', () => {
 
     cy.get('main').scrollTo('bottom', { ensureScrollable: false })
 
-    cy.get('main form', { timeout: 15000 })
-      .find('[aria-label="Voice input"]')
-      .scrollIntoView()
-      .should('be.visible')
-      /** Cookie / feedback widgets can still occlude the mic in the corner */
-      .click({ force: true })
+    cy.get('main form', { timeout: 15000 }).find('[aria-label="Voice input"]').as('voiceInputHome')
+    cy.get('@voiceInputHome').scrollIntoView()
+    cy.get('@voiceInputHome').should('be.visible')
+    /** Cookie / feedback widgets can still occlude the mic in the corner */
+    cy.get('@voiceInputHome').click({ force: true })
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15000 }).should('be.visible')
-    cy.wait(500)
+    assertRecordingWaveformCanvasReady()
 
     cy.screenshot('waveform-home-recording', { capture: 'viewport' })
 
-    cy.get('main form').find('[aria-label="Voice input"]').click({ force: true })
+    cy.get('main form [aria-label="Voice input"]').click({ force: true })
 
     cy.wait('@transcribePost')
   })
@@ -94,18 +99,17 @@ describe('Voice waveform visual', () => {
     })
     cy.wait('@chatModels')
 
-    cy.get('main form')
-      .find('[aria-label="Voice input"]')
-      .scrollIntoView()
-      .should('be.visible')
-      .click()
+    cy.get('main form').find('[aria-label="Voice input"]').as('voiceInputChat')
+    cy.get('@voiceInputChat').scrollIntoView()
+    cy.get('@voiceInputChat').should('be.visible')
+    cy.get('@voiceInputChat').click()
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15000 }).should('be.visible')
-    cy.wait(500)
+    assertRecordingWaveformCanvasReady()
 
     cy.screenshot('waveform-chat-recording', { capture: 'viewport' })
 
-    cy.get('main form').find('[aria-label="Voice input"]').click()
+    cy.get('main form [aria-label="Voice input"]').click()
 
     cy.wait('@transcribePost')
   })
