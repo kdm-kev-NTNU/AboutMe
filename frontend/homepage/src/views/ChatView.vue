@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, ref, computed, watch } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
@@ -33,7 +33,8 @@ import {
   getOrCreateChatConversationId,
   resetChatConversationId,
 } from '@/lib/chat-telemetry'
-import { transcribeSpeech } from '@/lib/transcribe-audio'
+import AudioWaveform from '@/components/AudioWaveform.vue'
+import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/useSpeechTranscription'
 import { Loader2, Mic, Square } from 'lucide-vue-next'
 
 // RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
@@ -47,37 +48,32 @@ const isLoading = ref(false)
 const errorText = ref('')
 const showInfoPopup = ref(false)
 const state = reactive<{ messages: Message[] }>({ messages: [] })
-const MAX_PROMPT_CHARS = 3000
+const MAX_PROMPT_CHARS = MAX_SPEECH_PROMPT_CHARS
 const CHAT_INFO_DISMISSED_KEY = 'chatInfoPopupDismissed.v2'
 const langStore = useLangStore()
 const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
 
-const supportsSpeechInput = computed(
-  () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,
-)
+const speechBlocked = computed(() => isLoading.value)
 
-const isRecording = ref(false)
-const isTranscribing = ref(false)
-let mediaRecorder: MediaRecorder | null = null
-let mediaStream: MediaStream | null = null
-const audioChunks: Blob[] = []
-
-function stopMediaTracks() {
-  mediaStream?.getTracks().forEach((t) => t.stop())
-  mediaStream = null
-}
-
-onUnmounted(() => {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    try {
-      mediaRecorder.stop()
-    } catch {
-      /* ignore */
-    }
-  }
-  stopMediaTracks()
+const {
+  supportsSpeechInput,
+  isRecording,
+  isTranscribing,
+  recordingMediaStream,
+  voiceError,
+  toggleVoiceInput,
+} = useSpeechTranscription({
+  language,
+  maxChars: MAX_PROMPT_CHARS,
+  isBlocked: speechBlocked,
+  onTranscript: (t) => {
+    const next = (input.value ? `${input.value.trim()} ${t}` : t).trim()
+    input.value = next.slice(0, MAX_PROMPT_CHARS)
+  },
 })
+
+const chatBannerError = computed(() => errorText.value || voiceError.value)
 
 const providerLabels = computed(() =>
   language.value === 'no'
@@ -175,6 +171,7 @@ const clearChat = () => {
   window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
   state.messages = []
   errorText.value = ''
+  voiceError.value = ''
   input.value = ''
   resetChatConversationId()
   void router.replace({ name: 'chat', query: {} })
@@ -205,107 +202,6 @@ watch(showInfoPopup, (isOpen, wasOpen) => {
   }
 })
 
-async function toggleVoiceInput() {
-  if (!supportsSpeechInput.value || isTranscribing.value || isLoading.value) return
-  if (isRecording.value) {
-    await stopRecordingAndTranscribe()
-    return
-  }
-  await startRecording()
-}
-
-async function startRecording() {
-  errorText.value = ''
-  try {
-    mediaStream = await navigator.mediaDevices!.getUserMedia({ audio: true })
-    const preferred =
-      typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : ''
-    mediaRecorder = preferred
-      ? new MediaRecorder(mediaStream, { mimeType: preferred })
-      : new MediaRecorder(mediaStream)
-    audioChunks.length = 0
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunks.push(e.data)
-    }
-    mediaRecorder.start(250)
-    isRecording.value = true
-  } catch {
-    errorText.value =
-      language.value === 'en'
-        ? 'Microphone permission is required for voice input.'
-        : 'Mikrofontilgang kreves for taleinndata.'
-    stopMediaTracks()
-    mediaRecorder = null
-  }
-}
-
-async function stopRecordingAndTranscribe() {
-  const rec = mediaRecorder
-  if (!rec || rec.state === 'inactive') {
-    isRecording.value = false
-    stopMediaTracks()
-    mediaRecorder = null
-    return
-  }
-  await new Promise<void>((resolve) => {
-    rec.addEventListener('stop', () => resolve(), { once: true })
-    try {
-      rec.requestData()
-    } catch {
-      /* ignore */
-    }
-    rec.stop()
-  })
-  isRecording.value = false
-  stopMediaTracks()
-  mediaRecorder = null
-
-  const blobType = audioChunks[0]?.type ?? 'audio/webm'
-  const blob = new Blob(audioChunks, { type: blobType })
-  audioChunks.length = 0
-  if (blob.size === 0) {
-    errorText.value =
-      language.value === 'en' ? 'No audio captured. Try again.' : 'Ingen lyd fanget opp. Prøv igjen.'
-    return
-  }
-
-  isTranscribing.value = true
-  errorText.value = ''
-  try {
-    const auth = (await import('@/stores/auth')).useAuthStore()
-    auth.restore()
-    const lang = language.value === 'en' ? 'en' : 'no'
-    const r = await transcribeSpeech(blob, lang)
-    if (r.status === 200 && r.data && typeof r.data === 'object' && r.data !== null && 'text' in r.data) {
-      const t = String((r.data as { text: unknown }).text ?? '').trim()
-      if (t) {
-        const next = (input.value ? `${input.value.trim()} ${t}` : t).trim()
-        input.value = next.slice(0, MAX_PROMPT_CHARS)
-      }
-      return
-    }
-    if (r.status === 429) {
-      errorText.value =
-        language.value === 'en'
-          ? 'Too many requests or budget limit. Wait and try again.'
-          : 'For mange forespørsler eller budsjettgrense. Vent litt og prøv igjen.'
-      return
-    }
-    errorText.value =
-      readApiError(r.data) ??
-      (language.value === 'en' ? 'Could not transcribe audio.' : 'Kunne ikke transkribere lyd.')
-  } catch {
-    errorText.value =
-      language.value === 'en' ? 'Network error during transcription.' : 'Nettverksfeil ved transkripsjon.'
-  } finally {
-    isTranscribing.value = false
-  }
-}
-
 // Calls the portfolio backend; auth store is restored so optional future authenticated /ask works the same way.
 async function send(text: string) {
   if (!text.trim() || isLoading.value || isTranscribing.value) return
@@ -318,6 +214,7 @@ async function send(text: string) {
     return
   }
   errorText.value = ''
+  voiceError.value = ''
   state.messages.push({ role: 'user', text })
   input.value = ''
   const modelId = chatModelStore.selectedModelId ?? null
@@ -488,8 +385,8 @@ onMounted(async () => {
     <!-- Chat Container -->
     <div class="relative z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
       <!-- Error Alert -->
-      <Alert v-if="errorText" variant="destructive" class="mb-6 flex-shrink-0">
-        <AlertDescription>{{ errorText }}</AlertDescription>
+      <Alert v-if="chatBannerError" variant="destructive" class="mb-6 flex-shrink-0">
+        <AlertDescription>{{ chatBannerError }}</AlertDescription>
       </Alert>
 
       <section class="mb-5 flex-shrink-0 rounded-3xl border border-blue-100/70 bg-white/85 p-4 shadow-lg shadow-blue-900/10 backdrop-blur-xl sm:p-5">
@@ -615,7 +512,13 @@ onMounted(async () => {
             <Square v-else-if="isRecording" class="h-5 w-5 text-red-600" />
             <Mic v-else class="h-5 w-5" />
           </Button>
+          <AudioWaveform
+            v-if="isRecording"
+            :stream="recordingMediaStream"
+            :aria-label="language === 'en' ? 'Audio level while recording' : 'Lydnivå under opptak'"
+          />
           <Input
+            v-else
             v-model="input"
             :disabled="isLoading || isTranscribing"
             type="text"
@@ -624,7 +527,7 @@ onMounted(async () => {
           />
           <Button
             type="submit"
-            :disabled="isLoading || isTranscribing || !input.trim()"
+            :disabled="isLoading || isTranscribing || isRecording || !input.trim()"
             class="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:shadow-blue-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:transform-none"
           >
             {{ isLoading ? 'Sending...' : 'Send →' }}

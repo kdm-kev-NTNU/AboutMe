@@ -12,6 +12,7 @@ import {
 } from '@/api/generated/portfolio'
 import { useLangStore } from '@/stores/lang'
 import { useChatModelStore } from '@/stores/model'
+import { transcribeSpeech } from '@/lib/transcribe-audio'
 
 vi.mock('@/api/generated/portfolio', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@/api/generated/portfolio')>()
@@ -272,6 +273,66 @@ describe('ChatView', () => {
   describe('voice input control', () => {
     const origMediaDevices = globalThis.navigator.mediaDevices
 
+    function stubMediaRecorder() {
+      class StubRecorder {
+        static isTypeSupported = () => true
+        state = 'inactive'
+        ondataavailable: ((ev: { data: Blob }) => void) | null = null
+        private listeners: Record<string, Array<(ev?: Event) => void>> = {}
+        start() {
+          this.state = 'recording'
+        }
+        stop() {
+          this.state = 'inactive'
+          for (const cb of this.listeners['stop'] ?? []) cb()
+        }
+        addEventListener(type: string, cb: (ev?: Event) => void) {
+          if (!this.listeners[type]) this.listeners[type] = []
+          this.listeners[type].push(cb)
+        }
+        requestData = () => {
+          this.ondataavailable?.({ data: new Blob([new Uint8Array([1])]) } as BlobEvent)
+        }
+      }
+      vi.stubGlobal('MediaRecorder', StubRecorder as unknown as typeof MediaRecorder)
+    }
+
+    function stubWebAudioAndResize() {
+      class FakeAnalyser {
+        fftSize = 2048
+        smoothingTimeConstant = 0
+        connect() {
+          return this
+        }
+        disconnect() {}
+        getFloatTimeDomainData(arr: Float32Array) {
+          for (let i = 0; i < arr.length; i++) arr[i] = 0
+        }
+      }
+      class FakeMediaStreamAudioSourceNode {
+        connect() {
+          return new FakeAnalyser()
+        }
+        disconnect() {}
+      }
+      class FakeAudioContext {
+        state: AudioContextState = 'running'
+        resume = vi.fn().mockResolvedValue(undefined)
+        close = vi.fn().mockResolvedValue(undefined)
+        createMediaStreamSource = vi.fn(() => new FakeMediaStreamAudioSourceNode())
+        createAnalyser = vi.fn(() => new FakeAnalyser())
+      }
+      vi.stubGlobal('AudioContext', FakeAudioContext as unknown as typeof AudioContext)
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        },
+      )
+    }
+
     afterEach(() => {
       Object.defineProperty(globalThis.navigator, 'mediaDevices', {
         value: origMediaDevices,
@@ -294,23 +355,43 @@ describe('ChatView', () => {
         value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
         configurable: true,
       })
-      class StubRecorder {
-        static isTypeSupported = () => true
-        state = 'inactive'
-        ondataavailable: ((ev: { data: Blob }) => void) | null = null
-        start() {
-          this.state = 'recording'
-        }
-        stop() {
-          this.state = 'inactive'
-        }
-        addEventListener = () => {}
-        requestData = () => {}
-      }
-      vi.stubGlobal('MediaRecorder', StubRecorder as unknown as typeof MediaRecorder)
+      stubMediaRecorder()
 
       const { wrapper } = await mountChat({})
       expect(wrapper.find('[aria-label="Voice input"]').exists()).toBe(true)
+    })
+
+    it('replaces the text field with a live waveform while recording, then restores after stop', async () => {
+      Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+        value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
+        configurable: true,
+      })
+      stubMediaRecorder()
+      stubWebAudioAndResize()
+
+      vi.mocked(transcribeSpeech).mockResolvedValue({
+        status: 200,
+        data: { text: 'hello' },
+        headers: new Headers(),
+      })
+
+      const { wrapper } = await mountChat({})
+      expect(wrapper.find('input[type="text"]').exists()).toBe(true)
+
+      await wrapper.find('[aria-label="Voice input"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('input[type="text"]').exists()).toBe(false)
+      const wave = wrapper.find('[role="img"]')
+      expect(wave.exists()).toBe(true)
+      expect(wave.attributes('aria-label')).toBe('Audio level while recording')
+
+      await wrapper.find('[aria-label="Voice input"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('input[type="text"]').exists()).toBe(true)
+      expect(wrapper.find('[role="img"]').exists()).toBe(false)
+      expect(vi.mocked(transcribeSpeech)).toHaveBeenCalled()
     })
   })
 })
