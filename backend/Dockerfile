@@ -51,10 +51,10 @@ COPY pom.xml .
 # Cache /root/.m2/repository across builds and share it across concurrent multi-arch
 # builds (sharing=locked) so we don't re-download every dependency per platform and
 # stampede Maven Central into rate limiting.
-RUN --mount=type=cache,id=aboutme-m2,target=/root/.m2/repository,sharing=locked \
+RUN --mount=type=cache,id=s/e6f61e16-913e-443d-8379-19475d5675a7-/root/.m2/repository,target=/root/.m2/repository,sharing=locked \
     mvn -B --no-transfer-progress dependency:go-offline
 COPY src ./src
-RUN --mount=type=cache,id=aboutme-m2,target=/root/.m2/repository,sharing=locked \
+RUN --mount=type=cache,id=s/e6f61e16-913e-443d-8379-19475d5675a7-/root/.m2/repository,target=/root/.m2/repository,sharing=locked \
     mvn -B --no-transfer-progress clean package -DskipTests -Dmaven.test.skip=true -Dmaven.compiler.fork=true -Dmaven.compiler.maxmem=512m
 
 # Production stage
