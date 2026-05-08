@@ -36,7 +36,8 @@ export default mergeConfig(
           'src/components/icons/**',
         ],
         // Vitest 4 switched to AST-based v8 analysis; numbers shifted down vs the old v8-to-istanbul pipeline.
-        // Branch % stays lowest on template-heavy Vue (many ternaries).
+        // Branch % stays lowest on template-heavy Vue (many ternaries). If the branch gate fails, add tests
+        // in the worst-covered files (often views) rather than micro-testing defensive catch paths elsewhere.
         thresholds: {
           lines: 84,
           statements: 82,

@@ -294,8 +294,32 @@ describe('useAudioWaveform', () => {
     streamRef.value = null
     await flushPromises()
 
-    expect(composable.sourceRef).not.toBeDefined()
+    expect(composable.timeDomainData.value).toBeNull()
     expect(composable.analyserRef.value).toBeNull()
+    expect(audioContextCloseSpies.at(-1)).toHaveBeenCalled()
+
+    scope.stop()
+  })
+
+  it('still attaches the graph when resume rejects on a suspended AudioContext', async () => {
+    class BadResumeContext extends FakeAudioContext {
+      override state: AudioContextState = 'suspended'
+      override resume = vi.fn(() => Promise.reject(new Error('resume denied')))
+    }
+    vi.stubGlobal('AudioContext', BadResumeContext as unknown as typeof AudioContext)
+
+    const streamRef = ref<MediaStream | null>(new MediaStream())
+    const scope = effectScope()
+    let composable!: ReturnType<typeof useAudioWaveform>
+    scope.run(() => {
+      composable = useAudioWaveform(streamRef)
+    })
+    await flushPromises()
+
+    await vi.waitFor(() => expect(composable.tick.value).toBeGreaterThan(0))
+    expect(composable.isActive.value).toBe(true)
+    expect(composable.analyserRef.value).not.toBeNull()
+
     scope.stop()
   })
 })
