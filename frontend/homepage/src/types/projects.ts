@@ -9,6 +9,8 @@ export interface Project {
   status: 'completed' | 'ongoing' | 'planned'
   githubUrl?: string
   liveUrl?: string
+  /** Internal portfolio route for a dedicated project story page (e.g. `/projects/heathen-army`). */
+  detailUrl?: string
 }
 
 export interface ProjectsData {

@@ -33,6 +33,9 @@ import {
   getOrCreateChatConversationId,
   resetChatConversationId,
 } from '@/lib/chat-telemetry'
+import AudioWaveform from '@/components/AudioWaveform.vue'
+import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/useSpeechTranscription'
+import { Loader2, Mic, Square } from 'lucide-vue-next'
 
 // RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
@@ -45,11 +48,32 @@ const isLoading = ref(false)
 const errorText = ref('')
 const showInfoPopup = ref(false)
 const state = reactive<{ messages: Message[] }>({ messages: [] })
-const MAX_PROMPT_CHARS = 3000
+const MAX_PROMPT_CHARS = MAX_SPEECH_PROMPT_CHARS
 const CHAT_INFO_DISMISSED_KEY = 'chatInfoPopupDismissed.v2'
 const langStore = useLangStore()
 const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
+
+const speechBlocked = computed(() => isLoading.value)
+
+const {
+  supportsSpeechInput,
+  isRecording,
+  isTranscribing,
+  recordingMediaStream,
+  voiceError,
+  toggleVoiceInput,
+} = useSpeechTranscription({
+  language,
+  maxChars: MAX_PROMPT_CHARS,
+  isBlocked: speechBlocked,
+  onTranscript: (t) => {
+    const next = (input.value ? `${input.value.trim()} ${t}` : t).trim()
+    input.value = next.slice(0, MAX_PROMPT_CHARS)
+  },
+})
+
+const chatBannerError = computed(() => errorText.value || voiceError.value)
 
 const providerLabels = computed(() =>
   language.value === 'no'
@@ -147,6 +171,7 @@ const clearChat = () => {
   window.dispatchEvent(new CustomEvent('chatMessagesUpdated'))
   state.messages = []
   errorText.value = ''
+  voiceError.value = ''
   input.value = ''
   resetChatConversationId()
   void router.replace({ name: 'chat', query: {} })
@@ -179,7 +204,7 @@ watch(showInfoPopup, (isOpen, wasOpen) => {
 
 // Calls the portfolio backend; auth store is restored so optional future authenticated /ask works the same way.
 async function send(text: string) {
-  if (!text.trim() || isLoading.value) return
+  if (!text.trim() || isLoading.value || isTranscribing.value) return
   // client-side validation to mirror backend
   if (text.length > MAX_PROMPT_CHARS) {
     errorText.value =
@@ -189,6 +214,7 @@ async function send(text: string) {
     return
   }
   errorText.value = ''
+  voiceError.value = ''
   state.messages.push({ role: 'user', text })
   input.value = ''
   const modelId = chatModelStore.selectedModelId ?? null
@@ -359,8 +385,8 @@ onMounted(async () => {
     <!-- Chat Container -->
     <div class="relative z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
       <!-- Error Alert -->
-      <Alert v-if="errorText" variant="destructive" class="mb-6 flex-shrink-0">
-        <AlertDescription>{{ errorText }}</AlertDescription>
+      <Alert v-if="chatBannerError" variant="destructive" class="mb-6 flex-shrink-0">
+        <AlertDescription>{{ chatBannerError }}</AlertDescription>
       </Alert>
 
       <section class="mb-5 flex-shrink-0 rounded-3xl border border-blue-100/70 bg-white/85 p-4 shadow-lg shadow-blue-900/10 backdrop-blur-xl sm:p-5">
@@ -471,16 +497,37 @@ onMounted(async () => {
           class="relative flex gap-3 rounded-3xl border border-blue-100/70 bg-white/85 p-3 shadow-lg shadow-blue-900/10 backdrop-blur-xl transition-all duration-300 hover:border-blue-200/80 focus-within:border-blue-300/70 focus-within:shadow-lg focus-within:shadow-blue-500/20"
           @submit.prevent="send(input)"
         >
+          <Button
+            v-if="supportsSpeechInput"
+            type="button"
+            variant="outline"
+            :disabled="isLoading || isTranscribing"
+            :aria-pressed="isRecording"
+            :aria-label="language === 'en' ? 'Voice input' : 'Taleinndata'"
+            class="relative shrink-0 rounded-2xl border border-blue-200/80 bg-white/90 px-3 text-slate-700 hover:bg-blue-50/80 disabled:opacity-50"
+            :class="{ 'animate-pulse ring-2 ring-red-400 ring-offset-1': isRecording }"
+            @click="toggleVoiceInput"
+          >
+            <Loader2 v-if="isTranscribing" class="h-5 w-5 animate-spin text-blue-600" />
+            <Square v-else-if="isRecording" class="h-5 w-5 text-red-600" />
+            <Mic v-else class="h-5 w-5" />
+          </Button>
+          <AudioWaveform
+            v-if="isRecording"
+            :stream="recordingMediaStream"
+            :aria-label="language === 'en' ? 'Audio level while recording' : 'Lydnivå under opptak'"
+          />
           <Input
+            v-else
             v-model="input"
-            :disabled="isLoading"
+            :disabled="isLoading || isTranscribing"
             type="text"
             class="flex-1 rounded-2xl border border-blue-100/70 bg-white/85 text-slate-700 transition-all duration-300 placeholder:font-medium placeholder:text-slate-400 focus:border-blue-300/70 focus:bg-white focus:shadow-sm focus:shadow-blue-500/15 focus:outline-none"
             :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'"
           />
           <Button
             type="submit"
-            :disabled="isLoading || !input.trim()"
+            :disabled="isLoading || isTranscribing || isRecording || !input.trim()"
             class="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:shadow-blue-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:transform-none"
           >
             {{ isLoading ? 'Sending...' : 'Send →' }}

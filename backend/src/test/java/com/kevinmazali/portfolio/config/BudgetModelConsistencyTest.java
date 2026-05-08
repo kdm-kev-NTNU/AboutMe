@@ -8,6 +8,8 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static java.util.Set.of;
+
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
@@ -19,6 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * YAML block stay in sync. Pure unit test: no Spring context, runs in the fast CI gate.
  */
 class BudgetModelConsistencyTest {
+
+  /**
+   * Budget YAML entries for non-chat models (e.g. OpenAI Whisper) must not require a {@link SupportedChatModel} enum value.
+   */
+  private static final Set<String> BUDGET_KEYS_EXEMPT_FROM_CHAT_ENUM =
+      of("whisper-1", "gpt-4o-mini-transcribe", "gpt-4o-transcribe");
 
   private static Set<String> budgetModelKeys;
 
@@ -62,6 +70,9 @@ class BudgetModelConsistencyTest {
         .collect(Collectors.toSet());
 
     for (String budgetKey : budgetModelKeys) {
+      if (BUDGET_KEYS_EXEMPT_FROM_CHAT_ENUM.contains(budgetKey)) {
+        continue;
+      }
       assertThat(enumIds)
           .as("Budget entry '%s' has no matching SupportedChatModel enum value", budgetKey)
           .contains(budgetKey);

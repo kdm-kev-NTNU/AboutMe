@@ -49,6 +49,27 @@ describe('portfolio views (smoke)', () => {
 		})
 	}
 
+	function mountProjectsView() {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('en')
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: '/', name: 'home', component: { template: '<div />' } },
+				{ path: '/projects', name: 'projects', component: { template: '<div />' } },
+				{
+					path: '/projects/heathen-army',
+					name: 'project-heathen-army',
+					component: { template: '<div />' },
+				},
+			],
+		})
+		return mount(ProjectsView, {
+			global: { plugins: [pinia, router, MotionPlugin] },
+		})
+	}
+
 	it('renders AboutView', () => {
 		const wrapper = mountView(AboutView)
 		expect(wrapper.text()).toContain('about page')
@@ -121,7 +142,7 @@ describe('portfolio views (smoke)', () => {
 	})
 
 	it('renders ProjectsView with project grid', async () => {
-		const wrapper = mountView(ProjectsView)
+		const wrapper = mountProjectsView()
 		await flushPromises()
 		expect(wrapper.text()).toContain('Projects')
 		expect(wrapper.find('h1').exists()).toBe(true)

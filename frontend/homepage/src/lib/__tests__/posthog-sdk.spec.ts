@@ -5,6 +5,7 @@ const getFeatureFlag = vi.fn()
 const onFeatureFlags = vi.fn((cb: () => void) => {
   cb()
 })
+const register = vi.fn()
 
 vi.mock('posthog-js', () => ({
   default: {
@@ -12,6 +13,7 @@ vi.mock('posthog-js', () => ({
     capture,
     getFeatureFlag,
     onFeatureFlags,
+    register,
   },
 }))
 
@@ -97,5 +99,88 @@ describe('posthog-sdk', () => {
     initializePosthogSdk({ key: 'phc_abc', host: 'https://eu.i.posthog.com' })
     expect(gf('aboutme_chat_reply_experiment')).toBe('test')
     expect(posthog.getFeatureFlag).toHaveBeenCalledWith('aboutme_chat_reply_experiment')
+  })
+
+  it('captureAnalyticsEvent swallows errors from posthog.capture', async () => {
+    const posthog = (await import('posthog-js')).default
+    vi.mocked(posthog.capture).mockImplementationOnce(() => {
+      throw new Error('network')
+    })
+    const { initializePosthogSdk, captureAnalyticsEvent } = await import('../posthog-sdk')
+    initializePosthogSdk({ key: 'phc_abc', host: 'https://eu.i.posthog.com' })
+    expect(() => captureAnalyticsEvent('portfolio_chat_answer_error')).not.toThrow()
+  })
+
+  it('getFeatureFlag returns undefined when posthog.getFeatureFlag throws', async () => {
+    const posthog = (await import('posthog-js')).default
+    vi.mocked(posthog.getFeatureFlag).mockImplementationOnce(() => {
+      throw new Error('flag error')
+    })
+    const { initializePosthogSdk, getFeatureFlag: gf } = await import('../posthog-sdk')
+    initializePosthogSdk({ key: 'phc_abc', host: 'https://eu.i.posthog.com' })
+    expect(gf('aboutme_chat_reply_experiment')).toBeUndefined()
+  })
+
+  it('onFeatureFlagsReady invokes callback when SDK not initialized', async () => {
+    const { onFeatureFlagsReady } = await import('../posthog-sdk')
+    const cb = vi.fn()
+    onFeatureFlagsReady(cb)
+    expect(cb).toHaveBeenCalledTimes(1)
+    expect(onFeatureFlags).not.toHaveBeenCalled()
+  })
+
+  it('onFeatureFlagsReady forwards to posthog when initialized', async () => {
+    const posthog = (await import('posthog-js')).default
+    const { initializePosthogSdk, onFeatureFlagsReady } = await import('../posthog-sdk')
+    initializePosthogSdk({ key: 'phc_abc', host: 'https://eu.i.posthog.com' })
+    const cb = vi.fn()
+    onFeatureFlagsReady(cb)
+    expect(posthog.onFeatureFlags).toHaveBeenCalledWith(cb)
+    expect(cb).toHaveBeenCalled()
+  })
+
+  it('onFeatureFlagsReady invokes callback when onFeatureFlags throws', async () => {
+    vi.mocked(onFeatureFlags).mockImplementationOnce(() => {
+      throw new Error('subscriber')
+    })
+    const { initializePosthogSdk, onFeatureFlagsReady } = await import('../posthog-sdk')
+    initializePosthogSdk({ key: 'phc_abc', host: 'https://eu.i.posthog.com' })
+    const cb = vi.fn()
+    onFeatureFlagsReady(cb)
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('registerAnalyticsProperties is a no-op before init', async () => {
+    const { registerAnalyticsProperties } = await import('../posthog-sdk')
+    registerAnalyticsProperties({ cohort: 'a' })
+    expect(register).not.toHaveBeenCalled()
+  })
+
+  it('registerAnalyticsProperties forwards to posthog after init', async () => {
+    const posthog = (await import('posthog-js')).default
+    const { initializePosthogSdk, registerAnalyticsProperties } = await import('../posthog-sdk')
+    initializePosthogSdk({ key: 'phc_abc', host: 'https://eu.i.posthog.com' })
+    registerAnalyticsProperties({ cohort: 'b' })
+    expect(posthog.register).toHaveBeenCalledWith({ cohort: 'b' })
+  })
+
+  it('registerAnalyticsProperties swallows register errors', async () => {
+    const posthog = (await import('posthog-js')).default
+    vi.mocked(posthog.register).mockImplementationOnce(() => {
+      throw new Error('register fail')
+    })
+    const { initializePosthogSdk, registerAnalyticsProperties } = await import('../posthog-sdk')
+    initializePosthogSdk({ key: 'phc_abc', host: 'https://eu.i.posthog.com' })
+    expect(() => registerAnalyticsProperties({ x: 1 })).not.toThrow()
+  })
+
+  it('defaults api host when config host is whitespace-only', async () => {
+    const posthog = (await import('posthog-js')).default
+    const { initializePosthogSdk } = await import('../posthog-sdk')
+    expect(initializePosthogSdk({ key: ' phc_trim ', host: '   ' })).toBe(true)
+    expect(posthog.init).toHaveBeenCalledWith(
+      'phc_trim',
+      expect.objectContaining({ api_host: 'https://eu.i.posthog.com' }),
+    )
   })
 })
