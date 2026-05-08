@@ -15,6 +15,7 @@ describe('application router (index)', () => {
 		expect(names.has('chat')).toBe(true)
 		expect(names.has('privacy-policy')).toBe(true)
 		expect(names.has('project')).toBe(true)
+		expect(names.has('project-heathen-army')).toBe(true)
 		expect(names.has('career')).toBe(true)
 		expect(names.has('admin-tools')).toBe(true)
 		expect(names.has('admin-experiments')).toBe(true)
@@ -69,6 +70,9 @@ describe('application router (index)', () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/projects')
 		expect(router.currentRoute.value.name).toBe('projects')
+
+		await router.push('/projects/heathen-army')
+		expect(router.currentRoute.value.name).toBe('project-heathen-army')
 
 		await router.push('/career')
 		expect(router.currentRoute.value.name).toBe('career')
