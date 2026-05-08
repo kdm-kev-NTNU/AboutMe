@@ -34,6 +34,9 @@ export default mergeConfig(
           'src/components/TheWelcome.vue',
           'src/components/WelcomeItem.vue',
           'src/components/icons/**',
+          // Reka UI slot wrappers; no app logic and not targeted by unit tests
+          'src/components/ui/card/**',
+          'src/components/ui/dialog/**',
         ],
         // Vitest 4 switched to AST-based v8 analysis; numbers shifted down vs the old v8-to-istanbul pipeline.
         // Branch % stays lowest on template-heavy Vue (many ternaries). If the branch gate fails, add tests
