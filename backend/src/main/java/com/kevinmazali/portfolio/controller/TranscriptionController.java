@@ -110,6 +110,9 @@ public class TranscriptionController {
       return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
           .body(new ApiError("Speech-to-text is temporarily unavailable."));
     }
+    // Other runtime exceptions (Spring AI / OpenAI transports such as RestClientException,
+    // HttpServerErrorException, etc.) bubble up to GlobalApiExceptionHandler so the SPA gets
+    // a structured ApiError JSON instead of Spring Boot's default 500 HTML body.
   }
 
   private static boolean isAllowedAudio(String contentType) {

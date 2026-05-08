@@ -6,7 +6,6 @@
 
 const ALL_MODELS = [
   { id: 'gpt-5.4-mini', provider: 'OPENAI', label: 'GPT-5.4 mini', tags: ['FAST'] },
-  { id: 'gpt-5.4', provider: 'OPENAI', label: 'GPT-5.4', tags: ['REASONING'] },
   { id: 'claude-haiku-4-5-20251001', provider: 'ANTHROPIC', label: 'Claude Haiku 4.5', tags: ['FAST'] },
 ]
 
@@ -91,18 +90,20 @@ describe('Chat e2e flow', () => {
     cy.visit('/chat')
     cy.get('#chat-model-select').should('exist')
 
-    cy.get('#chat-model-select').select('gpt-5.4')
+    cy.contains('button', /^Anthropic$/i).click()
+    cy.get('#chat-model-select').select('claude-haiku-4-5-20251001')
     cy.window().then((win) => {
-      expect(win.sessionStorage.getItem('chatSelectedModel')).to.eq('gpt-5.4')
+      expect(win.sessionStorage.getItem('chatSelectedModel')).to.eq('claude-haiku-4-5-20251001')
     })
 
     cy.visit('/')
     cy.visit('/chat')
 
     cy.window().then((win) => {
-      expect(win.sessionStorage.getItem('chatSelectedModel')).to.eq('gpt-5.4')
+      expect(win.sessionStorage.getItem('chatSelectedModel')).to.eq('claude-haiku-4-5-20251001')
     })
-    cy.get('#chat-model-select').should('have.value', 'gpt-5.4')
+    cy.contains('button', /^Anthropic$/i).click()
+    cy.get('#chat-model-select').should('have.value', 'claude-haiku-4-5-20251001')
   })
 
   it('clear chat removes messages and resets state', () => {

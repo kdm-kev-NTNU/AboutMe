@@ -40,9 +40,9 @@ export default mergeConfig(
         // in the worst-covered files (often views) rather than micro-testing defensive catch paths elsewhere.
         thresholds: {
           lines: 84,
-          statements: 82,
+          statements: 83,
           branches: 70,
-          functions: 75,
+          functions: 80,
         },
       },
     },

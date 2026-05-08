@@ -251,6 +251,39 @@ describe('HomeView', () => {
 			vi.unstubAllGlobals()
 		})
 
+		function mountHome() {
+			const pinia = createPinia()
+			setActivePinia(pinia)
+			useLangStore().setLanguage('en')
+			const router = makeRouter()
+			return router.push('/').then(() => ({
+				router,
+				wrapper: mount(HomeView, {
+					global: {
+						plugins: [pinia, router],
+						stubs: {
+							Input: { props: ['modelValue'], template: '<input />' },
+							Button: buttonStub,
+							Alert: {
+								props: ['variant'],
+								template: '<div :data-variant="variant"><slot /></div>',
+							},
+							AlertTitle: { template: '<div><slot /></div>' },
+							AlertDescription: { template: '<div><slot /></div>' },
+							Info: true,
+							Github: true,
+							Linkedin: true,
+							MessageSquare: true,
+							ChevronRight: true,
+							Mic: true,
+							Square: true,
+							Loader2: true,
+						},
+					},
+				}),
+			}))
+		}
+
 		it('opens chat with transcribed query after finishing voice input', async () => {
 			Object.defineProperty(globalThis.navigator, 'mediaDevices', {
 				value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
@@ -265,13 +298,72 @@ describe('HomeView', () => {
 				headers: new Headers(),
 			})
 
+			const { router, wrapper } = await mountHome()
+			const pushSpy = vi.spyOn(router, 'push')
+			await flushPromises()
+
+			await wrapper.find('[aria-label="Voice input"]').trigger('click')
+			await flushPromises()
+
+			await wrapper.find('[aria-label="Voice input"]').trigger('click')
+			await flushPromises()
+
+			expect(pushSpy).toHaveBeenCalledWith({ name: 'chat', query: { q: 'hello voice' } })
+		})
+
+		it('shows the destructive voice-error alert when transcription fails with 500', async () => {
+			Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+				value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
+				configurable: true,
+			})
+			stubMediaRecorder()
+			stubWebAudioAndResize()
+
+			vi.mocked(transcribeSpeech).mockResolvedValue({
+				status: 500,
+				data: { error: 'server msg ignored on purpose' },
+				headers: new Headers(),
+			})
+
+			const { router, wrapper } = await mountHome()
+			const pushSpy = vi.spyOn(router, 'push')
+			await flushPromises()
+
+			await wrapper.find('[aria-label="Voice input"]').trigger('click')
+			await flushPromises()
+			await wrapper.find('[aria-label="Voice input"]').trigger('click')
+			await flushPromises()
+
+			expect(pushSpy).not.toHaveBeenCalledWith(
+				expect.objectContaining({ name: 'chat' }),
+			)
+			// The composable maps 500s to a canned i18n message; HomeView surfaces it in the
+			// destructive alert at the bottom.
+			expect(wrapper.text()).toContain(
+				'Transcription failed on the server. Please try again.',
+			)
+			expect(wrapper.html()).toContain('data-variant="destructive"')
+		})
+
+		it('forwards the active UI language to transcribeSpeech', async () => {
+			Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+				value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
+				configurable: true,
+			})
+			stubMediaRecorder()
+			stubWebAudioAndResize()
+
+			vi.mocked(transcribeSpeech).mockResolvedValue({
+				status: 200,
+				data: { text: 'hei' },
+				headers: new Headers(),
+			})
+
 			const pinia = createPinia()
 			setActivePinia(pinia)
-			useLangStore().setLanguage('en')
+			useLangStore().setLanguage('no')
 			const router = makeRouter()
 			await router.push('/')
-			const pushSpy = vi.spyOn(router, 'push')
-
 			const wrapper = mount(HomeView, {
 				global: {
 					plugins: [pinia, router],
@@ -294,13 +386,12 @@ describe('HomeView', () => {
 			})
 			await flushPromises()
 
-			await wrapper.find('[aria-label="Voice input"]').trigger('click')
+			await wrapper.find('[aria-label="Taleinndata"]').trigger('click')
+			await flushPromises()
+			await wrapper.find('[aria-label="Taleinndata"]').trigger('click')
 			await flushPromises()
 
-			await wrapper.find('[aria-label="Voice input"]').trigger('click')
-			await flushPromises()
-
-			expect(pushSpy).toHaveBeenCalledWith({ name: 'chat', query: { q: 'hello voice' } })
+			expect(transcribeSpeech).toHaveBeenCalledWith(expect.any(Blob), 'no')
 		})
 	})
 })

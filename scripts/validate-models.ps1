@@ -19,8 +19,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $failed = @()
 
-$openaiModels = @('gpt-5.4-nano', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.5')
-$anthropicModels = @('claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-7')
+$openaiModels = @('gpt-5.4-mini')
+$anthropicModels = @('claude-haiku-4-5-20251001')
 
 if ($OpenAiKey) {
   foreach ($m in $openaiModels) {

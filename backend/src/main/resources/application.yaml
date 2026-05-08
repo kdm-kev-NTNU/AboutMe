@@ -28,7 +28,7 @@ spring:
         enabled: ${OPENAI_CHAT_ENABLED:false}
         api-key: ${OPENAI_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
         options:
-          model: gpt-5.5
+          model: gpt-5.4-mini
           max-completion-tokens: ${portfolio.ai.limits.chat-max-completion-tokens:400}
       embedding:
         options:
@@ -84,27 +84,12 @@ portfolio:
       spike-hourly-multiplier: 5.0
       anon-identity-salt: ${AI_BUDGET_ANON_SALT:portfolio-ai-budget}
       models:
-        gpt-5.4-nano:
-          input-per-million-usd: 0.05
-          output-per-million-usd: 0.20
         gpt-5.4-mini:
           input-per-million-usd: 0.15
           output-per-million-usd: 0.60
-        gpt-5.4:
-          input-per-million-usd: 2.50
-          output-per-million-usd: 10.00
-        gpt-5.5:
-          input-per-million-usd: 2.50
-          output-per-million-usd: 10.00
         claude-haiku-4-5-20251001:
           input-per-million-usd: 0.80
           output-per-million-usd: 4.00
-        claude-sonnet-4-6:
-          input-per-million-usd: 3.00
-          output-per-million-usd: 15.00
-        claude-opus-4-7:
-          input-per-million-usd: 5.00
-          output-per-million-usd: 25.00
         # Transcription-only (not in SupportedChatModel). Pseudo input tokens = est_seconds * 1000; rate tuned ~Whisper $/min.
         whisper-1:
           input-per-million-usd: 0.10
@@ -136,7 +121,7 @@ portfolio:
       capacity: 15
       window-seconds: 300
   chat:
-    default-model-id: gpt-5.5
+    default-model-id: gpt-5.4-mini
   retrieval:
     # Optional ONNX rerank; Docker image sets paths under /app/rerank (see backend/Dockerfile).
     rerank-enabled: false

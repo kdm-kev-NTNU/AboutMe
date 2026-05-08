@@ -21,7 +21,7 @@ import org.springframework.test.context.TestPropertySource;
 		"spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
 		"spring.ai.openai.api-key=test-placeholder-key-for-context-tests-only",
 		"spring.ai.openai.chat.enabled=true",
-		"portfolio.chat.default-model-id=gpt-5.5",
+		"portfolio.chat.default-model-id=gpt-5.4-mini",
 		"server.port=0"
 	}
 )
