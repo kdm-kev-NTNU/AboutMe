@@ -110,8 +110,7 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
     try {
       const auth = (await import('@/stores/auth')).useAuthStore()
       auth.restore()
-      const lang = options.language.value === 'en' ? 'en' : 'no'
-      const r = await transcribeSpeech(blob, lang)
+      const r = await transcribeSpeech(blob)
       if (r.status === 200 && r.data && typeof r.data === 'object' && r.data !== null && 'text' in r.data) {
         const t = String((r.data as { text: unknown }).text ?? '').trim().slice(0, options.maxChars)
         if (t) {

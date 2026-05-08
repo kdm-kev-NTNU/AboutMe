@@ -80,7 +80,7 @@ export function useAudioWaveform(streamRef: Ref<MediaStream | null>) {
       }
       rafId = requestAnimationFrame(loop)
     },
-    { flush: 'sync' },
+    { flush: 'sync', immediate: true },
   )
 
   onScopeDispose(() => {
