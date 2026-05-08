@@ -19,6 +19,7 @@ type RunSummary = {
   meanRelevance: number | null
   meanCorrectness: number | null
   meanConciseness: number | null
+  meanLanguageConsistency: number | null
   errorMessage: string | null
   createdAt: string
   completedAt: string | null
@@ -33,10 +34,12 @@ type ExperimentResultRow = {
   relevance: number | null
   correctness: number | null
   conciseness: number | null
+  languageConsistency: number | null
   faithfulnessExplanation: string | null
   relevanceExplanation: string | null
   correctnessExplanation: string | null
   concisenessExplanation: string | null
+  languageConsistencyExplanation: string | null
 }
 type RunDetail = RunSummary & {
   evalDatasetId: number | null
@@ -466,7 +469,7 @@ onUnmounted(() => {
         <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">RAG-experiments (datasett + dommer)</h1>
         <p class="text-sm text-gray-600 leading-relaxed max-w-3xl">
           Velg et eval-datasett lagret i PostgreSQL, kjør AboutMe-RAG per spørsmål med valgt modell, og få LLM-as-judge-scorer
-          (faithfulness, relevance, correctness, conciseness) lagret i databasen. Valgfritt: samme LLM-kall kan også sendes som
+          (faithfulness, relevance, correctness, conciseness, language consistency) lagret i databasen. Valgfritt: samme LLM-kall kan også sendes som
           <code class="text-xs bg-gray-100 px-1 rounded">$ai_generation</code>
           til PostHog når
           <code class="text-xs bg-gray-100 px-1 rounded">POSTHOG_*</code>
@@ -692,7 +695,7 @@ onUnmounted(() => {
             </button>
             <span class="text-xs text-gray-500"
               >F: {{ formatScore(r.meanFaithfulness) }} · R: {{ formatScore(r.meanRelevance) }} · C:
-              {{ formatScore(r.meanCorrectness) }} · K: {{ formatScore(r.meanConciseness) }}</span
+              {{ formatScore(r.meanCorrectness) }} · K: {{ formatScore(r.meanConciseness) }} · L: {{ formatScore(r.meanLanguageConsistency) }}</span
             >
           </li>
           <li v-if="!runs.length" class="px-3 py-4 text-sm text-gray-500">Ingen kjøringer ennå.</li>
@@ -729,6 +732,7 @@ onUnmounted(() => {
                   <th class="p-2 border border-gray-200">R</th>
                   <th class="p-2 border border-gray-200">C</th>
                   <th class="p-2 border border-gray-200">K</th>
+                  <th class="p-2 border border-gray-200">L</th>
                 </tr>
               </thead>
               <tbody>
@@ -739,6 +743,7 @@ onUnmounted(() => {
                   <td class="p-2 border border-gray-100">{{ formatScore(row.relevance) }}</td>
                   <td class="p-2 border border-gray-100">{{ formatScore(row.correctness) }}</td>
                   <td class="p-2 border border-gray-100">{{ formatScore(row.conciseness) }}</td>
+                  <td class="p-2 border border-gray-100">{{ formatScore(row.languageConsistency) }}</td>
                 </tr>
               </tbody>
             </table>

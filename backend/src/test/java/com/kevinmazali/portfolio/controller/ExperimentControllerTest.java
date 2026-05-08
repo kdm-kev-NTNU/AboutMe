@@ -97,6 +97,7 @@ class ExperimentControllerTest {
             0.8,
             0.7,
             0.6,
+            0.95,
             null,
             OffsetDateTime.parse("2026-04-19T10:00:00Z"),
             OffsetDateTime.parse("2026-04-19T10:05:00Z"))));
@@ -258,6 +259,7 @@ class ExperimentControllerTest {
         0.8,
         0.7,
         0.6,
+        0.95,
         null,
         OffsetDateTime.parse("2026-04-19T10:00:00Z"),
         OffsetDateTime.parse("2026-04-19T10:05:00Z"),
@@ -291,6 +293,7 @@ class ExperimentControllerTest {
             "claude-haiku-4-5-20251001",
             ExperimentRunStatus.RUNNING,
             1,
+            null,
             null,
             null,
             null,

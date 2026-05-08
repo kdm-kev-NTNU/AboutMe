@@ -80,4 +80,144 @@ describe('lang store', () => {
     expect(store.language).toBe('en')
     setItem.mockRestore()
   })
+
+  // --- Language detection edge cases for Norwegian dialects ---
+
+  it('detects nb (bokmål) as Norwegian', () => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'nb',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('no')
+  })
+
+  it('detects nn (nynorsk) as Norwegian', () => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'nn',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('no')
+  })
+
+  it('detects no-NO as Norwegian', () => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'no-NO',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('no')
+  })
+
+  it('detects nn-NO (nynorsk with region) as Norwegian', () => {
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      language: 'nn-NO',
+      languages: ['nn-NO'],
+    })
+    setActivePinia(createPinia())
+    const store = useLangStore()
+    expect(store.language).toBe('no')
+  })
+
+  // --- English variant detection ---
+
+  it('detects en-US as English', () => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'en-US',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('en')
+  })
+
+  it('detects en-GB as English', () => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'en-GB',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('en')
+  })
+
+  // --- Other languages default to English ---
+
+  it('detects fr-FR (French) as English fallback', () => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'fr-FR',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('en')
+  })
+
+  it('detects de-DE (German) as English fallback', () => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'de-DE',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('en')
+  })
+
+  it('detects sv-SE (Swedish) as English fallback', () => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'sv-SE',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('en')
+  })
+
+  it('detects da-DK (Danish) as English fallback', () => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'da-DK',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('en')
+  })
+
+  // --- Language store toggle ---
+
+  it('can toggle between en and no', () => {
+    const store = useLangStore()
+    store.setLanguage('en')
+    expect(store.language).toBe('en')
+    store.setLanguage('no')
+    expect(store.language).toBe('no')
+    store.setLanguage('en')
+    expect(store.language).toBe('en')
+  })
+
+  it('persists explicit no to localStorage', () => {
+    const store = useLangStore()
+    store.setLanguage('no')
+    expect(localStorage.getItem('lang')).toBe('no')
+    store.setLanguage('en')
+    expect(localStorage.getItem('lang')).toBe('en')
+  })
+
+  // --- Priority: localStorage over navigator ---
+
+  it('prefers localStorage en even when browser is Norwegian', () => {
+    localStorage.setItem('lang', 'en')
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'nb-NO',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('en')
+  })
+
+  it('prefers localStorage no even when browser is English', () => {
+    localStorage.setItem('lang', 'no')
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      value: 'en-US',
+    })
+    const store = useLangStore()
+    expect(store.language).toBe('no')
+  })
 })
