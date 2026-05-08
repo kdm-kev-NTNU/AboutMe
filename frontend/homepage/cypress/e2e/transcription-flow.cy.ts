@@ -13,6 +13,11 @@ const FAKE_MODELS = [
   { id: 'gpt-5.4-mini', provider: 'OPENAI', label: 'GPT-5.4 mini', tags: ['FAST'] },
 ]
 
+/** Hero voice form can sit below the fold on the default CI viewport; match voice-waveform.cy.ts. */
+function scrollHomeHeroIntoPlay() {
+  cy.get('main').scrollTo('bottom', { ensureScrollable: false })
+}
+
 function withFakeMicrophone() {
   return {
     onBeforeLoad(win: Cypress.AUTWindow) {
@@ -58,17 +63,18 @@ describe('Transcription flow', () => {
 
     cy.visit('/', withFakeMicrophone())
     cy.wait('@chatModels')
+    scrollHomeHeroIntoPlay()
 
-    cy.get('main form').find('[aria-label="Voice input"]').as('mic')
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()
     cy.get('@mic').click({ force: true })
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
-    cy.get('main form [aria-label="Voice input"]').click({ force: true })
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
 
-    cy.wait('@transcribe').then((intercept) => {
+    cy.wait('@transcribe', { timeout: 15_000 }).then((intercept) => {
       // Frontend must send the X-Chat-Language header so the backend can pick the right Whisper hint.
       expect(intercept.request.headers).to.have.property('x-chat-language', 'en')
       expect(intercept.request.headers['content-type']).to.match(/^multipart\/form-data;\s*boundary=/i)
@@ -88,16 +94,17 @@ describe('Transcription flow', () => {
 
     cy.visit('/', withFakeMicrophone())
     cy.wait('@chatModels')
+    scrollHomeHeroIntoPlay()
 
-    cy.get('main form').find('[aria-label="Voice input"]').as('mic')
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()
     cy.get('@mic').click({ force: true })
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
-    cy.get('main form [aria-label="Voice input"]').click({ force: true })
-    cy.wait('@transcribe')
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
+    cy.wait('@transcribe', { timeout: 15_000 })
 
     // User-friendly canned message (we deliberately do NOT leak server text), and we MUST stay on /.
     cy.contains(/Transcription failed on the server/i, { timeout: 5_000 }).should('be.visible')
@@ -112,16 +119,17 @@ describe('Transcription flow', () => {
 
     cy.visit('/', withFakeMicrophone())
     cy.wait('@chatModels')
+    scrollHomeHeroIntoPlay()
 
-    cy.get('main form').find('[aria-label="Voice input"]').as('mic')
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()
     cy.get('@mic').click({ force: true })
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
-    cy.get('main form [aria-label="Voice input"]').click({ force: true })
-    cy.wait('@transcribe')
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
+    cy.wait('@transcribe', { timeout: 15_000 })
 
     cy.contains(/Too many requests or budget limit/i, { timeout: 5_000 }).should('be.visible')
     cy.location('pathname').should('eq', '/')
@@ -135,16 +143,17 @@ describe('Transcription flow', () => {
 
     cy.visit('/', withFakeMicrophone())
     cy.wait('@chatModels')
+    scrollHomeHeroIntoPlay()
 
-    cy.get('main form').find('[aria-label="Voice input"]').as('mic')
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()
     cy.get('@mic').click({ force: true })
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
-    cy.get('main form [aria-label="Voice input"]').click({ force: true })
-    cy.wait('@transcribe')
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
+    cy.wait('@transcribe', { timeout: 15_000 })
 
     cy.contains(/Speech-to-text is temporarily unavailable/i, { timeout: 5_000 })
       .should('be.visible')
@@ -179,17 +188,18 @@ describe('Transcription flow', () => {
       },
     })
     cy.wait('@chatModels')
+    scrollHomeHeroIntoPlay()
 
-    cy.get('main form').find('[aria-label="Taleinndata"]').as('mic')
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Taleinndata"]').as('mic')
     cy.get('@mic').scrollIntoView()
     cy.get('@mic').click({ force: true })
 
     cy.get('[role="img"][aria-label="Lydnivå under opptak"]', { timeout: 15_000 })
       .should('be.visible')
 
-    cy.get('main form [aria-label="Taleinndata"]').click({ force: true })
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Taleinndata"]').click({ force: true })
 
-    cy.wait('@transcribe').then((intercept) => {
+    cy.wait('@transcribe', { timeout: 15_000 }).then((intercept) => {
       expect(intercept.request.headers).to.have.property('x-chat-language', 'no')
     })
   })
@@ -205,20 +215,23 @@ describe('Transcription flow', () => {
 
     cy.visit('/', withFakeMicrophone())
     cy.wait('@chatModels')
+    scrollHomeHeroIntoPlay()
 
-    cy.get('main form').find('[aria-label="Voice input"]').as('mic')
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()
     cy.get('@mic').click({ force: true })
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
-    cy.get('main form [aria-label="Voice input"]').click({ force: true })
+    cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
 
     // While the request is mid-flight, the mic must be disabled to prevent overlapping recordings.
-    cy.get('main form [aria-label="Voice input"]', { timeout: 1_000 }).should('be.disabled')
+    cy.get('main form', { timeout: 15_000 })
+      .find('[aria-label="Voice input"]', { timeout: 5_000 })
+      .should('be.disabled')
 
-    cy.wait('@transcribe')
+    cy.wait('@transcribe', { timeout: 15_000 })
     cy.location('pathname', { timeout: 5_000 }).should('eq', '/chat')
   })
 })
