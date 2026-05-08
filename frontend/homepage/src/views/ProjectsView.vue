@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -83,6 +84,7 @@ const projects = computed(() => {
       status: project.status,
       githubUrl: project.githubUrl,
       liveUrl: project.liveUrl,
+      detailUrl: project.detailUrl,
     }))
 })
 </script>
@@ -98,12 +100,15 @@ const projects = computed(() => {
       
       <!-- Projects Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card 
-          v-for="project in projects" 
+        <div
+          v-for="project in projects"
           :key="project.id"
-          class="relative border-2 border-transparent transition-all duration-300 bg-white/90 backdrop-blur-sm hover:border-blue-300/30 hover:bg-white/95 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/15 group"
+          class="relative"
         >
-          <CardHeader>
+        <Card 
+          class="relative z-0 border-2 border-transparent transition-all duration-300 bg-white/90 backdrop-blur-sm hover:border-blue-300/30 hover:bg-white/95 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/15 group"
+        >
+          <CardHeader class="relative z-10">
             <div class="flex items-start justify-between mb-3">
               <div class="flex-1">
                 <CardTitle class="text-xl mb-2">{{ project.projectName }}</CardTitle>
@@ -133,11 +138,11 @@ const projects = computed(() => {
             </div>
           </CardHeader>
           
-          <CardContent>
+          <CardContent class="relative z-10">
             <p class="text-gray-600 leading-relaxed mb-4">{{ project.projectDescription }}</p>
             
             <!-- Action Buttons -->
-            <div class="flex gap-2">
+            <div class="relative z-20 flex gap-2">
               <Button 
                 v-if="project.githubUrl"
                 variant="outline" 
@@ -171,6 +176,13 @@ const projects = computed(() => {
             </div>
           </CardContent>
         </Card>
+        <RouterLink
+          v-if="project.detailUrl"
+          :to="project.detailUrl"
+          class="absolute inset-0 z-[5] rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          :aria-label="`${langStore.language === 'no' ? 'Åpne prosjektside' : 'Open project page'}: ${project.projectName}`"
+        />
+        </div>
       </div>
     </div>
   </main>

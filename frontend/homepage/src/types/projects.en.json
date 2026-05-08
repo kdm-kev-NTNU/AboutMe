@@ -1,6 +1,16 @@
 {
   "projects": [
     {
+      "id": "heathen-army-blog",
+      "projectName": "Heathen Army (Vikings blog)",
+      "projectDescription": "A Vikings TV series fan blog I built and ran between ages 12 and 14: consistent publishing, SEO with Yoast on WordPress, Google Analytics, Patreon, and a global audience — lessons in community, grit, and solo execution before AI tooling existed.",
+      "startDate": "2017-06-01",
+      "endDate": "2018-10-01",
+      "technologies": ["WordPress", "Yoast SEO", "Google Analytics", "Patreon", "Social media"],
+      "status": "completed",
+      "detailUrl": "/projects/heathen-army"
+    },
+    {
       "id": "portfolio-project-2025",
       "projectName": "Portfolio Project (RAG & AI)",
       "projectDescription": "A personal project that combines self-presentation with exploring Retrieval-Augmented Generation (RAG) and Spring AI. The website serves as both a digital CV and a demonstration of AI technology: users can ask questions to a chatbot trained on documents about me (education, projects, interests). The project demonstrates how RAG can be used in practice to retrieve personalized and context-sensitive information.",
