@@ -23,6 +23,8 @@ function scrollHomeHeroIntoPlay() {
  * voice-waveform.cy.ts avoids this accidentally via screenshot latency — we wait explicitly here.
  */
 function waitForRecordedAudioChunks() {
+  // Aligns with useSpeechTranscription's 250ms MediaRecorder timeslice; stopping sooner yields an empty blob (no /transcribe).
+  // eslint-disable-next-line cypress/no-unnecessary-waiting
   cy.wait(400)
 }
 
