@@ -48,15 +48,17 @@ describe('Voice waveform visual', () => {
 
     cy.get('main').scrollTo('bottom', { ensureScrollable: false })
 
+    cy.get('main form', { timeout: 15000 }).find('[aria-label="Voice input"]').scrollIntoView()
     cy.get('main form', { timeout: 15000 })
       .find('[aria-label="Voice input"]')
-      .scrollIntoView()
       .should('be.visible')
       /** Cookie / feedback widgets can still occlude the mic in the corner */
       .click({ force: true })
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15000 }).should('be.visible')
-    cy.wait(500)
+    cy.get('[role="img"][aria-label="Audio level while recording"] canvas', { timeout: 5000 }).should(($canvas) => {
+      expect($canvas.width(), 'waveform canvas has layout width').to.be.greaterThan(0)
+    })
 
     cy.screenshot('waveform-home-recording', { capture: 'viewport' })
 
@@ -94,14 +96,13 @@ describe('Voice waveform visual', () => {
     })
     cy.wait('@chatModels')
 
-    cy.get('main form')
-      .find('[aria-label="Voice input"]')
-      .scrollIntoView()
-      .should('be.visible')
-      .click()
+    cy.get('main form').find('[aria-label="Voice input"]').scrollIntoView()
+    cy.get('main form').find('[aria-label="Voice input"]').should('be.visible').click()
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15000 }).should('be.visible')
-    cy.wait(500)
+    cy.get('[role="img"][aria-label="Audio level while recording"] canvas', { timeout: 5000 }).should(($canvas) => {
+      expect($canvas.width(), 'waveform canvas has layout width').to.be.greaterThan(0)
+    })
 
     cy.screenshot('waveform-chat-recording', { capture: 'viewport' })
 
