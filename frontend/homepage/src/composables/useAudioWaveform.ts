@@ -73,6 +73,7 @@ export function useAudioWaveform(streamRef: Ref<MediaStream | null>) {
 
       const loop = () => {
         const a = analyserRef.value
+        // Guards rare cases (e.g. external null of analyserRef) while a rAF callback is queued.
         if (!a) return
         a.getFloatTimeDomainData(loopBuf)
         tick.value++
