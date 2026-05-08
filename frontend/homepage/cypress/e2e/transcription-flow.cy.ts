@@ -18,6 +18,14 @@ function scrollHomeHeroIntoPlay() {
   cy.get('main').scrollTo('bottom', { ensureScrollable: false })
 }
 
+/**
+ * useSpeechTranscription starts MediaRecorder with a 250ms timeslice; stopping immediately yields an empty Blob and skips fetch.
+ * voice-waveform.cy.ts avoids this accidentally via screenshot latency — we wait explicitly here.
+ */
+function waitForRecordedAudioChunks() {
+  cy.wait(400)
+}
+
 function withFakeMicrophone() {
   return {
     onBeforeLoad(win: Cypress.AUTWindow) {
@@ -72,6 +80,7 @@ describe('Transcription flow', () => {
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
+    waitForRecordedAudioChunks()
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
 
     cy.wait('@transcribe', { timeout: 15_000 }).then((intercept) => {
@@ -103,6 +112,7 @@ describe('Transcription flow', () => {
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
+    waitForRecordedAudioChunks()
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
     cy.wait('@transcribe', { timeout: 15_000 })
 
@@ -128,6 +138,7 @@ describe('Transcription flow', () => {
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
+    waitForRecordedAudioChunks()
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
     cy.wait('@transcribe', { timeout: 15_000 })
 
@@ -152,6 +163,7 @@ describe('Transcription flow', () => {
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
+    waitForRecordedAudioChunks()
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
     cy.wait('@transcribe', { timeout: 15_000 })
 
@@ -197,6 +209,7 @@ describe('Transcription flow', () => {
     cy.get('[role="img"][aria-label="Lydnivå under opptak"]', { timeout: 15_000 })
       .should('be.visible')
 
+    waitForRecordedAudioChunks()
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Taleinndata"]').click({ force: true })
 
     cy.wait('@transcribe', { timeout: 15_000 }).then((intercept) => {
@@ -224,6 +237,7 @@ describe('Transcription flow', () => {
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15_000 })
       .should('be.visible')
 
+    waitForRecordedAudioChunks()
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
 
     // While the request is mid-flight, the mic must be disabled to prevent overlapping recordings.
