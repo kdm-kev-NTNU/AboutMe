@@ -93,6 +93,7 @@ describe('useSpeechTranscription', () => {
     await flushPromises()
 
     expect(onTranscript).toHaveBeenCalledWith('hello from mic')
+    expect(transcribeSpeech).toHaveBeenCalledWith(expect.any(Blob))
     expect(api.isRecording.value).toBe(false)
     expect(api.isTranscribing.value).toBe(false)
 

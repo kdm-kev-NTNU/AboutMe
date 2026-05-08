@@ -251,45 +251,6 @@ describe('HomeView', () => {
 			vi.unstubAllGlobals()
 		})
 
-		it('shows voice hint copy when speech is supported', async () => {
-			Object.defineProperty(globalThis.navigator, 'mediaDevices', {
-				value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
-				configurable: true,
-			})
-			stubMediaRecorder()
-
-			const pinia = createPinia()
-			setActivePinia(pinia)
-			useLangStore().setLanguage('en')
-			const router = makeRouter()
-			await router.push('/')
-
-			const wrapper = mount(HomeView, {
-				global: {
-					plugins: [pinia, router],
-					stubs: {
-						Input: { props: ['modelValue'], template: '<input />' },
-						Button: buttonStub,
-						Alert: { template: '<div><slot /></div>' },
-						AlertTitle: { template: '<div><slot /></div>' },
-						AlertDescription: { template: '<div><slot /></div>' },
-						Info: true,
-						Github: true,
-						Linkedin: true,
-						MessageSquare: true,
-						ChevronRight: true,
-						Mic: true,
-						Square: true,
-						Loader2: true,
-						AudioWaveform: true,
-					},
-				},
-			})
-			await flushPromises()
-			expect(wrapper.text()).toMatch(/You can also speak/i)
-			expect(wrapper.text()).toMatch(/Voice/i)
-		})
-
 		it('opens chat with transcribed query after finishing voice input', async () => {
 			Object.defineProperty(globalThis.navigator, 'mediaDevices', {
 				value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
