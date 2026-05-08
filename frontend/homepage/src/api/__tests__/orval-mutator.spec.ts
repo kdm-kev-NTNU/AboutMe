@@ -125,6 +125,22 @@ describe('customFetch', () => {
     expect(r.status).toBe(200)
   })
 
+  it('does not set Authorization when auth JSON has no basicToken', async () => {
+    sessionStorage.setItem('auth', JSON.stringify({ username: 'u', role: 'ADMIN' }))
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('{}', {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    globalThis.fetch = fetchMock as typeof fetch
+
+    await customFetch<{ data: unknown; status: number }>('/x')
+    const init = fetchMock.mock.calls[0][1] as RequestInit
+    const headers = new Headers(init.headers)
+    expect(headers.get('Authorization')).toBeNull()
+  })
+
   it('ignores malformed auth JSON in sessionStorage', async () => {
     sessionStorage.setItem('auth', 'not-json')
     const fetchMock = vi.fn().mockResolvedValue(

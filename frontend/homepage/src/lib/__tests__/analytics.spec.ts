@@ -81,6 +81,11 @@ describe('analytics helpers', () => {
     expect(posthog.captureException).toHaveBeenCalledWith(err)
   })
 
+  it('forwards non-Error values to captureException when available', () => {
+    captureClientException('not-an-error')
+    expect(posthog.captureException).toHaveBeenCalledWith('not-an-error')
+  })
+
   it('falls back to capture when captureException is unavailable', () => {
     // @ts-expect-error testing fallback
     posthog.captureException = undefined
@@ -89,6 +94,16 @@ describe('analytics helpers', () => {
     expect(posthog.capture).toHaveBeenCalledWith('client_exception', {
       message: 'boom',
       name: 'Error',
+    })
+  })
+
+  it('uses UnknownError metadata for non-Error when captureException is unavailable', () => {
+    // @ts-expect-error testing fallback
+    posthog.captureException = undefined
+    captureClientException(42)
+    expect(posthog.capture).toHaveBeenCalledWith('client_exception', {
+      message: '42',
+      name: 'UnknownError',
     })
   })
 
