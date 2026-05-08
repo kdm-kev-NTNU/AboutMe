@@ -110,11 +110,16 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
     try {
       const auth = (await import('@/stores/auth')).useAuthStore()
       auth.restore()
-      const r = await transcribeSpeech(blob)
+      const r = await transcribeSpeech(blob, options.language.value)
       if (r.status === 200 && r.data && typeof r.data === 'object' && r.data !== null && 'text' in r.data) {
         const t = String((r.data as { text: unknown }).text ?? '').trim().slice(0, options.maxChars)
         if (t) {
           options.onTranscript(t)
+        } else {
+          voiceError.value =
+            options.language.value === 'en'
+              ? 'No speech detected. Try again.'
+              : 'Ingen tale oppdaget. Prøv igjen.'
         }
         return
       }
@@ -123,6 +128,20 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
           options.language.value === 'en'
             ? 'Too many requests or budget limit. Wait and try again.'
             : 'For mange forespørsler eller budsjettgrense. Vent litt og prøv igjen.'
+        return
+      }
+      if (r.status === 503) {
+        voiceError.value =
+          options.language.value === 'en'
+            ? 'Speech-to-text is temporarily unavailable. Please try again later.'
+            : 'Tale-til-tekst er midlertidig utilgjengelig. Prøv igjen senere.'
+        return
+      }
+      if (r.status >= 500) {
+        voiceError.value =
+          options.language.value === 'en'
+            ? 'Transcription failed on the server. Please try again.'
+            : 'Transkribering feilet på serveren. Prøv igjen.'
         return
       }
       voiceError.value =
