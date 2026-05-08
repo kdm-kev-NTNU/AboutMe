@@ -38,7 +38,7 @@ import tools.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class DefaultQuestionSuggestionServiceTest {
 
-  private static final String MODEL_ID = "gpt-5.4-nano";
+  private static final String MODEL_ID = "gpt-5.4-mini";
 
   @Mock
   private DocumentIngestionService documentIngestionService;

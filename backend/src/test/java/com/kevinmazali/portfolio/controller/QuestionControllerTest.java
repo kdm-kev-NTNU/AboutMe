@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-5.5")
+@WebMvcTest(controllers = QuestionController.class, properties = "portfolio.chat.default-model-id=gpt-5.4-mini")
 @EnableConfigurationProperties({
   AskRateLimitProperties.class,
   ExperimentRunRateLimitProperties.class,
@@ -116,7 +116,7 @@ class QuestionControllerTest {
 			.andExpect(jsonPath("$.answer").value("ok"));
 
 		verify(openAIService, times(1)).getAnswer(argThat(q ->
-			"What is your name?".equals(q.question()) && "gpt-5.5".equals(q.model())));
+			"What is your name?".equals(q.question()) && "gpt-5.4-mini".equals(q.model())));
 	}
 
 	@Test
@@ -125,12 +125,12 @@ class QuestionControllerTest {
 
 		mockMvc.perform(post("/ask")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"question\":\"Ping\",\"model\":\"gpt-5.4-nano\"}"))
+				.content("{\"question\":\"Ping\",\"model\":\"claude-haiku-4-5-20251001\"}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.answer").value("ok"));
 
 		verify(openAIService).getAnswer(argThat(q ->
-			"Ping".equals(q.question()) && "gpt-5.4-nano".equals(q.model())));
+			"Ping".equals(q.question()) && "claude-haiku-4-5-20251001".equals(q.model())));
 	}
 
 	@Test
