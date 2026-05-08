@@ -34,6 +34,13 @@ spring:
         options:
           model: text-embedding-3-large
           dimensions: 3072
+      audio:
+        transcription:
+          options:
+            model: whisper-1
+            response-format: TEXT
+            language: "no"
+            temperature: 0
     anthropic:
       api-key: ${ANTHROPIC_API_KEY:}
       chat:
@@ -98,6 +105,16 @@ portfolio:
         claude-opus-4-7:
           input-per-million-usd: 5.00
           output-per-million-usd: 25.00
+        # Transcription-only (not in SupportedChatModel). Pseudo input tokens = est_seconds * 1000; rate tuned ~Whisper $/min.
+        whisper-1:
+          input-per-million-usd: 0.10
+          output-per-million-usd: 0.00
+        gpt-4o-mini-transcribe:
+          input-per-million-usd: 0.15
+          output-per-million-usd: 0.00
+        gpt-4o-transcribe:
+          input-per-million-usd: 0.40
+          output-per-million-usd: 0.00
     kill-switch:
       enabled: true
       monthly-limit-usd: 50.00
