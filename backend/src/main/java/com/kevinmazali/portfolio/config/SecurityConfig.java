@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Spring Security: HTTP Basic for authenticated routes, role-based rules for {@code /admin/**},
  * and a CORS allow-list aligned with the Vue SPA and production site origins.
- * <p>Most API routes stay {@code permitAll}; admin document and prompt APIs require {@code ROLE_ADMIN}.</p>
+ * <p>Most API routes stay {@code permitAll} (including {@code POST /ask} and {@code POST /transcribe}); admin document and prompt APIs require {@code ROLE_ADMIN}.</p>
  */
 @Configuration
 @EnableWebSecurity
@@ -76,7 +76,9 @@ public class SecurityConfig {
             "Accept",
             "Origin",
             "Access-Control-Request-Method",
-            "Access-Control-Request-Headers"
+            "Access-Control-Request-Headers",
+            "X-Chat-Language",
+            "X-Conversation-Id"
         ));
         configuration.setAllowCredentials(true);
 
