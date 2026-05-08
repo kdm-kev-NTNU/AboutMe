@@ -43,6 +43,11 @@ describe('Transcription flow', () => {
       statusCode: 200,
       body: FAKE_MODELS,
     }).as('chatModels')
+    // Voice success navigates to /chat?q=…; ChatView auto-POSTs /ask. Preview has no backend — stub it so the suite stays stable.
+    cy.intercept('POST', '**/ask', {
+      statusCode: 200,
+      body: { answer: '(e2e stub)', sources: [] },
+    }).as('askStub')
   })
 
   it('navigates to chat with the transcribed query on a successful round-trip', () => {
@@ -70,7 +75,9 @@ describe('Transcription flow', () => {
     })
 
     cy.location('pathname', { timeout: 5_000 }).should('eq', '/chat')
-    cy.location('search').should('include', encodeURIComponent('tell me about kevin'))
+    cy.url().should((href) => {
+      expect(new URL(href).searchParams.get('q')).to.eq('tell me about kevin')
+    })
   })
 
   it('shows the destructive error alert when /transcribe returns 500', () => {
