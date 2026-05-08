@@ -17,6 +17,7 @@ public record ExperimentRunDetailResponse(
     Double meanRelevance,
     Double meanCorrectness,
     Double meanConciseness,
+    Double meanLanguageConsistency,
     String errorMessage,
     OffsetDateTime createdAt,
     OffsetDateTime completedAt,

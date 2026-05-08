@@ -75,6 +75,9 @@ public class ExperimentRun {
   @Column
   private Double meanConciseness;
 
+  @Column
+  private Double meanLanguageConsistency;
+
   @Column(columnDefinition = "TEXT")
   private String errorMessage;
 

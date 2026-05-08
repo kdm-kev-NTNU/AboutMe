@@ -108,6 +108,8 @@ class ExperimentAsyncRunnerTest {
         .thenReturn(new EvaluationScore(0.9, "ok", "c"));
     when(evaluatorService.evaluateConciseness(any(), any(), any()))
         .thenReturn(EvaluationScore.failed("skip"));
+    when(evaluatorService.evaluateLanguageConsistency(any(), any(), any()))
+        .thenReturn(new EvaluationScore(1.0, "consistent", "same lang"));
 
     runner.executeExperimentRun(1L);
 
@@ -121,6 +123,7 @@ class ExperimentAsyncRunnerTest {
     assertEquals(0.7, saved.getMeanRelevance(), 0.001);
     assertEquals(0.9, saved.getMeanCorrectness(), 0.001);
     assertNull(saved.getMeanConciseness());
+    assertEquals(1.0, saved.getMeanLanguageConsistency(), 0.001);
   }
 
   private static ExperimentRun baseRun() {
