@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import AudioWaveform from '../AudioWaveform.vue'
 
-let resizeObserverInstances: Array<{ disconnect: ReturnType<typeof vi.fn> }> = []
+const resizeObserverInstances: Array<{ disconnect: ReturnType<typeof vi.fn> }> = []
 
 vi.stubGlobal(
   'MediaStream',
