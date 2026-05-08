@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed, watch } from 'vue'
+import { onMounted, onUnmounted, reactive, ref, computed, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
@@ -33,6 +33,8 @@ import {
   getOrCreateChatConversationId,
   resetChatConversationId,
 } from '@/lib/chat-telemetry'
+import { transcribeSpeech } from '@/lib/transcribe-audio'
+import { Loader2, Mic, Square } from 'lucide-vue-next'
 
 // RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
@@ -50,6 +52,32 @@ const CHAT_INFO_DISMISSED_KEY = 'chatInfoPopupDismissed.v2'
 const langStore = useLangStore()
 const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
+
+const supportsSpeechInput = computed(
+  () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,
+)
+
+const isRecording = ref(false)
+const isTranscribing = ref(false)
+let mediaRecorder: MediaRecorder | null = null
+let mediaStream: MediaStream | null = null
+const audioChunks: Blob[] = []
+
+function stopMediaTracks() {
+  mediaStream?.getTracks().forEach((t) => t.stop())
+  mediaStream = null
+}
+
+onUnmounted(() => {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try {
+      mediaRecorder.stop()
+    } catch {
+      /* ignore */
+    }
+  }
+  stopMediaTracks()
+})
 
 const providerLabels = computed(() =>
   language.value === 'no'
@@ -177,9 +205,110 @@ watch(showInfoPopup, (isOpen, wasOpen) => {
   }
 })
 
+async function toggleVoiceInput() {
+  if (!supportsSpeechInput.value || isTranscribing.value || isLoading.value) return
+  if (isRecording.value) {
+    await stopRecordingAndTranscribe()
+    return
+  }
+  await startRecording()
+}
+
+async function startRecording() {
+  errorText.value = ''
+  try {
+    mediaStream = await navigator.mediaDevices!.getUserMedia({ audio: true })
+    const preferred =
+      typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : ''
+    mediaRecorder = preferred
+      ? new MediaRecorder(mediaStream, { mimeType: preferred })
+      : new MediaRecorder(mediaStream)
+    audioChunks.length = 0
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data)
+    }
+    mediaRecorder.start(250)
+    isRecording.value = true
+  } catch {
+    errorText.value =
+      language.value === 'en'
+        ? 'Microphone permission is required for voice input.'
+        : 'Mikrofontilgang kreves for taleinndata.'
+    stopMediaTracks()
+    mediaRecorder = null
+  }
+}
+
+async function stopRecordingAndTranscribe() {
+  const rec = mediaRecorder
+  if (!rec || rec.state === 'inactive') {
+    isRecording.value = false
+    stopMediaTracks()
+    mediaRecorder = null
+    return
+  }
+  await new Promise<void>((resolve) => {
+    rec.addEventListener('stop', () => resolve(), { once: true })
+    try {
+      rec.requestData()
+    } catch {
+      /* ignore */
+    }
+    rec.stop()
+  })
+  isRecording.value = false
+  stopMediaTracks()
+  mediaRecorder = null
+
+  const blobType = audioChunks[0]?.type ?? 'audio/webm'
+  const blob = new Blob(audioChunks, { type: blobType })
+  audioChunks.length = 0
+  if (blob.size === 0) {
+    errorText.value =
+      language.value === 'en' ? 'No audio captured. Try again.' : 'Ingen lyd fanget opp. Prøv igjen.'
+    return
+  }
+
+  isTranscribing.value = true
+  errorText.value = ''
+  try {
+    const auth = (await import('@/stores/auth')).useAuthStore()
+    auth.restore()
+    const lang = language.value === 'en' ? 'en' : 'no'
+    const r = await transcribeSpeech(blob, lang)
+    if (r.status === 200 && r.data && typeof r.data === 'object' && r.data !== null && 'text' in r.data) {
+      const t = String((r.data as { text: unknown }).text ?? '').trim()
+      if (t) {
+        const next = (input.value ? `${input.value.trim()} ${t}` : t).trim()
+        input.value = next.slice(0, MAX_PROMPT_CHARS)
+      }
+      return
+    }
+    if (r.status === 429) {
+      errorText.value =
+        language.value === 'en'
+          ? 'Too many requests or budget limit. Wait and try again.'
+          : 'For mange forespørsler eller budsjettgrense. Vent litt og prøv igjen.'
+      return
+    }
+    errorText.value =
+      readApiError(r.data) ??
+      (language.value === 'en' ? 'Could not transcribe audio.' : 'Kunne ikke transkribere lyd.')
+  } catch {
+    errorText.value =
+      language.value === 'en' ? 'Network error during transcription.' : 'Nettverksfeil ved transkripsjon.'
+  } finally {
+    isTranscribing.value = false
+  }
+}
+
 // Calls the portfolio backend; auth store is restored so optional future authenticated /ask works the same way.
 async function send(text: string) {
-  if (!text.trim() || isLoading.value) return
+  if (!text.trim() || isLoading.value || isTranscribing.value) return
   // client-side validation to mirror backend
   if (text.length > MAX_PROMPT_CHARS) {
     errorText.value =
@@ -471,16 +600,31 @@ onMounted(async () => {
           class="relative flex gap-3 rounded-3xl border border-blue-100/70 bg-white/85 p-3 shadow-lg shadow-blue-900/10 backdrop-blur-xl transition-all duration-300 hover:border-blue-200/80 focus-within:border-blue-300/70 focus-within:shadow-lg focus-within:shadow-blue-500/20"
           @submit.prevent="send(input)"
         >
+          <Button
+            v-if="supportsSpeechInput"
+            type="button"
+            variant="outline"
+            :disabled="isLoading || isTranscribing"
+            :aria-pressed="isRecording"
+            :aria-label="language === 'en' ? 'Voice input' : 'Taleinndata'"
+            class="relative shrink-0 rounded-2xl border border-blue-200/80 bg-white/90 px-3 text-slate-700 hover:bg-blue-50/80 disabled:opacity-50"
+            :class="{ 'animate-pulse ring-2 ring-red-400 ring-offset-1': isRecording }"
+            @click="toggleVoiceInput"
+          >
+            <Loader2 v-if="isTranscribing" class="h-5 w-5 animate-spin text-blue-600" />
+            <Square v-else-if="isRecording" class="h-5 w-5 text-red-600" />
+            <Mic v-else class="h-5 w-5" />
+          </Button>
           <Input
             v-model="input"
-            :disabled="isLoading"
+            :disabled="isLoading || isTranscribing"
             type="text"
             class="flex-1 rounded-2xl border border-blue-100/70 bg-white/85 text-slate-700 transition-all duration-300 placeholder:font-medium placeholder:text-slate-400 focus:border-blue-300/70 focus:bg-white focus:shadow-sm focus:shadow-blue-500/15 focus:outline-none"
             :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'"
           />
           <Button
             type="submit"
-            :disabled="isLoading || !input.trim()"
+            :disabled="isLoading || isTranscribing || !input.trim()"
             class="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:shadow-blue-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:transform-none"
           >
             {{ isLoading ? 'Sending...' : 'Send →' }}

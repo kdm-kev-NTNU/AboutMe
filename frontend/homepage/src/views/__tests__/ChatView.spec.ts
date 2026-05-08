@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -21,6 +21,10 @@ vi.mock('@/api/generated/portfolio', async (importOriginal) => {
     listChatModels: vi.fn(),
   }
 })
+
+vi.mock('@/lib/transcribe-audio', () => ({
+  transcribeSpeech: vi.fn(),
+}))
 
 describe('ChatView', () => {
   const HomeStub = { template: '<div>home-stub</div>' }
@@ -263,5 +267,50 @@ describe('ChatView', () => {
     localStorage.setItem('chatInfoPopupDismissed', 'true')
     const { wrapper } = await mountChat({})
     expect(wrapper.text()).toContain('This portfolio keeps evolving')
+  })
+
+  describe('voice input control', () => {
+    const origMediaDevices = globalThis.navigator.mediaDevices
+
+    afterEach(() => {
+      Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+        value: origMediaDevices,
+        configurable: true,
+      })
+      vi.unstubAllGlobals()
+    })
+
+    it('hides the mic when mediaDevices is unavailable', async () => {
+      Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+        value: undefined,
+        configurable: true,
+      })
+      const { wrapper } = await mountChat({})
+      expect(wrapper.find('[aria-label="Voice input"]').exists()).toBe(false)
+    })
+
+    it('shows the mic when MediaRecorder and getUserMedia exist', async () => {
+      Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+        value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
+        configurable: true,
+      })
+      class StubRecorder {
+        static isTypeSupported = () => true
+        state = 'inactive'
+        ondataavailable: ((ev: { data: Blob }) => void) | null = null
+        start() {
+          this.state = 'recording'
+        }
+        stop() {
+          this.state = 'inactive'
+        }
+        addEventListener = () => {}
+        requestData = () => {}
+      }
+      vi.stubGlobal('MediaRecorder', StubRecorder as unknown as typeof MediaRecorder)
+
+      const { wrapper } = await mountChat({})
+      expect(wrapper.find('[aria-label="Voice input"]').exists()).toBe(true)
+    })
   })
 })
