@@ -5,13 +5,8 @@
  */
 
 const FULL_CATALOG = [
-  { id: 'gpt-5.4-nano', provider: 'OPENAI', label: 'GPT-5.4 Nano', tags: ['FAST'] },
   { id: 'gpt-5.4-mini', provider: 'OPENAI', label: 'GPT-5.4 mini', tags: ['FAST'] },
-  { id: 'gpt-5.4', provider: 'OPENAI', label: 'GPT-5.4', tags: ['REASONING'] },
-  { id: 'gpt-5.5', provider: 'OPENAI', label: 'GPT-5.5', tags: ['REASONING'] },
   { id: 'claude-haiku-4-5-20251001', provider: 'ANTHROPIC', label: 'Claude Haiku 4.5', tags: ['FAST'] },
-  { id: 'claude-sonnet-4-6', provider: 'ANTHROPIC', label: 'Claude Sonnet 4.6', tags: ['REASONING'] },
-  { id: 'claude-opus-4-7', provider: 'ANTHROPIC', label: 'Claude Opus 4.7', tags: ['REASONING'] },
 ]
 
 function stubFullCatalog() {
@@ -37,13 +32,12 @@ describe('Chat model catalog', () => {
     cy.visit('/chat')
 
     cy.get('#chat-model-select').should('exist')
-    cy.get('#chat-model-select').find('option').should('have.length.at.least', 2)
+    cy.get('#chat-model-select').find('option').should('have.length', 1)
     cy.get('#chat-model-select').find('option').contains('Fast')
-    cy.get('#chat-model-select').find('option').contains('Reasoning')
-    cy.get('#chat-model-select').should('have.value', 'gpt-5.4-nano')
+    cy.get('#chat-model-select').should('have.value', 'gpt-5.4-mini')
 
     cy.contains('button', /^Anthropic$/i).click()
-    cy.get('#chat-model-select').find('option').should('have.length.at.least', 2)
+    cy.get('#chat-model-select').find('option').should('have.length', 1)
     cy.get('#chat-model-select').should('have.value', 'claude-haiku-4-5-20251001')
     cy.get('#chat-model-select').find('option').contains('Haiku')
   })
@@ -76,7 +70,7 @@ describe('Chat model catalog', () => {
     stubFullCatalog()
     cy.visit('/chat')
 
-    cy.get('#chat-model-select').should('have.value', 'gpt-5.4-nano')
+    cy.get('#chat-model-select').should('have.value', 'gpt-5.4-mini')
 
     cy.contains('button', /^Anthropic$/i).click()
     cy.get('#chat-model-select').should('have.value', 'claude-haiku-4-5-20251001')
@@ -85,7 +79,7 @@ describe('Chat model catalog', () => {
     })
 
     cy.contains('button', /^OpenAI$/i).click()
-    cy.get('#chat-model-select').should('have.value', 'gpt-5.4-nano')
+    cy.get('#chat-model-select').should('have.value', 'gpt-5.4-mini')
     cy.get('#chat-model-select').find('option').each(($opt) => {
       expect($opt.text()).to.match(/gpt|openai/i)
     })
@@ -96,11 +90,11 @@ describe('Chat model catalog', () => {
     cy.intercept('POST', '**/ask', { statusCode: 200, body: { answer: 'ok' } }).as('askPost')
 
     cy.visit('/chat')
-    cy.get('#chat-model-select').select('gpt-5.4')
+    cy.get('#chat-model-select').select('gpt-5.4-mini')
     cy.get('input[type="text"]').type('Test question')
     cy.contains('button', /send/i).click()
 
-    cy.wait('@askPost').its('request.body').should('have.property', 'model', 'gpt-5.4')
+    cy.wait('@askPost').its('request.body').should('have.property', 'model', 'gpt-5.4-mini')
   })
 
   it('sends the selected Anthropic model in the /ask request body', () => {
@@ -109,11 +103,11 @@ describe('Chat model catalog', () => {
 
     cy.visit('/chat')
     cy.contains('button', /^Anthropic$/i).click()
-    cy.get('#chat-model-select').select('claude-sonnet-4-6')
+    cy.get('#chat-model-select').select('claude-haiku-4-5-20251001')
     cy.get('input[type="text"]').type('Test question')
     cy.contains('button', /send/i).click()
 
-    cy.wait('@askPost').its('request.body').should('have.property', 'model', 'claude-sonnet-4-6')
+    cy.wait('@askPost').its('request.body').should('have.property', 'model', 'claude-haiku-4-5-20251001')
   })
 
   it('round-trip: switch providers, select model, send, switch back', () => {
@@ -123,15 +117,15 @@ describe('Chat model catalog', () => {
     cy.visit('/chat')
 
     cy.contains('button', /^Anthropic$/i).click()
-    cy.get('#chat-model-select').select('claude-opus-4-7')
+    cy.get('#chat-model-select').select('claude-haiku-4-5-20251001')
     cy.get('input[type="text"]').type('Q1')
     cy.contains('button', /send/i).click()
-    cy.wait('@askPost').its('request.body').should('have.property', 'model', 'claude-opus-4-7')
+    cy.wait('@askPost').its('request.body').should('have.property', 'model', 'claude-haiku-4-5-20251001')
 
     cy.contains('button', /^OpenAI$/i).click()
-    cy.get('#chat-model-select').select('gpt-5.5')
+    cy.get('#chat-model-select').select('gpt-5.4-mini')
     cy.get('input[type="text"]').type('Q2')
     cy.contains('button', /send/i).click()
-    cy.wait('@askPost').its('request.body').should('have.property', 'model', 'gpt-5.5')
+    cy.wait('@askPost').its('request.body').should('have.property', 'model', 'gpt-5.4-mini')
   })
 })

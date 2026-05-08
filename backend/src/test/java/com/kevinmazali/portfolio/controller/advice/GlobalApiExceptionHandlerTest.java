@@ -51,6 +51,22 @@ class GlobalApiExceptionHandlerTest {
         .andExpect(jsonPath("$.error").value("premium"));
   }
 
+  @Test
+  void unexpectedExceptionMapsTo500WithStructuredBody() throws Exception {
+    mockMvc
+        .perform(get("/__probe/boom").accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isInternalServerError())
+        .andExpect(jsonPath("$.error").value("An unexpected error occurred. Please try again."));
+  }
+
+  @Test
+  void unexpectedRuntimeExceptionAlsoMapsTo500() throws Exception {
+    mockMvc
+        .perform(get("/__probe/runtime").accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isInternalServerError())
+        .andExpect(jsonPath("$.error").value("An unexpected error occurred. Please try again."));
+  }
+
   @Controller
   static class ThrowingProbe {
 
@@ -67,6 +83,16 @@ class GlobalApiExceptionHandlerTest {
     @GetMapping("/__probe/premium")
     void premium() {
       throw new PremiumModelForbiddenException("premium");
+    }
+
+    @GetMapping("/__probe/boom")
+    void boom() throws Exception {
+      throw new Exception("kaboom");
+    }
+
+    @GetMapping("/__probe/runtime")
+    void runtime() {
+      throw new IllegalStateException("oops");
     }
   }
 }

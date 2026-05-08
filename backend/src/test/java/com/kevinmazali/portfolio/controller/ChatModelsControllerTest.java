@@ -45,7 +45,7 @@ class ChatModelsControllerTest {
   void listModelsReturnsJsonArray() throws Exception {
     when(chatModelCatalog.listAvailableModels()).thenReturn(List.of(
         new ChatModelOption("gpt-5.4-mini", ChatProvider.OPENAI, "GPT-5.4 mini", EnumSet.of(ModelTag.FAST)),
-        new ChatModelOption("gpt-5.4", ChatProvider.OPENAI, "GPT-5.4", EnumSet.of(ModelTag.REASONING))
+        new ChatModelOption("claude-haiku-4-5-20251001", ChatProvider.ANTHROPIC, "Claude Haiku 4.5", EnumSet.of(ModelTag.FAST))
     ));
 
     mockMvc.perform(get("/chat/models"))
@@ -54,6 +54,7 @@ class ChatModelsControllerTest {
         .andExpect(jsonPath("$[0].provider").value("OPENAI"))
         .andExpect(jsonPath("$[0].label").value("GPT-5.4 mini"))
         .andExpect(jsonPath("$[0].tags[0]").value("FAST"))
-        .andExpect(jsonPath("$[1].tags[0]").value("REASONING"));
+        .andExpect(jsonPath("$[1].id").value("claude-haiku-4-5-20251001"))
+        .andExpect(jsonPath("$[1].tags[0]").value("FAST"));
   }
 }

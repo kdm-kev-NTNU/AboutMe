@@ -2,6 +2,8 @@ package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.model.ApiError;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -12,6 +14,7 @@ import org.springframework.web.client.RestClientException;
 /**
  * Maps ingestion / I/O failures on admin document routes to 503 with {@link ApiError}.
  */
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(assignableTypes = DocumentPipelineController.class)
 @RequiredArgsConstructor
 public class DocumentPipelineControllerAdvice {

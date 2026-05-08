@@ -91,20 +91,20 @@ describe('ChatView', () => {
     return { wrapper, router, pinia }
   }
 
-  it('shows model FAST / Reasoning labels and defaults to a FAST model when anonymous', async () => {
+  it('shows model FAST label and defaults to OpenAI FAST when anonymous', async () => {
     vi.mocked(listChatModels).mockResolvedValue({
       status: 200,
       data: [
         {
-          id: 'gpt-5.4',
-          provider: ChatModelOptionProvider.OPENAI,
-          label: 'GPT-5.4',
-          tags: [ModelTag.REASONING],
-        },
-        {
           id: 'gpt-5.4-mini',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'GPT-5.4 mini',
+          tags: [ModelTag.FAST],
+        },
+        {
+          id: 'claude-haiku-4-5-20251001',
+          provider: ChatModelOptionProvider.ANTHROPIC,
+          label: 'Claude Haiku 4.5',
           tags: [ModelTag.FAST],
         },
       ],
@@ -116,11 +116,10 @@ describe('ChatView', () => {
     expect(sel.exists()).toBe(true)
     const opts = sel.findAll('option')
     expect(opts.some((o) => o.text().includes('Fast'))).toBe(true)
-    expect(opts.some((o) => o.text().includes('Reasoning'))).toBe(true)
     expect((sel.element as HTMLSelectElement).value).toBe('gpt-5.4-mini')
   })
 
-  it('defaults to a REASONING model when signed in', async () => {
+  it('defaults to first catalog model when signed in and no REASONING options exist', async () => {
     sessionStorage.setItem(
       'auth',
       JSON.stringify({ username: 'u', role: 'USER', basicToken: 'dGVzdA==' }),
@@ -129,15 +128,15 @@ describe('ChatView', () => {
       status: 200,
       data: [
         {
-          id: 'gpt-5.4',
-          provider: ChatModelOptionProvider.OPENAI,
-          label: 'GPT-5.4',
-          tags: [ModelTag.REASONING],
-        },
-        {
           id: 'gpt-5.4-mini',
           provider: ChatModelOptionProvider.OPENAI,
           label: 'GPT-5.4 mini',
+          tags: [ModelTag.FAST],
+        },
+        {
+          id: 'claude-haiku-4-5-20251001',
+          provider: ChatModelOptionProvider.ANTHROPIC,
+          label: 'Claude Haiku 4.5',
           tags: [ModelTag.FAST],
         },
       ],
@@ -146,7 +145,7 @@ describe('ChatView', () => {
     const { wrapper } = await mountChat({})
     await flushPromises()
     const sel = wrapper.find('#chat-model-select')
-    expect((sel.element as HTMLSelectElement).value).toBe('gpt-5.4')
+    expect((sel.element as HTMLSelectElement).value).toBe('gpt-5.4-mini')
   })
 
   it('shows English error when prompt exceeds max length', async () => {
@@ -391,7 +390,7 @@ describe('ChatView', () => {
 
       expect(wrapper.find('input[type="text"]').exists()).toBe(true)
       expect(wrapper.find('[role="img"]').exists()).toBe(false)
-      expect(vi.mocked(transcribeSpeech)).toHaveBeenCalledWith(expect.any(Blob))
+      expect(vi.mocked(transcribeSpeech)).toHaveBeenCalledWith(expect.any(Blob), 'en')
     })
   })
 })

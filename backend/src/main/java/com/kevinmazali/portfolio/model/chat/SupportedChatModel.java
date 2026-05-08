@@ -11,14 +11,9 @@ import java.util.Set;
  */
 public enum SupportedChatModel {
 
-  GPT_5_4_NANO("gpt-5.4-nano", ChatProvider.OPENAI, "GPT-5.4 Nano", EnumSet.of(ModelTag.FAST)),
   GPT_5_4_MINI("gpt-5.4-mini", ChatProvider.OPENAI, "GPT-5.4 mini", EnumSet.of(ModelTag.FAST)),
-  GPT_5_4("gpt-5.4", ChatProvider.OPENAI, "GPT-5.4", EnumSet.of(ModelTag.REASONING)),
-  GPT_5_5("gpt-5.5", ChatProvider.OPENAI, "GPT-5.5", EnumSet.of(ModelTag.REASONING)),
 
-  CLAUDE_HAIKU_4_5("claude-haiku-4-5-20251001", ChatProvider.ANTHROPIC, "Claude Haiku 4.5", EnumSet.of(ModelTag.FAST)),
-  CLAUDE_SONNET_4_6("claude-sonnet-4-6", ChatProvider.ANTHROPIC, "Claude Sonnet 4.6", EnumSet.of(ModelTag.REASONING)),
-  CLAUDE_OPUS_4_7("claude-opus-4-7", ChatProvider.ANTHROPIC, "Claude Opus 4.7", EnumSet.of(ModelTag.REASONING));
+  CLAUDE_HAIKU_4_5("claude-haiku-4-5-20251001", ChatProvider.ANTHROPIC, "Claude Haiku 4.5", EnumSet.of(ModelTag.FAST));
 
   private final String modelId;
   private final ChatProvider provider;
