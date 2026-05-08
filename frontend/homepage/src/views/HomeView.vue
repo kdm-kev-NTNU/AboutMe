@@ -83,7 +83,7 @@ const futureWorkHomeLink = computed(() => {
 
 const quickQuestion = ref('')
 
-const speechLang = computed(() => (language.value === 'no' ? 'no' : 'en'))
+const speechUiLanguage = computed(() => language.value)
 
 const speechBlocked = computed(() => false)
 
@@ -95,7 +95,7 @@ const {
   voiceError,
   toggleVoiceInput,
 } = useSpeechTranscription({
-  language: speechLang,
+  language: speechUiLanguage,
   maxChars: MAX_SPEECH_PROMPT_CHARS,
   isBlocked: speechBlocked,
   onTranscript: (t) => {
@@ -103,12 +103,6 @@ const {
     router.push({ name: 'chat', query: { q: t } })
   },
 })
-
-const voiceHint = computed(() =>
-  language.value === 'no'
-    ? 'Du kan også snakke: trykk på mikrofonen, snakk, og trykk igjen — du sendes til chat med det du sa.'
-    : 'You can also speak: tap the microphone, talk, tap again — you’ll open chat with what you said.',
-)
 
 const providerLabels = computed(() =>
   language.value === 'no'
@@ -332,17 +326,6 @@ function submitQuick() {
           </svg>
         </a>
       </div>
-
-      <p
-        v-if="supportsSpeechInput"
-        class="mx-auto max-w-lg px-2 text-center text-sm font-medium leading-snug text-slate-800"
-      >
-        <span class="mr-1 inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-blue-800">
-          <Mic class="size-3.5 shrink-0" aria-hidden="true" />
-          {{ language === 'no' ? 'Tale' : 'Voice' }}
-        </span>
-        {{ voiceHint }}
-      </p>
 
       <form
         class="relative mx-auto flex max-w-md gap-3 rounded-xl border-2 border-blue-200/20 bg-white/90 p-2 backdrop-blur-sm transition-all duration-300 hover:border-blue-300/40 hover:bg-white/95 hover:shadow-lg hover:shadow-blue-500/15 focus-within:border-blue-300/60 focus-within:bg-white/98 focus-within:shadow-lg focus-within:shadow-blue-500/25"
