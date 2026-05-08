@@ -269,6 +269,268 @@ describe('ChatView', () => {
     expect(wrapper.text()).toContain('This portfolio keeps evolving')
   })
 
+  // --- Language-dependent UI tests ---
+
+  it('shows Norwegian placeholder when language is no', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useLangStore().setLanguage('no')
+    useChatModelStore().$reset()
+
+    const router = makeRouter()
+    await router.push({ path: '/chat' })
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
+          DialogContent: { template: '<div><slot /></div>' },
+          DialogHeader: { template: '<div><slot /></div>' },
+          DialogTitle: { template: '<h2><slot /></h2>' },
+          DialogDescription: { template: '<p><slot /></p>' },
+          DialogFooter: { template: '<div><slot /></div>' },
+          MessagesArea: {
+            props: ['messages', 'isLoading', 'isReadOnly'],
+            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    const input = wrapper.find('input[type="text"]')
+    expect(input.exists()).toBe(true)
+    expect(input.attributes('placeholder')).toContain('Spør')
+  })
+
+  it('shows English placeholder when language is en', async () => {
+    const { wrapper } = await mountChat({})
+    const input = wrapper.find('input[type="text"]')
+    expect(input.exists()).toBe(true)
+    expect(input.attributes('placeholder')).toContain('Ask')
+  })
+
+  it('shows Norwegian popup text when language is no', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useLangStore().setLanguage('no')
+    useChatModelStore().$reset()
+
+    const router = makeRouter()
+    await router.push({ path: '/chat' })
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
+          DialogContent: { template: '<div><slot /></div>' },
+          DialogHeader: { template: '<div><slot /></div>' },
+          DialogTitle: { template: '<h2><slot /></h2>' },
+          DialogDescription: { template: '<p><slot /></p>' },
+          DialogFooter: { template: '<div><slot /></div>' },
+          MessagesArea: {
+            props: ['messages', 'isLoading', 'isReadOnly'],
+            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Porteføljen oppdateres fortløpende')
+  })
+
+  it('shows English popup text when language is en', async () => {
+    const { wrapper } = await mountChat({})
+    expect(wrapper.text()).toContain('This portfolio keeps evolving')
+  })
+
+  it('shows Norwegian dismiss button when language is no', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useLangStore().setLanguage('no')
+    useChatModelStore().$reset()
+
+    const router = makeRouter()
+    await router.push({ path: '/chat' })
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
+          DialogContent: { template: '<div><slot /></div>' },
+          DialogHeader: { template: '<div><slot /></div>' },
+          DialogTitle: { template: '<h2><slot /></h2>' },
+          DialogDescription: { template: '<p><slot /></p>' },
+          DialogFooter: { template: '<div><slot /></div>' },
+          MessagesArea: {
+            props: ['messages', 'isLoading', 'isReadOnly'],
+            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    const dismissBtn = wrapper.findAll('button').find((b) => /forstått/i.test(b.text()))
+    expect(dismissBtn).toBeDefined()
+  })
+
+  it('shows Norwegian error when prompt is too long and language is no', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useLangStore().setLanguage('no')
+    useChatModelStore().$reset()
+
+    const router = makeRouter()
+    await router.push({ path: '/chat' })
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
+          DialogContent: { template: '<div><slot /></div>' },
+          DialogHeader: { template: '<div><slot /></div>' },
+          DialogTitle: { template: '<h2><slot /></h2>' },
+          DialogDescription: { template: '<p><slot /></p>' },
+          DialogFooter: { template: '<div><slot /></div>' },
+          MessagesArea: {
+            props: ['messages', 'isLoading', 'isReadOnly'],
+            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    const input = wrapper.find('input[type="text"]')
+    expect(input.exists()).toBe(true)
+    await input.setValue('x'.repeat(3001))
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(wrapper.text()).toMatch(/for lang|3000/i)
+  })
+
+  it('shows Norwegian model label when language is no', async () => {
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'gpt-5.4-mini',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'GPT-5.4 mini',
+          tags: [ModelTag.FAST],
+        },
+      ],
+      headers: new Headers(),
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useLangStore().setLanguage('no')
+    useChatModelStore().$reset()
+
+    const router = makeRouter()
+    await router.push({ path: '/chat' })
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
+          DialogContent: { template: '<div><slot /></div>' },
+          DialogHeader: { template: '<div><slot /></div>' },
+          DialogTitle: { template: '<h2><slot /></h2>' },
+          DialogDescription: { template: '<p><slot /></p>' },
+          DialogFooter: { template: '<div><slot /></div>' },
+          MessagesArea: {
+            props: ['messages', 'isLoading', 'isReadOnly'],
+            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Modell')
+  })
+
+  it('shows English model label when language is en', async () => {
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'gpt-5.4-mini',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'GPT-5.4 mini',
+          tags: [ModelTag.FAST],
+        },
+      ],
+      headers: new Headers(),
+    })
+
+    const { wrapper } = await mountChat({})
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Model')
+  })
+
+  it('shows Norwegian tag label (Rask) when language is no', async () => {
+    vi.mocked(listChatModels).mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'gpt-5.4-mini',
+          provider: ChatModelOptionProvider.OPENAI,
+          label: 'GPT-5.4 mini',
+          tags: [ModelTag.FAST],
+        },
+      ],
+      headers: new Headers(),
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useLangStore().setLanguage('no')
+    useChatModelStore().$reset()
+
+    const router = makeRouter()
+    await router.push({ path: '/chat' })
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
+          DialogContent: { template: '<div><slot /></div>' },
+          DialogHeader: { template: '<div><slot /></div>' },
+          DialogTitle: { template: '<h2><slot /></h2>' },
+          DialogDescription: { template: '<p><slot /></p>' },
+          DialogFooter: { template: '<div><slot /></div>' },
+          MessagesArea: {
+            props: ['messages', 'isLoading', 'isReadOnly'],
+            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    const opts = wrapper.findAll('option')
+    expect(opts.some((o) => o.text().includes('Rask'))).toBe(true)
+  })
+
   describe('voice input control', () => {
     const origMediaDevices = globalThis.navigator.mediaDevices
 

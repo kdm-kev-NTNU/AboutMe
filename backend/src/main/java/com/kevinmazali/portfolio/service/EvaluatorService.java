@@ -136,6 +136,42 @@ public class EvaluatorService {
     return invokeJudge(evaluatorModelId, prompt);
   }
 
+  /**
+   * Evaluates whether the response language matches the question language.
+   * The chatbot must reply in Norwegian when asked in Norwegian, and in English when asked in English.
+   * Mixed-language responses (e.g. English answer to a Norwegian question) receive a low score.
+   */
+  public EvaluationScore evaluateLanguageConsistency(
+      String evaluatorModelId,
+      String question,
+      String response) {
+    String prompt = """
+        You are an expert language evaluator for a bilingual (Norwegian / English) chatbot.
+
+        Your task: determine whether the assistant response is written in the SAME language as the user question.
+        The chatbot is required to reply in Norwegian when the question is in Norwegian, and in English when the question is in English.
+
+        Scoring rubric:
+        - 1.0 "consistent": The response is entirely in the same language as the question.
+        - 0.7 "mostly_consistent": The response is mostly in the correct language but contains a few words or short phrases in the other language (e.g. proper nouns, technical terms, or minor slips).
+        - 0.3 "mixed": The response is roughly half in each language, or large portions are in the wrong language.
+        - 0.0 "wrong_language": The response is entirely or almost entirely in the wrong language (e.g. an English answer to a Norwegian question).
+
+        Important rules:
+        - Proper nouns, brand names, programming terms, and technical jargon that have no standard translation are acceptable in either language and should NOT lower the score.
+        - If the question language is ambiguous (e.g. a single word that exists in both languages), be lenient and score 1.0 if the response is coherent in one language.
+        - Focus on the prose/natural-language portions of the response, not code snippets or URLs.
+
+        Question: %s
+
+        Assistant response:
+        %s
+
+        Return ONLY a single JSON object: {"score": <number 0.0-1.0>, "label": "<consistent|mostly_consistent|mixed|wrong_language>", "explanation": "<brief reasoning>"}
+        """.formatted(escapeTemplate(question), escapeTemplate(response));
+    return invokeJudge(evaluatorModelId, prompt);
+  }
+
   private EvaluationScore invokeJudge(String evaluatorModelId, String userContent) {
     Optional<SupportedChatModel> resolved = SupportedChatModel.fromModelId(evaluatorModelId);
     if (resolved.isEmpty()) {

@@ -73,4 +73,10 @@ public class ExperimentResult {
 
   @Column(columnDefinition = "TEXT")
   private String concisenessExplanation;
+
+  @Column
+  private Double languageConsistency;
+
+  @Column(columnDefinition = "TEXT")
+  private String languageConsistencyExplanation;
 }

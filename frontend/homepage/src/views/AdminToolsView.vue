@@ -120,7 +120,7 @@ onMounted(() => {
               <span class="text-base font-semibold text-blue-600 group-hover:underline">Experiments</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">
                 Kjør RAG-eval mot eval-datasett i PostgreSQL, LLM-as-judge (faithfulness, relevance, correctness,
-                conciseness), og se aggregerte scorer i databasen; valgfritt PostHog for LLM-hendelser, inspirert av Piscada
+                conciseness, language consistency), og se aggregerte scorer i databasen; valgfritt PostHog for LLM-hendelser, inspirert av Piscada
                 eval-steg 2.
               </p>
             </RouterLink>
