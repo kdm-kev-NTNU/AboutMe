@@ -26,11 +26,12 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",
+    "@types/dompurify": "^3.0.5",
     "@vueuse/core": "^14.3.0",
     "@vueuse/motion": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dompurify": "^3.2.6",
+    "dompurify": "^3.4.2",
     "lucide": "^1.11.0",
     "lucide-vue-next": "^1.0.0",
     "markdown-it": "^14.1.0",
