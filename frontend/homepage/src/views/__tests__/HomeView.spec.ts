@@ -1,15 +1,30 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import HomeView from '../HomeView.vue'
 import { listChatModels, ChatModelOptionProvider } from '@/api/generated/portfolio'
 import { useChatModelStore } from '@/stores/model'
+import { useLangStore } from '@/stores/lang'
+import { transcribeSpeech } from '@/lib/transcribe-audio'
 
 vi.mock('@/api/generated/portfolio', async (importOriginal) => {
 	const mod = await importOriginal<typeof import('@/api/generated/portfolio')>()
 	return { ...mod, listChatModels: vi.fn() }
 })
+
+vi.mock('@/lib/transcribe-audio', () => ({
+	transcribeSpeech: vi.fn(),
+}))
+
+vi.mock('@/stores/auth', () => ({
+	useAuthStore: () => ({ restore: vi.fn() }),
+}))
+
+const buttonStub = {
+	props: ['type'],
+	template: '<button :type="type === \'submit\' ? \'submit\' : \'button\'"><slot /></button>',
+}
 
 describe('HomeView', () => {
 	function makeRouter() {
@@ -49,7 +64,7 @@ describe('HomeView', () => {
 				plugins: [pinia, router],
 				stubs: {
 					Input: { props: ['modelValue'], template: '<input />' },
-					Button: { template: '<button type="submit"><slot /></button>' },
+					Button: buttonStub,
 					Alert: { template: '<div><slot /></div>' },
 					AlertTitle: { template: '<div><slot /></div>' },
 					AlertDescription: { template: '<div><slot /></div>' },
@@ -88,7 +103,7 @@ describe('HomeView', () => {
 						emits: ['update:modelValue'],
 						template: '<input @input="$emit(\'update:modelValue\', $event.target.value)" />',
 					},
-					Button: { template: '<button type="submit"><slot /></button>' },
+					Button: buttonStub,
 					Alert: { template: '<div><slot /></div>' },
 					AlertTitle: { template: '<div><slot /></div>' },
 					AlertDescription: { template: '<div><slot /></div>' },
@@ -117,7 +132,7 @@ describe('HomeView', () => {
 				plugins: [pinia, router],
 				stubs: {
 					Input: { props: ['modelValue'], template: '<input />' },
-					Button: { template: '<button type="submit"><slot /></button>' },
+					Button: buttonStub,
 					Alert: { template: '<div><slot /></div>' },
 					AlertTitle: { template: '<div><slot /></div>' },
 					AlertDescription: { template: '<div><slot /></div>' },
@@ -148,7 +163,7 @@ describe('HomeView', () => {
 				plugins: [pinia, router],
 				stubs: {
 					Input: { props: ['modelValue'], template: '<input />' },
-					Button: { template: '<button type="submit"><slot /></button>' },
+					Button: buttonStub,
 					Alert: { template: '<div><slot /></div>' },
 					AlertTitle: { template: '<div><slot /></div>' },
 					AlertDescription: { template: '<div><slot /></div>' },
@@ -163,5 +178,129 @@ describe('HomeView', () => {
 		await flushPromises()
 		const futureLink = wrapper.get('a[href="/project#future-work"]')
 		expect(futureLink.text()).toContain('Future work and improvements')
+	})
+
+	describe('voice input to chat', () => {
+		const origMediaDevices = globalThis.navigator.mediaDevices
+
+		function stubMediaRecorder() {
+			class StubRecorder {
+				static isTypeSupported = () => true
+				state = 'inactive'
+				ondataavailable: ((ev: { data: Blob }) => void) | null = null
+				private listeners: Record<string, Array<(ev?: Event) => void>> = {}
+				start() {
+					this.state = 'recording'
+				}
+				stop() {
+					this.state = 'inactive'
+					for (const cb of this.listeners['stop'] ?? []) cb()
+				}
+				addEventListener(type: string, cb: (ev?: Event) => void) {
+					if (!this.listeners[type]) this.listeners[type] = []
+					this.listeners[type].push(cb)
+				}
+				requestData = () => {
+					this.ondataavailable?.({ data: new Blob([new Uint8Array([1])]) } as BlobEvent)
+				}
+			}
+			vi.stubGlobal('MediaRecorder', StubRecorder as unknown as typeof MediaRecorder)
+		}
+
+		function stubWebAudioAndResize() {
+			class FakeAnalyser {
+				fftSize = 2048
+				smoothingTimeConstant = 0
+				connect() {
+					return this
+				}
+				disconnect() {}
+				getFloatTimeDomainData(arr: Float32Array) {
+					for (let i = 0; i < arr.length; i++) arr[i] = 0
+				}
+			}
+			class FakeMediaStreamAudioSourceNode {
+				connect() {
+					return new FakeAnalyser()
+				}
+				disconnect() {}
+			}
+			class FakeAudioContext {
+				state: AudioContextState = 'running'
+				resume = vi.fn().mockResolvedValue(undefined)
+				close = vi.fn().mockResolvedValue(undefined)
+				createMediaStreamSource = vi.fn(() => new FakeMediaStreamAudioSourceNode())
+				createAnalyser = vi.fn(() => new FakeAnalyser())
+			}
+			vi.stubGlobal('AudioContext', FakeAudioContext as unknown as typeof AudioContext)
+			vi.stubGlobal(
+				'ResizeObserver',
+				class {
+					observe() {}
+					unobserve() {}
+					disconnect() {}
+				},
+			)
+		}
+
+		afterEach(() => {
+			Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+				value: origMediaDevices,
+				configurable: true,
+			})
+			vi.unstubAllGlobals()
+		})
+
+		it('opens chat with transcribed query after finishing voice input', async () => {
+			Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+				value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
+				configurable: true,
+			})
+			stubMediaRecorder()
+			stubWebAudioAndResize()
+
+			vi.mocked(transcribeSpeech).mockResolvedValue({
+				status: 200,
+				data: { text: 'hello voice' },
+				headers: new Headers(),
+			})
+
+			const pinia = createPinia()
+			setActivePinia(pinia)
+			useLangStore().setLanguage('en')
+			const router = makeRouter()
+			await router.push('/')
+			const pushSpy = vi.spyOn(router, 'push')
+
+			const wrapper = mount(HomeView, {
+				global: {
+					plugins: [pinia, router],
+					stubs: {
+						Input: { props: ['modelValue'], template: '<input />' },
+						Button: buttonStub,
+						Alert: { template: '<div><slot /></div>' },
+						AlertTitle: { template: '<div><slot /></div>' },
+						AlertDescription: { template: '<div><slot /></div>' },
+						Info: true,
+						Github: true,
+						Linkedin: true,
+						MessageSquare: true,
+						ChevronRight: true,
+						Mic: true,
+						Square: true,
+						Loader2: true,
+					},
+				},
+			})
+			await flushPromises()
+
+			await wrapper.find('[aria-label="Voice input"]').trigger('click')
+			await flushPromises()
+
+			await wrapper.find('[aria-label="Voice input"]').trigger('click')
+			await flushPromises()
+
+			expect(pushSpy).toHaveBeenCalledWith({ name: 'chat', query: { q: 'hello voice' } })
+		})
 	})
 })

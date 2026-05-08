@@ -36,6 +36,11 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				component: () => import('../views/ProjectsView.vue'),
 			},
 			{
+				path: '/projects/heathen-army',
+				name: 'project-heathen-army',
+				component: () => import('../views/HeathenArmyView.vue'),
+			},
+			{
 				path: '/career',
 				name: 'career',
 				component: () => import('../views/CareerView.vue'),
