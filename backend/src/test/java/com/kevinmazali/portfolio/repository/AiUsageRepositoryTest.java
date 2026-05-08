@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.ai.openai.api-key=test-placeholder-key-for-context-tests-only",
         "spring.ai.openai.chat.enabled=true",
         "spring.ai.anthropic.api-key=sk-ant-api03-test-placeholder-for-spring-context-only",
-        "portfolio.chat.default-model-id=gpt-5.5",
+        "portfolio.chat.default-model-id=gpt-5.4-mini",
         "server.port=0",
     })
 class AiUsageRepositoryTest {

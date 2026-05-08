@@ -272,9 +272,8 @@ class ExperimentServiceTest {
   @Test
   void startRunRejectsSameProviderModels() {
     when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4_MINI)).thenReturn(true);
-    when(chatModelCatalog.isModelConfigured(SupportedChatModel.GPT_5_4)).thenReturn(true);
 
-    var req = new RunExperimentRequest("1", "n", null, "gpt-5.4-mini", "gpt-5.4", null);
+    var req = new RunExperimentRequest("1", "n", null, "gpt-5.4-mini", "gpt-5.4-mini", null);
     IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> experimentService.startRun(req));
     assertTrue(ex.getMessage().contains("different providers"));
   }

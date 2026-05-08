@@ -23,10 +23,7 @@ describe('Model catalog guard rails', () => {
       if (req.url.includes('/chat/models')) {
         req.reply({
           statusCode: 200,
-          body: [
-            { id: 'gpt-5.4-mini', provider: 'OPENAI', label: 'GPT-5.4 mini', tags: ['FAST'] },
-            { id: 'gpt-5.4', provider: 'OPENAI', label: 'GPT-5.4', tags: ['REASONING'] },
-          ],
+          body: [{ id: 'gpt-5.4-mini', provider: 'OPENAI', label: 'GPT-5.4 mini', tags: ['FAST'] }],
         })
       } else {
         req.reply({ statusCode: 200, body: [] })
@@ -35,7 +32,7 @@ describe('Model catalog guard rails', () => {
 
     cy.visit('/chat')
     cy.get('#chat-model-select').should('exist')
-    cy.get('#chat-model-select').find('option').should('have.length', 2)
+    cy.get('#chat-model-select').find('option').should('have.length', 1)
 
     cy.contains('button', /^OpenAI$/i).should('not.exist')
     cy.contains('button', /^Anthropic$/i).should('not.exist')
@@ -53,12 +50,6 @@ describe('Model catalog guard rails', () => {
               label: 'Claude Haiku 4.5',
               tags: ['FAST'],
             },
-            {
-              id: 'claude-sonnet-4-6',
-              provider: 'ANTHROPIC',
-              label: 'Claude Sonnet 4.6',
-              tags: ['REASONING'],
-            },
           ],
         })
       } else {
@@ -68,7 +59,7 @@ describe('Model catalog guard rails', () => {
 
     cy.visit('/chat')
     cy.get('#chat-model-select').should('exist')
-    cy.get('#chat-model-select').find('option').should('have.length', 2)
+    cy.get('#chat-model-select').find('option').should('have.length', 1)
 
     cy.contains('button', /^OpenAI$/i).should('not.exist')
     cy.contains('button', /^Anthropic$/i).should('not.exist')

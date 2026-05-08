@@ -36,7 +36,7 @@ class ChatModelCatalogTest {
         .withProperty("spring.ai.anthropic.api-key", "sk-ant-test");
     ChatModelCatalog catalog = new ChatModelCatalog(env);
 
-    assertThat(catalog.listAvailableModels()).hasSize(7);
+    assertThat(catalog.listAvailableModels()).hasSize(2);
   }
 
   @Test
@@ -47,17 +47,17 @@ class ChatModelCatalogTest {
         .withProperty("spring.ai.anthropic.api-key", "sk-ant-test");
     ChatModelCatalog catalog = new ChatModelCatalog(env);
 
-    ChatModelOption nano = catalog.listAvailableModels().stream()
-        .filter(o -> "gpt-5.4-nano".equals(o.id()))
+    ChatModelOption mini = catalog.listAvailableModels().stream()
+        .filter(o -> "gpt-5.4-mini".equals(o.id()))
         .findFirst()
         .orElseThrow();
-    assertThat(nano.tags()).isEqualTo(EnumSet.of(ModelTag.FAST));
+    assertThat(mini.tags()).isEqualTo(EnumSet.of(ModelTag.FAST));
 
-    ChatModelOption opus = catalog.listAvailableModels().stream()
-        .filter(o -> "claude-opus-4-7".equals(o.id()))
+    ChatModelOption haiku = catalog.listAvailableModels().stream()
+        .filter(o -> "claude-haiku-4-5-20251001".equals(o.id()))
         .findFirst()
         .orElseThrow();
-    assertThat(opus.tags()).isEqualTo(EnumSet.of(ModelTag.REASONING));
+    assertThat(haiku.tags()).isEqualTo(EnumSet.of(ModelTag.FAST));
   }
 
   @Test
