@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
 import { ChatModelOptionProvider } from '@/api/generated/portfolio'
@@ -10,6 +10,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import AudioWaveform from '@/components/AudioWaveform.vue'
 import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/useSpeechTranscription'
 import { Info, MessageSquare, ChevronRight, Loader2, Mic, Square } from 'lucide-vue-next'
+import {
+  pickRotatingShortcuts,
+  shortcutRotationBucket,
+} from '@/utils/shortcutQuestions'
 
 const router = useRouter()
 
@@ -21,22 +25,14 @@ const language = computed({
   set: (v: 'en' | 'no') => langStore.setLanguage(v),
 })
 
-const questionsByLang: Record<'en' | 'no', string[]> = {
-  en: [
-    'Why did Kevin create this website?',
-    'Which courses has Kevin taken?',
-    'Which projects has Kevin worked on?',
-    'Who is Kevin?',
-  ],
-  no: [
-    'Hvorfor lagde Kevin denne nettsiden?',
-    'Hvilke emner har Kevin hatt?',
-    'Hvilke prosjekter har Kevin jobbet med?',
-    'Hvem er Kevin?',
-  ],
-}
+/** Bumps when the 6h rotation bucket changes so shortcut list refreshes for long-lived tabs */
+const rotationEpoch = ref(0)
+const lastShortcutBucket = ref(shortcutRotationBucket(Date.now()))
 
-const visibleQuestions = computed(() => questionsByLang[language.value])
+const visibleQuestions = computed(() => {
+  rotationEpoch.value
+  return pickRotatingShortcuts(language.value, Date.now())
+})
 
 const chatDisclaimer = computed(() => {
   if (language.value === 'no') {
@@ -127,8 +123,25 @@ const showProviderToggle = computed(
   () => chatModelStore.hasOpenAI && chatModelStore.hasAnthropic,
 )
 
+let shortcutBucketInterval: ReturnType<typeof setInterval> | undefined
+
 onMounted(() => {
   void chatModelStore.ensureModelsLoaded()
+  lastShortcutBucket.value = shortcutRotationBucket(Date.now())
+  shortcutBucketInterval = setInterval(() => {
+    const b = shortcutRotationBucket(Date.now())
+    if (b !== lastShortcutBucket.value) {
+      lastShortcutBucket.value = b
+      rotationEpoch.value += 1
+    }
+  }, 60_000)
+})
+
+onUnmounted(() => {
+  if (shortcutBucketInterval !== undefined) {
+    clearInterval(shortcutBucketInterval)
+    shortcutBucketInterval = undefined
+  }
 })
 
 function ask(q: string) {
