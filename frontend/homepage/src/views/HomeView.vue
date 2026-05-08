@@ -30,8 +30,8 @@ const rotationEpoch = ref(0)
 const lastShortcutBucket = ref(shortcutRotationBucket(Date.now()))
 
 const visibleQuestions = computed(() => {
-  rotationEpoch.value
-  return pickRotatingShortcuts(language.value, Date.now())
+  // Evaluate rotationEpoch first so this computed re-runs when the 6h bucket ticks (see onMounted).
+  return (rotationEpoch.value, pickRotatingShortcuts(language.value, Date.now()))
 })
 
 const chatDisclaimer = computed(() => {
