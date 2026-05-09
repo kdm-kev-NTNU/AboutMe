@@ -1158,7 +1158,7 @@ describe('Admin CRUD views (integration-style)', () => {
       status: 403,
       data: { detail: 'Synk er skrudd av' },
       headers: headersJson,
-    } as Awaited<ReturnType<typeof adminDocumentsSyncFromRemote>>)
+    } as unknown as Awaited<ReturnType<typeof adminDocumentsSyncFromRemote>>)
 
     const wrapper = mountAdmin(AdminPipelineView)
     await flushPromises()
@@ -1197,7 +1197,7 @@ describe('Admin CRUD views (integration-style)', () => {
       status: 503,
       data: { error: 'db down' },
       headers: headersJson,
-    } as Awaited<ReturnType<typeof adminDocumentsCollections>>)
+    } as unknown as Awaited<ReturnType<typeof adminDocumentsCollections>>)
     vi.mocked(adminDocumentsFiles).mockResolvedValue({ status: 200, data: [], headers: headersJson })
 
     const wrapper = mountAdmin(AdminPipelineView)
@@ -1212,7 +1212,7 @@ describe('Admin CRUD views (integration-style)', () => {
       status: 500,
       data: { message: 'boom' },
       headers: headersJson,
-    } as Awaited<ReturnType<typeof adminDocumentsReseed>>)
+    } as unknown as Awaited<ReturnType<typeof adminDocumentsReseed>>)
 
     const wrapper = mountAdmin(AdminPipelineView)
     await flushPromises()
@@ -1236,14 +1236,14 @@ describe('Admin CRUD views (integration-style)', () => {
       headers: headersJson,
     })
 
-    const wrapper = mountAdmin(AdminPipelineView)
+    const wrapper = mountAdmin(AdminPipelineView, { attachToBody: true })
     await flushPromises()
 
     const uploadSummary = wrapper.findAll('summary').find((s) => s.text().includes('Last opp'))
     await uploadSummary!.trigger('click')
-    await flushPromises()
+    await nextTick()
 
-    const fileInput = wrapper.get('#ingest-file').element as HTMLInputElement
+    const fileInput = document.getElementById('ingest-file') as HTMLInputElement
     const file = new File(['# hi'], 'note.md', { type: 'text/markdown' })
     Object.defineProperty(fileInput, 'files', { value: [file], configurable: true })
 
@@ -1255,6 +1255,7 @@ describe('Admin CRUD views (integration-style)', () => {
     )
     expect(wrapper.text()).toContain('2 chunks')
     expect(wrapper.text()).toContain('note.md')
+    wrapper.unmount()
   })
 
   it('AdminPipelineView handles batch upload with HTTP 400 but partial result rows', async () => {
@@ -1264,14 +1265,14 @@ describe('Admin CRUD views (integration-style)', () => {
       headers: headersJson,
     } as Awaited<ReturnType<typeof adminDocumentsUploadBatch>>)
 
-    const wrapper = mountAdmin(AdminPipelineView)
+    const wrapper = mountAdmin(AdminPipelineView, { attachToBody: true })
     await flushPromises()
 
     const uploadSummary = wrapper.findAll('summary').find((s) => s.text().includes('Last opp'))
     await uploadSummary!.trigger('click')
-    await flushPromises()
+    await nextTick()
 
-    const fileInput = wrapper.get('#ingest-file').element as HTMLInputElement
+    const fileInput = document.getElementById('ingest-file') as HTMLInputElement
     const f1 = new File(['x'], 'a.md', { type: 'text/markdown' })
     const f2 = new File(['y'], 'b.md', { type: 'text/markdown' })
     Object.defineProperty(fileInput, 'files', { value: [f1, f2], configurable: true })
@@ -1281,6 +1282,7 @@ describe('Admin CRUD views (integration-style)', () => {
 
     expect(adminDocumentsUploadBatch).toHaveBeenCalled()
     expect(wrapper.text()).toContain('bad encoding')
+    wrapper.unmount()
   })
 
   it('AdminPipelineView shows server file list error when adminDocumentsFiles fails', async () => {
@@ -1288,7 +1290,7 @@ describe('Admin CRUD views (integration-style)', () => {
       status: 401,
       data: {},
       headers: headersJson,
-    } as Awaited<ReturnType<typeof adminDocumentsFiles>>)
+    } as unknown as Awaited<ReturnType<typeof adminDocumentsFiles>>)
 
     const wrapper = mountAdmin(AdminPipelineView)
     await flushPromises()
