@@ -6,7 +6,9 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json ./
 ENV CYPRESS_INSTALL_BINARY=0
-RUN npm ci
+# npm ci can fail on Alpine when the lockfile omits a nested peer resolution (e.g. typescript 5.9.x)
+# that local npm materialized differently; install respects the lock for hoisted deps and fills gaps.
+RUN npm install --no-audit --no-fund
 
 # Copy source and build
 COPY . .
