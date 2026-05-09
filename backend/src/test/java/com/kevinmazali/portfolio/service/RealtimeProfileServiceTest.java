@@ -13,7 +13,7 @@ class RealtimeProfileServiceTest {
     assertThat(service.profileCard("no"))
         .contains("Kevin")
         .contains("NTNU")
-        .contains("dataingenior");
+        .contains("dataingeniør");
     assertThat(service.profileCard("en"))
         .contains("Kevin")
         .contains("NTNU")
@@ -28,6 +28,6 @@ class RealtimeProfileServiceTest {
 
     assertThat(service.lookup("portefolje RAG", "no"))
         .extracting(snippet -> snippet.title())
-        .anySatisfy(title -> assertThat(String.valueOf(title)).contains("Portefolje"));
+        .anySatisfy(title -> assertThat(String.valueOf(title)).contains("Portefølje"));
   }
 }
