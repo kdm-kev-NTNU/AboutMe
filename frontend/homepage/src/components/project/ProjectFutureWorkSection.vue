@@ -18,6 +18,19 @@ type SectionCopy = {
 
 const sectionsEn: SectionCopy[] = [
 	{
+		category: 'Voice',
+		title: 'Live voice with Kevin: talk directly, not just the AI',
+		intro:
+			'A planned feature where visitors can request a short live voice conversation with Kevin himself — not the AI — for Q&A that goes beyond what the chatbot can safely cover, or for human nuance (tone, follow-ups, clarifications). This is separate from the site’s OpenAI Realtime voice mode, which stays as “talk to Kevin’s AI”.',
+		points: [
+			'Scheduling: clear availability windows (time zones) and a lightweight booking or “request a call” flow with expected response time.',
+			'Notifications: email or on-site notice when Kevin can take a slot, plus consent before any call.',
+			'Transport: WebRTC peer-to-peer or a managed voice bridge from the browser, with minimal retained metadata and a short retention policy for logs.',
+			'Optional multilingual path: experiment with GPT-Realtime-Translate-style live translation so visitors can speak their preferred language while Kevin replies in another, without replacing human judgment.',
+		],
+		refs: [],
+	},
+	{
 		category: 'Personal',
 		title: 'ElevenLabs voice agent: collect, then I process',
 		intro:
@@ -87,6 +100,19 @@ const sectionsEn: SectionCopy[] = [
 ]
 
 const sectionsNo: SectionCopy[] = [
+	{
+		category: 'Stemme',
+		title: 'Live stemme med Kevin: snakk direkte, ikke bare med KI-en',
+		intro:
+			'Planlagt funksjon der besøkende kan be om en kort live samtale med Kevin selv — ikke KI-en — for spørsmål som passer bedre med menneske, eller for nyanser samtalen ikke bør stole på en modell for. Dette er noe annet enn OpenAI Realtime-stemmepå siden («snakk med Kevin sin AI»).',
+		points: [
+			'Planlegging: tydelige tidsvinduer (tidssoner) og en enkel booking- eller «be om samtale»-flyt med forventet svartid.',
+			'Varsling: e-post eller melding på sida når Kevin har kapasitet, med samtykke før samtalen.',
+			'Teknisk: WebRTC fra-til-bruker eller bro, minimale logger og kort lagringspolicy.',
+			'Valgfritt flerspråklig spor: teste live oversettelse (i tråd med GPT-Realtime-Translate) slik at besøkende kan snakke sitt språk uten at det erstatter menneskelig vurdering.',
+		],
+		refs: [],
+	},
 	{
 		category: 'Personlig',
 		title: 'ElevenLabs stemmeagent: først inn, så rydder jeg',

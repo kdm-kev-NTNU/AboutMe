@@ -17,6 +17,10 @@ vi.mock('@/lib/transcribe-audio', () => ({
 	transcribeSpeech: vi.fn(),
 }))
 
+vi.mock('@/lib/realtime-voice', () => ({
+	fetchRealtimeVoiceEnabled: vi.fn().mockResolvedValue(false),
+}))
+
 vi.mock('@/stores/auth', () => ({
 	useAuthStore: () => ({ restore: vi.fn() }),
 }))

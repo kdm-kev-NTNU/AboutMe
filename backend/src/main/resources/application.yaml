@@ -100,9 +100,13 @@ portfolio:
         gpt-4o-transcribe:
           input-per-million-usd: 0.40
           output-per-million-usd: 0.00
+        # GPT-Realtime-2 audio (USD per 1M audio tokens; reservation uses same estimateCostUsd math)
+        gpt-realtime-2:
+          input-per-million-usd: 32.00
+          output-per-million-usd: 64.00
     kill-switch:
       enabled: true
-      monthly-limit-usd: 50.00
+      monthly-limit-usd: 10.00
       warn-fraction: 0.80
       check-cron: "0 * * * * *"
   ask-rate-limit:
@@ -122,6 +126,19 @@ portfolio:
       window-seconds: 300
   chat:
     default-model-id: gpt-5.4-mini
+  # OpenAI Realtime (WebRTC) — disabled by default; set PORTFOLIO_REALTIME_ENABLED=true and OPENAI_API_KEY to enable.
+  realtime:
+    enabled: ${PORTFOLIO_REALTIME_ENABLED:false}
+    model: gpt-realtime-2
+    voice: ash
+    reasoning-effort: medium
+    max-response-output-tokens: 1024
+    reservation-input-tokens: 2000
+    reservation-output-tokens: 2000
+  realtime-rate-limit:
+    enabled: true
+    capacity: 3
+    window-seconds: 3600
   retrieval:
     # Optional ONNX rerank; Docker image sets paths under /app/rerank (see backend/Dockerfile).
     rerank-enabled: false

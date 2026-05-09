@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import AudioWaveform from '@/components/AudioWaveform.vue'
 import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/useSpeechTranscription'
-import { Info, MessageSquare, ChevronRight, Loader2, Mic, Square } from 'lucide-vue-next'
+import { Info, MessageSquare, ChevronRight, Loader2, Mic, Square, Headphones } from 'lucide-vue-next'
+import { fetchRealtimeVoiceEnabled } from '@/lib/realtime-voice'
 import {
   pickRotatingShortcuts,
   shortcutRotationBucket,
@@ -39,13 +40,13 @@ const chatDisclaimer = computed(() => {
     return {
       title: 'Før du chatter',
       body:
-        'Svarene lages av en språkmodell og kan være helt feil. Ikke del private eller sensitive ting her. Tale sendes til server for transkripsjon (samme som på chat-siden).',
+        'Svarene lages av en språkmodell og kan være helt feil. Ikke del private eller sensitive ting her. Kort tale kan sendes til server for transkripsjon; live stemmechat (når slått på) sender lyd direkte til OpenAI i sanntid via WebRTC — se stemmesiden.',
     }
   }
   return {
     title: 'Before you chat',
     body:
-      'Replies come from a language model and can be wrong. Do not share private or sensitive information here. Voice is sent to the server for transcription (same as on the chat page).',
+      'Replies come from a language model and can be wrong. Do not share private or sensitive information here. Short voice clips are sent to the server for transcription; live voice chat (when enabled) streams audio directly to OpenAI in real time via WebRTC — see the voice page.',
   }
 })
 
@@ -78,6 +79,16 @@ const futureWorkHomeLink = computed(() => {
 })
 
 const quickQuestion = ref('')
+
+/** Null until loaded from GET /realtime/status */
+const voiceFeatureEnabled = ref<boolean | null>(null)
+
+const voiceCta = computed(() =>
+  language.value === 'no' ? 'Snakk med Kevin sin AI' : "Talk to Kevin's AI",
+)
+const voiceCtaAria = computed(() =>
+  language.value === 'no' ? 'Gå til live stemmechat' : 'Go to live voice chat',
+)
 
 const speechUiLanguage = computed(() => language.value)
 
@@ -127,6 +138,9 @@ let shortcutBucketInterval: ReturnType<typeof setInterval> | undefined
 
 onMounted(() => {
   void chatModelStore.ensureModelsLoaded()
+  void fetchRealtimeVoiceEnabled().then((ok) => {
+    voiceFeatureEnabled.value = ok
+  })
   lastShortcutBucket.value = shortcutRotationBucket(Date.now())
   shortcutBucketInterval = setInterval(() => {
     const b = shortcutRotationBucket(Date.now())
@@ -387,6 +401,16 @@ function submitQuick() {
       <Alert v-if="voiceError" variant="destructive" class="mx-auto max-w-md">
         <AlertDescription>{{ voiceError }}</AlertDescription>
       </Alert>
+
+      <RouterLink
+        v-if="voiceFeatureEnabled === true"
+        to="/voice"
+        class="mx-auto flex max-w-md items-center justify-center gap-2 rounded-xl border-2 border-blue-300/80 bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:from-blue-700 hover:to-indigo-800 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        :aria-label="voiceCtaAria"
+      >
+        <Headphones class="size-5 shrink-0" aria-hidden="true" />
+        {{ voiceCta }}
+      </RouterLink>
     </div>
 
     <!-- Mobile: compact FAB-style feedback; sm+: card with copy -->

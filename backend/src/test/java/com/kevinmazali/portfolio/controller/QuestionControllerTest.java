@@ -12,6 +12,7 @@ import com.kevinmazali.portfolio.service.ChatModelCatalog;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
+import com.kevinmazali.portfolio.config.RealtimeRateLimitProperties;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
 import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.service.OpenAIService;
@@ -43,7 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EnableConfigurationProperties({
   AskRateLimitProperties.class,
   ExperimentRunRateLimitProperties.class,
-  DatasetGenerateRateLimitProperties.class
+  DatasetGenerateRateLimitProperties.class,
+  RealtimeRateLimitProperties.class
 })
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class, GlobalApiExceptionHandler.class })
 class QuestionControllerTest {
