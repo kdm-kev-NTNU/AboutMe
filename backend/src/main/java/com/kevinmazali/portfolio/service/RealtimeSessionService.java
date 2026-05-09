@@ -38,8 +38,12 @@ public class RealtimeSessionService {
   private final AiBudgetProperties budgetProperties;
   private final AiCircuitBreaker aiCircuitBreaker;
   private final OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker;
-  private final ObjectMapper objectMapper;
   private final String openAiApiKey;
+
+  // Spring Boot 4 auto-configures the new tools.jackson.databind.ObjectMapper, so injecting the
+  // legacy com.fasterxml.jackson.databind.ObjectMapper would fail bean lookup. ObjectMapper is
+  // thread-safe; one private instance per service is fine.
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   private String instructionsEn;
   private String instructionsNo;
@@ -50,14 +54,12 @@ public class RealtimeSessionService {
       AiBudgetProperties budgetProperties,
       AiCircuitBreaker aiCircuitBreaker,
       OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker,
-      ObjectMapper objectMapper,
       @Value("${spring.ai.openai.api-key:}") String openAiApiKey) {
     this.realtimeProperties = realtimeProperties;
     this.aiBudgetService = aiBudgetService;
     this.budgetProperties = budgetProperties;
     this.aiCircuitBreaker = aiCircuitBreaker;
     this.openAiRealtimeHttpInvoker = openAiRealtimeHttpInvoker;
-    this.objectMapper = objectMapper;
     this.openAiApiKey = openAiApiKey;
   }
 
