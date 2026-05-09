@@ -92,6 +92,17 @@ function goToVoiceChat() {
   router.push({ name: 'voice' })
 }
 
+const voiceStatus = computed(() => {
+  if (language.value === 'no') {
+    if (voiceFeatureEnabled.value === true) return 'Live stemme er tilgjengelig'
+    if (voiceFeatureEnabled.value === false) return 'Stemme er midlertidig av'
+    return 'Sjekker stemmestatus'
+  }
+  if (voiceFeatureEnabled.value === true) return 'Live voice is available'
+  if (voiceFeatureEnabled.value === false) return 'Voice is temporarily off'
+  return 'Checking voice status'
+})
+
 const providerLabels = computed(() =>
   language.value === 'no'
     ? { heading: 'AI-leverandør', openai: 'OpenAI', anthropic: 'Anthropic' }
@@ -151,7 +162,7 @@ function submitQuick() {
 </script>
 
 <template>
-  <main class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 pt-20">
+  <main class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 pt-20">
     <!-- Gradient Background Overlay -->
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 50%);"></div>
@@ -168,7 +179,82 @@ function submitQuick() {
     </div>
 
     <!-- Main Content - Centered -->
-    <div class="relative z-10 flex min-h-full flex-col items-center justify-center px-4 py-8">
+    <div class="relative z-10 flex min-h-full flex-col items-center justify-start gap-8 px-4 py-8">
+      <section
+        class="grid w-full max-w-6xl items-center gap-8 overflow-hidden rounded-[2rem] border border-blue-100/80 bg-white/82 p-5 shadow-2xl shadow-blue-950/10 backdrop-blur-xl sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-10"
+        aria-labelledby="voice-first-title"
+      >
+        <div class="min-w-0">
+          <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-xs font-semibold text-blue-800">
+            <span
+              class="size-2 rounded-full"
+              :class="voiceFeatureEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
+              aria-hidden="true"
+            ></span>
+            {{ voiceStatus }}
+          </div>
+          <h1
+            id="voice-first-title"
+            class="max-w-3xl text-3xl font-bold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl"
+          >
+            {{ language === 'no' ? 'Snakk med Kevin sin AI først.' : "Talk with Kevin's AI first." }}
+          </h1>
+          <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+            {{
+              language === 'no'
+                ? 'Live stemme er den raskeste veien inn i porteføljen. Spør om studier, prosjekter, erfaring og AI-bygget med en gang.'
+                : 'Live voice is the fastest way into the portfolio. Ask about studies, projects, experience, and the AI build without typing first.'
+            }}
+          </p>
+          <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+            <Button
+              type="button"
+              :aria-label="voiceCtaAria"
+              class="h-14 w-full justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 text-sm font-semibold text-white shadow-xl shadow-blue-500/25 transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-indigo-800 sm:w-auto sm:px-7 sm:text-base"
+              @click="goToVoiceChat"
+            >
+              <Headphones class="me-2 size-5" aria-hidden="true" />
+              {{ language === 'no' ? 'Start stemme' : 'Start voice' }}
+            </Button>
+            <Button
+              as-child
+              variant="outline"
+              class="h-14 w-full justify-center rounded-2xl border-blue-200 bg-white/85 px-5 text-sm font-semibold text-slate-800 hover:bg-blue-50 sm:w-auto sm:px-7 sm:text-base"
+            >
+              <RouterLink to="/chat" class="inline-flex items-center">
+                <MessageSquare class="me-2 size-5" aria-hidden="true" />
+                {{ language === 'no' ? 'Bruk tekstchat' : 'Use text chat' }}
+              </RouterLink>
+            </Button>
+          </div>
+        </div>
+
+        <div class="relative mx-auto flex min-h-[21rem] w-full max-w-md flex-col items-center justify-center">
+          <div class="absolute inset-6 rounded-full bg-blue-500/10 blur-3xl" aria-hidden="true"></div>
+          <button
+            type="button"
+            :aria-label="voiceCtaAria"
+            class="group relative flex aspect-square w-64 max-w-[80vw] items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 via-blue-600 to-indigo-800 text-white shadow-2xl shadow-blue-700/30 ring-8 ring-white/70 transition hover:-translate-y-1 hover:shadow-blue-700/40 sm:w-72"
+            @click="goToVoiceChat"
+          >
+            <span class="absolute inset-8 rounded-full border border-white/30" aria-hidden="true"></span>
+            <Mic class="size-20 transition group-hover:scale-105" stroke-width="1.8" aria-hidden="true" />
+          </button>
+          <div class="relative z-10 mt-[-2rem] w-full max-w-[calc(100vw-4rem)] rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 text-sm text-slate-600 shadow-lg shadow-blue-950/10 backdrop-blur-md sm:absolute sm:bottom-2 sm:left-1/2 sm:mt-0 sm:w-[min(22rem,90vw)] sm:-translate-x-1/2">
+            <div class="flex items-start gap-3">
+              <Info class="mt-0.5 size-4 shrink-0 text-blue-600" aria-hidden="true" />
+              <p>
+                {{
+                  language === 'no'
+                    ? 'Stemme kan bruke et lite offentlig faktaoppslag. Dypere RAG-svar ligger fortsatt i tekstchat.'
+                    : 'Voice can use a small public fact lookup. Deeper RAG answers still live in text chat.'
+                }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div class="flex flex-col items-center space-y-8">
         <section class="brand">
           <h1 class="mb-4 px-1 text-center text-4xl font-bold sm:text-5xl md:text-6xl lg:text-7xl">
@@ -377,10 +463,18 @@ function submitQuick() {
       </RouterLink>
     </div>
 
-    <!-- Mobile: compact FAB-style feedback; sm+: card with copy -->
+    <!-- Mobile: compact FAB; sm+: card with copy -->
     <RouterLink
       to="/feedback"
-      class="feedback-corner group fixed bottom-4 left-3 z-[60] flex items-center justify-center rounded-full border-2 border-blue-300/70 bg-white/95 p-3 shadow-lg shadow-blue-900/10 ring-1 ring-blue-500/15 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-white hover:shadow-xl hover:shadow-blue-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:bottom-6 sm:left-5 sm:max-w-[min(20.5rem,calc(100vw-1.5rem))] sm:items-start sm:justify-start sm:gap-4 sm:rounded-2xl sm:p-4"
+      class="feedback-corner-mobile group fixed bottom-6 left-5 z-[60] flex size-14 items-center justify-center rounded-full border-2 border-blue-300/70 bg-white/95 text-blue-700 shadow-lg shadow-blue-900/10 ring-1 ring-blue-500/15 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-white hover:shadow-xl hover:shadow-blue-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:hidden"
+      :aria-label="feedbackInvite.ariaLabel"
+    >
+      <MessageSquare class="size-7" stroke-width="2" aria-hidden="true" />
+    </RouterLink>
+
+    <RouterLink
+      to="/feedback"
+      class="feedback-corner group fixed bottom-6 left-5 z-[60] hidden max-w-[min(20.5rem,calc(100vw-1.5rem))] items-start justify-start gap-4 rounded-2xl border-2 border-blue-300/70 bg-white/95 p-4 shadow-lg shadow-blue-900/10 ring-1 ring-blue-500/15 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-white hover:shadow-xl hover:shadow-blue-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:flex"
       :aria-label="feedbackInvite.ariaLabel"
     >
       <div
@@ -389,7 +483,7 @@ function submitQuick() {
       >
         <MessageSquare class="size-7 sm:size-9" stroke-width="2" />
       </div>
-      <div class="hidden min-w-0 flex-1 pt-0.5 text-left sm:block">
+      <div class="min-w-0 flex-1 pt-0.5 text-left">
         <p class="text-sm font-medium leading-snug text-slate-800 sm:text-[0.95rem] sm:leading-snug">
           {{ feedbackInvite.body }}
         </p>
@@ -444,13 +538,14 @@ function submitQuick() {
   pointer-events: none;
   overflow: hidden;
   z-index: 1;
+  opacity: 0.38;
 }
 
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(40px);
-  animation: float 6s ease-in-out infinite;
+  filter: blur(52px);
+  animation: float 10s ease-in-out infinite;
 }
 
 .blob-1 {

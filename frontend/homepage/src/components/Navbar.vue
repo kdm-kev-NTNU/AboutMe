@@ -30,6 +30,7 @@ const isActive = (routeName: string) => route.name === routeName
 const getButtonText = (key: string) => {
   const texts: Record<string, { en: string; no: string }> = {
     home: { en: 'Home', no: 'Hjem' },
+    voice: { en: 'Voice', no: 'Stemme' },
     projects: { en: 'Projects', no: 'Prosjekter' },
     career: { en: 'Career', no: 'Karriere' },
     project: { en: 'The project', no: 'Prosjektet' },
@@ -41,6 +42,7 @@ const getButtonWidth = () => {
   // Calculate the width needed for the longest button text
   const buttonTexts = [
     getButtonText('home'),
+    getButtonText('voice'),
     getButtonText('projects'),
     getButtonText('career'),
     getButtonText('project'),
@@ -55,9 +57,10 @@ const getIndicatorPosition = () => {
   const buttonWidth = getButtonWidth()
 
   if (isActive('home')) return { transform: 'translateX(0px)', opacity: '1' }
-  if (isActive('projects')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
-  if (isActive('career')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
-  if (isActive('project')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
+  if (isActive('voice')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
+  if (isActive('projects')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
+  if (isActive('career')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
+  if (isActive('project')) return { transform: `translateX(${buttonWidth * 4}px)`, opacity: '1' }
   return { transform: 'translateX(0px)', opacity: '0' }
 }
 
@@ -134,6 +137,14 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
             {{ getButtonText('home') }}
           </RouterLink>
           <RouterLink
+            to="/voice"
+            role="menuitem"
+            :class="[mobileLinkBase, isActive('voice') ? mobileLinkActive : mobileLinkInactive]"
+            @click="closeMenu"
+          >
+            {{ getButtonText('voice') }}
+          </RouterLink>
+          <RouterLink
             to="/projects"
             role="menuitem"
             :class="[mobileLinkBase, isActive('projects') ? mobileLinkActive : mobileLinkInactive]"
@@ -173,6 +184,13 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
         ></div>
         <RouterLink to="/" :class="getButtonClasses('home')" :style="{ width: getButtonWidth() + 'px' }">
           {{ getButtonText('home') }}
+        </RouterLink>
+        <RouterLink
+          to="/voice"
+          :class="getButtonClasses('voice')"
+          :style="{ width: getButtonWidth() + 'px' }"
+        >
+          {{ getButtonText('voice') }}
         </RouterLink>
         <RouterLink
           to="/projects"
