@@ -21,6 +21,7 @@ import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
+import com.kevinmazali.portfolio.util.AiRequestContext;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -306,7 +307,7 @@ class RealtimeSessionServiceTest {
   }
 
   @Test
-  void createRealtimeCall_truncatesOpenAiSafetyHeaderForLongAuthenticatedUser() throws Exception {
+  void createRealtimeCall_hashesBudgetUserIdForOpenAiSafetyHeader() throws Exception {
     String username = "u".repeat(200);
     SecurityContextHolder.getContext().setAuthentication(
         new UsernamePasswordAuthenticationToken(username, "pw", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
@@ -319,11 +320,10 @@ class RealtimeSessionServiceTest {
 
     service.createRealtimeCall("v=0\r\noffer", null);
 
+    String budgetId = "user:" + username;
     String safety = captor.getValue().headers().firstValue("OpenAI-Safety-Identifier").orElseThrow();
-    assertThat(safety).hasSize(64);
-    // "user:" (5 chars) plus 59 "u"s = first 64 characters of identifier
-    assertThat(safety).isEqualTo("user:" + "u".repeat(59));
-    verify(aiBudgetService).assertWithinBudget(eq("user:" + username), eq(false));
+    assertThat(safety).hasSize(64).matches("[0-9a-f]{64}").isEqualTo(AiRequestContext.openAiSafetyIdentifier(budgetId));
+    verify(aiBudgetService).assertWithinBudget(eq(budgetId), eq(false));
   }
 
   static String utf8Drain(HttpRequest request) throws Exception {
