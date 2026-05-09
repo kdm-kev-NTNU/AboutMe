@@ -10,8 +10,12 @@ import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
+import com.kevinmazali.portfolio.model.RealtimeLookupResponse;
+import com.kevinmazali.portfolio.model.RealtimeLookupSnippet;
+import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,6 +65,9 @@ class RealtimeControllerTest {
 
   @MockitoBean
   private RealtimeSessionService realtimeSessionService;
+
+  @MockitoBean
+  private RealtimeLookupService realtimeLookupService;
 
   @MockitoBean
   private RequestLogService requestLogService;
@@ -170,6 +177,50 @@ class RealtimeControllerTest {
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
     verify(realtimeSessionService).createRealtimeCall(eq("v"), isNull());
   }
+
+  @Test
+  void lookupReturnsSnippets() throws Exception {
+    when(realtimeLookupService.lookup(eq("NTNU"), eq("en")))
+        .thenReturn(new RealtimeLookupResponse(
+            true,
+            List.of(new RealtimeLookupSnippet("profile", "Data engineering", "Kevin studies at NTNU."))));
+
+    mockMvc.perform(post("/realtime/lookup")
+            .content("{\"query\":\"NTNU\",\"language\":\"en\"}")
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.found").value(true))
+        .andExpect(jsonPath("$.snippets[0].sourceType").value("profile"))
+        .andExpect(jsonPath("$.snippets[0].title").value("Data engineering"));
+
+    verify(realtimeLookupService).lookup(eq("NTNU"), eq("en"));
+  }
+
+  @Test
+  void lookupReturns503WhenFeatureDisabled() throws Exception {
+    realtimeProperties.setEnabled(false);
+
+    mockMvc.perform(post("/realtime/lookup")
+            .content("{\"query\":\"NTNU\",\"language\":\"en\"}")
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(jsonPath("$.code").value("REALTIME_DISABLED"));
+
+    verify(realtimeLookupService, never()).lookup(any(), any());
+  }
+
+  @Test
+  void lookupReturns400WhenServiceRejectsQuery() throws Exception {
+    when(realtimeLookupService.lookup(any(), any()))
+        .thenThrow(new IllegalArgumentException("Lookup query is required."));
+
+    mockMvc.perform(post("/realtime/lookup")
+            .content("{\"query\":\"\",\"language\":\"en\"}")
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+        .andExpect(jsonPath("$.error").value("Lookup query is required."));
+  }
 }
 
 /**
@@ -197,6 +248,9 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
 
   @MockitoBean
   private RealtimeSessionService realtimeSessionService;
+
+  @MockitoBean
+  private RealtimeLookupService realtimeLookupService;
 
   @MockitoBean
   private RequestLogService requestLogService;

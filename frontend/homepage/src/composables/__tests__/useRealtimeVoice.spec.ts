@@ -547,6 +547,36 @@ describe('useRealtimeVoice', () => {
     scope.stop()
   })
 
+  it('surfaces Realtime error events from the data channel', async () => {
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const { captureProductAnalyticsEvent } = await import('@/lib/analytics')
+
+    const lang = ref<SpeechUiLang>('en')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang)
+    })
+
+    const connectPromise = api.connect()
+    await flushPromises()
+    latestRtc?.dispatchRemoteTrack()
+    await connectPromise
+
+    await simulateChannelPayload(
+      JSON.stringify({ type: 'error', error: { message: 'Realtime model error' } }),
+    )
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toBe('Realtime model error')
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_error',
+      expect.objectContaining({ reason: 'mid_session' }),
+    )
+
+    scope.stop()
+  })
+
   it('schedules a session timeout aligned with REALTIME_SESSION_MAX_MS', async () => {
     const originalSetTimeout = globalThis.setTimeout
     vi.spyOn(globalThis, 'setTimeout').mockImplementation(((handler: TimerHandler, delay?: number) => {

@@ -130,8 +130,8 @@ portfolio:
   realtime:
     enabled: ${PORTFOLIO_REALTIME_ENABLED:false}
     model: gpt-realtime-2
-    voice: ash
-    reasoning-effort: medium
+    voice: marin
+    reasoning-effort: low
     max-response-output-tokens: 1024
     reservation-input-tokens: 2000
     reservation-output-tokens: 2000
@@ -139,6 +139,10 @@ portfolio:
     enabled: true
     capacity: 3
     window-seconds: 3600
+  realtime-lookup-rate-limit:
+    enabled: true
+    capacity: 20
+    window-seconds: 180
   retrieval:
     # Optional ONNX rerank; Docker image sets paths under /app/rerank (see backend/Dockerfile).
     rerank-enabled: false

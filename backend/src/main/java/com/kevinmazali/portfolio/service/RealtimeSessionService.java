@@ -38,6 +38,7 @@ public class RealtimeSessionService {
   private final AiBudgetProperties budgetProperties;
   private final AiCircuitBreaker aiCircuitBreaker;
   private final OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker;
+  private final RealtimeProfileService realtimeProfileService;
   private final String openAiApiKey;
 
   // Spring Boot 4 auto-configures the new tools.jackson.databind.ObjectMapper, so injecting the
@@ -54,12 +55,14 @@ public class RealtimeSessionService {
       AiBudgetProperties budgetProperties,
       AiCircuitBreaker aiCircuitBreaker,
       OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker,
+      RealtimeProfileService realtimeProfileService,
       @Value("${spring.ai.openai.api-key:}") String openAiApiKey) {
     this.realtimeProperties = realtimeProperties;
     this.aiBudgetService = aiBudgetService;
     this.budgetProperties = budgetProperties;
     this.aiCircuitBreaker = aiCircuitBreaker;
     this.openAiRealtimeHttpInvoker = openAiRealtimeHttpInvoker;
+    this.realtimeProfileService = realtimeProfileService;
     this.openAiApiKey = openAiApiKey;
   }
 
@@ -109,7 +112,8 @@ public class RealtimeSessionService {
     aiBudgetService.assertWithinBudget(budgetUserId, anonymous);
 
     String lang = normalizeLang(chatLanguage);
-    String instructions = instructionsForLanguage(lang);
+    String instructions = instructionsForLanguage(lang)
+        .replace("{profile_card}", realtimeProfileService.profileCard(lang));
     String sessionJson;
     try {
       sessionJson = buildSessionJson(instructions);
@@ -248,9 +252,17 @@ public class RealtimeSessionService {
     root.put("type", "realtime");
     root.put("model", realtimeProperties.getModel());
     root.put("instructions", instructions);
-    root.put("reasoning_effort", realtimeProperties.getReasoningEffort());
-    root.put("max_response_output_tokens", realtimeProperties.getMaxResponseOutputTokens());
-    root.putArray("modalities").add("text").add("audio");
+    root.put("max_output_tokens", realtimeProperties.getMaxResponseOutputTokens());
+    root.putArray("output_modalities").add("audio");
+    addLookupTool(root);
+
+    ObjectNode reasoning = objectMapper.createObjectNode();
+    String reasoningEffort =
+        StringUtils.hasText(realtimeProperties.getReasoningEffort())
+            ? realtimeProperties.getReasoningEffort().trim()
+            : "low";
+    reasoning.put("effort", reasoningEffort);
+    root.set("reasoning", reasoning);
 
     ObjectNode audio = objectMapper.createObjectNode();
     ObjectNode output = objectMapper.createObjectNode();
@@ -261,11 +273,43 @@ public class RealtimeSessionService {
     ObjectNode transcription = objectMapper.createObjectNode();
     transcription.put("model", "whisper-1");
     input.set("transcription", transcription);
+
+    ObjectNode turnDetection = objectMapper.createObjectNode();
+    turnDetection.put("type", "semantic_vad");
+    turnDetection.put("eagerness", "auto");
+    turnDetection.put("create_response", true);
+    turnDetection.put("interrupt_response", true);
+    input.set("turn_detection", turnDetection);
+
     audio.set("input", input);
 
     root.set("audio", audio);
 
     return objectMapper.writeValueAsString(root);
+  }
+
+  private void addLookupTool(ObjectNode root) {
+    var tools = root.putArray("tools");
+    ObjectNode tool = objectMapper.createObjectNode();
+    tool.put("type", "function");
+    tool.put("name", "lookup_kevin_info");
+    tool.put(
+        "description",
+        "Look up concise public facts about Kevin's studies, projects, course areas, work experience, and portfolio. Do not use for grades, private details, or questions outside Kevin's public profile.");
+
+    ObjectNode parameters = objectMapper.createObjectNode();
+    parameters.put("type", "object");
+    ObjectNode properties = objectMapper.createObjectNode();
+    ObjectNode query = objectMapper.createObjectNode();
+    query.put("type", "string");
+    query.put("description", "A concise search query in the user's language.");
+    properties.set("query", query);
+    parameters.set("properties", properties);
+    parameters.putArray("required").add("query");
+    parameters.put("additionalProperties", false);
+    tool.set("parameters", parameters);
+    tools.add(tool);
+    root.put("tool_choice", "auto");
   }
 
   /**

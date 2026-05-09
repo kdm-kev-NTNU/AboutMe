@@ -13,10 +13,10 @@ public class RealtimeProperties {
 
   private String model = "gpt-realtime-2";
 
-  private String voice = "ash";
+  private String voice = "marin";
 
   /** Reasoning effort for GPT-Realtime-2: minimal, low, medium, high, xhigh. */
-  private String reasoningEffort = "medium";
+  private String reasoningEffort = "low";
 
   private int maxResponseOutputTokens = 1024;
 

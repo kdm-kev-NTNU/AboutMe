@@ -3,7 +3,9 @@ package com.kevinmazali.portfolio.controller;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.model.ApiError;
+import com.kevinmazali.portfolio.model.RealtimeLookupRequest;
 import com.kevinmazali.portfolio.model.RealtimeStatusResponse;
+import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,16 +30,19 @@ public class RealtimeController {
 
   private final RealtimeProperties realtimeProperties;
   private final RealtimeSessionService realtimeSessionService;
+  private final RealtimeLookupService realtimeLookupService;
   private final RequestLogService requestLogService;
   private final String openAiApiKey;
 
   public RealtimeController(
       RealtimeProperties realtimeProperties,
       RealtimeSessionService realtimeSessionService,
+      RealtimeLookupService realtimeLookupService,
       RequestLogService requestLogService,
       @Value("${spring.ai.openai.api-key:}") String openAiApiKey) {
     this.realtimeProperties = realtimeProperties;
     this.realtimeSessionService = realtimeSessionService;
+    this.realtimeLookupService = realtimeLookupService;
     this.requestLogService = requestLogService;
     this.openAiApiKey = openAiApiKey;
   }
@@ -80,6 +85,24 @@ public class RealtimeController {
     } catch (IllegalStateException e) {
       log.warn("realtime session (legacy): {}", e.getMessage());
       return ResponseEntity.status(503).body(new ApiError(e.getMessage()));
+    }
+  }
+
+  @Operation(
+      summary = "Lookup public voice facts",
+      description = "Returns short snippets for the Realtime voice assistant; not a full RAG answer.")
+  @PostMapping(value = "/realtime/lookup", consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<?> lookup(@RequestBody(required = false) RealtimeLookupRequest request) {
+    if (!realtimeProperties.isEnabled()) {
+      return ResponseEntity.status(503)
+          .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
+    }
+    try {
+      String query = request == null ? null : request.query();
+      String language = request == null ? null : request.language();
+      return ResponseEntity.ok(realtimeLookupService.lookup(query, language));
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.badRequest().body(new ApiError(e.getMessage(), "BAD_REQUEST"));
     }
   }
 }

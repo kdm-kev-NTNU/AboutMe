@@ -33,8 +33,8 @@ const copy = computed(() => {
   return {
     title: en ? "Talk with Kevin's AI" : 'Snakk med Kevin sin AI',
     subtitle: en
-      ? 'Live voice (OpenAI GPT-Realtime). Audio is sent to OpenAI for real-time processing — not the same as typed chat RAG retrieval. For document-grounded answers, use text chat.'
-      : 'Live stemme (OpenAI GPT-Realtime). Lyd sendes til OpenAI i sanntid — ikke det samme som tekstchat med RAG. For svar forankret i dokumenter, bruk tekstchat.',
+      ? 'Live voice (OpenAI GPT-Realtime-2). Audio is sent to OpenAI for real-time processing — not the same as typed chat RAG retrieval. For document-grounded answers, use text chat.'
+      : 'Live stemme (OpenAI GPT-Realtime-2). Lyd sendes til OpenAI i sanntid — ikke det samme som tekstchat med RAG. For svar forankret i dokumenter, bruk tekstchat.',
     chatAlt: en ? 'Use text chat instead' : 'Bruk tekstchat',
     unavailable: en
       ? 'Voice chat is not enabled on the server right now.'
