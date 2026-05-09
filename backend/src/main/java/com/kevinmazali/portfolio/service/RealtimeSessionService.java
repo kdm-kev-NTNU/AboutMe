@@ -126,7 +126,7 @@ public class RealtimeSessionService {
     String boundary = "----PortfolioBoundary" + UUID.randomUUID();
     byte[] body = buildMultipartBody(boundary, sdp, sessionJson);
 
-    String safetyId = budgetUserId.length() > 64 ? budgetUserId.substring(0, 64) : budgetUserId;
+    String safetyId = AiRequestContext.openAiSafetyIdentifier(budgetUserId);
 
     HttpRequest request =
         HttpRequest.newBuilder()
