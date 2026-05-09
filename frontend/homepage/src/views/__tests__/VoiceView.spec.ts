@@ -106,6 +106,10 @@ describe('VoiceView.vue', () => {
       MicOff: true,
       Loader2: true,
       MessageSquare: true,
+      AiStatusDialog: {
+        props: ['open', 'title', 'message'],
+        template: '<div v-if="open" role="dialog"><h2>{{ title }}</h2><p>{{ message }}</p><button @click="$emit(\'update:open\', false)">OK</button></div>',
+      },
     }
 
     const wrapper = mount(VoiceView, {
@@ -189,7 +193,7 @@ describe('VoiceView.vue', () => {
     wrapper.unmount()
   })
 
-  it('surfaces realtime errors through the descriptive alert', async () => {
+  it('surfaces realtime errors through the AI status dialog', async () => {
     const { wrapper, refs } = await factory({
       lang: 'en',
       fetchResult: true,
@@ -200,6 +204,8 @@ describe('VoiceView.vue', () => {
     refs.errorMessage.value = 'Microphone unavailable'
     await wrapper.vm.$nextTick()
 
+    expect(document.body.querySelector('[role="dialog"]')).toBeTruthy()
+    expect(document.body.textContent).toContain('Voice could not start')
     expect(document.body.textContent).toContain('Microphone unavailable')
 
     wrapper.unmount()
