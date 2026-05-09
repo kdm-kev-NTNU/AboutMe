@@ -93,6 +93,20 @@ Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `bac
 - **Backend** (from `backend/`): `./mvnw test` or `./mvnw verify` (includes JaCoCo gate; open `target/site/jacoco/index.html` after verify)
 - **Frontend** (from `frontend/homepage/`): `npm ci`, `npm run test:unit` or `npm run test:unit:coverage`
 
+### Opt-in Realtime live verification
+
+The default PR/CI gate does **not** run a live OpenAI Realtime end-to-end session. That path depends on a real `OPENAI_API_KEY`, network access, browser media/WebRTC behavior, and `PORTFOLIO_REALTIME_ENABLED=true`, so it is reserved for manual release or post-deploy signoff.
+
+Use this split when reporting test coverage:
+
+- **Default automated coverage**: backend tests cover Realtime session JSON, multipart SDP, lookup tool config, error mapping, budget checks, and circuit checks. Frontend tests cover the WebRTC/browser loop, `oai-events`, transcripts, session errors, and the lookup tool response loop.
+- **Lightweight deployed smoke**: from the repo root, run `.\scripts\voice-live-smoke.ps1 -BaseUrl https://<host> -ExpectRealtimeEnabled $true` to verify `/api/realtime/status` and structured `/api/realtime/session` error responses. This does not create a real OpenAI SDP session.
+- **Full live OpenAI browser smoke**: with the app running and Realtime enabled, run from `frontend/homepage/`: `npm run test:e2e:voice-live:openai -- --config baseUrl=http://localhost:5173`. For a deployed target, replace `baseUrl` with the deployment URL.
+
+The full live smoke uses `cypress/e2e/voice-live-smoke.cy.ts` as the source of truth. It passes only when `/api/realtime/status` returns `{ "enabled": true }`, the voice page renders `Start voice`, the browser posts SDP to `/api/realtime/session`, and the backend returns a 2xx `application/sdp` answer containing `v=0`.
+
+Release notes should say "Live OpenAI Realtime E2E passed" only after the full live OpenAI browser smoke has run successfully. Otherwise, use: "Live OpenAI Realtime E2E was not run in default CI; deterministic tests cover session JSON/tool config and browser tool loop."
+
 ## API (short)
 
 - **`POST /ask`**: JSON `{ "question": "...", "model": "<optional>" }` → `{ "answer": "..." }`. Rate limited; max question length enforced server-side.
