@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Mic, MicOff, Loader2, Info, MessageSquare } from 'lucide-vue-next'
 import { useLangStore } from '@/stores/lang'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import AiStatusDialog from '@/components/AiStatusDialog.vue'
 import { useRealtimeVoice } from '@/composables/useRealtimeVoice'
 import { fetchRealtimeVoiceEnabled } from '@/lib/realtime-voice'
 
@@ -12,6 +13,7 @@ const langStore = useLangStore()
 const language = computed(() => langStore.language)
 
 const voiceAvailable = ref<boolean | null>(null)
+const aiErrorDialogOpen = ref(false)
 
 const {
   connectionState,
@@ -57,12 +59,42 @@ const statusLabel = computed(() => {
   if (connectionState.value === 'connected') return copy.value.live
   return ''
 })
+
+const errorDialogCopy = computed(() => {
+  const en = language.value === 'en'
+  return {
+    title: en ? 'Voice could not start' : 'Stemme kunne ikke starte',
+    description: en
+      ? 'The live AI service needs a fresh session before it can continue.'
+      : 'Live AI-tjenesten trenger en ny økt før den kan fortsette.',
+    retry: en ? 'Try again' : 'Prøv igjen',
+  }
+})
+
+watch(errorMessage, (message) => {
+  aiErrorDialogOpen.value = message.trim() !== ''
+})
+
+function retryVoice() {
+  aiErrorDialogOpen.value = false
+  void connect()
+}
 </script>
 
 <template>
   <main
     class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 pt-20"
   >
+    <AiStatusDialog
+      v-model:open="aiErrorDialogOpen"
+      :title="errorDialogCopy.title"
+      :description="errorDialogCopy.description"
+      :message="errorMessage"
+      :retry-label="errorDialogCopy.retry"
+      show-retry
+      @retry="retryVoice"
+    />
+
     <div class="absolute inset-0 pointer-events-none">
       <div
         class="absolute top-0 left-0 h-full w-full"
@@ -161,9 +193,6 @@ const statusLabel = computed(() => {
           </div>
         </div>
 
-        <Alert v-if="errorMessage" variant="destructive" class="mt-6">
-          <AlertDescription>{{ errorMessage }}</AlertDescription>
-        </Alert>
         <Alert
           v-if="sessionNotice"
           class="mt-6 border-blue-200 bg-blue-50 text-slate-800"

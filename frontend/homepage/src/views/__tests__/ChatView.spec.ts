@@ -30,6 +30,42 @@ vi.mock('@/lib/transcribe-audio', () => ({
 describe('ChatView', () => {
   const HomeStub = { template: '<div>home-stub</div>' }
 
+  /** Matches VoiceView.spec AiStatusDialog stub; keeps ChatView tests stable alongside Dialog stubs. */
+  const chatViewTestStubs = {
+    AiStatusDialog: {
+      props: [
+        'open',
+        'title',
+        'description',
+        'message',
+        'retryLabel',
+        'showRetry',
+        'dismissLabel',
+      ],
+      template: `
+        <div v-if="open" role="dialog" data-testid="ai-status-dialog">
+          <h2>{{ title }}</h2>
+          <p data-testid="ai-status-message">{{ message }}</p>
+          <button type="button" data-testid="ai-dismiss" @click="$emit('update:open', false)">{{ dismissLabel || 'OK' }}</button>
+          <button v-if="showRetry" type="button" data-testid="ai-retry" @click="$emit('retry')">{{ retryLabel }}</button>
+        </div>
+      `,
+    },
+    Dialog: {
+      props: ['open'],
+      template: '<div v-if="open"><slot /></div>',
+    },
+    DialogContent: { template: '<div><slot /></div>' },
+    DialogHeader: { template: '<div><slot /></div>' },
+    DialogTitle: { template: '<h2><slot /></h2>' },
+    DialogDescription: { template: '<p><slot /></p>' },
+    DialogFooter: { template: '<div><slot /></div>' },
+    MessagesArea: {
+      props: ['messages', 'isLoading', 'isReadOnly'],
+      template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
+    },
+  }
+
   function makeRouter() {
     return createRouter({
       history: createMemoryHistory(),
@@ -70,21 +106,7 @@ describe('ChatView', () => {
     const wrapper = mount(ChatView, {
       global: {
         plugins: [pinia, router],
-        stubs: {
-          Dialog: {
-            props: ['open'],
-            template: '<div v-if="open"><slot /></div>',
-          },
-          DialogContent: { template: '<div><slot /></div>' },
-          DialogHeader: { template: '<div><slot /></div>' },
-          DialogTitle: { template: '<h2><slot /></h2>' },
-          DialogDescription: { template: '<p><slot /></p>' },
-          DialogFooter: { template: '<div><slot /></div>' },
-          MessagesArea: {
-            props: ['messages', 'isLoading', 'isReadOnly'],
-            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
-          },
-        },
+        stubs: chatViewTestStubs,
       },
     })
     await flushPromises()
@@ -208,6 +230,37 @@ describe('ChatView', () => {
     expect(wrapper.text()).toContain('Nettverksfeil')
   })
 
+  it('AI status retry submits again when the composer still has text after a failed ask', async () => {
+    vi.mocked(askQuestion)
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { answer: 'Recovered' },
+        headers: new Headers(),
+      })
+
+    const { wrapper } = await mountChat({})
+    const input = wrapper.find('input[type="text"]')
+    await input.setValue('retry-query')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Nettverksfeil')
+    expect(vi.mocked(askQuestion)).toHaveBeenCalledTimes(1)
+
+    await input.setValue('retry-query')
+    await wrapper.vm.$nextTick()
+
+    const retryBtn = wrapper.find('[data-testid="ai-retry"]')
+    expect(retryBtn.exists()).toBe(true)
+    await retryBtn.trigger('click')
+    await flushPromises()
+
+    expect(vi.mocked(askQuestion)).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(askQuestion).mock.calls[1][0]).toEqual({ question: 'retry-query' })
+    expect(wrapper.text()).toContain('Recovered')
+  })
+
   it('clearChat clears transcript and stays on chat', async () => {
     sessionStorage.setItem('chatMessages', JSON.stringify([{ role: 'user', text: 'x' }]))
     const { wrapper, router } = await mountChat({})
@@ -284,18 +337,7 @@ describe('ChatView', () => {
     const wrapper = mount(ChatView, {
       global: {
         plugins: [pinia, router],
-        stubs: {
-          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
-          DialogContent: { template: '<div><slot /></div>' },
-          DialogHeader: { template: '<div><slot /></div>' },
-          DialogTitle: { template: '<h2><slot /></h2>' },
-          DialogDescription: { template: '<p><slot /></p>' },
-          DialogFooter: { template: '<div><slot /></div>' },
-          MessagesArea: {
-            props: ['messages', 'isLoading', 'isReadOnly'],
-            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
-          },
-        },
+        stubs: chatViewTestStubs,
       },
     })
     await flushPromises()
@@ -325,18 +367,7 @@ describe('ChatView', () => {
     const wrapper = mount(ChatView, {
       global: {
         plugins: [pinia, router],
-        stubs: {
-          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
-          DialogContent: { template: '<div><slot /></div>' },
-          DialogHeader: { template: '<div><slot /></div>' },
-          DialogTitle: { template: '<h2><slot /></h2>' },
-          DialogDescription: { template: '<p><slot /></p>' },
-          DialogFooter: { template: '<div><slot /></div>' },
-          MessagesArea: {
-            props: ['messages', 'isLoading', 'isReadOnly'],
-            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
-          },
-        },
+        stubs: chatViewTestStubs,
       },
     })
     await flushPromises()
@@ -362,18 +393,7 @@ describe('ChatView', () => {
     const wrapper = mount(ChatView, {
       global: {
         plugins: [pinia, router],
-        stubs: {
-          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
-          DialogContent: { template: '<div><slot /></div>' },
-          DialogHeader: { template: '<div><slot /></div>' },
-          DialogTitle: { template: '<h2><slot /></h2>' },
-          DialogDescription: { template: '<p><slot /></p>' },
-          DialogFooter: { template: '<div><slot /></div>' },
-          MessagesArea: {
-            props: ['messages', 'isLoading', 'isReadOnly'],
-            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
-          },
-        },
+        stubs: chatViewTestStubs,
       },
     })
     await flushPromises()
@@ -395,18 +415,7 @@ describe('ChatView', () => {
     const wrapper = mount(ChatView, {
       global: {
         plugins: [pinia, router],
-        stubs: {
-          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
-          DialogContent: { template: '<div><slot /></div>' },
-          DialogHeader: { template: '<div><slot /></div>' },
-          DialogTitle: { template: '<h2><slot /></h2>' },
-          DialogDescription: { template: '<p><slot /></p>' },
-          DialogFooter: { template: '<div><slot /></div>' },
-          MessagesArea: {
-            props: ['messages', 'isLoading', 'isReadOnly'],
-            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
-          },
-        },
+        stubs: chatViewTestStubs,
       },
     })
     await flushPromises()
@@ -446,18 +455,7 @@ describe('ChatView', () => {
     const wrapper = mount(ChatView, {
       global: {
         plugins: [pinia, router],
-        stubs: {
-          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
-          DialogContent: { template: '<div><slot /></div>' },
-          DialogHeader: { template: '<div><slot /></div>' },
-          DialogTitle: { template: '<h2><slot /></h2>' },
-          DialogDescription: { template: '<p><slot /></p>' },
-          DialogFooter: { template: '<div><slot /></div>' },
-          MessagesArea: {
-            props: ['messages', 'isLoading', 'isReadOnly'],
-            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
-          },
-        },
+        stubs: chatViewTestStubs,
       },
     })
     await flushPromises()
@@ -511,18 +509,7 @@ describe('ChatView', () => {
     const wrapper = mount(ChatView, {
       global: {
         plugins: [pinia, router],
-        stubs: {
-          Dialog: { props: ['open'], template: '<div v-if="open"><slot /></div>' },
-          DialogContent: { template: '<div><slot /></div>' },
-          DialogHeader: { template: '<div><slot /></div>' },
-          DialogTitle: { template: '<h2><slot /></h2>' },
-          DialogDescription: { template: '<p><slot /></p>' },
-          DialogFooter: { template: '<div><slot /></div>' },
-          MessagesArea: {
-            props: ['messages', 'isLoading', 'isReadOnly'],
-            template: '<div class="stub-messages">{{ messages.map(m => m.text).join(",") }}</div>',
-          },
-        },
+        stubs: chatViewTestStubs,
       },
     })
     await flushPromises()

@@ -5,7 +5,7 @@ import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import AiStatusDialog from '@/components/AiStatusDialog.vue'
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,7 @@ const router = useRouter()
 const input = ref('')
 const isLoading = ref(false)
 const errorText = ref('')
+const aiErrorDialogOpen = ref(false)
 const showInfoPopup = ref(false)
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = MAX_SPEECH_PROMPT_CHARS
@@ -75,6 +76,29 @@ const {
 })
 
 const chatBannerError = computed(() => errorText.value || voiceError.value)
+const canRetryChatError = computed(() => input.value.trim() !== '' && !isLoading.value)
+const aiErrorDialogCopy = computed(() => {
+  const en = language.value === 'en'
+  return {
+    title: en ? 'AI is temporarily unavailable' : 'AI er midlertidig utilgjengelig',
+    description: en
+      ? 'The request could not continue right now. You can wait a moment and try again.'
+      : 'Forespørselen kunne ikke fortsette akkurat nå. Vent litt og prøv igjen.',
+    retry: en ? 'Try again' : 'Prøv igjen',
+  }
+})
+
+watch(chatBannerError, (message) => {
+  aiErrorDialogOpen.value = message.trim() !== ''
+})
+
+function retryAfterError() {
+  aiErrorDialogOpen.value = false
+  const q = input.value.trim()
+  if (q) {
+    void send(q)
+  }
+}
 
 const providerLabels = computed(() =>
   language.value === 'no'
@@ -354,6 +378,16 @@ onMounted(async () => {
 
 <template>
   <main class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 pt-20">
+    <AiStatusDialog
+      v-model:open="aiErrorDialogOpen"
+      :title="aiErrorDialogCopy.title"
+      :description="aiErrorDialogCopy.description"
+      :message="chatBannerError"
+      :retry-label="aiErrorDialogCopy.retry"
+      :show-retry="canRetryChatError"
+      @retry="retryAfterError"
+    />
+
     <Dialog v-model:open="showInfoPopup">
       <DialogContent class="sm:max-w-xl">
         <DialogHeader>
@@ -377,11 +411,6 @@ onMounted(async () => {
     </div>
     <!-- Chat Container -->
     <div class="relative z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
-      <!-- Error Alert -->
-      <Alert v-if="chatBannerError" variant="destructive" class="mb-6 flex-shrink-0">
-        <AlertDescription>{{ chatBannerError }}</AlertDescription>
-      </Alert>
-
       <section class="mb-5 flex-shrink-0 rounded-3xl border border-blue-100/70 bg-white/85 p-4 shadow-lg shadow-blue-900/10 backdrop-blur-xl sm:p-5">
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-3">
