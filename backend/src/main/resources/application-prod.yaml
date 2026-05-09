@@ -18,6 +18,8 @@ spring:
         log-completion: false
 
 logging:
+  pattern:
+    level: "%5p [${spring.application.name:},trace:%X{traceId:-}] %logger{36} - %msg%n"
   level:
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: WARN

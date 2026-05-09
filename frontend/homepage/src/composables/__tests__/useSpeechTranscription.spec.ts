@@ -286,7 +286,7 @@ describe('useSpeechTranscription', () => {
     scope.stop()
   })
 
-  it('surfaces server-provided error string via readApiError when status is 4xx other than 429', async () => {
+  it('surfaces server-provided error string via apiErrorMessage when status is 4xx other than 429', async () => {
     vi.mocked(transcribeSpeech).mockResolvedValue({
       status: 400,
       data: { error: 'Audio file is empty.' },

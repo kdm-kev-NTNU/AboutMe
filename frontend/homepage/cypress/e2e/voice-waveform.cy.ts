@@ -28,11 +28,13 @@ describe('Voice waveform visual', () => {
     })
   }
 
-  it('shows waveform canvas while recording (screenshot)', () => {
-    cy.visit('/', {
+  it('shows waveform canvas while recording on chat STT (screenshot)', () => {
+    cy.visit('/chat', {
       onBeforeLoad(win) {
+        win.sessionStorage.clear()
         /** Otherwise navigator locale can pick NO and Mic uses aria-label Taleinndata */
         win.localStorage.setItem('lang', 'en')
+        win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
         Object.defineProperty(win.navigator, 'mediaDevices', {
           configurable: true,
           value: {
@@ -52,18 +54,16 @@ describe('Voice waveform visual', () => {
     })
     cy.wait('@chatModels')
 
-    cy.get('main').scrollTo('bottom', { ensureScrollable: false })
-
-    cy.get('main form', { timeout: 15000 }).find('[aria-label="Voice input"]').as('voiceInputHome')
-    cy.get('@voiceInputHome').scrollIntoView()
-    cy.get('@voiceInputHome').should('be.visible')
+    cy.get('main form', { timeout: 15000 }).find('[aria-label="Voice input"]').as('voiceInputChatStt')
+    cy.get('@voiceInputChatStt').scrollIntoView()
+    cy.get('@voiceInputChatStt').should('be.visible')
     /** Cookie / feedback widgets can still occlude the mic in the corner */
-    cy.get('@voiceInputHome').click({ force: true })
+    cy.get('@voiceInputChatStt').click({ force: true })
 
     cy.get('[role="img"][aria-label="Audio level while recording"]', { timeout: 15000 }).should('be.visible')
     assertRecordingWaveformCanvasReady()
 
-    cy.screenshot('waveform-home-recording', { capture: 'viewport' })
+    cy.screenshot('waveform-chat-recording-stt', { capture: 'viewport' })
 
     cy.get('main form [aria-label="Voice input"]').click({ force: true })
 
@@ -78,6 +78,7 @@ describe('Voice waveform visual', () => {
 
     cy.visit('/chat', {
       onBeforeLoad(win) {
+        win.sessionStorage.clear()
         win.localStorage.setItem('lang', 'en')
         win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
         Object.defineProperty(win.navigator, 'mediaDevices', {

@@ -16,6 +16,8 @@
     "prepare": "node -e \"if(!process.env.CI)try{require.resolve('cypress');require('child_process').execSync('cypress install',{stdio:'inherit'})}catch(_){}\"",
     "test:e2e": "start-server-and-test preview http://localhost:4173 'cypress run --e2e'",
     "test:e2e:dev": "start-server-and-test 'vite dev --port 4173' http://localhost:4173 'cypress open --e2e'",
+    "test:e2e:voice-live": "cypress run --e2e --spec cypress/e2e/voice-live-smoke.cy.ts --env VOICE_LIVE=true,VOICE_LIVE_EXPECT_REALTIME_ENABLED=true",
+    "test:e2e:voice-live:openai": "cypress run --e2e --spec cypress/e2e/voice-live-smoke.cy.ts --env VOICE_LIVE=true,VOICE_LIVE_EXPECT_REALTIME_ENABLED=true,VOICE_LIVE_RUN_OPENAI=true",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "api:pull": "node scripts/fetch-openapi.mjs",

@@ -3,28 +3,29 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import HomeView from '../HomeView.vue'
+import { listChatModels, ChatModelOptionProvider } from '@/api/generated/portfolio'
+import { useChatModelStore } from '@/stores/model'
 import { useLangStore } from '@/stores/lang'
 
-vi.mock('@/composables/useOpenAiRealtimeVoice', () => {
-	const ref = (v: unknown) => ({ value: v })
-	return {
-		useOpenAiRealtimeVoice: vi.fn(() => ({
-			status: ref({ enabled: true, sessionMaxMinutes: 3, model: 'gpt-4o-realtime' }),
-			loadStatus: vi.fn().mockResolvedValue(undefined),
-		})),
-	}
+vi.mock('@/api/generated/portfolio', async (importOriginal) => {
+	const mod = await importOriginal<typeof import('@/api/generated/portfolio')>()
+	return { ...mod, listChatModels: vi.fn() }
 })
+
+vi.mock('@/lib/realtime-voice', () => ({
+	fetchRealtimeVoiceEnabled: vi.fn().mockResolvedValue(false),
+}))
 
 vi.mock('@/stores/auth', () => ({
 	useAuthStore: () => ({ restore: vi.fn() }),
 }))
 
 const buttonStub = {
-	props: ['type', 'variant', 'disabled'],
-	template: '<button :type="type === \'submit\' ? \'submit\' : \'button\'" :disabled="disabled"><slot /></button>',
+	props: ['type'],
+	template: '<button :type="type === \'submit\' ? \'submit\' : \'button\'"><slot /></button>',
 }
 
-describe('HomeView - Dual Mode Gateway', () => {
+describe('HomeView', () => {
 	function makeRouter() {
 		return createRouter({
 			history: createMemoryHistory(),
@@ -32,6 +33,8 @@ describe('HomeView - Dual Mode Gateway', () => {
 				{ path: '/', name: 'home', component: HomeView },
 				{ path: '/chat', name: 'chat', component: { template: '<div>chat</div>' } },
 				{ path: '/voice', name: 'voice', component: { template: '<div>voice</div>' } },
+				{ path: '/feedback', name: 'feedback', component: { template: '<div>feedback</div>' } },
+				{ path: '/project', name: 'project', component: { template: '<div>project</div>' } },
 			],
 		})
 	}
@@ -40,57 +43,52 @@ describe('HomeView - Dual Mode Gateway', () => {
 		sessionStorage.clear()
 		localStorage.clear()
 		vi.clearAllMocks()
+		vi.mocked(listChatModels).mockResolvedValue({
+			status: 200,
+			data: [
+				{ id: 'o1', label: 'GPT', provider: ChatModelOptionProvider.OPENAI },
+				{ id: 'a1', label: 'Claude', provider: ChatModelOptionProvider.ANTHROPIC },
+			],
+			headers: new Headers(),
+		})
 	})
 
-	it('renders the dual mode gateway with Talk and Ask cards', async () => {
+	it('switches language with EN/NO toggles and shows Norwegian disclaimer', async () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
 		const router = makeRouter()
 		await router.push('/')
+		const pushSpy = vi.spyOn(router, 'push')
 		const wrapper = mount(HomeView, {
 			global: {
 				plugins: [pinia, router],
 				stubs: {
+					Input: { props: ['modelValue'], template: '<input />' },
 					Button: buttonStub,
-					VoiceOrb: { template: '<div class="voice-orb-stub" />' },
-					BudgetDialog: { props: ['open'], template: '<div />' },
+					Alert: { template: '<div><slot /></div>' },
+					AlertTitle: { template: '<div><slot /></div>' },
+					AlertDescription: { template: '<div><slot /></div>' },
+					Info: true,
+					Github: true,
+					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
 				},
 			},
 		})
 		await flushPromises()
-
-		expect(wrapper.text()).toContain('Choose how you want to meet the AI')
-		expect(wrapper.text()).toContain('Talk')
-		expect(wrapper.text()).toContain('Ask')
-		expect(wrapper.text()).toContain('Start voice')
-		expect(wrapper.text()).toContain('Open chat')
-	})
-
-	it('switches language between EN and NO', async () => {
-		const pinia = createPinia()
-		setActivePinia(pinia)
-		const router = makeRouter()
-		await router.push('/')
-		const wrapper = mount(HomeView, {
-			global: {
-				plugins: [pinia, router],
-				stubs: {
-					Button: buttonStub,
-					VoiceOrb: { template: '<div />' },
-					BudgetDialog: { props: ['open'], template: '<div />' },
-				},
-			},
-		})
-		await flushPromises()
-
 		const noBtn = wrapper.findAll('button').find((b) => b.text().trim() === 'NO')
 		expect(noBtn).toBeTruthy()
 		await noBtn!.trigger('click')
-		expect(wrapper.text()).toContain('Velg hvordan du vil møte AI-en')
-		expect(wrapper.text()).toContain('Snakk')
+		expect(wrapper.text()).toContain('Før du chatter')
+
+		const firstQuick = wrapper.findAll('section.quick button').at(0)
+		expect(firstQuick).toBeTruthy()
+		await firstQuick!.trigger('click')
+		expect(pushSpy).toHaveBeenCalled()
 	})
 
-	it('navigates to /voice when Start voice is clicked and voice is enabled', async () => {
+	it('submits quick question via form and navigates to chat', async () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
 		const router = makeRouter()
@@ -100,25 +98,124 @@ describe('HomeView - Dual Mode Gateway', () => {
 			global: {
 				plugins: [pinia, router],
 				stubs: {
+					Input: {
+						props: ['modelValue'],
+						emits: ['update:modelValue'],
+						template: '<input @input="$emit(\'update:modelValue\', $event.target.value)" />',
+					},
 					Button: buttonStub,
-					VoiceOrb: { template: '<div />' },
-					BudgetDialog: { props: ['open'], template: '<div />' },
+					Alert: { template: '<div><slot /></div>' },
+					AlertTitle: { template: '<div><slot /></div>' },
+					AlertDescription: { template: '<div><slot /></div>' },
+					Info: true,
+					Github: true,
+					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
+				},
+			},
+		})
+		await flushPromises()
+		const input = wrapper.get('form input')
+		await input.setValue('  custom question  ')
+		await wrapper.get('form').trigger('submit.prevent')
+		expect(pushSpy).toHaveBeenCalledWith({ name: 'chat', query: { q: 'custom question' } })
+	})
+
+	it('toggles AI provider when both are available', async () => {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		const router = makeRouter()
+		await router.push('/')
+		const wrapper = mount(HomeView, {
+			global: {
+				plugins: [pinia, router],
+				stubs: {
+					Input: { props: ['modelValue'], template: '<input />' },
+					Button: buttonStub,
+					Alert: { template: '<div><slot /></div>' },
+					AlertTitle: { template: '<div><slot /></div>' },
+					AlertDescription: { template: '<div><slot /></div>' },
+					Info: true,
+					Github: true,
+					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
+				},
+			},
+		})
+		await flushPromises()
+		const anthropicBtn = wrapper.findAll('button[type="button"]').find((b) => b.text().includes('Anthropic'))
+		expect(anthropicBtn).toBeTruthy()
+		await anthropicBtn!.trigger('click')
+		await flushPromises()
+		expect(useChatModelStore().selectedModelId).toBe('a1')
+	})
+
+	it('links to the future work roadmap from the home hero', async () => {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		const router = makeRouter()
+		await router.push('/')
+		await router.isReady()
+		const wrapper = mount(HomeView, {
+			global: {
+				plugins: [pinia, router],
+				stubs: {
+					Input: { props: ['modelValue'], template: '<input />' },
+					Button: buttonStub,
+					Alert: { template: '<div><slot /></div>' },
+					AlertTitle: { template: '<div><slot /></div>' },
+					AlertDescription: { template: '<div><slot /></div>' },
+					Info: true,
+					Github: true,
+					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
+				},
+			},
+		})
+		await flushPromises()
+		const futureLink = wrapper.get('a[href="/project#future-work"]')
+		expect(futureLink.text()).toContain('Future work and improvements')
+	})
+
+	it('navigates to voice chat when Speak button is clicked', async () => {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('en')
+		const router = makeRouter()
+		await router.push('/')
+		const pushSpy = vi.spyOn(router, 'push')
+		const wrapper = mount(HomeView, {
+			global: {
+				plugins: [pinia, router],
+				stubs: {
+					Input: { props: ['modelValue'], template: '<input />' },
+					Button: buttonStub,
+					Alert: { template: '<div><slot /></div>' },
+					AlertTitle: { template: '<div><slot /></div>' },
+					AlertDescription: { template: '<div><slot /></div>' },
+					Info: true,
+					Github: true,
+					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
+					Mic: true,
+					Headphones: true,
 				},
 			},
 		})
 		await flushPromises()
 
-		const startBtn = wrapper.findAll('button').find((b) => b.text().includes('Start voice'))
-		expect(startBtn).toBeTruthy()
-		await startBtn!.trigger('click')
-		await flushPromises()
-
+		await wrapper.find('[aria-label="Go to live voice chat"]').trigger('click')
 		expect(pushSpy).toHaveBeenCalledWith({ name: 'voice' })
 	})
 
-	it('navigates to /chat when Open chat is clicked', async () => {
+	it('navigates to voice chat with Norwegian aria-label when UI is NO', async () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
+		useLangStore().setLanguage('no')
 		const router = makeRouter()
 		await router.push('/')
 		const pushSpy = vi.spyOn(router, 'push')
@@ -126,49 +223,24 @@ describe('HomeView - Dual Mode Gateway', () => {
 			global: {
 				plugins: [pinia, router],
 				stubs: {
+					Input: { props: ['modelValue'], template: '<input />' },
 					Button: buttonStub,
-					VoiceOrb: { template: '<div />' },
-					BudgetDialog: { props: ['open'], template: '<div />' },
+					Alert: { template: '<div><slot /></div>' },
+					AlertTitle: { template: '<div><slot /></div>' },
+					AlertDescription: { template: '<div><slot /></div>' },
+					Info: true,
+					Github: true,
+					Linkedin: true,
+					MessageSquare: true,
+					ChevronRight: true,
+					Mic: true,
+					Headphones: true,
 				},
 			},
 		})
 		await flushPromises()
 
-		const chatBtn = wrapper.findAll('button').find((b) => b.text().includes('Open chat'))
-		expect(chatBtn).toBeTruthy()
-		await chatBtn!.trigger('click')
-		await flushPromises()
-
-		expect(pushSpy).toHaveBeenCalledWith({ name: 'chat' })
-	})
-
-	it('shows budget dialog when voice is disabled', async () => {
-		const { useOpenAiRealtimeVoice } = await import('@/composables/useOpenAiRealtimeVoice')
-		vi.mocked(useOpenAiRealtimeVoice).mockReturnValue({
-			status: { value: { enabled: false, sessionMaxMinutes: 3, model: '' } } as any,
-			loadStatus: vi.fn().mockResolvedValue(undefined),
-		} as any)
-
-		const pinia = createPinia()
-		setActivePinia(pinia)
-		const router = makeRouter()
-		await router.push('/')
-		const wrapper = mount(HomeView, {
-			global: {
-				plugins: [pinia, router],
-				stubs: {
-					Button: buttonStub,
-					VoiceOrb: { template: '<div />' },
-					BudgetDialog: { props: ['open'], template: '<div v-if="open" class="budget-dialog">budget popup</div>' },
-				},
-			},
-		})
-		await flushPromises()
-
-		const startBtn = wrapper.findAll('button').find((b) => b.text().includes('Start voice'))
-		await startBtn!.trigger('click')
-		await flushPromises()
-
-		expect(wrapper.find('.budget-dialog').exists()).toBe(true)
+		await wrapper.find('[aria-label="Gå til live stemmechat"]').trigger('click')
+		expect(pushSpy).toHaveBeenCalledWith({ name: 'voice' })
 	})
 })
