@@ -2,6 +2,17 @@ import { customFetch } from '@/api/orval-mutator'
 
 export type SpeechUiLang = 'en' | 'no'
 
+export type RealtimeLookupSnippet = {
+  sourceType: 'profile' | 'rag'
+  title: string
+  text: string
+}
+
+export type RealtimeLookupResponse = {
+  found: boolean
+  snippets: RealtimeLookupSnippet[]
+}
+
 /** Failure from POST /realtime/session (includes optional machine-readable `code` from backend). */
 export type RealtimeSdpFailure = {
   ok: false
@@ -23,6 +34,40 @@ export async function fetchRealtimeVoiceEnabled(): Promise<boolean> {
     return d.enabled === true
   } catch {
     return false
+  }
+}
+
+function isLookupSnippet(value: unknown): value is RealtimeLookupSnippet {
+  if (value === null || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return (
+    (v.sourceType === 'profile' || v.sourceType === 'rag') &&
+    typeof v.title === 'string' &&
+    typeof v.text === 'string'
+  )
+}
+
+/**
+ * Small public knowledge lookup for the Realtime tool loop.
+ */
+export async function lookupRealtimeInfo(
+  query: string,
+  language: SpeechUiLang,
+): Promise<RealtimeLookupResponse> {
+  try {
+    const r = await customFetch<{ data: unknown; status: number }>('/realtime/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, language }),
+    })
+    if (r.status < 200 || r.status >= 300 || r.data === null || typeof r.data !== 'object') {
+      return { found: false, snippets: [] }
+    }
+    const data = r.data as { found?: unknown; snippets?: unknown }
+    const snippets = Array.isArray(data.snippets) ? data.snippets.filter(isLookupSnippet) : []
+    return { found: data.found === true && snippets.length > 0, snippets }
+  } catch {
+    return { found: false, snippets: [] }
   }
 }
 

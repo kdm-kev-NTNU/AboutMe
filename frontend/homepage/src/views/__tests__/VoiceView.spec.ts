@@ -184,7 +184,7 @@ describe('VoiceView.vue', () => {
 
     await flushPromises()
 
-    expect(document.body.textContent).toContain('Live stemme (OpenAI GPT-Realtime)')
+    expect(document.body.textContent).toContain('Live stemme (OpenAI GPT-Realtime-2)')
 
     wrapper.unmount()
   })

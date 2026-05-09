@@ -1,6 +1,6 @@
 import { ref, onUnmounted, type Ref } from 'vue'
 import type { RealtimeSdpFailure, SpeechUiLang } from '@/lib/realtime-voice'
-import { exchangeRealtimeSdp, REALTIME_SESSION_MAX_MS } from '@/lib/realtime-voice'
+import { exchangeRealtimeSdp, lookupRealtimeInfo, REALTIME_SESSION_MAX_MS } from '@/lib/realtime-voice'
 import { captureProductAnalyticsEvent, captureClientException } from '@/lib/analytics'
 import { POSTHOG_VOICE_EVENTS } from '@/lib/posthog-sdk'
 
@@ -191,20 +191,96 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
     })
   }
 
+  function sendRealtimeClientEvent(event: unknown) {
+    if (!dc || dc.readyState !== 'open') return
+    dc.send(JSON.stringify(event))
+  }
+
+  async function handleLookupFunctionCall(item: {
+    name?: unknown
+    call_id?: unknown
+    arguments?: unknown
+  }) {
+    if (item.name !== 'lookup_kevin_info' || typeof item.call_id !== 'string') return
+
+    let query = ''
+    if (typeof item.arguments === 'string' && item.arguments.trim() !== '') {
+      try {
+        const parsed = JSON.parse(item.arguments) as { query?: unknown }
+        if (typeof parsed.query === 'string') {
+          query = parsed.query.trim()
+        }
+      } catch {
+        query = ''
+      }
+    }
+
+    let output = { found: false, snippets: [] as unknown[] }
+    if (query !== '') {
+      try {
+        output = await lookupRealtimeInfo(query, language.value)
+      } catch {
+        output = { found: false, snippets: [] }
+      }
+    }
+
+    if (userEndedSession || midSessionFailureHandled) return
+    sendRealtimeClientEvent({
+      type: 'conversation.item.create',
+      item: {
+        type: 'function_call_output',
+        call_id: item.call_id,
+        output: JSON.stringify(output),
+      },
+    })
+    sendRealtimeClientEvent({ type: 'response.create' })
+  }
+
+  function handleResponseDone(ev: { response?: { output?: unknown } }) {
+    const output = ev.response?.output
+    if (!Array.isArray(output)) return
+    for (const item of output) {
+      if (item && typeof item === 'object') {
+        void handleLookupFunctionCall(item as { name?: unknown; call_id?: unknown; arguments?: unknown })
+      }
+    }
+  }
+
   function handleDataMessage(raw: string) {
     try {
       const ev = JSON.parse(raw) as {
         type?: string
         delta?: string
         transcript?: string
+        response?: {
+          output?: unknown
+        }
+        error?: {
+          message?: unknown
+          code?: unknown
+        }
       }
       const t = ev.type ?? ''
+      if (t === 'error') {
+        const message =
+          typeof ev.error?.message === 'string' && ev.error.message.trim() !== ''
+            ? ev.error.message.trim()
+            : language.value === 'no'
+              ? 'Stemmesesjonen returnerte en feil.'
+              : 'Voice session returned an error.'
+        handleMidSessionFailure(message)
+        return
+      }
       if (t === 'response.output_audio_transcript.delta' && typeof ev.delta === 'string') {
         assistantTranscript.value += ev.delta
         return
       }
       if (t === 'response.output_audio_transcript.done' && typeof ev.transcript === 'string') {
         assistantTranscript.value = ev.transcript
+        return
+      }
+      if (t === 'response.done') {
+        handleResponseDone(ev)
         return
       }
       if (t === 'conversation.item.input_audio_transcription.delta' && typeof ev.delta === 'string') {

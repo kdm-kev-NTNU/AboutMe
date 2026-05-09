@@ -4,6 +4,7 @@ import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import jakarta.servlet.Filter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +23,7 @@ import org.springframework.lang.NonNull;
 
 /**
  * Registers servlet filters that rate-limit {@code POST /ask}, {@code POST /transcribe}, {@code POST /realtime/session},
- * {@code POST /auth/login},
+ * {@code POST /realtime/lookup}, {@code POST /auth/login},
  * {@code POST /feedback}, {@code POST /admin/tools/experiments/run}, and
  * {@code POST /admin/tools/experiments/datasets/generate} (token buckets per client key or IP).
  * <p>
@@ -38,16 +39,20 @@ public class WebConfig {
     private final ExperimentRunRateLimitProperties experimentRunRateLimitProperties;
     private final DatasetGenerateRateLimitProperties datasetGenerateRateLimitProperties;
     private final RealtimeRateLimitProperties realtimeRateLimitProperties;
+    private final RealtimeLookupRateLimitProperties realtimeLookupRateLimitProperties;
 
     public WebConfig(
         AskRateLimitProperties askRateLimitProperties,
         ExperimentRunRateLimitProperties experimentRunRateLimitProperties,
         DatasetGenerateRateLimitProperties datasetGenerateRateLimitProperties,
-        RealtimeRateLimitProperties realtimeRateLimitProperties) {
+        RealtimeRateLimitProperties realtimeRateLimitProperties,
+        ObjectProvider<RealtimeLookupRateLimitProperties> realtimeLookupRateLimitProperties) {
         this.askRateLimitProperties = askRateLimitProperties;
         this.experimentRunRateLimitProperties = experimentRunRateLimitProperties;
         this.datasetGenerateRateLimitProperties = datasetGenerateRateLimitProperties;
         this.realtimeRateLimitProperties = realtimeRateLimitProperties;
+        this.realtimeLookupRateLimitProperties =
+            realtimeLookupRateLimitProperties.getIfAvailable(RealtimeLookupRateLimitProperties::new);
     }
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
@@ -56,6 +61,7 @@ public class WebConfig {
     private final Map<String, Bucket> experimentRunBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> datasetGenerateBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> realtimeSessionBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> realtimeLookupBuckets = new ConcurrentHashMap<>();
 
     private Bucket newAskBucketAuthenticated() {
         AskRateLimitProperties p = askRateLimitProperties;
@@ -144,6 +150,19 @@ public class WebConfig {
 
     private String realtimeSessionKey(HttpServletRequest req) {
         return "realtime:ip:" + req.getRemoteAddr();
+    }
+
+    private Bucket newRealtimeLookupBucket() {
+        RealtimeLookupRateLimitProperties p = realtimeLookupRateLimitProperties;
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(p.getCapacity())
+            .refillGreedy(p.getCapacity(), Duration.ofSeconds(p.getWindowSeconds()))
+            .build();
+        return Bucket.builder().addLimit(limit).build();
+    }
+
+    private String realtimeLookupKey(HttpServletRequest req) {
+        return "realtime-lookup:ip:" + req.getRemoteAddr();
     }
 
     private static void write429(HttpServletResponse response, ConsumptionProbe probe, String message) throws IOException {
@@ -325,6 +344,36 @@ public class WebConfig {
         registration.addUrlPatterns("/realtime/session");
         registration.setName("realtimeSessionRateLimitFilter");
         registration.setOrder(5);
+        return registration;
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "portfolio.realtime-lookup-rate-limit.enabled", havingValue = "true", matchIfMissing = true)
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> realtimeLookupRateLimitFilter() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<Filter>();
+        registration.setFilter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+                throws ServletException, IOException {
+                if (!"POST".equalsIgnoreCase(request.getMethod())) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                Bucket bucket = realtimeLookupBuckets.computeIfAbsent(realtimeLookupKey(request), k -> newRealtimeLookupBucket());
+                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+                if (probe.isConsumed()) {
+                    filterChain.doFilter(request, response);
+                } else {
+                    write429(
+                        response,
+                        probe,
+                        "Too many voice lookups from this network. Please wait before trying again.");
+                }
+            }
+        });
+        registration.addUrlPatterns("/realtime/lookup");
+        registration.setName("realtimeLookupRateLimitFilter");
+        registration.setOrder(6);
         return registration;
     }
 }

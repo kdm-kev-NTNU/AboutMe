@@ -91,6 +91,7 @@ class RealtimeSessionServiceTest {
             budgetProperties,
             aiCircuitBreaker,
             openAiRealtimeHttpInvoker,
+            new RealtimeProfileService(),
             "sk-test-openai-key");
   }
 
@@ -160,6 +161,7 @@ class RealtimeSessionServiceTest {
             budgetProperties,
             aiCircuitBreaker,
             openAiRealtimeHttpInvoker,
+            new RealtimeProfileService(),
             "  ");
 
     assertThatThrownBy(() -> svc.createRealtimeCall("v=0", "en"))
@@ -275,12 +277,24 @@ class RealtimeSessionServiceTest {
     JsonNode json = extractSessionJson(captor.getValue());
 
     assertThat(json.get("instructions").asText()).contains("Du er en hjelpsom");
+    assertThat(json.get("instructions").asText()).contains("Kevin studerer dataingenior ved NTNU");
     assertThat(json.get("model").asText()).isEqualTo("gpt-realtime-2");
-    assertThat(json.get("reasoning_effort").asText()).isEqualTo("low");
-    assertThat(json.get("max_response_output_tokens").asInt()).isEqualTo(512);
+    assertThat(json.get("max_output_tokens").asInt()).isEqualTo(512);
+    assertThat(json.at("/tools/0/type").asText()).isEqualTo("function");
+    assertThat(json.at("/tools/0/name").asText()).isEqualTo("lookup_kevin_info");
+    assertThat(json.at("/tools/0/parameters/properties/query/type").asText()).isEqualTo("string");
+    assertThat(json.at("/tool_choice").asText()).isEqualTo("auto");
+    assertThat(json.at("/reasoning/effort").asText()).isEqualTo("low");
     assertThat(json.at("/audio/output/voice").asText()).isEqualTo("marin");
     assertThat(json.at("/audio/input/transcription/model").asText()).isEqualTo("whisper-1");
-    assertThat(json.at("/modalities").toString()).contains("text").contains("audio");
+    assertThat(json.at("/audio/input/turn_detection/type").asText()).isEqualTo("semantic_vad");
+    assertThat(json.at("/audio/input/turn_detection/eagerness").asText()).isEqualTo("auto");
+    assertThat(json.at("/audio/input/turn_detection/create_response").asBoolean()).isTrue();
+    assertThat(json.at("/audio/input/turn_detection/interrupt_response").asBoolean()).isTrue();
+    assertThat(json.at("/output_modalities").toString()).contains("audio");
+    assertThat(json.has("reasoning_effort")).isFalse();
+    assertThat(json.has("max_response_output_tokens")).isFalse();
+    assertThat(json.has("modalities")).isFalse();
   }
 
   @Test

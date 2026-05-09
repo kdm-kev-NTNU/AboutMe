@@ -13,8 +13,8 @@ class RealtimePropertiesTest {
 
     assertThat(p.isEnabled()).isFalse();
     assertThat(p.getModel()).isEqualTo("gpt-realtime-2");
-    assertThat(p.getVoice()).isEqualTo("ash");
-    assertThat(p.getReasoningEffort()).isEqualTo("medium");
+    assertThat(p.getVoice()).isEqualTo("marin");
+    assertThat(p.getReasoningEffort()).isEqualTo("low");
     assertThat(p.getMaxResponseOutputTokens()).isEqualTo(1024);
     assertThat(p.getReservationInputTokens()).isEqualTo(2000);
     assertThat(p.getReservationOutputTokens()).isEqualTo(2000);
