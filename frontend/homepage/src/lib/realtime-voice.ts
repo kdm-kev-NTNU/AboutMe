@@ -2,14 +2,28 @@ import { customFetch } from '@/api/orval-mutator'
 
 export type SpeechUiLang = 'en' | 'no'
 
+/** Failure from POST /realtime/session (includes optional machine-readable `code` from backend). */
+export type RealtimeSdpFailure = {
+  ok: false
+  status: number
+  message: string
+  code?: string
+  /** From HTTP Retry-After when present (e.g. rate limit). */
+  retryAfterSeconds?: number
+}
+
 /**
  * Whether the backend exposes Realtime voice (feature flag + API key).
  */
 export async function fetchRealtimeVoiceEnabled(): Promise<boolean> {
-  const r = await customFetch<{ data: unknown; status: number }>('/realtime/status', { method: 'GET' })
-  if (r.status !== 200 || r.data === null || typeof r.data !== 'object') return false
-  const d = r.data as { enabled?: boolean }
-  return d.enabled === true
+  try {
+    const r = await customFetch<{ data: unknown; status: number }>('/realtime/status', { method: 'GET' })
+    if (r.status !== 200 || r.data === null || typeof r.data !== 'object') return false
+    const d = r.data as { enabled?: boolean }
+    return d.enabled === true
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -18,12 +32,12 @@ export async function fetchRealtimeVoiceEnabled(): Promise<boolean> {
 export async function exchangeRealtimeSdp(
   offerSdp: string,
   language: SpeechUiLang,
-): Promise<{ ok: true; answerSdp: string } | { ok: false; status: number; message: string }> {
+): Promise<{ ok: true; answerSdp: string } | RealtimeSdpFailure> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/sdp',
     'X-Chat-Language': language,
   }
-  const r = await customFetch<{ data: unknown; status: number }>('/realtime/session', {
+  const r = await customFetch<{ data: unknown; status: number; headers?: Headers }>('/realtime/session', {
     method: 'POST',
     body: offerSdp,
     headers,
@@ -31,14 +45,27 @@ export async function exchangeRealtimeSdp(
   if (r.status >= 200 && r.status < 300 && typeof r.data === 'string') {
     return { ok: true, answerSdp: r.data }
   }
-  const msg =
-    r.data && typeof r.data === 'object' && r.data !== null && 'error' in r.data
-      ? String((r.data as { error?: unknown }).error ?? '')
-      : ''
+  let msg = ''
+  let code: string | undefined
+  if (r.data && typeof r.data === 'object' && r.data !== null && 'error' in r.data) {
+    msg = String((r.data as { error?: unknown }).error ?? '')
+  }
+  const obj = r.data && typeof r.data === 'object' && r.data !== null ? (r.data as { code?: unknown }) : null
+  if (obj && 'code' in obj && obj.code != null && String(obj.code).trim() !== '') {
+    code = String(obj.code)
+  }
+  let retryAfterSeconds: number | undefined
+  const ra = r.headers?.get?.('Retry-After')
+  if (ra != null && ra !== '') {
+    const n = parseInt(ra, 10)
+    if (!Number.isNaN(n) && n > 0) retryAfterSeconds = n
+  }
   return {
     ok: false,
     status: r.status,
     message: msg || `HTTP ${r.status}`,
+    ...(code !== undefined ? { code } : {}),
+    ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}),
   }
 }
 

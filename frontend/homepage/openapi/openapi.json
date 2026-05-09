@@ -46,7 +46,11 @@
         "type": "object",
         "required": ["error"],
         "properties": {
-          "error": { "type": "string" }
+          "error": { "type": "string" },
+          "code": {
+            "type": "string",
+            "description": "Optional machine-readable code (e.g. BUDGET_EXCEEDED, OPENAI_REJECTED)."
+          }
         }
       },
       "ServiceUnavailableError": {

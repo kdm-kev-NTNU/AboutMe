@@ -27,6 +27,8 @@ export interface LoginResponse {
 
 export interface ApiError {
   error: string;
+  /** Optional machine-readable code (e.g. BUDGET_EXCEEDED, OPENAI_REJECTED). */
+  code?: string;
 }
 
 export interface ServiceUnavailableError {
