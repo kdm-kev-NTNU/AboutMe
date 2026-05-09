@@ -14,6 +14,7 @@ import {
   type PromptVersionResponse,
   type PromptDiffResponse,
 } from '@/api/generated/portfolio'
+import { formatAdminHttpError as formatHttpError } from '@/lib/api-error'
 
 // Versioned RAG prompts: list, history, create, activate, diff vs classpath, seed, delete variant.
 const auth = useAuthStore()
@@ -38,15 +39,6 @@ const createBusy = ref(false)
 
 const diffData = ref<PromptDiffResponse | null>(null)
 const diffLoading = ref(false)
-
-function formatHttpError(status: number, data: unknown): string {
-  if (status === 401) return 'Ikke autorisert (logg inn som admin)'
-  if (data && typeof data === 'object') {
-    const o = data as Record<string, unknown>
-    if (typeof o.error === 'string' && o.error) return o.error
-  }
-  return `Feilet (${status})`
-}
 
 function clearMessages() {
   error.value = ''

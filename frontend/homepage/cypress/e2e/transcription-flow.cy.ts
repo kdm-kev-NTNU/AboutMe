@@ -1,5 +1,5 @@
 /**
- * E2E coverage for the speech-to-text user flow.
+ * E2E coverage for speech-to-text on the chat page (ChatView).
  *
  * Covers happy path, server failures (500/503/429), language header forwarding, and
  * verifies that error states do NOT crash the UI or navigate the user away.
@@ -13,24 +13,21 @@ const FAKE_MODELS = [
   { id: 'gpt-5.4-mini', provider: 'OPENAI', label: 'GPT-5.4 mini', tags: ['FAST'] },
 ]
 
-/** Hero voice form can sit below the fold on the default CI viewport; match voice-waveform.cy.ts. */
-function scrollHomeHeroIntoPlay() {
-  cy.get('main').scrollTo('bottom', { ensureScrollable: false })
-}
-
 /**
  * useSpeechTranscription starts MediaRecorder with a 250ms timeslice; stopping immediately yields an empty Blob and skips fetch.
  * voice-waveform.cy.ts avoids this accidentally via screenshot latency — we wait explicitly here.
  */
 function waitForRecordedAudioChunks() {
   // Aligns with useSpeechTranscription's 250ms MediaRecorder timeslice; stopping sooner yields an empty blob (no /transcribe).
+  // Slightly above 250ms × 2 so CI/Electron scheduling misses fewer chunks (800ms for slow runners).
   // eslint-disable-next-line cypress/no-unnecessary-waiting
-  cy.wait(400)
+  cy.wait(800)
 }
 
 function withFakeMicrophone() {
   return {
     onBeforeLoad(win: Cypress.AUTWindow) {
+      win.sessionStorage.clear()
       win.localStorage.setItem('lang', 'en')
       win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
       Object.defineProperty(win.navigator, 'mediaDevices', {
@@ -58,22 +55,21 @@ describe('Transcription flow', () => {
       statusCode: 200,
       body: FAKE_MODELS,
     }).as('chatModels')
-    // Voice success navigates to /chat?q=…; ChatView auto-POSTs /ask. Preview has no backend — stub it so the suite stays stable.
+    // After STT, user can send from the composer; preview has no backend — stub /ask for the happy path.
     cy.intercept('POST', '**/ask', {
       statusCode: 200,
       body: { answer: '(e2e stub)', sources: [] },
     }).as('askStub')
   })
 
-  it('navigates to chat with the transcribed query on a successful round-trip', () => {
+  it('fills the composer with the transcript and can send on a successful round-trip', () => {
     cy.intercept('POST', '**/transcribe', {
       statusCode: 200,
       body: { text: 'tell me about kevin' },
     }).as('transcribe')
 
-    cy.visit('/', withFakeMicrophone())
+    cy.visit('/chat', withFakeMicrophone())
     cy.wait('@chatModels')
-    scrollHomeHeroIntoPlay()
 
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()
@@ -92,9 +88,9 @@ describe('Transcription flow', () => {
     })
 
     cy.location('pathname', { timeout: 5_000 }).should('eq', '/chat')
-    cy.url().should((href) => {
-      expect(new URL(href).searchParams.get('q')).to.eq('tell me about kevin')
-    })
+    cy.get('main form input[type="text"]').should('have.value', 'tell me about kevin')
+    cy.contains('button', /send/i).click()
+    cy.wait('@askStub')
   })
 
   it('shows the destructive error alert when /transcribe returns 500', () => {
@@ -103,9 +99,8 @@ describe('Transcription flow', () => {
       body: { error: 'Transcription failed unexpectedly. Please try again.' },
     }).as('transcribe')
 
-    cy.visit('/', withFakeMicrophone())
+    cy.visit('/chat', withFakeMicrophone())
     cy.wait('@chatModels')
-    scrollHomeHeroIntoPlay()
 
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()
@@ -118,9 +113,9 @@ describe('Transcription flow', () => {
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').click({ force: true })
     cy.wait('@transcribe', { timeout: 15_000 })
 
-    // User-friendly canned message (we deliberately do NOT leak server text), and we MUST stay on /.
+    // User-friendly canned message (we deliberately do NOT leak server text), and we stay on chat.
     cy.contains(/Transcription failed on the server/i, { timeout: 5_000 }).should('be.visible')
-    cy.location('pathname').should('eq', '/')
+    cy.location('pathname').should('eq', '/chat')
   })
 
   it('shows the rate-limit message on 429', () => {
@@ -129,9 +124,8 @@ describe('Transcription flow', () => {
       body: { error: 'over budget' },
     }).as('transcribe')
 
-    cy.visit('/', withFakeMicrophone())
+    cy.visit('/chat', withFakeMicrophone())
     cy.wait('@chatModels')
-    scrollHomeHeroIntoPlay()
 
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()
@@ -145,7 +139,7 @@ describe('Transcription flow', () => {
     cy.wait('@transcribe', { timeout: 15_000 })
 
     cy.contains(/Too many requests or budget limit/i, { timeout: 5_000 }).should('be.visible')
-    cy.location('pathname').should('eq', '/')
+    cy.location('pathname').should('eq', '/chat')
   })
 
   it('shows the temporarily-unavailable message on 503', () => {
@@ -154,9 +148,8 @@ describe('Transcription flow', () => {
       body: { error: 'Speech-to-text is temporarily unavailable.' },
     }).as('transcribe')
 
-    cy.visit('/', withFakeMicrophone())
+    cy.visit('/chat', withFakeMicrophone())
     cy.wait('@chatModels')
-    scrollHomeHeroIntoPlay()
 
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()
@@ -171,7 +164,7 @@ describe('Transcription flow', () => {
 
     cy.contains(/Speech-to-text is temporarily unavailable/i, { timeout: 5_000 })
       .should('be.visible')
-    cy.location('pathname').should('eq', '/')
+    cy.location('pathname').should('eq', '/chat')
   })
 
   it('forwards Norwegian X-Chat-Language when the UI is in Norwegian', () => {
@@ -180,8 +173,9 @@ describe('Transcription flow', () => {
       body: { text: 'hei kevin' },
     }).as('transcribe')
 
-    cy.visit('/', {
+    cy.visit('/chat', {
       onBeforeLoad(win) {
+        win.sessionStorage.clear()
         win.localStorage.setItem('lang', 'no')
         win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
         Object.defineProperty(win.navigator, 'mediaDevices', {
@@ -202,7 +196,6 @@ describe('Transcription flow', () => {
       },
     })
     cy.wait('@chatModels')
-    scrollHomeHeroIntoPlay()
 
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Taleinndata"]').as('mic')
     cy.get('@mic').scrollIntoView()
@@ -228,9 +221,8 @@ describe('Transcription flow', () => {
       })
     }).as('transcribe')
 
-    cy.visit('/', withFakeMicrophone())
+    cy.visit('/chat', withFakeMicrophone())
     cy.wait('@chatModels')
-    scrollHomeHeroIntoPlay()
 
     cy.get('main form', { timeout: 15_000 }).find('[aria-label="Voice input"]').as('mic')
     cy.get('@mic').scrollIntoView()

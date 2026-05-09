@@ -30,6 +30,12 @@ export const POSTHOG_CHAT_EVENTS = {
   ANSWER_ERROR: 'portfolio_chat_answer_error',
 } as const
 
+export const POSTHOG_VOICE_EVENTS = {
+  SESSION_STARTED: 'portfolio_voice_session_started',
+  SESSION_ENDED: 'portfolio_voice_session_ended',
+  SESSION_ERROR: 'portfolio_voice_session_error',
+} as const
+
 /** Feature flag keys created in PostHog (MCP / UI). */
 export const POSTHOG_FEATURE_FLAGS = {
   CHAT_REPLY_EXPERIMENT: 'aboutme_chat_reply_experiment',

@@ -1,32 +1,41 @@
 # AboutMe
 
-Portfolio web app with a document-grounded AI chat (RAG). The UI supports Norwegian and English. Stack: **Vue 3** (Vite 8), **Spring Boot 4.x** with **Spring AI 2.0.x** (BOM), and **PostgreSQL with pgvector** (relational data and embeddings in one database). **PostHog** can receive `$ai_generation` events from the backend when enabled, alongside consent-gated frontend analytics.
+Portfolio web app with a document-grounded AI chat, live voice, and admin tooling for keeping the knowledge base current. The UI supports Norwegian and English.
 
-## Repository layout
+Core stack:
+
+- **Frontend:** Vue 3, TypeScript, Vite 8, Pinia, Vue Router, Tailwind 4, Reka UI, Orval, Cypress, Vitest.
+- **Backend:** Java 21, Spring Boot 4, Spring AI 2 BOM, Spring Security, Spring Data JPA, SpringDoc OpenAPI.
+- **AI/RAG:** OpenAI and optional Anthropic chat models, OpenAI embeddings, OpenAI Realtime WebRTC voice, optional ONNX cross-encoder reranking, OpenNLP-backed sanitization.
+- **Data/ops:** PostgreSQL 17 with pgvector for relational data and embeddings, Docker Compose, Nginx, Actuator, Prometheus, optional PostHog frontend and server-side LLM analytics.
+
+## Repository Layout
 
 | Path | What |
 |------|------|
-| `backend/` | Spring Boot 4.x API (Spring AI 2.x, RAG, auth, admin document pipeline) |
-| `frontend/homepage/` | Vue 3 SPA: [frontend/homepage/README.md](frontend/homepage/README.md) for npm scripts and Orval |
-| `scripts/dev.ps1` | Windows: Docker for infra, then opens API + Vite in separate terminals |
-| `docker-compose.yml` | PostgreSQL (pgvector), backend, Nginx frontend |
-| `.github/workflows/` | `tests.yml` (Maven verify + frontend unit coverage), `semgrep.yml`, `docker-publish.yml` (Docker Hub via Docker Build Cloud) |
+| `backend/` | Spring Boot API for chat, Realtime voice, auth, admin tools, RAG, experiments, budgets, and observability |
+| `frontend/homepage/` | Vue SPA. See [frontend/homepage/README.md](frontend/homepage/README.md) for scripts, routes, analytics, and Orval notes |
+| `scripts/dev.ps1` | Windows helper that starts Docker infrastructure and opens backend + Vite terminals |
+| `docker-compose.yml` | PostgreSQL/pgvector, backend, and Nginx-hosted frontend |
+| `.env.example` | Documented runtime configuration for backend secrets and optional integrations |
+| `.github/workflows/` | Maven/frontend tests, Semgrep, and Docker image publishing |
 
-Seed documents for the vector store go in **`backend/data/docs/`** (gitignored). With hybrid dev, create that folder and add PDFs/DOCX/MD as needed.
+Seed documents for the vector store go in `backend/data/docs/` (gitignored). The backend also ships a classpath seed document for a minimal local knowledge base.
 
 ## Prerequisites
 
-- **Node**: see `engines` in [frontend/homepage/package.json](frontend/homepage/package.json)
-- **JDK 21** and the Maven wrapper in `backend/` (`./mvnw` / `mvnw.cmd`)
-- **Docker** + Compose
-- **OpenAI API key** (embeddings + RAG; required for a normal setup)
-- Optional: **Anthropic** key for Claude models in the chat UI
+- Node version from `frontend/homepage/package.json`
+- JDK 21 and the Maven wrapper in `backend/`
+- Docker + Compose
+- OpenAI API key for normal chat/RAG usage
+- Optional Anthropic API key for Claude models
+- Optional PostHog keys for analytics and LLM observability
 
-## Run locally
+## Run Locally
 
-### Option A: full stack in Docker
+### Full Stack in Docker
 
-From the repo root (set `OPENAI_API_KEY` in the environment or in a root `.env` used by Compose):
+Copy `.env.example` to `backend/.env`, set at least `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true`, then run:
 
 ```bash
 docker compose up -d --build
@@ -34,99 +43,159 @@ docker compose up -d --build
 
 Typical URLs:
 
-- App (Nginx): [http://localhost:5173](http://localhost:5173). `/api` proxied to the backend
+- App: [http://localhost:5173](http://localhost:5173), with `/api` proxied to the backend
 - API: [http://localhost:8080](http://localhost:8080)
-- PostgreSQL: host **5432**, DB `aboutme`, user/password `postgres`/`postgres`
+- Swagger UI: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+- PostgreSQL: host `5432`, DB `aboutme`, user/password `postgres`/`postgres`
 
-The backend image mounts `./backend/data` read-only; `file:./data/docs/` resolves to that path inside the container.
+The backend container mounts `./backend/data` read-only, so `file:./data/docs/` resolves to `backend/data/docs/` inside the container.
 
-### Option B: hybrid (DB in Docker, app on the host)
+### Hybrid Dev
+
+Run the database in Docker:
 
 ```bash
 docker compose up -d db
 ```
 
-Then:
-
-- Backend: from `backend/`, `./mvnw spring-boot:run` (Windows: `.\mvnw.cmd spring-boot:run`)
-- Frontend: from `frontend/homepage/`, `npm install` and `npm run dev` → [http://localhost:5173](http://localhost:5173) (Vite proxies `/api` to port 8080)
-
-On Windows you can use **`.\scripts\dev.ps1`** after copying `.env.example` to `.env`. It starts the same infra and launches API + Vite.
-
-### Container images (Docker Hub)
-
-CI builds **multi-platform** (`linux/amd64`, `linux/arm64`) images with **Docker Build Cloud** and pushes them on pushes to `main`, semver tags `v*.*.*`, or manual **Actions → Docker publish → Run workflow**. Replace `<DOCKER_ACCOUNT>` with your Docker Hub username or org.
-
-**Pull (private repos require `docker login`):**
+Then start the apps on the host:
 
 ```bash
-docker login
-docker pull <DOCKER_ACCOUNT>/aboutme-backend:latest
-docker pull <DOCKER_ACCOUNT>/aboutme-frontend:latest
+cd backend
+./mvnw spring-boot:run
 ```
 
-**Hub:** open [hub.docker.com](https://hub.docker.com/) → Repositories → `aboutme-backend` / `aboutme-frontend`.
+```bash
+cd frontend/homepage
+npm install
+npm run dev
+```
 
-**Use prebuilt images instead of local `build:`:** copy `docker-compose.yml` and replace the `backend` / `frontend` `build:` blocks with `image: <DOCKER_ACCOUNT>/aboutme-backend:latest` and `image: <DOCKER_ACCOUNT>/aboutme-frontend:latest` (keep `db` as-is). Pass runtime secrets the same way as local Compose (`backend/.env`, etc.).
-
-**GitHub Actions setup:** Repository → **Settings** → **Secrets and variables** → **Actions**
-
-- Variables: `DOCKER_ACCOUNT`, `CLOUD_BUILDER_NAME` (your Docker Build Cloud builder name).
-- Secrets: `DOCKER_ACCESS_TOKEN` (Hub PAT with read/write), `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST`, `VITE_POSTHOG_ENABLED` (optional; baked into the frontend at build time).
-
-**Verify after merge:** Actions → **Docker publish** → run workflow on `main`; confirm both jobs succeed, then `docker pull` both `:latest` tags and smoke-test with Compose using `image:` overrides.
-
-**If `docker pull` says `not found`:** the image is not on Hub under that name yet, or the tag differs. Check GitHub → **Actions** → **Docker publish** for a **green** run (merge the workflow file and set `DOCKER_ACCOUNT` / `CLOUD_BUILDER_NAME` / `DOCKER_ACCESS_TOKEN` first). Confirm the Hub username matches the repo variable (`kevindm1066/...` only works if `DOCKER_ACCOUNT` is `kevindm1066`). Until `:latest` exists, try `docker pull <DOCKER_ACCOUNT>/aboutme-backend:main` (branch tag from metadata-action).
+On Windows, `.\scripts\dev.ps1` starts the same setup after you copy `.env.example` to `backend/.env`.
 
 ## Configuration
 
-Copy [`.env.example`](.env.example) to **`.env`** at the repo root or under `backend/` (Spring loads it via `spring.config.import` in `application.yaml`). Never commit secrets.
+Configuration defaults live in `backend/src/main/resources/application.yaml`. Copy `.env.example` to `backend/.env` for local secrets. Frontend build-time `VITE_*` values belong in `frontend/homepage/.env`.
 
-**Usually required:** `OPENAI_API_KEY`, PostgreSQL user/password (defaults align with Compose: `postgres` / `postgres`), `PORT` for the API (default **8080**).
+Common backend settings:
 
-**Common optional:** `ANTHROPIC_API_KEY`, PostHog backend LLM capture (`POSTHOG_ENABLED`, `POSTHOG_API_KEY`, `POSTHOG_HOST`), `ADMIN_BOOTSTRAP_*` for first admin user, `PORTFOLIO_CHAT_DEFAULT_MODEL_ID`, `SANITIZER_ENABLED`, `AI_BUDGET_ANON_SALT`. Details and comments live in `.env.example`.
+- `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true` for OpenAI chat, embeddings, transcription, and Realtime.
+- `ANTHROPIC_API_KEY` to expose Anthropic models in `/chat/models`.
+- `PORTFOLIO_REALTIME_ENABLED=true` to enable `/voice` and OpenAI Realtime WebRTC sessions.
+- `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` to create the first admin user.
+- `POSTHOG_ENABLED`, `POSTHOG_API_KEY`, `POSTHOG_HOST` for server-side `$ai_generation` capture.
+- `AI_BUDGET_ANON_SALT` for stable anonymous AI budget identities in production.
+- `SPRING_PROFILES_ACTIVE=prod` for production deployments.
 
-**AI usage budgeting:** The backend tracks estimated LLM spend (per-model rates in [backend/src/main/resources/application.yaml](backend/src/main/resources/application.yaml) under `portfolio.ai.budget`) with daily/monthly caps for authenticated and anonymous users, a spike guard, and an optional kill switch. Override defaults with `PORTFOLIO_AI_BUDGET_*` style env vars (Spring relaxed binding) if you deploy with different limits; set `AI_BUDGET_ANON_SALT` to a stable secret in production so anonymous budget keys stay consistent across restarts.
+Managed Postgres providers must allow the pgvector extension:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+Spring AI can initialize the `vector_store` table, but the extension itself must exist first.
+
+## Current Functionality
+
+- Public portfolio pages: home, career, projects, individual project story, project/tech stack, feedback, privacy policy.
+- Text chat: `/chat` sends document-grounded questions through `/ask`, with selectable allow-listed models from `/chat/models`.
+- Chat history: `/chat-history` lists stored conversations and can reopen a conversation in `/chat`.
+- Live voice: `/voice` uses OpenAI Realtime through `/realtime/status`, `/realtime/session`, and `/realtime/lookup` when enabled.
+- Feedback: `/feedback` posts visitor feedback to the backend with server-side length limits.
+- Admin tools: protected routes for AI status/budget kill switch, document uploads and ingestion, chunk browsing/export, generated question suggestions, prompt versions/diffs, and RAG experiments.
+- Observability: Actuator health/metrics/Prometheus, optional PostHog frontend analytics after consent, and optional PostHog server-side LLM events.
+
+## API Overview
+
+Public endpoints:
+
+- `POST /ask`: document-grounded chat. Body: `{ "question": "...", "model": "<optional model id>" }`.
+- `GET /chat/models`: configured and allow-listed chat models.
+- `POST /feedback`: visitor feedback.
+- `POST /transcribe`: multipart audio transcription.
+- `GET /realtime/status`: whether Realtime voice is enabled for the current deployment.
+- `POST /realtime/session`: WebRTC SDP exchange with OpenAI Realtime.
+- `POST /realtime/lookup`: RAG lookup tool used by the Realtime session.
+- `GET /health/vectorstore` and `GET /health/chroma`: vector store health. `chroma` is a compatibility alias.
+
+Admin endpoints require `ADMIN` credentials:
+
+- `/admin/tools/ai/**`: AI budget status, usage, and kill switch.
+- `/admin/tools/documents/**`: upload, batch upload, ingest-by-path, list server files, list documents, chunks, export, collections, reseed, remote sync, delete, and question suggestions.
+- `/admin/tools/prompt-versions/**`: list prompt names, history, create, activate, seed, delete variants, and diff.
+- `/admin/tools/experiments/**`: config, datasets, generated datasets, model list, experiment runs, and run status.
+- `/auth/login`: Basic-auth backed login used by the SPA admin session.
+
+The full contract is available from Swagger UI at `/swagger-ui/index.html` when the API is running.
+
+## AI Budgeting and Safety
+
+The backend estimates LLM spend per configured model, enforces daily/monthly caps, includes a spike guard, and exposes an admin kill switch. Defaults live under `portfolio.ai.budget` in `application.yaml`.
+
+Public AI endpoints are rate-limited with Bucket4j. Admin routes are protected by Spring Security. The sanitizer pipeline can redact likely sensitive values before prompts are sent to model providers.
+
+Treat database backups as sensitive. Conversations, documents, chunks, embeddings, prompts, feedback, and experiment datasets may contain personal or project-specific information.
+
+## Document Pipeline and RAG
+
+The knowledge base is curated through admin tooling:
+
+1. Add documents through upload, batch upload, server-file ingestion, classpath reseed, or optional remote vector-store sync.
+2. Parse and chunk content through Spring AI/Tika-backed ingestion.
+3. Store chunks and embeddings in PostgreSQL/pgvector.
+4. Review chunks, export data, generate starter questions, and run RAG experiments.
+5. Tune prompts and active prompt versions through the admin prompt-version UI.
+
+Optional ONNX reranking can be enabled with model/tokenizer paths when local rerank weights are available.
 
 ## Tests
 
-- **Backend** (from `backend/`): `./mvnw test` or `./mvnw verify` (includes JaCoCo gate; open `target/site/jacoco/index.html` after verify)
-- **Frontend** (from `frontend/homepage/`): `npm ci`, `npm run test:unit` or `npm run test:unit:coverage`
+Backend:
 
-## API (short)
+```bash
+cd backend
+./mvnw test
+./mvnw verify
+```
 
-- **`POST /ask`**: JSON `{ "question": "...", "model": "<optional>" }` → `{ "answer": "..." }`. Rate limited; max question length enforced server-side.
-- **`GET /chat/models`**: models available for configured providers
-- **`POST /auth/login`**: JSON credentials; admin UI uses HTTP Basic on protected routes
-- **`GET /health/chroma`** (alias) and **`GET /health/vectorstore`**: vector store / pgvector health for ops
-- **Admin**: document upload, pipeline, chunks, prompts under `/admin/tools/**` (requires `ADMIN` role). Full contract: **Swagger UI** at `/swagger-ui/index.html` when the API runs (e.g. [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)).
+Frontend:
 
-## Security and privacy (summary)
+```bash
+cd frontend/homepage
+npm ci
+npm run test:unit
+npm run test:unit:coverage
+npm run lint:ci
+```
 
-Spring Security protects admin routes; public **`POST /ask`** is rate-limited. Production should use **`SPRING_PROFILES_ACTIVE=prod`**. Use TLS-backed JDBC URLs in production; treat database backups as sensitive if documents are personal.
+### Realtime Voice Verification
 
-**Managed Postgres (e.g. Railway):** ensure the **`vector`** extension exists once on the database (Railway **Data** → **Query** / `psql`): `CREATE EXTENSION IF NOT EXISTS vector;` Spring AI can create the `vector_store` table when `spring.ai.vectorstore.pgvector.initialize-schema` is true, but the extension must be allowed by the provider.
+Default CI does not run a live OpenAI Realtime browser session because it requires a real API key, network access, browser media/WebRTC support, and `PORTFOLIO_REALTIME_ENABLED=true`.
 
-**Privacy:** conversations may be stored for troubleshooting and improvement. Do not send secrets. **RAG chunks and embeddings** live in PostgreSQL (`vector_store`); protect that data like any PII-bearing store. **AI output** can be wrong; verify anything important.
+Use this split when reporting release coverage:
 
-## Knowledge pipeline (capture → curate → RAG)
+- Default automated coverage: backend and frontend deterministic tests cover session JSON, SDP handling, tool lookup config, error mapping, budget checks, and the browser loop.
+- Lightweight deployed smoke: `.\scripts\voice-live-smoke.ps1 -BaseUrl https://<host> -ExpectRealtimeEnabled $true`.
+- Full live OpenAI browser smoke: from `frontend/homepage/`, run `npm run test:e2e:voice-live:openai -- --config baseUrl=http://localhost:5173`.
 
-Optional **conversational capture** (for example a voice UI such as ElevenLabs) is a **product choice** for richer spoken input. Academic RAG papers do not tell you to add that layer. **Raw exports or transcripts are not public or in the vector store by default.** The operator **structures, trims, redacts, and tunes** content into drafts, uploads through the **admin document pipeline**, then **re-embeds and checks retrieval** before curated chunks power document-grounded chat.
+Release notes should say "Live OpenAI Realtime E2E passed" only after the full live smoke passes.
 
-**What the papers cover:** corpus preparation, chunking, indexing, retrieval, and evaluation, not voice vendors. Primary references:
+## Docker Images
 
-- [Wang et al., *Searching for Best Practices in Retrieval-Augmented Generation* (arXiv:2407.01219)](https://arxiv.org/abs/2407.01219): empirical RAG component choices and evaluation (EMNLP 2024).
-- [Gao et al., *Retrieval-Augmented Generation for Large Language Models: A Survey* (arXiv:2312.10997)](https://arxiv.org/abs/2312.10997): Dec 2023 preprint; widely cited as “2024” in secondary sources.
+CI can build multi-platform backend and frontend images and publish them to Docker Hub when the required repository variables and secrets are configured:
 
-**Human-grounded evaluation (also arXiv):**
+- Variables: `DOCKER_ACCOUNT`, `CLOUD_BUILDER_NAME`
+- Secrets: `DOCKER_ACCESS_TOKEN`, plus optional frontend `VITE_POSTHOG_*` build values
 
-- [Abbasiantaeb et al., *Conversational Gold*: human gold nuggets (arXiv:2503.09902)](https://arxiv.org/abs/2503.09902).
-- [*Retrieval Augmented Generation Evaluation in the Era of Large Language Models: A Comprehensive Survey* (arXiv:2504.14891)](https://arxiv.org/abs/2504.14891).
+Use prebuilt images by replacing the `build:` blocks in `docker-compose.yml` with:
 
-**Practice guides (not peer-reviewed):** [AWS: securing the RAG ingestion pipeline](https://aws.amazon.com/blogs/security/securing-the-rag-ingestion-pipeline-filtering-mechanisms/), [Anyscale: RAG data ingestion strategies](https://docs.anyscale.com/rag/quality-improvement/data-ingestion-strategies).
+```yaml
+image: <DOCKER_ACCOUNT>/aboutme-backend:latest
+image: <DOCKER_ACCOUNT>/aboutme-frontend:latest
+```
 
-**Privacy:** purpose limitation, consent, and minimisation for any capture channel follow applicable law (for example GDPR), not the RAG literature above. On-site copy also lives under **The project** → **Future work** in the Vue app (`frontend/homepage/src/views/ProjectPageView.vue` and `frontend/homepage/src/components/project/ProjectFutureWorkSection.vue`).
+Keep runtime secrets in `backend/.env` and frontend build-time values in `frontend/homepage/.env`.
 
 ## Feedback
 
-The project is under active development; some edge cases may remain. Feedback and suggestions: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)
+The project is under active development. Feedback and suggestions: [kevindmazali@gmail.com](mailto:kevindmazali@gmail.com)

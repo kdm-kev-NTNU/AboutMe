@@ -16,6 +16,7 @@ import {
   type DocumentListEntry,
   type IngestionResult,
 } from '@/api/generated/portfolio'
+import { formatAdminHttpError as formatHttpError } from '@/lib/api-error'
 
 // Document ingestion: uploads, path ingest, reseed, delete; Orval + customFetch attach HTTP Basic when logged in.
 const auth = useAuthStore()
@@ -46,24 +47,6 @@ const reseedMessage = ref('')
 const syncClean = ref(true)
 const syncBusy = ref(false)
 const syncMessage = ref('')
-
-function formatHttpError(status: number, data: unknown): string {
-  if (status === 401) return 'Ikke autorisert (logg inn som admin)'
-  if (status === 403) {
-    if (data && typeof data === 'object') {
-      const o = data as Record<string, unknown>
-      if (typeof o.detail === 'string' && o.detail) return o.detail
-      if (typeof o.message === 'string' && o.message) return o.message
-    }
-    return 'Ikke tillatt (403) — f.eks. synk deaktivert på serveren'
-  }
-  if (data && typeof data === 'object') {
-    const o = data as Record<string, unknown>
-    if (typeof o.error === 'string' && o.error) return o.error
-    if (typeof o.message === 'string' && o.message) return o.message
-  }
-  return `Feilet (${status})`
-}
 
 async function loadData() {
   error.value = ''

@@ -42,11 +42,36 @@
           "role": { "type": "string", "enum": ["USER", "ADMIN"] }
         }
       },
+      "FieldViolation": {
+        "type": "object",
+        "required": ["field", "message"],
+        "properties": {
+          "field": { "type": "string", "description": "Field or property path" },
+          "message": { "type": "string", "description": "Validation message" }
+        }
+      },
       "ApiError": {
         "type": "object",
         "required": ["error"],
         "properties": {
-          "error": { "type": "string" }
+          "error": { "type": "string" },
+          "code": {
+            "type": "string",
+            "description": "Machine-readable code when applicable (e.g. BUDGET_EXCEEDED, VALIDATION_FAILED, UNAUTHORIZED)."
+          },
+          "traceId": {
+            "type": "string",
+            "description": "Distributed trace id for correlating with server logs."
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "ISO-8601 timestamp when the error was produced."
+          },
+          "violations": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/FieldViolation" },
+            "description": "Field-level validation failures for HTTP 400 responses."
+          }
         }
       },
       "ServiceUnavailableError": {

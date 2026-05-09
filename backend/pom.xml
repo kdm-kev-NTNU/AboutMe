@@ -28,7 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
-		<spring-ai.version>2.0.0-M5</spring-ai.version>
+		<spring-ai.version>2.0.0-M6</spring-ai.version>
 		<opennlp.version>2.5.9</opennlp.version>
 	</properties>
 	
@@ -36,6 +36,10 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 		<!-- RestClientCustomizer (Brotli workaround) lives in this module; Spring AI M5 no longer brings it transitively. -->
 		<dependency>
@@ -135,13 +139,13 @@
 		<dependency>
 			<groupId>com.posthog</groupId>
 			<artifactId>posthog-server</artifactId>
-			<version>2.5.0</version>
+			<version>2.5.1</version>
 		</dependency>
 		<!-- Local cross-encoder reranking (ONNX Runtime + Hugging Face tokenizers) -->
 		<dependency>
 			<groupId>com.microsoft.onnxruntime</groupId>
 			<artifactId>onnxruntime</artifactId>
-			<version>1.25.1</version>
+			<version>1.26.0</version>
 		</dependency>
 		<dependency>
 			<groupId>ai.djl.huggingface</groupId>
@@ -204,7 +208,7 @@
 						<exclude>**/com/kevinmazali/portfolio/model/**</exclude>
 						<exclude>**/com/kevinmazali/portfolio/config/**</exclude>
 						<exclude>**/com/kevinmazali/portfolio/PortfolioApplication.class</exclude>
-						<!-- Large ingestion + JDBC/pgvector paths; covered by dedicated tests + manual re-ingest verification. -->
+						<!-- Large ingestion + JDBC/pgvector paths; bundle gates stay meaningful—include when coverage catches up. -->
 						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService.class</exclude>
 						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService$*.class</exclude>
 						<!-- Optional native ONNX stack; CI/dev typically run without model weights. -->
@@ -239,12 +243,12 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.82</minimum>
+											<minimum>0.83</minimum>
 										</limit>
 										<limit>
 											<counter>BRANCH</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.62</minimum>
+											<minimum>0.635</minimum>
 										</limit>
 									</limits>
 								</rule>

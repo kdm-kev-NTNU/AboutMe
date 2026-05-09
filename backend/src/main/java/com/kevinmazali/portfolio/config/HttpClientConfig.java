@@ -1,5 +1,10 @@
 package com.kevinmazali.portfolio.config;
 
+import com.kevinmazali.portfolio.service.OpenAiRealtimeHttpInvoker;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +20,14 @@ import org.springframework.http.HttpHeaders;
  */
 @Configuration
 public class HttpClientConfig {
+
+    @Bean
+    OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker() {
+        HttpClient client =
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
+        return (request) ->
+            client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+    }
 
     @Bean
     RestClientCustomizer disableBrotliEncoding() {

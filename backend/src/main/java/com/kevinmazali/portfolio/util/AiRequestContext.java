@@ -46,6 +46,18 @@ public final class AiRequestContext {
     return "anon:unknown";
   }
 
+  /**
+   * Opaque value for OpenAI's {@code OpenAI-Safety-Identifier} header. Always 64 ASCII hex
+   * characters (64 UTF-8 bytes), derived from the budget identity string. OpenAI rejects
+   * identifiers longer than 64 bytes; long or non-ASCII usernames can exceed that when sent raw.
+   */
+  public static String openAiSafetyIdentifier(String budgetUserId) {
+    if (budgetUserId == null || budgetUserId.isEmpty()) {
+      return sha256Hex("");
+    }
+    return sha256Hex(budgetUserId);
+  }
+
   private static String sha256Hex(String input) {
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-256");

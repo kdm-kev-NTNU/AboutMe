@@ -5,7 +5,7 @@ import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import AiStatusDialog from '@/components/AiStatusDialog.vue'
 import {
   Dialog,
   DialogContent,
@@ -35,9 +35,10 @@ import {
 } from '@/lib/chat-telemetry'
 import AudioWaveform from '@/components/AudioWaveform.vue'
 import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/useSpeechTranscription'
-import { Loader2, Mic, Square } from 'lucide-vue-next'
+import { apiErrorMessage } from '@/lib/api-error'
+import { Loader2, Mic, Square, Headphones } from 'lucide-vue-next'
 
-// RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
+// RAG chat: sessionStorage transcript, optional ?conversationId= hydrate from server, askQuestion with optional model id; clear stays on chat route.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
 // --- Route + local UI state ---
@@ -46,6 +47,7 @@ const router = useRouter()
 const input = ref('')
 const isLoading = ref(false)
 const errorText = ref('')
+const aiErrorDialogOpen = ref(false)
 const showInfoPopup = ref(false)
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = MAX_SPEECH_PROMPT_CHARS
@@ -74,6 +76,29 @@ const {
 })
 
 const chatBannerError = computed(() => errorText.value || voiceError.value)
+const canRetryChatError = computed(() => input.value.trim() !== '' && !isLoading.value)
+const aiErrorDialogCopy = computed(() => {
+  const en = language.value === 'en'
+  return {
+    title: en ? 'AI is temporarily unavailable' : 'AI er midlertidig utilgjengelig',
+    description: en
+      ? 'The request could not continue right now. You can wait a moment and try again.'
+      : 'Forespørselen kunne ikke fortsette akkurat nå. Vent litt og prøv igjen.',
+    retry: en ? 'Try again' : 'Prøv igjen',
+  }
+})
+
+watch(chatBannerError, (message) => {
+  aiErrorDialogOpen.value = message.trim() !== ''
+})
+
+function retryAfterError() {
+  aiErrorDialogOpen.value = false
+  const q = input.value.trim()
+  if (q) {
+    void send(q)
+  }
+}
 
 const providerLabels = computed(() =>
   language.value === 'no'
@@ -155,14 +180,6 @@ const loadMessagesFromStorage = () => {
 
 watch(() => state.messages, saveMessagesToStorage, { deep: true })
 
-function readApiError(data: unknown): string | undefined {
-  if (data && typeof data === 'object' && 'error' in data) {
-    const err = (data as { error?: unknown }).error
-    return typeof err === 'string' && err.length > 0 ? err : undefined
-  }
-  return undefined
-}
-
 const GENERIC_ASK_ERROR = 'Noe gikk galt. Prøv igjen.'
 
 // Drops the in-memory transcript and stays on /chat (strip deep-link query params).
@@ -202,7 +219,7 @@ watch(showInfoPopup, (isOpen, wasOpen) => {
   }
 })
 
-// Calls the portfolio backend; auth store is restored so optional future authenticated /ask works the same way.
+// Calls the portfolio backend; auth store is restored so optional future authenticated asks use the same path.
 async function send(text: string) {
   if (!text.trim() || isLoading.value || isTranscribing.value) return
   // client-side validation to mirror backend
@@ -275,7 +292,7 @@ async function send(text: string) {
         conversation_id: conversationId,
         ...ffProp,
       })
-      errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
+      errorText.value = apiErrorMessage(errData) ?? GENERIC_ASK_ERROR
       return
     }
     if (sc === 400 || sc === 503) {
@@ -285,7 +302,7 @@ async function send(text: string) {
         conversation_id: conversationId,
         ...ffProp,
       })
-      errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
+      errorText.value = apiErrorMessage(errData) ?? GENERIC_ASK_ERROR
       return
     }
     captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
@@ -294,7 +311,7 @@ async function send(text: string) {
       conversation_id: conversationId,
       ...ffProp,
     })
-    errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
+    errorText.value = apiErrorMessage(errData) ?? GENERIC_ASK_ERROR
   } catch {
     captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
       http_status: 0,
@@ -361,6 +378,16 @@ onMounted(async () => {
 
 <template>
   <main class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 pt-20">
+    <AiStatusDialog
+      v-model:open="aiErrorDialogOpen"
+      :title="aiErrorDialogCopy.title"
+      :description="aiErrorDialogCopy.description"
+      :message="chatBannerError"
+      :retry-label="aiErrorDialogCopy.retry"
+      :show-retry="canRetryChatError"
+      @retry="retryAfterError"
+    />
+
     <Dialog v-model:open="showInfoPopup">
       <DialogContent class="sm:max-w-xl">
         <DialogHeader>
@@ -384,11 +411,6 @@ onMounted(async () => {
     </div>
     <!-- Chat Container -->
     <div class="relative z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
-      <!-- Error Alert -->
-      <Alert v-if="chatBannerError" variant="destructive" class="mb-6 flex-shrink-0">
-        <AlertDescription>{{ chatBannerError }}</AlertDescription>
-      </Alert>
-
       <section class="mb-5 flex-shrink-0 rounded-3xl border border-blue-100/70 bg-white/85 p-4 shadow-lg shadow-blue-900/10 backdrop-blur-xl sm:p-5">
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-3">
@@ -399,15 +421,23 @@ onMounted(async () => {
               {{ isLoading ? 'Thinking...' : 'Online' }}
             </span>
           </div>
-          <Button
-            v-if="state.messages.length > 0"
-            @click="clearChat"
-            variant="outline"
-            size="sm"
-            class="border border-blue-200/80 bg-white/85 text-blue-700 hover:border-blue-300/80 hover:bg-blue-50/70 hover:text-blue-800"
-          >
-            Clear chat
-          </Button>
+          <div class="flex flex-wrap items-center gap-2">
+            <Button as-child variant="outline" size="sm" class="border border-blue-200/80 bg-white/85 text-blue-700 hover:border-blue-300/80 hover:bg-blue-50/70 hover:text-blue-800">
+              <RouterLink to="/voice" class="inline-flex items-center gap-1.5">
+                <Headphones class="size-4 shrink-0" aria-hidden="true" />
+                {{ language === 'no' ? 'Stemmechat' : 'Voice chat' }}
+              </RouterLink>
+            </Button>
+            <Button
+              v-if="state.messages.length > 0"
+              @click="clearChat"
+              variant="outline"
+              size="sm"
+              class="border border-blue-200/80 bg-white/85 text-blue-700 hover:border-blue-300/80 hover:bg-blue-50/70 hover:text-blue-800"
+            >
+              Clear chat
+            </Button>
+          </div>
         </div>
       </section>
 

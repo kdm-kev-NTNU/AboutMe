@@ -9,6 +9,7 @@ import {
   type ChatModelOption,
   type DocumentListEntry,
 } from '@/api/generated/portfolio'
+import { formatAdminHttpError as formatHttpError } from '@/lib/api-error'
 
 const auth = useAuthStore()
 const error = ref('')
@@ -30,16 +31,6 @@ const modelUsed = ref('')
 
 const pasteHint =
   'Lim inn eller last opp JSON fra «Last ned JSON (chunks)». Må inneholde et «chunks»-felt.'
-
-function formatHttpError(status: number, data: unknown): string {
-  if (status === 401) return 'Ikke autorisert (logg inn som admin)'
-  if (data && typeof data === 'object') {
-    const o = data as Record<string, unknown>
-    const msg = o.message ?? o.error
-    if (typeof msg === 'string' && msg) return msg
-  }
-  return `Feilet (${status})`
-}
 
 async function loadDocumentsAndModels() {
   error.value = ''

@@ -5,6 +5,7 @@ import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
+import com.kevinmazali.portfolio.config.RealtimeRateLimitProperties;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.model.FeedbackSubmission;
@@ -30,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     AskRateLimitProperties.class,
     ExperimentRunRateLimitProperties.class,
     DatasetGenerateRateLimitProperties.class,
+    RealtimeRateLimitProperties.class,
     AiLimitsProperties.class
 })
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
