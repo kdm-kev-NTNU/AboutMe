@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
+import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
+import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -40,6 +42,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -98,6 +101,13 @@ class RealtimeSessionServiceTest {
   }
 
   @Test
+  void summarizeOpenAiErrorBody_extractsMessageAndCode() {
+    String body =
+        "{\"error\":{\"message\":\"Invalid model\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}";
+    assertThat(RealtimeSessionService.summarizeOpenAiErrorBody(body)).contains("Invalid model").contains("model_not_found");
+  }
+
+  @Test
   void createRealtimeCall_returnsSdpOnSuccess_recordsUsage_invokesAssertions() throws Exception {
     String answer = "v=0\r\no=- realtime answer";
     HttpResponse<String> response = mock(HttpResponse.class);
@@ -152,22 +162,42 @@ class RealtimeSessionServiceTest {
             "  ");
 
     assertThatThrownBy(() -> svc.createRealtimeCall("v=0", "en"))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("API key");
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.API_KEY_MISSING)
+        .hasFieldOrPropertyWithValue("httpStatus", HttpStatus.SERVICE_UNAVAILABLE);
 
     verify(openAiRealtimeHttpInvoker, never()).invoke(any());
   }
 
   @Test
-  void createRealtimeCall_mapsHttpErrorFromOpenAi() throws Exception {
+  void createRealtimeCall_mapsHttp4xxFromOpenAi() throws Exception {
     HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(401);
+    when(response.statusCode()).thenReturn(400);
+    when(response.body())
+        .thenReturn(
+            "{\"error\":{\"message\":\"bad sdp\",\"type\":\"invalid_request_error\",\"code\":\"invalid_value\"}}");
+    when(openAiRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    assertThatThrownBy(() -> service.createRealtimeCall("v=0\r\no=x", null))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasFieldOrPropertyWithValue("httpStatus", HttpStatus.BAD_GATEWAY)
+        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.OPENAI_REJECTED)
+        .hasMessageContaining("bad sdp");
+
+    verify(aiBudgetService, never())
+        .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), nullable(Double.class), anyString());
+  }
+
+  @Test
+  void createRealtimeCall_mapsHttp5xxFromOpenAi() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(503);
     when(response.body()).thenReturn("{}");
     when(openAiRealtimeHttpInvoker.invoke(any())).thenReturn(response);
 
     assertThatThrownBy(() -> service.createRealtimeCall("v=0\r\no=x", null))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("HTTP 401");
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.OPENAI_SERVER_ERROR);
 
     verify(aiBudgetService, never())
         .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), nullable(Double.class), anyString());
@@ -178,7 +208,8 @@ class RealtimeSessionServiceTest {
     when(openAiRealtimeHttpInvoker.invoke(any())).thenThrow(new IOException("reset"));
 
     assertThatThrownBy(() -> service.createRealtimeCall("v=0\r\no=x", "en"))
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.OPENAI_UNREACHABLE)
         .hasCauseInstanceOf(IOException.class);
   }
 
@@ -187,7 +218,8 @@ class RealtimeSessionServiceTest {
     when(openAiRealtimeHttpInvoker.invoke(any())).thenThrow(new InterruptedException("boom"));
 
     assertThatThrownBy(() -> service.createRealtimeCall("v=0\r\no=x", "en"))
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.OPENAI_UNREACHABLE)
         .hasCauseInstanceOf(InterruptedException.class);
 
     assertThat(Thread.interrupted()).isTrue();
@@ -241,13 +273,11 @@ class RealtimeSessionServiceTest {
     service.createRealtimeCall("v=0", "fr");
 
     JsonNode json = extractSessionJson(captor.getValue());
-    assertThat(json.get("instructions").asText()).contains("portfolio website")
-        .contains("third person");
+    assertThat(json.get("instructions").asText()).contains("portfolio website").contains("third person");
 
     HttpRequest req = captor.getValue();
     assertThat(req.uri()).isEqualTo(URI.create("https://api.openai.com/v1/realtime/calls"));
-    assertThat(req.headers().firstValue("Authorization"))
-        .hasValue("Bearer sk-test-openai-key");
+    assertThat(req.headers().firstValue("Authorization")).hasValue("Bearer sk-test-openai-key");
 
     verify(aiCircuitBreaker).assertClosed();
     verify(aiBudgetService).assertWithinBudget(anyString(), anyBoolean());

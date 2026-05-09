@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.controller.advice;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
 import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.exception.PremiumModelForbiddenException;
+import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.model.ApiError;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
@@ -56,17 +57,20 @@ public class GlobalApiExceptionHandler {
 
   @ExceptionHandler(BudgetExceededException.class)
   public ResponseEntity<ApiError> budgetExceeded(BudgetExceededException e) {
-    return ResponseEntity.status(429).body(new ApiError(e.getMessage()));
+    return ResponseEntity.status(429)
+        .body(new ApiError(e.getMessage(), RealtimeErrorCode.BUDGET_EXCEEDED.name()));
   }
 
   @ExceptionHandler(AiCircuitOpenException.class)
   public ResponseEntity<ApiError> circuitOpen(AiCircuitOpenException e) {
-    return ResponseEntity.status(503).body(new ApiError(e.getMessage()));
+    return ResponseEntity.status(503)
+        .body(new ApiError(e.getMessage(), RealtimeErrorCode.CIRCUIT_OPEN.name()));
   }
 
   @ExceptionHandler(PremiumModelForbiddenException.class)
   public ResponseEntity<ApiError> premiumForbidden(PremiumModelForbiddenException e) {
-    return ResponseEntity.status(403).body(new ApiError(e.getMessage()));
+    return ResponseEntity.status(403)
+        .body(new ApiError(e.getMessage(), RealtimeErrorCode.PREMIUM_MODEL_FORBIDDEN.name()));
   }
 
   /**
