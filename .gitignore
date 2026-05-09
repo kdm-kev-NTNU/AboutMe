@@ -22,3 +22,6 @@ backend/data/docs/*
 
 # Maven build output
 backend/target/
+
+# Local dependency tree dumps (ad-hoc mvn dependency:tree output)
+backend/__deptree.txt
