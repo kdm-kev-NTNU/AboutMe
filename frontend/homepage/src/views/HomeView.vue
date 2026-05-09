@@ -7,9 +7,7 @@ import { ChatModelOptionProvider } from '@/api/generated/portfolio'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import AudioWaveform from '@/components/AudioWaveform.vue'
-import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/useSpeechTranscription'
-import { Info, MessageSquare, ChevronRight, Loader2, Mic, Square, Headphones } from 'lucide-vue-next'
+import { Info, MessageSquare, ChevronRight, Mic, Headphones } from 'lucide-vue-next'
 import { fetchRealtimeVoiceEnabled } from '@/lib/realtime-voice'
 import {
   pickRotatingShortcuts,
@@ -40,13 +38,13 @@ const chatDisclaimer = computed(() => {
     return {
       title: 'Før du chatter',
       body:
-        'Svarene lages av en språkmodell og kan være helt feil. Ikke del private eller sensitive ting her. Kort tale kan sendes til server for transkripsjon; live stemmechat (når slått på) sender lyd direkte til OpenAI i sanntid via WebRTC — se stemmesiden.',
+        'Svarene lages av en språkmodell og kan være helt feil. Ikke del private eller sensitive ting her. Tekstchat er på denne siden; live stemmechat (når slått på) sender lyd direkte til OpenAI i sanntid via WebRTC — bruk Snakk-knappen eller stemmesiden.',
     }
   }
   return {
     title: 'Before you chat',
     body:
-      'Replies come from a language model and can be wrong. Do not share private or sensitive information here. Short voice clips are sent to the server for transcription; live voice chat (when enabled) streams audio directly to OpenAI in real time via WebRTC — see the voice page.',
+      'Replies come from a language model and can be wrong. Do not share private or sensitive information here. Text chat lives on this page; live voice chat (when enabled) streams audio directly to OpenAI in real time via WebRTC — use the Speak button or the voice page.',
   }
 })
 
@@ -90,26 +88,9 @@ const voiceCtaAria = computed(() =>
   language.value === 'no' ? 'Gå til live stemmechat' : 'Go to live voice chat',
 )
 
-const speechUiLanguage = computed(() => language.value)
-
-const speechBlocked = computed(() => false)
-
-const {
-  supportsSpeechInput,
-  isRecording,
-  isTranscribing,
-  recordingMediaStream,
-  voiceError,
-  toggleVoiceInput,
-} = useSpeechTranscription({
-  language: speechUiLanguage,
-  maxChars: MAX_SPEECH_PROMPT_CHARS,
-  isBlocked: speechBlocked,
-  onTranscript: (t) => {
-    quickQuestion.value = t
-    router.push({ name: 'chat', query: { q: t } })
-  },
-})
+function goToVoiceChat() {
+  router.push({ name: 'voice' })
+}
 
 const providerLabels = computed(() =>
   language.value === 'no'
@@ -359,54 +340,37 @@ function submitQuick() {
         @submit.prevent="submitQuick"
       >
         <Button
-          v-if="supportsSpeechInput"
           type="button"
           variant="outline"
-          :disabled="isTranscribing"
-          :aria-pressed="isRecording"
-          :aria-label="language === 'en' ? 'Voice input' : 'Taleinndata'"
-          class="relative shrink-0 rounded-lg border border-blue-200/80 bg-white/90 px-2 text-slate-700 hover:bg-blue-50/80 disabled:opacity-50 sm:px-3"
-          :class="{ 'animate-pulse ring-2 ring-red-400 ring-offset-1': isRecording }"
-          @click="toggleVoiceInput"
+          :aria-label="voiceCtaAria"
+          class="relative shrink-0 rounded-lg border border-blue-200/80 bg-white/90 px-2 text-slate-700 hover:bg-blue-50/80 sm:px-3"
+          @click="goToVoiceChat"
         >
-          <Loader2 v-if="isTranscribing" class="h-5 w-5 shrink-0 animate-spin text-blue-600" />
-          <Square v-else-if="isRecording" class="h-5 w-5 shrink-0 text-red-600" />
-          <Mic v-else class="h-5 w-5 shrink-0" />
+          <Mic class="h-5 w-5 shrink-0" />
           <span class="hidden min-w-[3rem] ps-1 text-sm font-medium sm:inline">{{
             language === 'no' ? 'Snakk' : 'Speak'
           }}</span>
         </Button>
-        <AudioWaveform
-          v-if="isRecording"
-          :stream="recordingMediaStream"
-          :aria-label="language === 'en' ? 'Audio level while recording' : 'Lydnivå under opptak'"
-        />
         <Input
-          v-else
           v-model="quickQuestion"
           type="text"
           class="flex-1 border-2 border-blue-200/20 bg-white/80 rounded-lg transition-all duration-300 focus:bg-white/95 focus:border-blue-300/50 focus:shadow-sm focus:shadow-blue-500/10 focus:outline-none placeholder:text-blue-600/60 placeholder:font-medium"
-          :disabled="isTranscribing"
           :placeholder="language === 'en' ? `Curious? Kevin's AI is here to answer!` : `Nysgjerrig? Kevin sin AI svarer gjerne!`"
         />
         <Button
           type="submit"
-          :disabled="isTranscribing || isRecording || !quickQuestion.trim()"
+          :disabled="!quickQuestion.trim()"
           class="cursor-pointer shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:shadow-blue-500/40 relative overflow-hidden"
         >
           Send →
         </Button>
       </form>
 
-      <Alert v-if="voiceError" variant="destructive" class="mx-auto max-w-md">
-        <AlertDescription>{{ voiceError }}</AlertDescription>
-      </Alert>
-
       <RouterLink
         v-if="voiceFeatureEnabled === true"
         to="/voice"
         class="mx-auto flex max-w-md items-center justify-center gap-2 rounded-xl border-2 border-blue-300/80 bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:from-blue-700 hover:to-indigo-800 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        :aria-label="voiceCtaAria"
+        :aria-label="voiceCta"
       >
         <Headphones class="size-5 shrink-0" aria-hidden="true" />
         {{ voiceCta }}
