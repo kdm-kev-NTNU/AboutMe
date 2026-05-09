@@ -3,20 +3,6 @@
  */
 
 describe('Portfolio browsing', () => {
-  beforeEach(() => {
-    cy.intercept('GET', '**/api/chat/models', {
-      statusCode: 200,
-      body: [
-        {
-          id: 'gpt-5.4-mini',
-          provider: 'OPENAI',
-          label: 'GPT-5.4 mini',
-          tags: ['FAST'],
-        },
-      ],
-    }).as('chatModels')
-  })
-
   function visitEn(path: string) {
     cy.visit(path, {
       onBeforeLoad(win) {
@@ -27,7 +13,6 @@ describe('Portfolio browsing', () => {
 
   it('loads home, projects, project page, and career', () => {
     visitEn('/')
-    cy.wait('@chatModels')
     cy.contains("Kevin's").should('be.visible')
 
     visitEn('/projects')

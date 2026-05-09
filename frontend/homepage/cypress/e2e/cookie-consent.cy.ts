@@ -5,17 +5,6 @@
 describe('Cookie consent settings', () => {
   beforeEach(() => {
     cy.clearAllLocalStorage()
-    cy.intercept('GET', '**/api/chat/models', {
-      statusCode: 200,
-      body: [
-        {
-          id: 'gpt-5.4-mini',
-          provider: 'OPENAI',
-          label: 'GPT-5.4 mini',
-          tags: ['FAST'],
-        },
-      ],
-    }).as('chatModels')
   })
 
   it('opens cookie settings from footer, cancels, then saves analytics choice', () => {
@@ -24,7 +13,6 @@ describe('Cookie consent settings', () => {
         win.localStorage.setItem('lang', 'en')
       },
     })
-    cy.wait('@chatModels')
 
     cy.get('[aria-label="Cookie consent"]').within(() => {
       cy.contains('button', /^Reject$/).click()
