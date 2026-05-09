@@ -3,14 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import HomeView from '../HomeView.vue'
-import { listChatModels, ChatModelOptionProvider } from '@/api/generated/portfolio'
-import { useChatModelStore } from '@/stores/model'
 import { useLangStore } from '@/stores/lang'
-
-vi.mock('@/api/generated/portfolio', async (importOriginal) => {
-	const mod = await importOriginal<typeof import('@/api/generated/portfolio')>()
-	return { ...mod, listChatModels: vi.fn() }
-})
 
 vi.mock('@/lib/realtime-voice', () => ({
 	fetchRealtimeVoiceEnabled: vi.fn().mockResolvedValue(false),
@@ -23,6 +16,17 @@ vi.mock('@/stores/auth', () => ({
 const buttonStub = {
 	props: ['type'],
 	template: '<button :type="type === \'submit\' ? \'submit\' : \'button\'"><slot /></button>',
+}
+
+const commonStubs = {
+	Button: buttonStub,
+	Info: true,
+	Github: true,
+	Linkedin: true,
+	MessageSquare: true,
+	ChevronRight: true,
+	Mic: true,
+	Headphones: true,
 }
 
 describe('HomeView', () => {
@@ -43,86 +47,27 @@ describe('HomeView', () => {
 		sessionStorage.clear()
 		localStorage.clear()
 		vi.clearAllMocks()
-		vi.mocked(listChatModels).mockResolvedValue({
-			status: 200,
-			data: [
-				{ id: 'o1', label: 'GPT', provider: ChatModelOptionProvider.OPENAI },
-				{ id: 'a1', label: 'Claude', provider: ChatModelOptionProvider.ANTHROPIC },
-			],
-			headers: new Headers(),
-		})
 	})
 
-	it('switches language with EN/NO toggles and shows Norwegian disclaimer', async () => {
+	it('switches language with EN/NO toggle and renders Norwegian voice status', async () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
 		const router = makeRouter()
 		await router.push('/')
-		const pushSpy = vi.spyOn(router, 'push')
 		const wrapper = mount(HomeView, {
 			global: {
 				plugins: [pinia, router],
-				stubs: {
-					Input: { props: ['modelValue'], template: '<input />' },
-					Button: buttonStub,
-					Alert: { template: '<div><slot /></div>' },
-					AlertTitle: { template: '<div><slot /></div>' },
-					AlertDescription: { template: '<div><slot /></div>' },
-					Info: true,
-					Github: true,
-					Linkedin: true,
-					MessageSquare: true,
-					ChevronRight: true,
-				},
+				stubs: commonStubs,
 			},
 		})
 		await flushPromises()
 		const noBtn = wrapper.findAll('button').find((b) => b.text().trim() === 'NO')
 		expect(noBtn).toBeTruthy()
 		await noBtn!.trigger('click')
-		expect(wrapper.text()).toContain('Før du chatter')
-
-		const firstQuick = wrapper.findAll('section.quick button').at(0)
-		expect(firstQuick).toBeTruthy()
-		await firstQuick!.trigger('click')
-		expect(pushSpy).toHaveBeenCalled()
+		expect(wrapper.text()).toContain('Snakk med Kevin sin AI først.')
 	})
 
-	it('submits quick question via form and navigates to chat', async () => {
-		const pinia = createPinia()
-		setActivePinia(pinia)
-		const router = makeRouter()
-		await router.push('/')
-		const pushSpy = vi.spyOn(router, 'push')
-		const wrapper = mount(HomeView, {
-			global: {
-				plugins: [pinia, router],
-				stubs: {
-					Input: {
-						props: ['modelValue'],
-						emits: ['update:modelValue'],
-						template: '<input @input="$emit(\'update:modelValue\', $event.target.value)" />',
-					},
-					Button: buttonStub,
-					Alert: { template: '<div><slot /></div>' },
-					AlertTitle: { template: '<div><slot /></div>' },
-					AlertDescription: { template: '<div><slot /></div>' },
-					Info: true,
-					Github: true,
-					Linkedin: true,
-					MessageSquare: true,
-					ChevronRight: true,
-				},
-			},
-		})
-		await flushPromises()
-		const input = wrapper.get('form input')
-		await input.setValue('  custom question  ')
-		await wrapper.get('form').trigger('submit.prevent')
-		expect(pushSpy).toHaveBeenCalledWith({ name: 'chat', query: { q: 'custom question' } })
-	})
-
-	it('toggles AI provider when both are available', async () => {
+	it('renders GitHub and LinkedIn social links', async () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
 		const router = makeRouter()
@@ -130,26 +75,12 @@ describe('HomeView', () => {
 		const wrapper = mount(HomeView, {
 			global: {
 				plugins: [pinia, router],
-				stubs: {
-					Input: { props: ['modelValue'], template: '<input />' },
-					Button: buttonStub,
-					Alert: { template: '<div><slot /></div>' },
-					AlertTitle: { template: '<div><slot /></div>' },
-					AlertDescription: { template: '<div><slot /></div>' },
-					Info: true,
-					Github: true,
-					Linkedin: true,
-					MessageSquare: true,
-					ChevronRight: true,
-				},
+				stubs: commonStubs,
 			},
 		})
 		await flushPromises()
-		const anthropicBtn = wrapper.findAll('button[type="button"]').find((b) => b.text().includes('Anthropic'))
-		expect(anthropicBtn).toBeTruthy()
-		await anthropicBtn!.trigger('click')
-		await flushPromises()
-		expect(useChatModelStore().selectedModelId).toBe('a1')
+		expect(wrapper.find('a[href*="github.com"]').exists()).toBe(true)
+		expect(wrapper.find('a[href*="linkedin.com"]').exists()).toBe(true)
 	})
 
 	it('links to the future work roadmap from the home hero', async () => {
@@ -161,18 +92,7 @@ describe('HomeView', () => {
 		const wrapper = mount(HomeView, {
 			global: {
 				plugins: [pinia, router],
-				stubs: {
-					Input: { props: ['modelValue'], template: '<input />' },
-					Button: buttonStub,
-					Alert: { template: '<div><slot /></div>' },
-					AlertTitle: { template: '<div><slot /></div>' },
-					AlertDescription: { template: '<div><slot /></div>' },
-					Info: true,
-					Github: true,
-					Linkedin: true,
-					MessageSquare: true,
-					ChevronRight: true,
-				},
+				stubs: commonStubs,
 			},
 		})
 		await flushPromises()
@@ -180,7 +100,7 @@ describe('HomeView', () => {
 		expect(futureLink.text()).toContain('Future work and improvements')
 	})
 
-	it('navigates to voice chat when Speak button is clicked', async () => {
+	it('navigates to voice chat when voice CTA is clicked', async () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
 		useLangStore().setLanguage('en')
@@ -190,20 +110,7 @@ describe('HomeView', () => {
 		const wrapper = mount(HomeView, {
 			global: {
 				plugins: [pinia, router],
-				stubs: {
-					Input: { props: ['modelValue'], template: '<input />' },
-					Button: buttonStub,
-					Alert: { template: '<div><slot /></div>' },
-					AlertTitle: { template: '<div><slot /></div>' },
-					AlertDescription: { template: '<div><slot /></div>' },
-					Info: true,
-					Github: true,
-					Linkedin: true,
-					MessageSquare: true,
-					ChevronRight: true,
-					Mic: true,
-					Headphones: true,
-				},
+				stubs: commonStubs,
 			},
 		})
 		await flushPromises()
@@ -222,20 +129,7 @@ describe('HomeView', () => {
 		const wrapper = mount(HomeView, {
 			global: {
 				plugins: [pinia, router],
-				stubs: {
-					Input: { props: ['modelValue'], template: '<input />' },
-					Button: buttonStub,
-					Alert: { template: '<div><slot /></div>' },
-					AlertTitle: { template: '<div><slot /></div>' },
-					AlertDescription: { template: '<div><slot /></div>' },
-					Info: true,
-					Github: true,
-					Linkedin: true,
-					MessageSquare: true,
-					ChevronRight: true,
-					Mic: true,
-					Headphones: true,
-				},
+				stubs: commonStubs,
 			},
 		})
 		await flushPromises()

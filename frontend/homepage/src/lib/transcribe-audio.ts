@@ -9,7 +9,7 @@ export type TranscribeSpeechResult = {
 export type TranscribeLanguage = 'en' | 'no'
 
 /**
- * POST multipart audio to the backend (same /api prefix and Basic auth as Orval-generated clients).
+ * POST multipart audio to the backend (same base URL and Basic auth handling as Orval-generated clients).
  *
  * Passes the UI language as the `X-Chat-Language` header so the backend can hint Whisper. The
  * backend retries with the other language on failure (see `TranscriptionService` fallback), so
