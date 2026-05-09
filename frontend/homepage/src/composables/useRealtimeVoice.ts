@@ -41,6 +41,35 @@ function isLikelyGetUserMediaError(e: unknown): boolean {
   )
 }
 
+/** Wait until ICE candidates are gathered (or timeout) so the SDP posted to the server includes candidates. */
+const ICE_GATHERING_TIMEOUT_MS = 8000
+
+function waitForIceGatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<void> {
+  if (pc.iceGatheringState === 'complete') {
+    return Promise.resolve()
+  }
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      pc.removeEventListener('icegatheringstatechange', onGatheringStateChange)
+      resolve()
+    }
+    const timer = setTimeout(finish, timeoutMs)
+    const onGatheringStateChange = () => {
+      if (pc.iceGatheringState === 'complete') {
+        finish()
+      }
+    }
+    pc.addEventListener('icegatheringstatechange', onGatheringStateChange)
+    if (pc.iceGatheringState === 'complete') {
+      finish()
+    }
+  })
+}
+
 function mapSdpFailureToUserMessage(lang: SpeechUiLang, f: RealtimeSdpFailure): string {
   const en = lang === 'en'
   const code = f.code ?? (f.status === 429 ? 'RATE_LIMITED' : undefined)
@@ -253,6 +282,7 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
 
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
+      await waitForIceGatheringComplete(pc, ICE_GATHERING_TIMEOUT_MS)
       const offerSdp = pc.localDescription?.sdp
       if (!offerSdp) {
         throw new Error('Missing local SDP')
