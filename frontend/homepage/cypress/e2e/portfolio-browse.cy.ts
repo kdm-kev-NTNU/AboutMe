@@ -3,32 +3,25 @@
  */
 
 describe('Portfolio browsing', () => {
-  beforeEach(() => {
-    cy.intercept('GET', '**/api/chat/models', {
-      statusCode: 200,
-      body: [
-        {
-          id: 'gpt-5.4-mini',
-          provider: 'OPENAI',
-          label: 'GPT-5.4 mini',
-          tags: ['FAST'],
-        },
-      ],
-    }).as('chatModels')
-  })
+  function visitEn(path: string) {
+    cy.visit(path, {
+      onBeforeLoad(win) {
+        win.localStorage.setItem('lang', 'en')
+      },
+    })
+  }
 
   it('loads home, projects, project page, and career', () => {
-    cy.visit('/')
-    cy.wait('@chatModels')
+    visitEn('/')
     cy.contains("Kevin's").should('be.visible')
 
-    cy.visit('/projects')
+    visitEn('/projects')
     cy.contains('Projects', { timeout: 30000 }).should('be.visible')
 
-    cy.visit('/project')
+    visitEn('/project')
     cy.contains(/Tech stack|Teknologistakk/).should('be.visible')
 
-    cy.visit('/career')
+    visitEn('/career')
     cy.contains(/Experience & education|Erfaring og utdanning/).should('be.visible')
   })
 })

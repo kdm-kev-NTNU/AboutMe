@@ -18,6 +18,19 @@ type SectionCopy = {
 
 const sectionsEn: SectionCopy[] = [
 	{
+		category: 'Voice',
+		title: "Custom voice clone: Kevin\u2019s AI speaks in his own voice",
+		intro:
+			"A planned feature where the AI chatbot uses a cloned version of Kevin\u2019s actual voice, so visitors hear Kevin\u2019s tone and cadence when using voice mode \u2014 not a generic TTS voice. The current OpenAI Realtime voice mode stays, but the synthetic voice will be replaced with a personal clone trained on Kevin\u2019s speech.",
+		points: [
+			"Voice cloning: train a high-fidelity voice model on recordings of Kevin\u2019s speech using ElevenLabs or a comparable provider, capturing natural intonation and rhythm.",
+			'Integration: swap the default TTS output in the existing Realtime voice pipeline with the custom clone, keeping the same conversational AI backend.',
+			'Quality control: validate that the clone sounds natural across different answer lengths, languages, and emotional tones before going live.',
+			"Consent and transparency: clearly disclose to visitors that the voice is AI-generated from Kevin\u2019s recordings, not a live human conversation.",
+		],
+		refs: [],
+	},
+	{
 		category: 'Personal',
 		title: 'ElevenLabs voice agent: collect, then I process',
 		intro:
@@ -26,7 +39,7 @@ const sectionsEn: SectionCopy[] = [
 			'Collect with clear purpose, consent, and boundaries on what is stored.',
 			'Personally process raw material before anything is ingestible or visitor-facing.',
 			'Upload curated files through the admin document pipeline.',
-			'Re-ingest and verify retrieval on new chunks before they power Kevin’s AI in live chat.',
+			'Re-ingest and verify retrieval on new chunks before they power Kevin\u2019s AI in live chat.',
 		],
 		refs: [
 			{
@@ -34,7 +47,7 @@ const sectionsEn: SectionCopy[] = [
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 			{
-				label: 'Gao et al.: Retrieval-Augmented Generation for Large Language Models: A Survey (arXiv:2312.10997, Dec 2023 preprint; often cited as “2024” elsewhere)',
+				label: 'Gao et al.: Retrieval-Augmented Generation for Large Language Models: A Survey (arXiv:2312.10997, Dec 2023 preprint; often cited as \u201c2024\u201d elsewhere)',
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 			{
@@ -88,15 +101,28 @@ const sectionsEn: SectionCopy[] = [
 
 const sectionsNo: SectionCopy[] = [
 	{
-		category: 'Personlig',
-		title: 'ElevenLabs stemmeagent: først inn, så rydder jeg',
+		category: 'Stemme',
+		title: 'Egen stemmeklone: Kevins AI snakker med hans stemme',
 		intro:
-			'Valgfri samtale via ElevenLabs gir mer muntlig detalj enn bare ferdig skrevne sider. Rå filer eller transkripsjoner er ikke offentlige eller i vektorlageret som standard. Jeg strukturerer, korter ned, redakterer og lager notater eller .txt-utkast, laster opp via dokumentpipelinen, og kjører re-ingest og sjekk av henting før produksjonschat. arXiv-referansene under handler om indeksering, henting og evaluering i RAG, ikke om hvilken stemmeleverandør jeg velger (det er et produktvalg). Formål, samtykke og dataminimering følger personvernregelverket, ikke artiklene.',
+			'Planlagt funksjon der AI-chatboten bruker en klonet versjon av Kevins faktiske stemme, slik at bes\u00f8kende h\u00f8rer Kevins tone og rytme i stemmemodus \u2014 ikke en generisk TTS-stemme. Den eksisterende OpenAI Realtime-stemmemodusen beholdes, men den syntetiske stemmen byttes ut med en personlig klone trent p\u00e5 Kevins tale.',
 		points: [
-			'Samle inn med tydelig formål, samtykke og grenser for hva som lagres.',
-			'Prosesser råmateriale selv før noe kan ingestes eller vises for besøkende.',
+			'Stemmekloning: trene en h\u00f8ykvalitets stemmemodell p\u00e5 opptak av Kevins tale via ElevenLabs eller tilsvarende leverand\u00f8r, med naturlig intonasjon og rytme.',
+			'Integrasjon: bytte standard TTS-utdata i den eksisterende Realtime-stemmepipelinen med den egne klonen, med samme samtale-AI-backend.',
+			'Kvalitetskontroll: validere at klonen l\u00e5ter naturlig p\u00e5 tvers av ulike svarlengder, spr\u00e5k og emosjonelle toner f\u00f8r lansering.',
+			'Samtykke og \u00e5penhet: tydelig opplyse bes\u00f8kende om at stemmen er AI-generert fra Kevins opptak, ikke en live samtale med et menneske.',
+		],
+		refs: [],
+	},
+	{
+		category: 'Personlig',
+		title: 'ElevenLabs stemmeagent: f\u00f8rst inn, s\u00e5 rydder jeg',
+		intro:
+			'Valgfri samtale via ElevenLabs gir mer muntlig detalj enn bare ferdig skrevne sider. R\u00e5 filer eller transkripsjoner er ikke offentlige eller i vektorlageret som standard. Jeg strukturerer, korter ned, redakterer og lager notater eller .txt-utkast, laster opp via dokumentpipelinen, og kj\u00f8rer re-ingest og sjekk av henting f\u00f8r produksjonschat. arXiv-referansene under handler om indeksering, henting og evaluering i RAG, ikke om hvilken stemmeleverand\u00f8r jeg velger (det er et produktvalg). Form\u00e5l, samtykke og dataminimering f\u00f8lger personvernregelverket, ikke artiklene.',
+		points: [
+			'Samle inn med tydelig form\u00e5l, samtykke og grenser for hva som lagres.',
+			'Prosesser r\u00e5materiale selv f\u00f8r noe kan ingestes eller vises for bes\u00f8kende.',
 			'Last opp kuraterte filer via admin og dokumentpipelinen.',
-			'Re-ingest og verifiser retrieval på nye chunks før de driver Kevin sin AI i live chat.',
+			'Re-ingest og verifiser retrieval p\u00e5 nye chunks f\u00f8r de driver Kevin sin AI i live chat.',
 		],
 		refs: [
 			{
@@ -104,7 +130,7 @@ const sectionsNo: SectionCopy[] = [
 				href: 'https://arxiv.org/abs/2407.01219',
 			},
 			{
-				label: 'Gao m.fl.: Retrieval-Augmented Generation for Large Language Models: A Survey (arXiv:2312.10997, des. 2023; ofte sitert som «2024» andre steder)',
+				label: 'Gao m.fl.: Retrieval-Augmented Generation for Large Language Models: A Survey (arXiv:2312.10997, des. 2023; ofte sitert som \u00ab2024\u00bb andre steder)',
 				href: 'https://arxiv.org/abs/2312.10997',
 			},
 			{
@@ -121,11 +147,11 @@ const sectionsNo: SectionCopy[] = [
 		category: 'Generering',
 		title: 'Konsistens og reproduserbarhet i svar',
 		intro:
-			'Svar fra språkmodeller er fortsatt stokastiske. For portefølje-Q&A er det greit, men strammere dekoding og caching kan gjøre gjentatte spørsmål mer forutsigbare uten å miste nytteverdien.',
+			'Svar fra spr\u00e5kmodeller er fortsatt stokastiske. For portef\u00f8lje-Q&A er det greit, men strammere dekoding og caching kan gj\u00f8re gjentatte sp\u00f8rsm\u00e5l mer forutsigbare uten \u00e5 miste nytteverdien.',
 		points: [
-			'Finjuster temperatur og nucleus sampling (top-p), og kombiner med strengere validering når modellen må levere strukturerte fragmenter (for eksempel JSON i interne utvidelsessteg).',
-			'Cache svar for gjentatte eller nesten like spørsmål for lavere latency og lik begrunnelse for samme intensjon.',
-			'Utforsk grammatikk- eller begrenset generering når fast svarstruktur kreves, slik at formattering blir mer stabil.',
+			'Finjuster temperatur og nucleus sampling (top-p), og kombiner med strengere validering n\u00e5r modellen m\u00e5 levere strukturerte fragmenter (for eksempel JSON i interne utvidelsessteg).',
+			'Cache svar for gjentatte eller nesten like sp\u00f8rsm\u00e5l for lavere latency og lik begrunnelse for samme intensjon.',
+			'Utforsk grammatikk- eller begrenset generering n\u00e5r fast svarstruktur kreves, slik at formattering blir mer stabil.',
 		],
 		refs: [
 			{
@@ -140,12 +166,12 @@ const sectionsNo: SectionCopy[] = [
 	},
 	{
 		category: 'Analyse',
-		title: 'Spørringsanalyse og korpusvedlikehold',
+		title: 'Sp\u00f8rringsanalyse og korpusvedlikehold',
 		intro:
-			'Ettersom chat-historikk og admin-verktøy finnes, kan spørsmålslogger klustreres for å avdekke gjentakende tema, manglende dokumenter eller utdaterte deler av kunnskapsbasen.',
+			'Ettersom chat-historikk og admin-verkt\u00f8y finnes, kan sp\u00f8rsm\u00e5lslogger klustreres for \u00e5 avdekke gjentakende tema, manglende dokumenter eller utdaterte deler av kunnskapsbasen.',
 		points: [
-			'Klustr historiske spørsmål for å synliggjøre dekningsgap og prioritere nye opplastinger eller re-ingest av utdaterte filer.',
-			'Bruk innsikten sammen med chunk-visningen i admin for å holde embeddings i tråd med det besøkende faktisk spør om.',
+			'Klustr historiske sp\u00f8rsm\u00e5l for \u00e5 synliggj\u00f8re dekningsgap og prioritere nye opplastinger eller re-ingest av utdaterte filer.',
+			'Bruk innsikten sammen med chunk-visningen i admin for \u00e5 holde embeddings i tr\u00e5d med det bes\u00f8kende faktisk sp\u00f8r om.',
 		],
 		refs: [
 			{
@@ -163,9 +189,9 @@ const hero = computed(() =>
 		? {
 				title: 'Videre arbeid og forbedringer',
 				lead:
-					'En forskningsforankret roadmap for det som kommer videre: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, og promptversjoner. Porteføljen oppdateres fortløpende.',
+					'En forskningsforankret roadmap for det som kommer videre: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, og promptversjoner. Portef\u00f8ljen oppdateres fortl\u00f8pende.',
 				contextBefore:
-					'Roadmapen viser hva jeg prioriterer mens jeg kontinuerlig tilpasser porteføljen med læring fra bacheloroppgaven (2026) hos Piscada AS i Trondheim og arbeid på ',
+					'Roadmapen viser hva jeg prioriterer mens jeg kontinuerlig tilpasser portef\u00f8ljen med l\u00e6ring fra bacheloroppgaven (2026) hos Piscada AS i Trondheim og arbeid p\u00e5 ',
 				contextLinkText: 'Foresight AI',
 				contextAfter: ', som jeg utvikler sammen med en annen i teamet.',
 				contextLinkHref: foresightAiProductUrl,
@@ -208,7 +234,7 @@ const referencesHeading = computed(() =>
 					rel="noopener noreferrer"
 					:aria-label="
 						langStore.language === 'no'
-							? 'Foresight AI på piscada.com (åpner i ny fane)'
+							? 'Foresight AI p\u00e5 piscada.com (\u00e5pner i ny fane)'
 							: 'Foresight AI on piscada.com (opens in a new tab)'
 					"
 					>{{ hero.contextLinkText }}</a>{{ hero.contextAfter }}

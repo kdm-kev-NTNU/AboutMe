@@ -84,6 +84,12 @@ jobs:
   frontend-e2e:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    # Cookie banner only mounts when isPosthogEnabled() is true (Vite env at build time).
+    # Dummy values: no real ingestion; unlocks banner/modal E2E without repo secrets.
+    env:
+      VITE_POSTHOG_ENABLED: 'true'
+      VITE_POSTHOG_KEY: phc_ci_e2e_dummy
+      VITE_POSTHOG_HOST: https://eu.i.posthog.com
     defaults:
       run:
         working-directory: frontend/homepage

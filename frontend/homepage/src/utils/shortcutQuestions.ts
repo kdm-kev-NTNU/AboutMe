@@ -18,13 +18,13 @@ const introByLang = {
 const techByLang = {
   en: [
     "What's the tech stack behind kevindmazali.me (Vue, Spring Boot, Postgres/pgvector)?",
-    'How does the RAG chat and `/ask` work in your stack?',
+    'How does the RAG text chat work in your stack?',
     'Which AI and ops choices matter here (embeddings, budget, Docker/CI)?',
     "How does kevindmazali.me's stack compare to Krisefikser (Vue + Spring)?",
   ],
   no: [
     'Hva kjører kevindmazali.me teknisk — Vue, Spring Boot, Postgres/pgvector?',
-    'Hvordan fungerer RAG-chatten og `/ask` i stacken din?',
+    'Hvordan fungerer RAG-tekstchatten i stacken din?',
     'Hvilke AI- og driftvalg er viktige her (embeddings, budsjett, Docker/CI)?',
     'Hva er lik og ulik mellom stacken på kevindmazali.me og Krisefikser (Vue + Spring)?',
   ],

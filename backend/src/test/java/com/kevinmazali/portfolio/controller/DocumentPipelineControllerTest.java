@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
+import com.kevinmazali.portfolio.config.ApiErrorConfiguration;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.SyncProperties;
 import com.kevinmazali.portfolio.model.ChunkExportResponse;
@@ -46,7 +47,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = DocumentPipelineController.class)
-@Import({ SecurityConfig.class, MvcTestUserDetailsConfig.class, DocumentPipelineControllerAdvice.class })
+@Import({
+  SecurityConfig.class,
+  MvcTestUserDetailsConfig.class,
+  DocumentPipelineControllerAdvice.class,
+  ApiErrorConfiguration.class
+})
 class DocumentPipelineControllerTest {
 
 	@Autowired

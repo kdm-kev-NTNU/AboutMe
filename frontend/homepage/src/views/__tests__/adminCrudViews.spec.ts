@@ -19,6 +19,8 @@ import {
   adminDocumentsQuestionSuggestions,
   adminDocumentsReseed,
   adminDocumentsSyncFromRemote,
+  adminDocumentsUpload,
+  adminDocumentsUploadBatch,
   healthChroma,
   listChatModels,
   promptVersionsActivate,
@@ -47,6 +49,7 @@ vi.mock('@/api/generated/portfolio', async (importOriginal) => {
     adminDocumentsReseed: vi.fn(),
     adminDocumentsSyncFromRemote: vi.fn(),
     adminDocumentsUpload: vi.fn(),
+    adminDocumentsUploadBatch: vi.fn(),
     adminDocumentsIngestByPath: vi.fn(),
     adminDocumentsDelete: vi.fn(),
     promptVersionsNames: vi.fn(),
@@ -93,7 +96,7 @@ function setupListAndCollections() {
   })
 }
 
-function mountAdmin(component: Parameters<typeof mount>[0]) {
+function mountAdmin(component: Parameters<typeof mount>[0], opts?: { attachToBody?: boolean }) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const router = createRouter({
@@ -101,6 +104,7 @@ function mountAdmin(component: Parameters<typeof mount>[0]) {
     routes: [{ path: '/', name: 'home', component: { template: '<div />' } }],
   })
   return mount(component, {
+    ...(opts?.attachToBody ? { attachTo: document.body } : {}),
     global: {
       plugins: [pinia, router],
       stubs: {
@@ -1121,5 +1125,242 @@ describe('Admin CRUD views (integration-style)', () => {
     expect(wrapper.text()).toContain('PostHog (LLM-observabilitet)')
     expect(wrapper.text()).toContain('Eval-datasett-ID:')
     expect(wrapper.text()).toContain('Q?')
+  })
+
+  it('AdminPipelineView syncs from Railway with clean=false when checkbox unchecked', async () => {
+    setupListAndCollections()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    vi.mocked(adminDocumentsSyncFromRemote).mockResolvedValue({
+      status: 200,
+      data: { rowsSynced: 1, durationMs: 10, sourceHostMasked: 'x' },
+      headers: headersJson,
+    })
+
+    const wrapper = mountAdmin(AdminPipelineView)
+    await flushPromises()
+
+    const syncCleanLabel = wrapper.findAll('label').find((l) => l.text().includes('Tøm lokal tabell før synk'))
+    expect(syncCleanLabel).toBeTruthy()
+    const syncCb = syncCleanLabel!.get('input[type="checkbox"]')
+    await syncCb.setValue(false)
+
+    const syncBtn = wrapper.findAll('button').find((b) => b.text().includes('Synk fra Railway'))
+    await syncBtn!.trigger('click')
+    await flushPromises()
+
+    expect(adminDocumentsSyncFromRemote).toHaveBeenCalledWith({ clean: false })
+  })
+
+  it('AdminPipelineView surfaces 403 detail from sync response', async () => {
+    setupListAndCollections()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    vi.mocked(adminDocumentsSyncFromRemote).mockResolvedValue({
+      status: 403,
+      data: { detail: 'Synk er skrudd av' },
+      headers: headersJson,
+    } as unknown as Awaited<ReturnType<typeof adminDocumentsSyncFromRemote>>)
+
+    const wrapper = mountAdmin(AdminPipelineView)
+    await flushPromises()
+
+    await wrapper.findAll('button').find((b) => b.text().includes('Synk fra Railway'))!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Synk er skrudd av')
+  })
+
+  it('AdminPipelineView surfaces 400 error object from sync', async () => {
+    setupListAndCollections()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    vi.mocked(adminDocumentsSyncFromRemote).mockResolvedValue({
+      status: 400,
+      data: { error: 'Missing JDBC URL' },
+      headers: headersJson,
+    } as Awaited<ReturnType<typeof adminDocumentsSyncFromRemote>>)
+
+    const wrapper = mountAdmin(AdminPipelineView)
+    await flushPromises()
+
+    await wrapper.findAll('button').find((b) => b.text().includes('Synk fra Railway'))!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Missing JDBC URL')
+  })
+
+  it('AdminPipelineView shows error when vector collections request fails on load', async () => {
+    vi.mocked(adminDocumentsList).mockResolvedValue({
+      status: 200,
+      data: [],
+      headers: headersJson,
+    })
+    vi.mocked(adminDocumentsCollections).mockResolvedValue({
+      status: 503,
+      data: { error: 'db down' },
+      headers: headersJson,
+    } as unknown as Awaited<ReturnType<typeof adminDocumentsCollections>>)
+    vi.mocked(adminDocumentsFiles).mockResolvedValue({ status: 200, data: [], headers: headersJson })
+
+    const wrapper = mountAdmin(AdminPipelineView)
+    await flushPromises()
+
+    expect(wrapper.text()).toMatch(/Vektorlagring status feilet \(503\)/)
+  })
+
+  it('AdminPipelineView surfaces reseed HTTP errors', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    vi.mocked(adminDocumentsReseed).mockResolvedValue({
+      status: 500,
+      data: { message: 'boom' },
+      headers: headersJson,
+    } as unknown as Awaited<ReturnType<typeof adminDocumentsReseed>>)
+
+    const wrapper = mountAdmin(AdminPipelineView)
+    await flushPromises()
+
+    await wrapper.findAll('button').find((b) => b.text().includes('Re-seed seed-dokumenter'))!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('boom')
+  })
+
+  it('AdminPipelineView completes single-file upload and refreshes list', async () => {
+    vi.mocked(adminDocumentsUpload).mockResolvedValue({
+      status: 200,
+      data: {
+        filename: 'note.md',
+        chunksIngested: 2,
+        skipped: false,
+        message: 'OK',
+        documentId: 'docidfullhash',
+      },
+      headers: headersJson,
+    })
+
+    const wrapper = mountAdmin(AdminPipelineView, { attachToBody: true })
+    await flushPromises()
+
+    const uploadSummary = wrapper.findAll('summary').find((s) => s.text().includes('Last opp'))
+    await uploadSummary!.trigger('click')
+    await nextTick()
+
+    const fileInput = document.getElementById('ingest-file') as HTMLInputElement
+    const file = new File(['# hi'], 'note.md', { type: 'text/markdown' })
+    Object.defineProperty(fileInput, 'files', { value: [file], configurable: true })
+
+    await wrapper.findAll('button').find((b) => b.text().includes('Kjør ingest'))!.trigger('click')
+    await flushPromises()
+
+    expect(adminDocumentsUpload).toHaveBeenCalledWith(
+      expect.objectContaining({ file, title: undefined, force: false }),
+    )
+    expect(wrapper.text()).toContain('2 chunks')
+    expect(wrapper.text()).toContain('note.md')
+    wrapper.unmount()
+  })
+
+  it('AdminPipelineView handles batch upload with HTTP 400 but partial result rows', async () => {
+    vi.mocked(adminDocumentsUploadBatch).mockResolvedValue({
+      status: 400,
+      data: [{ filename: 'a.md', chunksIngested: 0, skipped: false, message: 'bad encoding' }],
+      headers: headersJson,
+    } as Awaited<ReturnType<typeof adminDocumentsUploadBatch>>)
+
+    const wrapper = mountAdmin(AdminPipelineView, { attachToBody: true })
+    await flushPromises()
+
+    const uploadSummary = wrapper.findAll('summary').find((s) => s.text().includes('Last opp'))
+    await uploadSummary!.trigger('click')
+    await nextTick()
+
+    const fileInput = document.getElementById('ingest-file') as HTMLInputElement
+    const f1 = new File(['x'], 'a.md', { type: 'text/markdown' })
+    const f2 = new File(['y'], 'b.md', { type: 'text/markdown' })
+    Object.defineProperty(fileInput, 'files', { value: [f1, f2], configurable: true })
+
+    await wrapper.findAll('button').find((b) => b.text().includes('Kjør ingest'))!.trigger('click')
+    await flushPromises()
+
+    expect(adminDocumentsUploadBatch).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('bad encoding')
+    wrapper.unmount()
+  })
+
+  it('AdminPipelineView shows server file list error when adminDocumentsFiles fails', async () => {
+    vi.mocked(adminDocumentsFiles).mockResolvedValue({
+      status: 401,
+      data: {},
+      headers: headersJson,
+    } as unknown as Awaited<ReturnType<typeof adminDocumentsFiles>>)
+
+    const wrapper = mountAdmin(AdminPipelineView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Ikke autorisert')
+  })
+
+  it('AdminPipelineView sets path ingest error when batch returns 400 with message', async () => {
+    vi.mocked(adminDocumentsIngestByPath).mockResolvedValue({
+      status: 400,
+      data: [{ filename: '/x', chunksIngested: 0, skipped: false, message: 'path not found' }],
+      headers: headersJson,
+    } as Awaited<ReturnType<typeof adminDocumentsIngestByPath>>)
+
+    const wrapper = mountAdmin(AdminPipelineView)
+    await flushPromises()
+
+    const batchSummary = wrapper.findAll('summary').find((s) => s.text().includes('Batch-ingest'))
+    await batchSummary!.trigger('click')
+    await flushPromises()
+    await wrapper.find('#srv-file-0').setValue(true)
+    await flushPromises()
+
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Kjør batch-ingest (valgte filer)'))!
+      .trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('path not found')
+  })
+
+  it('AdminExperimentsView shows documents error when document list fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+        if (url.includes('/api/admin/tools/experiments/config')) {
+          return new Response(JSON.stringify({ posthogConfigured: false, posthogHost: '' }), {
+            status: 200,
+            headers: headersJson,
+          })
+        }
+        if (url.includes('/api/admin/tools/documents')) {
+          return new Response(JSON.stringify({ error: 'no docs' }), { status: 502, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        if (url.includes('/api/admin/tools/experiments/models')) {
+          return new Response(
+            JSON.stringify([
+              { id: 'm1', label: 'M', provider: 'OPENAI' },
+              { id: 'c1', label: 'C', provider: 'ANTHROPIC' },
+            ]),
+            { status: 200, headers: headersJson },
+          )
+        }
+        if (url.includes('/api/admin/tools/experiments/runs')) {
+          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
+        }
+        return new Response('{}', { status: 404, headers: headersJson })
+      }),
+    )
+
+    const wrapper = mountAdmin(AdminExperimentsView)
+    await flushPromises()
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('no docs')
+    })
   })
 })

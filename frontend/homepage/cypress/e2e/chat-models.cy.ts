@@ -33,7 +33,7 @@ describe('Chat model catalog', () => {
 
     cy.get('#chat-model-select').should('exist')
     cy.get('#chat-model-select').find('option').should('have.length', 1)
-    cy.get('#chat-model-select').find('option').contains('Fast')
+    cy.get('#chat-model-select').find('option').contains(/Fast|Rask/)
     cy.get('#chat-model-select').should('have.value', 'gpt-5.4-mini')
 
     cy.contains('button', /^Anthropic$/i).click()
