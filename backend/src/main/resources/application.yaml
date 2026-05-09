@@ -122,6 +122,10 @@ portfolio:
       window-seconds: 300
   chat:
     default-model-id: gpt-5.4-mini
+  realtime:
+    enabled: true
+    model: gpt-realtime
+    session-max-minutes: 3
   retrieval:
     # Optional ONNX rerank; Docker image sets paths under /app/rerank (see backend/Dockerfile).
     rerank-enabled: false
