@@ -277,7 +277,7 @@ class RealtimeSessionServiceTest {
     JsonNode json = extractSessionJson(captor.getValue());
 
     assertThat(json.get("instructions").asText()).contains("Du er en hjelpsom");
-    assertThat(json.get("instructions").asText()).contains("Kevin studerer dataingenior ved NTNU");
+    assertThat(json.get("instructions").asText()).contains("Kevin studerer dataingeniør ved NTNU");
     assertThat(json.get("model").asText()).isEqualTo("gpt-realtime-2");
     assertThat(json.get("max_output_tokens").asInt()).isEqualTo(512);
     assertThat(json.at("/tools/0/type").asText()).isEqualTo("function");

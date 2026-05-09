@@ -2,7 +2,7 @@
   "version": 1,
   "languages": {
     "no": {
-      "profileCard": "Kevin studerer dataingenior ved NTNU i Trondheim, med retning systemutvikling. Han bygger denne portefoljen som et personlig AI- og RAG-prosjekt med Vue, TypeScript, Spring Boot, Spring AI, OpenAI og PostgreSQL/pgvector. Voice-boten kan svare kort om offentlig informasjon om studier, prosjekter, kursomrader og relevant arbeidserfaring. Den skal ikke dele karakterer eller private detaljer."
+      "profileCard": "Kevin studerer dataingeniør ved NTNU i Trondheim, med retning systemutvikling. Han bygger denne porteføljen som et personlig AI- og RAG-prosjekt med Vue, TypeScript, Spring Boot, Spring AI, OpenAI og PostgreSQL/pgvector. Voice-boten kan svare kort om offentlig informasjon om studier, prosjekter, kursområder og relevant arbeidserfaring. Den skal ikke dele karakterer eller private detaljer."
     },
     "en": {
       "profileCard": "Kevin studies data engineering at NTNU in Trondheim, focused on system development. He built this portfolio as a personal AI and RAG project using Vue, TypeScript, Spring Boot, Spring AI, OpenAI, and PostgreSQL/pgvector. The voice bot can answer briefly about public information on his studies, projects, course areas, and relevant work experience. It must not share grades or private details."
@@ -13,33 +13,33 @@
       "id": "education-ntnu-data-engineering",
       "category": "education",
       "title": {
-        "no": "Dataingenior ved NTNU",
+        "no": "Dataingeniør ved NTNU",
         "en": "Data engineering at NTNU"
       },
       "text": {
-        "no": "Kevin tar en bachelor i ingeniorfag, Data - systemutvikling ved NTNU i Trondheim. Studiet er pa 180 studiepoeng og har startdato august 2023.",
+        "no": "Kevin tar en bachelor i ingeniørfag, Data - systemutvikling ved NTNU i Trondheim. Studiet er på 180 studiepoeng og har startdato august 2023.",
         "en": "Kevin is taking a bachelor's degree in engineering, Data - system development at NTNU in Trondheim. The program is 180 credits and started in August 2023."
       },
-      "tags": ["ntnu", "dataingenior", "data engineering", "bachelor", "systemutvikling", "system development", "trondheim"]
+      "tags": ["ntnu", "dataingenior", "dataingeniør", "data engineering", "bachelor", "systemutvikling", "system development", "trondheim", "study", "studies", "studerer", "studier", "education", "utdanning"]
     },
     {
       "id": "portfolio-project-rag-ai",
       "category": "project",
       "title": {
-        "no": "Portefoljeprosjekt med RAG og AI",
+        "no": "Porteføljeprosjekt med RAG og AI",
         "en": "Portfolio project with RAG and AI"
       },
       "text": {
-        "no": "Portefoljen kombinerer presentasjon av Kevin med utforskning av Retrieval-Augmented Generation og Spring AI. Den fungerer som digital CV og som demonstrasjon av AI-teknologi.",
+        "no": "Porteføljen kombinerer presentasjon av Kevin med utforskning av Retrieval-Augmented Generation og Spring AI. Den fungerer som digital CV og som demonstrasjon av AI-teknologi.",
         "en": "The portfolio combines a presentation of Kevin with exploration of Retrieval-Augmented Generation and Spring AI. It works as a digital CV and a demonstration of AI technology."
       },
-      "tags": ["portfolio", "portefolje", "rag", "retrieval augmented generation", "spring ai", "ai", "openai"]
+      "tags": ["portfolio", "portefolje", "portefølje", "rag", "retrieval augmented generation", "spring ai", "ai", "openai"]
     },
     {
       "id": "portfolio-tech-stack",
       "category": "technology",
       "title": {
-        "no": "Teknologistack for portefoljen",
+        "no": "Teknologistack for porteføljen",
         "en": "Portfolio technology stack"
       },
       "text": {
@@ -56,7 +56,7 @@
         "en": "Heathen Army"
       },
       "text": {
-        "no": "Kevin bygde og drev Heathen Army, en fanside og blogg for TV-serien Vikings, da han var 12 til 14 ar. Prosjektet ga erfaring med WordPress, Yoast SEO, Google Analytics, Patreon, publisering og globalt publikum.",
+        "no": "Kevin bygde og drev Heathen Army, en fanside og blogg for TV-serien Vikings, da han var 12 til 14 år. Prosjektet ga erfaring med WordPress, Yoast SEO, Google Analytics, Patreon, publisering og globalt publikum.",
         "en": "Kevin built and ran Heathen Army, a fan site and blog for the TV series Vikings, when he was 12 to 14 years old. The project gave him experience with WordPress, Yoast SEO, Google Analytics, Patreon, publishing, and a global audience."
       },
       "tags": ["heathen army", "vikings", "wordpress", "seo", "yoast", "analytics", "patreon", "blog"]
@@ -69,7 +69,7 @@
         "en": "Krisefikser"
       },
       "text": {
-        "no": "Krisefikser er en nettside for a forbedre kriseberedskap i Norge. Prosjektet ble utviklet i et smidig systemutviklingskurs med fokus pa praktisk programvareutvikling.",
+        "no": "Krisefikser er en nettside for å forbedre kriseberedskap i Norge. Prosjektet ble utviklet i et smidig systemutviklingskurs med fokus på praktisk programvareutvikling.",
         "en": "Krisefikser is a website for improving emergency preparedness in Norway. The project was developed in an agile software development course with a practical software engineering focus."
       },
       "tags": ["krisefikser", "beredskap", "emergency preparedness", "agile", "systemutvikling", "deployment"]
@@ -82,10 +82,10 @@
         "en": "LEGO data analysis"
       },
       "text": {
-        "no": "I et statistisk laering og data science-emne gjennomforte Kevin et LEGO-basert dataanalyseprosjekt med regresjon, klassifikasjon og klyngeanalyse.",
+        "no": "I et statistisk læring og data science-emne gjennomførte Kevin et LEGO-basert dataanalyseprosjekt med regresjon, klassifikasjon og klyngeanalyse.",
         "en": "In a statistical learning and data science course, Kevin completed a LEGO-based data analysis project using regression, classification, and clustering."
       },
-      "tags": ["lego", "dataanalyse", "data analysis", "machine learning", "maskinlaering", "regression", "classification", "clustering"]
+      "tags": ["lego", "dataanalyse", "data analysis", "machine learning", "maskinlaering", "maskinlæring", "regression", "classification", "clustering"]
     },
     {
       "id": "project-roadmap",
@@ -95,7 +95,7 @@
         "en": "Roadmap"
       },
       "text": {
-        "no": "Roadmap implementerer korteste-vei-problemet med nordiske kartdata. Programmet bruker Dijkstra og ALT-sok, og kan finne naermeste interessepunkter.",
+        "no": "Roadmap implementerer korteste-vei-problemet med nordiske kartdata. Programmet bruker Dijkstra og ALT-søk, og kan finne nærmeste interessepunkter.",
         "en": "Roadmap implements shortest-path search with Nordic map data. The program uses Dijkstra and ALT search, and can find nearby points of interest."
       },
       "tags": ["roadmap", "dijkstra", "alt", "shortest path", "korteste vei", "java", "algorithms", "algoritmer"]
@@ -108,7 +108,7 @@
         "en": "Summer intern at SpareBank 1 Utvikling"
       },
       "text": {
-        "no": "Kevin skal gjennomfore et 8-ukers sommerinternship innen utvikling hos SpareBank 1 Utvikling sommeren 2026.",
+        "no": "Kevin skal gjennomføre et 8-ukers sommerinternship innen utvikling hos SpareBank 1 Utvikling sommeren 2026.",
         "en": "Kevin is scheduled to complete an 8-week software development summer internship at SpareBank 1 Utvikling in summer 2026."
       },
       "tags": ["sparebank 1", "sparebank1", "internship", "sommerintern", "utvikling", "software development"]
@@ -121,7 +121,7 @@
         "en": "Teaching assistant at NTNU"
       },
       "text": {
-        "no": "Kevin har vaert studentassistent for Programmering, numerikk og sikkerhet ved NTNU, et emne som kombinerer Python, numerikk og grunnleggende IKT-sikkerhet.",
+        "no": "Kevin har vært studentassistent for Programmering, numerikk og sikkerhet ved NTNU, et emne som kombinerer Python, numerikk og grunnleggende IKT-sikkerhet.",
         "en": "Kevin has been a teaching assistant for Programming, Numerics and Security at NTNU, a course combining Python, numerical methods, and basic ICT security."
       },
       "tags": ["ntnu", "studentassistent", "teaching assistant", "python", "numerics", "security", "sikkerhet"]
@@ -134,7 +134,7 @@
         "en": "Engage Resource Hub"
       },
       "text": {
-        "no": "Kevin har jobbet med innholdsproduksjon for Engage Resource Hub ved NTNU, med publisering av laeringsinnhold, teknisk stotte og designmessige forbedringer.",
+        "no": "Kevin har jobbet med innholdsproduksjon for Engage Resource Hub ved NTNU, med publisering av læringsinnhold, teknisk støtte og designmessige forbedringer.",
         "en": "Kevin has worked with content production for Engage Resource Hub at NTNU, including publishing learning content, technical support, and design improvements."
       },
       "tags": ["engage", "resource hub", "ntnu", "content", "innholdsproduksjon", "design", "technical support"]
@@ -143,11 +143,11 @@
       "id": "course-areas",
       "category": "courses",
       "title": {
-        "no": "Kursomrader",
+        "no": "Kursområder",
         "en": "Course areas"
       },
       "text": {
-        "no": "Kevin sine kursomrader inkluderer programmering, databaser, systemutvikling, algoritmer og datastrukturer, operativsystemer, nettverksprogrammering, full-stack utvikling, statistikk, maskinlaering, C++ og mobilutvikling.",
+        "no": "Kevin sine kursområder inkluderer programmering, databaser, systemutvikling, algoritmer og datastrukturer, operativsystemer, nettverksprogrammering, full-stack utvikling, statistikk, maskinlæring, C++ og mobilutvikling.",
         "en": "Kevin's course areas include programming, databases, system development, algorithms and data structures, operating systems, network programming, full-stack development, statistics, machine learning, C++, and mobile development."
       },
       "tags": ["courses", "kurs", "programming", "databases", "algorithms", "full-stack", "machine learning", "c++", "mobile"]
