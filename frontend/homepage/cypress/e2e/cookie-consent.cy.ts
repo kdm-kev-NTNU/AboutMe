@@ -30,13 +30,15 @@ describe('Cookie consent settings', () => {
       cy.contains('button', /^Reject$/).click()
     })
 
-    cy.contains('button', 'Cookie Settings').scrollIntoView().should('be.visible').click()
+    cy.contains('button', 'Cookie Settings').scrollIntoView()
+    cy.contains('button', 'Cookie Settings').should('be.visible').click()
     cy.get('[role="dialog"]').should('be.visible').and('contain.text', 'Cookies and analytics')
 
     cy.contains('button', 'Cancel').click()
     cy.get('[role="dialog"]').should('not.exist')
 
-    cy.contains('button', 'Cookie Settings').scrollIntoView().should('be.visible').click()
+    cy.contains('button', 'Cookie Settings').scrollIntoView()
+    cy.contains('button', 'Cookie Settings').should('be.visible').click()
     cy.get('[role="dialog"]').within(() => {
       cy.get('input[type="checkbox"]:not([disabled])').should('have.length', 4)
       cy.get('input[type="checkbox"]:not([disabled])').eq(0).check({ force: true })
