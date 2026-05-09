@@ -150,10 +150,10 @@ describe('HomeView, ChatHistory, admin views (smoke)', () => {
     })
   }
 
-  it('renders HomeView dual-mode gateway', async () => {
+  it('renders HomeView voice-first hero', async () => {
     const wrapper = mountView(HomeView)
     await flushPromises()
-    expect(wrapper.text()).toMatch(/Choose how you want to meet the AI/i)
+    expect(wrapper.text()).toMatch(/Talk with Kevin's AI first/i)
   })
 
   it('renders ChatHistory empty state in English', async () => {

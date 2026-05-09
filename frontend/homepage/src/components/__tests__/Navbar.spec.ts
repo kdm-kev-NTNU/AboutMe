@@ -15,6 +15,7 @@ describe('Navbar', () => {
 			history: createMemoryHistory(),
 			routes: [
 				{ path: '/', name: 'home', component: { template: '<div />' } },
+				{ path: '/voice', name: 'voice', component: { template: '<div />' } },
 				{ path: '/projects', name: 'projects', component: { template: '<div />' } },
 				{ path: '/career', name: 'career', component: { template: '<div />' } },
 				{ path: '/project', name: 'project', component: { template: '<div />' } },
@@ -34,6 +35,7 @@ describe('Navbar', () => {
 		})
 		await flushPromises()
 		expect(wrapper.text()).toContain('Home')
+		expect(wrapper.text()).toContain('Voice')
 		expect(wrapper.text()).toContain('Projects')
 		expect(wrapper.text()).toContain('Career')
 		expect(wrapper.text()).toContain('The project')
@@ -56,6 +58,7 @@ describe('Navbar', () => {
 		})
 		await flushPromises()
 		expect(wrapper.text()).toContain('Hjem')
+		expect(wrapper.text()).toContain('Stemme')
 		expect(wrapper.text()).toContain('Prosjekter')
 		expect(wrapper.text()).toContain('Karriere')
 		expect(wrapper.text()).toContain('Prosjektet')
@@ -97,8 +100,9 @@ describe('Navbar', () => {
 
 		const drawer = wrapper.find('#mobile-nav-drawer')
 		expect(drawer.exists()).toBe(true)
-		expect(drawer.findAll('a').length).toBe(4)
+		expect(drawer.findAll('a').length).toBe(5)
 		expect(drawer.text()).toContain('Home')
+		expect(drawer.text()).toContain('Voice')
 		expect(drawer.text()).toContain('Projects')
 	})
 })

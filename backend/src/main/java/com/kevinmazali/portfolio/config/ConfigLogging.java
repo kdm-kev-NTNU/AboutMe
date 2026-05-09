@@ -65,5 +65,14 @@ public class ConfigLogging implements ApplicationRunner {
         String posthogKey = environment.getProperty("portfolio.posthog.api-key");
         log.info("Config: portfolio.posthog.api-key={}",
             posthogKey == null || posthogKey.isBlank() ? "<empty>" : "***");
+
+        boolean realtimeOn =
+            Boolean.parseBoolean(environment.getProperty("portfolio.realtime.enabled", "false"));
+        String openaiKey = environment.getProperty("spring.ai.openai.api-key", "");
+        if (realtimeOn && (openaiKey == null || openaiKey.isBlank())) {
+            log.warn(
+                "portfolio.realtime.enabled=true but spring.ai.openai.api-key is blank; "
+                    + "voice status will show disabled and POST /realtime/session will return 503 until a key is set.");
+        }
     }
 }

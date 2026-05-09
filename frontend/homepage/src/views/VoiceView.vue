@@ -1,354 +1,231 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
+import { Mic, MicOff, Loader2, Info, MessageSquare } from 'lucide-vue-next'
 import { useLangStore } from '@/stores/lang'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import VoiceOrb from '@/components/VoiceOrb.vue'
-import BudgetDialog from '@/components/BudgetDialog.vue'
-import { useOpenAiRealtimeVoice } from '@/composables/useOpenAiRealtimeVoice'
-import { ChevronLeft, Info, Loader2 } from 'lucide-vue-next'
+import AiStatusDialog from '@/components/AiStatusDialog.vue'
+import { useRealtimeVoice } from '@/composables/useRealtimeVoice'
+import { fetchRealtimeVoiceEnabled } from '@/lib/realtime-voice'
 
-const router = useRouter()
 const langStore = useLangStore()
-const language = computed({
-  get: () => langStore.language,
-  set: (v: 'en' | 'no') => langStore.setLanguage(v),
-})
+const language = computed(() => langStore.language)
+
+const voiceAvailable = ref<boolean | null>(null)
+const aiErrorDialogOpen = ref(false)
 
 const {
-  phase,
+  connectionState,
   errorMessage,
-  status,
-  userTranscript,
+  sessionNotice,
   assistantTranscript,
-  assistantBuffer,
-  remoteAudioRef,
-  sessionMs,
-  loadStatus,
-  start,
-  stop,
-} = useOpenAiRealtimeVoice(language)
-
-const budgetDialogOpen = ref(false)
-const checkingVoice = ref(false)
-
-/** Dual-mode gateway + voice session; strings aligned with HomeView gateway where possible. */
-const copy = computed(() => {
-  if (language.value === 'no') {
-    return {
-      heading: 'Velg hvordan du vil møte AI-en',
-      headingMobile: 'Snakk først. Spør dypere ved behov.',
-      talkTitle: 'Snakk',
-      talkDesc: 'Sanntidsstemme for raske offentlige fakta om Kevin.',
-      talkCta: 'Start stemme',
-      askTitle: 'Spør',
-      askTitleMobile: 'Spør i tekstchat',
-      askDesc: 'Tekstchat for dypere dokumentbaserte svar.',
-      askCta: 'Åpne chat',
-      beforeVoiceTitle: 'Før du bruker stemme',
-      beforeVoiceBody:
-        'Dette er KI — ikke Kevin. Lyd går direkte til OpenAI over WebRTC fra nettleseren din. Foreslått økt ca. tre minutter; du kan avslutte når som helst.',
-      connecting: 'Kobler til…',
-      end: 'Avslutt',
-      active: 'Aktiv',
-      approx: 'ca.',
-      min: 'min',
-      you: 'DU (TRANSCRIPT)',
-      assistant: 'ASSISTENT',
-      back: 'Til forsiden',
-      sessionHint: 'Økt timer:',
-    }
-  }
-  return {
-    heading: 'Choose how you want to meet the AI',
-    headingMobile: 'Talk first. Ask deeper when needed.',
-    talkTitle: 'Talk',
-    talkDesc: 'Realtime voice for quick public facts about Kevin.',
-    talkCta: 'Start voice',
-    askTitle: 'Ask',
-    askTitleMobile: 'Ask in text chat',
-    askDesc: 'Text chat for deeper document-grounded answers.',
-    askCta: 'Open chat',
-    beforeVoiceTitle: 'Before you use voice',
-    beforeVoiceBody:
-      'This is AI — not Kevin. Audio goes to OpenAI over WebRTC from your browser. Sessions are about three minutes; you can disconnect anytime.',
-    connecting: 'Connecting…',
-    end: 'Hang up',
-    active: 'Active',
-    approx: '~',
-    min: 'min',
-    you: 'YOU (TRANSCRIPT)',
-    assistant: 'ASSISTANT',
-    back: 'Back to home',
-    sessionHint: 'Session timer:',
-  }
-})
-
-const sessionMinutesLabel = computed(() => status.value?.sessionMaxMinutes ?? 3)
-
-const showGateway = computed(() => phase.value === 'idle' || phase.value === 'error')
-
-async function handleStartVoice() {
-  checkingVoice.value = true
-  await loadStatus()
-  checkingVoice.value = false
-
-  if (!status.value?.enabled) {
-    budgetDialogOpen.value = true
-    return
-  }
-  await start()
-}
-
-async function handleBudgetRetry() {
-  await loadStatus()
-  if (status.value?.enabled) {
-    await start()
-  } else {
-    budgetDialogOpen.value = true
-  }
-}
-
-function handleOpenChat() {
-  router.push({ name: 'chat' })
-}
+  userTranscript,
+  connect,
+  disconnect,
+  maxSessionMs,
+} = useRealtimeVoice(language)
 
 onMounted(async () => {
-  await loadStatus()
-  if (status.value && !status.value.enabled) {
-    budgetDialogOpen.value = true
+  voiceAvailable.value = await fetchRealtimeVoiceEnabled()
+})
+
+const copy = computed(() => {
+  const en = language.value === 'en'
+  return {
+    title: en ? "Talk with Kevin's AI" : 'Snakk med Kevin sin AI',
+    subtitle: en
+      ? 'Live voice (OpenAI GPT-Realtime-2). Audio is sent to OpenAI for real-time processing. Voice can use a small public fact lookup when needed; for deeper document-grounded answers, use text chat.'
+      : 'Live stemme (OpenAI GPT-Realtime-2). Lyd sendes til OpenAI i sanntid. Stemme kan bruke et lite offentlig faktaoppslag ved behov; for dypere dokumentforankrede svar, bruk tekstchat.',
+    chatAlt: en ? 'Use text chat instead' : 'Bruk tekstchat',
+    unavailable: en
+      ? 'Voice chat is not enabled on the server right now.'
+      : 'Stemmechat er ikke slått på hos serveren akkurat nå.',
+    connect: en ? 'Start voice' : 'Start stemme',
+    disconnect: en ? 'End session' : 'Avslutt',
+    connecting: en ? 'Connecting…' : 'Kobler til…',
+    live: en ? 'Live' : 'Aktiv',
+    you: en ? 'You (transcript)' : 'Du (transkripsjon)',
+    assistant: en ? 'Assistant (transcript)' : 'Assistent (transkripsjon)',
+    disclaimerTitle: en ? 'Before you use voice' : 'Før du bruker stemme',
+    disclaimerBody: en
+      ? 'You are talking to an AI, not Kevin himself. Replies can be wrong. Audio is processed by OpenAI in real time (this page uses WebRTC). Each session ends automatically after about 3 minutes.'
+      : 'Du snakker med en KI, ikke Kevin selv. Svar kan være feil. Lyd behandles av OpenAI i sanntid (denne siden bruker WebRTC). Hver økt avsluttes automatisk etter ca. 3 minutter.',
   }
 })
+
+const statusLabel = computed(() => {
+  if (connectionState.value === 'connecting') return copy.value.connecting
+  if (connectionState.value === 'connected') return copy.value.live
+  return ''
+})
+
+const errorDialogCopy = computed(() => {
+  const en = language.value === 'en'
+  return {
+    title: en ? 'Voice could not start' : 'Stemme kunne ikke starte',
+    description: en
+      ? 'The live AI service needs a fresh session before it can continue.'
+      : 'Live AI-tjenesten trenger en ny økt før den kan fortsette.',
+    retry: en ? 'Try again' : 'Prøv igjen',
+  }
+})
+
+watch(errorMessage, (message) => {
+  aiErrorDialogOpen.value = message.trim() !== ''
+})
+
+function retryVoice() {
+  aiErrorDialogOpen.value = false
+  void connect()
+}
 </script>
 
 <template>
   <main
-    class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-linear-to-r from-[#f7fcff] to-[#e3f0ff] pb-28"
+    class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 pt-20"
   >
-    <!-- Language toggle -->
-    <div class="absolute top-6 right-6 z-20">
+    <AiStatusDialog
+      v-model:open="aiErrorDialogOpen"
+      :title="errorDialogCopy.title"
+      :description="errorDialogCopy.description"
+      :message="errorMessage"
+      :retry-label="errorDialogCopy.retry"
+      show-retry
+      @retry="retryVoice"
+    />
+
+    <div class="absolute inset-0 pointer-events-none">
       <div
-        class="flex rounded-full border border-slate-200/60 bg-white/80 p-1 shadow-sm backdrop-blur-sm"
-      >
-        <button
-          type="button"
-          class="rounded-full px-3 py-1.5 text-xs font-medium transition-all"
-          :class="
-            language === 'en' ? 'bg-white font-semibold text-blue-700 shadow-sm' : 'text-slate-500'
-          "
-          @click="language = 'en'"
-        >
-          EN
-        </button>
-        <button
-          type="button"
-          class="rounded-full px-3 py-1.5 text-xs font-medium transition-all"
-          :class="
-            language === 'no' ? 'bg-white font-semibold text-blue-700 shadow-sm' : 'text-slate-500'
-          "
-          @click="language = 'no'"
-        >
-          NO
-        </button>
-      </div>
+        class="absolute top-0 left-0 h-full w-full"
+        style="
+          background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%);
+        "
+      />
     </div>
 
-    <!-- Gateway: choose Talk vs Ask -->
-    <template v-if="showGateway">
-      <RouterLink
-        to="/"
-        class="absolute top-6 left-6 z-20 inline-flex items-center gap-1 text-sm font-medium text-[#2663eb] hover:text-blue-800 hover:underline"
-      >
-        <ChevronLeft class="size-4 shrink-0" aria-hidden="true" />
-        {{ copy.back }}
-      </RouterLink>
-
-      <div
-        class="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6 py-16 pt-24 lg:py-8 lg:pt-20"
-      >
-        <!-- Desktop heading -->
-        <h1 class="mb-10 hidden text-[58px] font-bold leading-[1.05] text-[#0f1729] lg:block">
-          {{ copy.heading }}
+    <div class="relative z-10 mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-8 sm:px-6">
+      <div class="mb-6 text-center">
+        <h1 class="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
+          {{ copy.title }}
         </h1>
-
-        <!-- Mobile heading -->
-        <h1 class="mb-8 text-[39px] font-bold leading-[1.08] text-[#0f1729] lg:hidden">
-          {{ copy.headingMobile }}
-        </h1>
-
-        <!-- Cards -->
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-          <!-- Talk -->
-          <div
-            class="flex w-full flex-col overflow-hidden rounded-[24px] border border-[#a6c2f5] bg-white p-8 shadow-[0px_18px_32px_rgba(20,38,77,0.12)] lg:max-w-[560px] lg:rounded-[28px] lg:p-10"
-          >
-            <div class="flex items-start gap-6">
-              <VoiceOrb size="md" class="hidden lg:block" />
-              <VoiceOrb size="sm" class="lg:hidden" />
-              <div class="flex flex-col">
-                <h2 class="text-[32px] font-bold text-[#0f1729] lg:text-[44px] lg:leading-[52px]">
-                  {{ copy.talkTitle }}
-                </h2>
-                <p class="mt-2 hidden text-lg leading-relaxed text-[#47546b] lg:block">
-                  {{ copy.talkDesc }}
-                </p>
-              </div>
-            </div>
-            <div class="mt-6 lg:mt-8 lg:ml-[168px]">
-              <Button
-                type="button"
-                :disabled="checkingVoice"
-                class="h-[52px] rounded-2xl bg-[#2663eb] px-7 text-[15px] font-semibold text-white shadow-[0px_14px_24px_rgba(38,99,235,0.25)] hover:bg-blue-700 disabled:opacity-60"
-                @click="handleStartVoice"
-              >
-                <Loader2
-                  v-if="checkingVoice"
-                  class="me-2 inline size-4 animate-spin"
-                  aria-hidden="true"
-                />
-                {{ copy.talkCta }}
-              </Button>
-            </div>
-          </div>
-
-          <!-- Ask -->
-          <div
-            class="w-full overflow-hidden rounded-[22px] border border-[#d1def0] bg-white/82 p-8 lg:mt-12 lg:max-w-[470px] lg:rounded-[26px]"
-          >
-            <div class="hidden flex-col lg:flex">
-              <h2 class="text-[38px] font-bold leading-[45px] text-[#0f1729]">
-                {{ copy.askTitle }}
-              </h2>
-              <p class="mt-3 text-[17px] leading-relaxed text-[#47546b]">
-                {{ copy.askDesc }}
-              </p>
-              <div class="mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  class="h-[52px] rounded-2xl border-[#c7d6ed] px-7 text-[15px] font-semibold text-[#1f293b] hover:bg-slate-50"
-                  @click="handleOpenChat"
-                >
-                  {{ copy.askCta }}
-                </Button>
-              </div>
-            </div>
-
-            <div class="flex flex-col lg:hidden">
-              <h2 class="text-2xl font-bold text-[#0f1729]">
-                {{ copy.askTitleMobile }}
-              </h2>
-              <div class="mt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  class="h-[52px] rounded-2xl border-[#c7d6ed] px-7 text-[15px] font-semibold text-[#1f293b] hover:bg-slate-50"
-                  @click="handleOpenChat"
-                >
-                  {{ copy.askCta }}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p class="mt-8 text-center text-xs text-[#47546b]/80">
-          {{ copy.sessionHint }} {{ Math.round(sessionMs / 60000) }} {{ copy.min }} (auto)
+        <p class="mt-2 text-sm text-slate-600">
+          {{ copy.subtitle }}
         </p>
-
-        <Alert
-          v-if="phase === 'error' && errorMessage"
-          variant="destructive"
-          class="mx-auto mt-6 max-w-xl"
-        >
-          <AlertDescription>{{ errorMessage }}</AlertDescription>
-        </Alert>
-      </div>
-    </template>
-
-    <!-- Active voice session -->
-    <template v-else>
-      <div
-        class="relative z-10 mx-auto w-full max-w-2xl flex-1 space-y-4 px-6 py-16 pt-24 lg:pt-20"
-      >
         <RouterLink
-          to="/"
-          class="inline-flex items-center gap-1 text-sm font-medium text-[#2663eb] hover:text-blue-800 hover:underline"
+          to="/chat"
+          class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900"
         >
-          <ChevronLeft class="size-4 shrink-0" aria-hidden="true" />
-          {{ copy.back }}
+          <MessageSquare class="size-4 shrink-0" aria-hidden="true" />
+          {{ copy.chatAlt }}
         </RouterLink>
+      </div>
 
-        <Alert
-          class="border-[#a6c2f5]/80 bg-white/90 text-[#0f1729] [&>svg]:text-[#2663eb]"
-        >
-          <Info class="size-4 shrink-0" aria-hidden="true" />
-          <AlertTitle>{{ copy.beforeVoiceTitle }}</AlertTitle>
-          <AlertDescription>
-            <p>{{ copy.beforeVoiceBody }}</p>
-          </AlertDescription>
-        </Alert>
+      <Alert
+        class="mb-6 border-blue-200/80 bg-blue-50/90 text-slate-800 shadow-sm backdrop-blur-sm [&>svg]:text-blue-600"
+      >
+        <Info class="size-4 shrink-0" aria-hidden="true" />
+        <AlertTitle>{{ copy.disclaimerTitle }}</AlertTitle>
+        <AlertDescription>{{ copy.disclaimerBody }}</AlertDescription>
+      </Alert>
 
-        <audio ref="remoteAudioRef" class="sr-only" autoplay playsinline />
+      <div
+        v-if="voiceAvailable === false"
+        class="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-center text-sm text-amber-900"
+      >
+        {{ copy.unavailable }}
+      </div>
 
+      <template v-else-if="voiceAvailable === true">
         <div class="flex flex-col items-center gap-6">
-          <VoiceOrb size="lg" :active="phase === 'connected'" />
-
-          <Button
-            v-if="phase === 'connecting'"
-            type="button"
-            disabled
-            class="h-[52px] rounded-2xl px-8 opacity-90"
-          >
-            <Loader2 class="me-2 size-5 animate-spin" aria-hidden="true" />
-            {{ copy.connecting }}
-          </Button>
-
           <div
-            v-if="phase === 'connected'"
-            class="flex w-full flex-wrap items-center justify-between gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-950"
+            class="relative flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl shadow-blue-500/25"
+            :class="{
+              'ring-4 ring-blue-400/50 animate-pulse': connectionState === 'connected',
+            }"
           >
-            <span class="font-medium">
-              {{ copy.active }} · {{ copy.approx }} {{ sessionMinutesLabel }} {{ copy.min }}
-            </span>
-            <Button type="button" variant="outline" class="border-emerald-300" @click="stop">
-              {{ copy.end }}
+            <Loader2
+              v-if="connectionState === 'connecting'"
+              class="size-14 text-white animate-spin"
+              aria-hidden="true"
+            />
+            <Mic
+              v-else-if="connectionState === 'connected'"
+              class="size-14 text-white"
+              aria-hidden="true"
+            />
+            <Mic v-else class="size-14 text-white opacity-90" aria-hidden="true" />
+            <span class="sr-only">{{ statusLabel }}</span>
+          </div>
+
+          <p v-if="connectionState === 'connected'" class="text-sm font-medium text-green-700">
+            {{ copy.live }} · ~{{ Math.round(maxSessionMs / 60_000) }} min max
+          </p>
+
+          <div class="flex flex-wrap justify-center gap-3">
+            <Button
+              v-if="connectionState === 'idle' || connectionState === 'error'"
+              type="button"
+              class="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-base font-semibold"
+              @click="connect"
+            >
+              {{ copy.connect }}
+            </Button>
+            <Button
+              v-if="connectionState === 'connecting'"
+              type="button"
+              variant="secondary"
+              disabled
+            >
+              {{ copy.connecting }}
+            </Button>
+            <Button
+              v-if="connectionState === 'connected'"
+              type="button"
+              variant="outline"
+              class="rounded-2xl border-red-200 text-red-700 hover:bg-red-50"
+              @click="disconnect"
+            >
+              <MicOff class="me-2 inline size-4" aria-hidden="true" />
+              {{ copy.disconnect }}
             </Button>
           </div>
         </div>
 
-        <div v-if="phase === 'connected'" class="grid gap-3">
-          <section
-            class="rounded-2xl border border-[#d1def0] bg-white/90 p-4 shadow-sm backdrop-blur-sm"
-            aria-label="user transcript"
-          >
-            <h2 class="mb-2 text-xs font-bold uppercase tracking-wide text-[#47546b]">
+        <Alert
+          v-if="sessionNotice"
+          class="mt-6 border-blue-200 bg-blue-50 text-slate-800"
+        >
+          <AlertDescription>{{ sessionNotice }}</AlertDescription>
+        </Alert>
+
+        <div
+          v-if="connectionState === 'connected' || userTranscript || assistantTranscript"
+          class="mt-8 space-y-4 rounded-2xl border border-blue-100 bg-white/85 p-4 shadow-sm backdrop-blur-md"
+        >
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {{ copy.you }}
-            </h2>
-            <p class="min-h-[4rem] whitespace-pre-wrap text-sm text-[#0f1729]">
+            </p>
+            <p class="mt-1 whitespace-pre-wrap text-sm text-slate-800">
               {{ userTranscript || '…' }}
             </p>
-          </section>
-          <section
-            class="rounded-2xl border border-[#d1def0] bg-white/90 p-4 shadow-sm backdrop-blur-sm"
-            aria-label="assistant transcript"
-          >
-            <h2 class="mb-2 text-xs font-bold uppercase tracking-wide text-[#47546b]">
+          </div>
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {{ copy.assistant }}
-            </h2>
-            <p class="min-h-[4rem] whitespace-pre-wrap text-sm text-[#0f1729]">
-              {{ assistantTranscript }}{{ assistantBuffer
-              }}<template v-if="!assistantTranscript && !assistantBuffer">…</template>
             </p>
-          </section>
+            <p class="mt-1 whitespace-pre-wrap text-sm text-slate-800">
+              {{ assistantTranscript || '…' }}
+            </p>
+          </div>
         </div>
-      </div>
-    </template>
+      </template>
 
-    <BudgetDialog
-      v-model:open="budgetDialogOpen"
-      @retry="handleBudgetRetry"
-    />
+      <div v-else class="flex justify-center py-12">
+        <Loader2 class="size-8 animate-spin text-blue-600" aria-hidden="true" />
+      </div>
+    </div>
   </main>
 </template>

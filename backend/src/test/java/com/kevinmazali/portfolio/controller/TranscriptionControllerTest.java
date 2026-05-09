@@ -3,9 +3,11 @@ package com.kevinmazali.portfolio.controller;
 import com.kevinmazali.portfolio.MockConfig;
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.controller.advice.GlobalApiExceptionHandler;
+import com.kevinmazali.portfolio.config.ApiErrorConfiguration;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
+import com.kevinmazali.portfolio.config.RealtimeRateLimitProperties;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
@@ -34,9 +36,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EnableConfigurationProperties({
   AskRateLimitProperties.class,
   ExperimentRunRateLimitProperties.class,
-  DatasetGenerateRateLimitProperties.class
+  DatasetGenerateRateLimitProperties.class,
+  RealtimeRateLimitProperties.class
 })
-@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class, GlobalApiExceptionHandler.class })
+@Import({
+  WebConfig.class,
+  SecurityConfig.class,
+  MvcTestUserDetailsConfig.class,
+  MockConfig.class,
+  GlobalApiExceptionHandler.class,
+  ApiErrorConfiguration.class
+})
 class TranscriptionControllerTest {
 
   @Autowired
