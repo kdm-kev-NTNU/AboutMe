@@ -25,10 +25,23 @@ export interface LoginResponse {
   role: LoginResponseRole;
 }
 
+export interface FieldViolation {
+  /** Field or property path */
+  field: string;
+  /** Validation message */
+  message: string;
+}
+
 export interface ApiError {
   error: string;
-  /** Optional machine-readable code (e.g. BUDGET_EXCEEDED, OPENAI_REJECTED). */
+  /** Machine-readable code when applicable (e.g. BUDGET_EXCEEDED, VALIDATION_FAILED, UNAUTHORIZED). */
   code?: string;
+  /** Distributed trace id for correlating with server logs. */
+  traceId?: string;
+  /** ISO-8601 timestamp when the error was produced. */
+  timestamp?: string;
+  /** Field-level validation failures for HTTP 400 responses. */
+  violations?: FieldViolation[];
 }
 
 export interface ServiceUnavailableError {
@@ -287,6 +300,13 @@ export type AdminDocumentsChunksParams = {
 documentId?: string;
 limit?: number;
 offset?: number;
+};
+
+export type AdminDocumentsSyncFromRemoteParams = {
+/**
+ * When true, TRUNCATE local vector_store before upsert
+ */
+clean?: boolean;
 };
 
 export type PromptVersionsHistoryParams = {
@@ -948,71 +968,64 @@ export const adminDocumentsReseed = async ( options?: RequestInit): Promise<admi
     
     
   }
-);
-}
+);}
+
+
 
 /**
  * @summary Sync vector_store from remote Postgres into local DB
  */
-export type AdminDocumentsSyncFromRemoteParams = {
-  clean?: boolean;
-};
-
 export type adminDocumentsSyncFromRemoteResponse200 = {
-  data: VectorStoreSyncResult;
-  status: 200;
-};
+  data: VectorStoreSyncResult
+  status: 200
+}
 
 export type adminDocumentsSyncFromRemoteResponse400 = {
-  data: ApiError;
-  status: 400;
-};
+  data: ApiError
+  status: 400
+}
 
 export type adminDocumentsSyncFromRemoteResponse403 = {
-  data: unknown;
-  status: 403;
+  data: void
+  status: 403
+}
+    
+export type adminDocumentsSyncFromRemoteResponseSuccess = (adminDocumentsSyncFromRemoteResponse200) & {
+  headers: Headers;
 };
-
-export type adminDocumentsSyncFromRemoteResponseSuccess = adminDocumentsSyncFromRemoteResponse200 & {
+export type adminDocumentsSyncFromRemoteResponseError = (adminDocumentsSyncFromRemoteResponse400 | adminDocumentsSyncFromRemoteResponse403) & {
   headers: Headers;
 };
 
-export type adminDocumentsSyncFromRemoteResponseError = (
-  | adminDocumentsSyncFromRemoteResponse400
-  | adminDocumentsSyncFromRemoteResponse403
-) & {
-  headers: Headers;
-};
+export type adminDocumentsSyncFromRemoteResponse = (adminDocumentsSyncFromRemoteResponseSuccess | adminDocumentsSyncFromRemoteResponseError)
 
-export type adminDocumentsSyncFromRemoteResponse =
-  | adminDocumentsSyncFromRemoteResponseSuccess
-  | adminDocumentsSyncFromRemoteResponseError;
-
-export const getAdminDocumentsSyncFromRemoteUrl = (params?: AdminDocumentsSyncFromRemoteParams) => {
+export const getAdminDocumentsSyncFromRemoteUrl = (params?: AdminDocumentsSyncFromRemoteParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
+    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0
-    ? `/admin/tools/documents/sync-from-remote?${stringifiedParams}`
-    : `/admin/tools/documents/sync-from-remote`;
-};
+  return stringifiedParams.length > 0 ? `/admin/tools/documents/sync-from-remote?${stringifiedParams}` : `/admin/tools/documents/sync-from-remote`
+}
 
-export const adminDocumentsSyncFromRemote = async (
-  params?: AdminDocumentsSyncFromRemoteParams,
-  options?: RequestInit,
-): Promise<adminDocumentsSyncFromRemoteResponse> => {
-  return customFetch<adminDocumentsSyncFromRemoteResponse>(getAdminDocumentsSyncFromRemoteUrl(params), {
+export const adminDocumentsSyncFromRemote = async (params?: AdminDocumentsSyncFromRemoteParams, options?: RequestInit): Promise<adminDocumentsSyncFromRemoteResponse> => {
+  
+  return customFetch<adminDocumentsSyncFromRemoteResponse>(getAdminDocumentsSyncFromRemoteUrl(params),
+  {      
     ...options,
-    method: 'POST',
-  });
-};
+    method: 'POST'
+    
+    
+  }
+);}
+
+
 
 /**
  * @summary Delete document

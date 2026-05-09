@@ -11,6 +11,7 @@ import {
   type ChunkListResponse,
   type DocumentListEntry,
 } from '@/api/generated/portfolio'
+import { formatAdminHttpError as formatHttpError } from '@/lib/api-error'
 
 // Chunk browser: paginated embeddings with optional documentId (content hash) filter.
 const auth = useAuthStore()
@@ -30,16 +31,6 @@ const expandedChunkId = ref<string | null>(null)
 const expandedTextChunkId = ref<string | null>(null)
 
 const TEXT_PREVIEW_LEN = 200
-
-function formatHttpError(status: number, data: unknown): string {
-  if (status === 401) return 'Ikke autorisert (logg inn som admin)'
-  if (data && typeof data === 'object') {
-    const o = data as Record<string, unknown>
-    if (typeof o.error === 'string' && o.error) return o.error
-    if (typeof o.message === 'string' && o.message) return o.message
-  }
-  return `Feilet (${status})`
-}
 
 async function loadData() {
   error.value = ''

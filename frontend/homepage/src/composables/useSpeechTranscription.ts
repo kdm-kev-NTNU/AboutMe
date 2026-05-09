@@ -1,17 +1,10 @@
 import { computed, onUnmounted, ref, type ComputedRef } from 'vue'
+import { apiErrorMessage } from '@/lib/api-error'
 import { transcribeSpeech } from '@/lib/transcribe-audio'
 
 export type SpeechUiLang = 'en' | 'no'
 
 export const MAX_SPEECH_PROMPT_CHARS = 3000
-
-function readApiError(data: unknown): string | undefined {
-  if (data && typeof data === 'object' && 'error' in data) {
-    const err = (data as { error?: unknown }).error
-    return typeof err === 'string' && err.length > 0 ? err : undefined
-  }
-  return undefined
-}
 
 export type UseSpeechTranscriptionOptions = {
   language: ComputedRef<SpeechUiLang>
@@ -145,7 +138,7 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
         return
       }
       voiceError.value =
-        readApiError(r.data) ??
+        apiErrorMessage(r.data) ??
         (options.language.value === 'en'
           ? 'Could not transcribe audio.'
           : 'Kunne ikke transkribere lyd.')

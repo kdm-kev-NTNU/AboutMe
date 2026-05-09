@@ -35,6 +35,7 @@ import {
 } from '@/lib/chat-telemetry'
 import AudioWaveform from '@/components/AudioWaveform.vue'
 import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/useSpeechTranscription'
+import { apiErrorMessage } from '@/lib/api-error'
 import { Loader2, Mic, Square, Headphones } from 'lucide-vue-next'
 
 // RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
@@ -155,14 +156,6 @@ const loadMessagesFromStorage = () => {
 
 watch(() => state.messages, saveMessagesToStorage, { deep: true })
 
-function readApiError(data: unknown): string | undefined {
-  if (data && typeof data === 'object' && 'error' in data) {
-    const err = (data as { error?: unknown }).error
-    return typeof err === 'string' && err.length > 0 ? err : undefined
-  }
-  return undefined
-}
-
 const GENERIC_ASK_ERROR = 'Noe gikk galt. Prøv igjen.'
 
 // Drops the in-memory transcript and stays on /chat (strip deep-link query params).
@@ -275,7 +268,7 @@ async function send(text: string) {
         conversation_id: conversationId,
         ...ffProp,
       })
-      errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
+      errorText.value = apiErrorMessage(errData) ?? GENERIC_ASK_ERROR
       return
     }
     if (sc === 400 || sc === 503) {
@@ -285,7 +278,7 @@ async function send(text: string) {
         conversation_id: conversationId,
         ...ffProp,
       })
-      errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
+      errorText.value = apiErrorMessage(errData) ?? GENERIC_ASK_ERROR
       return
     }
     captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
@@ -294,7 +287,7 @@ async function send(text: string) {
       conversation_id: conversationId,
       ...ffProp,
     })
-    errorText.value = readApiError(errData) ?? GENERIC_ASK_ERROR
+    errorText.value = apiErrorMessage(errData) ?? GENERIC_ASK_ERROR
   } catch {
     captureProductAnalyticsEvent(POSTHOG_CHAT_EVENTS.ANSWER_ERROR, {
       http_status: 0,
