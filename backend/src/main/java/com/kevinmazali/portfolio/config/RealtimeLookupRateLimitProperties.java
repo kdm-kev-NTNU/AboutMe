@@ -11,10 +11,10 @@ public class RealtimeLookupRateLimitProperties {
   private boolean enabled = true;
 
   /** Max POST /realtime/lookup calls per window per IP. */
-  private int capacity = 20;
+  private int capacity = 200;
 
   /** Refill window in seconds. */
-  private int windowSeconds = 180;
+  private int windowSeconds = 1800;
 
   public boolean isEnabled() {
     return enabled;
