@@ -25,3 +25,29 @@ backend/target/
 
 # Local dependency tree dumps (ad-hoc mvn dependency:tree output)
 backend/__deptree.txt
+
+# Frontend build/test output
+frontend/homepage/dist/
+frontend/homepage/dist-ssr/
+frontend/homepage/coverage/
+frontend/homepage/test-results/
+frontend/homepage/cypress/videos/
+frontend/homepage/cypress/screenshots/
+frontend/homepage/*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local runtime/db/temp (DB patterns scoped to backend/ so committed test fixtures stay visible)
+*.local
+*.tmp
+*.pid
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+backend/*.h2.db
