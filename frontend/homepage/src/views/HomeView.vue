@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
@@ -39,13 +39,13 @@ const chatDisclaimer = computed(() => {
     return {
       title: 'Før du chatter',
       body:
-        'Svarene lages av en språkmodell og kan være helt feil. Ikke del private eller sensitive ting her. Tale sendes til server for transkripsjon (samme som på chat-siden).',
+        'Svarene lages av en språkmodell og kan være helt feil. Ikke del private eller sensitive ting her. Snarveien under sender tale til server for transkripsjon. Live stemme på egen side bruker WebRTC direkte til OpenAI (se «Snakk med Kevin sin AI»).',
     }
   }
   return {
     title: 'Before you chat',
     body:
-      'Replies come from a language model and can be wrong. Do not share private or sensitive information here. Voice is sent to the server for transcription (same as on the chat page).',
+      'Replies come from a language model and can be wrong. Do not share private or sensitive information here. The shortcut below sends voice to the server for transcription. Live voice uses WebRTC to OpenAI on its own page (see “Talk with Kevin’s AI”).',
   }
 })
 
@@ -179,6 +179,32 @@ function submitQuick() {
           <h1 class="mb-4 px-1 text-center text-4xl font-bold sm:text-5xl md:text-6xl lg:text-7xl">
             Kevin's <span class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x">AI</span>.
           </h1>
+          <div class="mx-auto mb-4 max-w-xl space-y-1 px-2 text-center">
+            <RouterLink
+              to="/voice"
+              class="text-lg font-semibold text-blue-700 underline-offset-4 hover:text-blue-900 hover:underline sm:text-xl"
+              :aria-label="
+                language === 'no'
+                  ? 'Åpne live stemme med GPT-Realtime'
+                  : 'Open live voice with GPT-Realtime'
+              "
+            >
+              {{ language === 'no' ? 'Snakk med Kevin sin AI' : 'Talk with Kevin’s AI' }}
+            </RouterLink>
+            <p class="text-sm text-slate-600">
+              {{
+                language === 'no'
+                  ? 'Live stemme (GPT-Realtime). For dokument-chat → tekst.'
+                  : 'Live voice (GPT-Realtime). For document chat → text.'
+              }}
+            </p>
+            <RouterLink
+              to="/chat"
+              class="inline-block text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+            >
+              {{ language === 'no' ? 'Bruk tekstchat →' : 'Use text chat →' }}
+            </RouterLink>
+          </div>
           <div class="flex justify-center">
             <div class="relative rounded-full p-1 flex bg-gradient-to-r from-slate-200 to-slate-300 shadow-md border-2 border-transparent bg-clip-padding">
               <div
