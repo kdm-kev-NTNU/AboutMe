@@ -22,3 +22,6 @@ backend/data/docs/*
 
 # Maven build output
 backend/target/
+
+# Local scratch payloads / agent artifacts (never commit)
+scripts/_*
