@@ -1,5 +1,5 @@
 import { ref, onUnmounted, type Ref } from 'vue'
-import type { RealtimeSdpFailure, SpeechUiLang } from '@/lib/realtime-voice'
+import type { RealtimeLookupResponse, RealtimeSdpFailure, SpeechUiLang } from '@/lib/realtime-voice'
 import { exchangeRealtimeSdp, lookupRealtimeInfo, REALTIME_SESSION_MAX_MS } from '@/lib/realtime-voice'
 import { captureProductAnalyticsEvent, captureClientException } from '@/lib/analytics'
 import { POSTHOG_VOICE_EVENTS } from '@/lib/posthog-sdk'
@@ -197,11 +197,12 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
   }
 
   async function handleLookupFunctionCall(item: {
+    type?: unknown
     name?: unknown
     call_id?: unknown
     arguments?: unknown
   }) {
-    if (item.name !== 'lookup_kevin_info' || typeof item.call_id !== 'string') return
+    if (item.type !== 'function_call' || item.name !== 'lookup_kevin_info' || typeof item.call_id !== 'string') return
 
     let query = ''
     if (typeof item.arguments === 'string' && item.arguments.trim() !== '') {
@@ -215,7 +216,7 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
       }
     }
 
-    let output = { found: false, snippets: [] as unknown[] }
+    let output: RealtimeLookupResponse = { found: false, snippets: [] }
     if (query !== '') {
       try {
         output = await lookupRealtimeInfo(query, language.value)
@@ -241,7 +242,9 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
     if (!Array.isArray(output)) return
     for (const item of output) {
       if (item && typeof item === 'object') {
-        void handleLookupFunctionCall(item as { name?: unknown; call_id?: unknown; arguments?: unknown })
+        void handleLookupFunctionCall(
+          item as { type?: unknown; name?: unknown; call_id?: unknown; arguments?: unknown },
+        )
       }
     }
   }
