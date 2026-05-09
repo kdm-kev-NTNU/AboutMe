@@ -1,20 +1,6 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, ref, type Ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
-
-type ProjectSectionNav = {
-	openBachelor: () => void
-}
-const sectionNav = inject<ProjectSectionNav | null>('projectSectionNav', null)
-const router = useRouter()
-
-function onReadMoreBachelor() {
-	if (sectionNav) {
-		sectionNav.openBachelor()
-		return
-	}
-	void router.push({ path: '/project', hash: '#section-bachelor' })
-}
 import { useIntersectionObserver } from '@vueuse/core'
 import { useLangStore } from '@/stores/lang'
 import { Badge } from '@/components/ui/badge'
@@ -28,6 +14,12 @@ import {
   BookOpen,
 } from 'lucide-vue-next'
 
+const router = useRouter()
+
+function onOpenChat() {
+  void router.push({ name: 'chat' })
+}
+
 const langStore = useLangStore()
 const isNo = computed(() => langStore.language === 'no')
 
@@ -36,25 +28,21 @@ const lastUpdated = computed(() =>
   isNo.value ? 'Sist oppdatert: mai 2026' : 'Last updated: May 2026',
 )
 
-const headerBadge = computed(() =>
-  isNo.value ? 'IDATT2901 · Piscada AS' : 'IDATT2901 · Piscada AS',
-)
+const headerBadge = computed(() => 'AboutMe · AI portfolio')
 
 const headerSubtitle = computed(() =>
   isNo.value
-    ? 'Kort oversikt over arkitektur og hovedvalg. Detaljer og kilder finner du i README og bachelor-seksjonen.'
-    : 'A short overview of architecture and main choices. Details and sources live in the README and the Bachelor section.',
+    ? 'Kort oversikt over arkitektur, RAG, live stemme, adminverktøy og drift.'
+    : 'A short overview of architecture, RAG, live voice, admin tools, and operations.',
 )
 
 const contextParagraph = computed(() =>
   isNo.value
-    ? 'Utviklet som del av bacheloroppgave (IDATT2901, NTNU) med Piscada AS: en AI-assistent for energidata og sparing i næringsbygg.'
-    : 'Developed as part of a bachelor thesis (IDATT2901, NTNU) with Piscada AS: an AI assistant for energy data and savings in commercial buildings.',
+    ? 'AboutMe kombinerer en offentlig portfolio med dokumentbasert chat, OpenAI Realtime-stemme og adminflater for å holde kunnskapsbasen, promptene og RAG-evalueringene oppdatert.'
+    : 'AboutMe combines a public portfolio with document-grounded chat, OpenAI Realtime voice, and admin surfaces for keeping the knowledge base, prompts, and RAG evaluations current.',
 )
 
-const contextLinkLabel = computed(() =>
-  isNo.value ? 'Les mer om bacheloroppgaven' : 'Read more about the bachelor thesis',
-)
+const contextLinkLabel = computed(() => (isNo.value ? 'Prøv chatten' : 'Open the chat'))
 
 type Category = 'all' | 'ai' | 'backend' | 'frontend' | 'integration' | 'devops'
 
@@ -123,7 +111,7 @@ const pillarCards = computed(() =>
         {
           to: '/chat' as const,
           title: 'AI & RAG',
-          body: 'Spring AI mot OpenAI/Anthropic, dokumenter i PostgreSQL/pgvector (RAG).',
+          body: 'Spring AI mot OpenAI/Anthropic, dokumenter i PostgreSQL/pgvector og valgfri ONNX-rerank.',
           cta: 'Åpne chat',
           icon: BrainCircuit,
           accentBorder: 'hover:border-blue-200',
@@ -134,7 +122,7 @@ const pillarCards = computed(() =>
         {
           to: '/projects' as const,
           title: 'Backend',
-          body: 'Spring Boot 4, sikkerhet, JPA og REST mot SPA-en.',
+          body: 'Spring Boot 4 med sikkerhet, OpenAPI, AI-budsjett, Realtime og admin-API-er.',
           cta: 'Se prosjekter',
           icon: Server,
           accentBorder: 'hover:border-emerald-200',
@@ -145,7 +133,7 @@ const pillarCards = computed(() =>
         {
           to: '/' as const,
           title: 'Frontend',
-          body: 'Vue 3, Vite 8, Tailwind og Reka UI (shadcn-stil).',
+          body: 'Vue 3, Vite 8, Tailwind 4, Reka UI, Orval, PostHog og Cypress/Vitest.',
           cta: 'Til forsiden',
           icon: Globe,
           accentBorder: 'hover:border-sky-200',
@@ -158,7 +146,7 @@ const pillarCards = computed(() =>
         {
           to: '/chat' as const,
           title: 'AI & RAG',
-          body: 'Spring AI to OpenAI/Anthropic, documents in PostgreSQL/pgvector (RAG).',
+          body: 'Spring AI to OpenAI/Anthropic, documents in PostgreSQL/pgvector, and optional ONNX rerank.',
           cta: 'Open chat',
           icon: BrainCircuit,
           accentBorder: 'hover:border-blue-200',
@@ -169,7 +157,7 @@ const pillarCards = computed(() =>
         {
           to: '/projects' as const,
           title: 'Backend',
-          body: 'Spring Boot 4, security, JPA, and REST for the SPA.',
+          body: 'Spring Boot 4 with security, OpenAPI, AI budgets, Realtime, and admin APIs.',
           cta: 'View projects',
           icon: Server,
           accentBorder: 'hover:border-emerald-200',
@@ -180,7 +168,7 @@ const pillarCards = computed(() =>
         {
           to: '/' as const,
           title: 'Frontend',
-          body: 'Vue 3, Vite 8, Tailwind, and Reka UI (shadcn-style).',
+          body: 'Vue 3, Vite 8, Tailwind 4, Reka UI, Orval, PostHog, and Cypress/Vitest.',
           cta: 'Back to home',
           icon: Globe,
           accentBorder: 'hover:border-sky-200',
@@ -194,45 +182,45 @@ const pillarCards = computed(() =>
 const stackFront = computed(() =>
   isNo.value
     ? ([
-        'Vue 3, TypeScript, Vite 8 — Pinia, Vue Router, Tailwind 4, Reka UI',
-        'Orval-generert klient mot OpenAPI; PostHog i nettleseren når det er slått på',
+        'Vue 3, TypeScript, Vite 8, Pinia, Vue Router, Tailwind 4 og Reka UI',
+        'Orval-generert klient mot OpenAPI; PostHog i nettleseren etter samtykke',
+        'Vitest for enhetstester og Cypress for E2E, inkludert Realtime voice-smoke',
       ] as const)
     : ([
-        'Vue 3, TypeScript, Vite 8 — Pinia, Vue Router, Tailwind 4, Reka UI',
-        'Orval-generated client from OpenAPI; PostHog in the browser when enabled',
+        'Vue 3, TypeScript, Vite 8, Pinia, Vue Router, Tailwind 4, and Reka UI',
+        'Orval-generated client from OpenAPI; PostHog in the browser after consent',
+        'Vitest for unit tests and Cypress for E2E, including Realtime voice smoke',
       ] as const),
 )
 
 const stackBack = computed(() =>
   isNo.value
     ? ([
-        'Java 21, Spring Boot 4, Spring AI 2 (BOM), Spring Security, JPA → PostgreSQL 17/pgvector',
-        'Innlesing og RAG-flyt i Spring AI; valgfri ONNX-rerank og OpenNLP der det trengs',
-        'Docker Compose (db + API + nginx), Actuator/Prometheus; Bucket4j på offentlige endepunkter',
+        'Java 21, Spring Boot 4, Spring AI 2 (BOM), Spring Security og JPA mot PostgreSQL 17/pgvector',
+        'OpenAI/Anthropic-chat, OpenAI embeddings, Realtime WebRTC, valgfri ONNX-rerank og OpenNLP-sanitizer',
+        'Docker Compose (db + API + nginx), Actuator/Prometheus, Bucket4j og PostHog LLM-sporing',
       ] as const)
     : ([
-        'Java 21, Spring Boot 4, Spring AI 2 (BOM), Spring Security, JPA → PostgreSQL 17/pgvector',
-        'Ingestion and RAG in Spring AI; optional ONNX rerank and OpenNLP where needed',
-        'Docker Compose (db + API + nginx), Actuator/Prometheus; Bucket4j on public endpoints',
+        'Java 21, Spring Boot 4, Spring AI 2 (BOM), Spring Security, and JPA against PostgreSQL 17/pgvector',
+        'OpenAI/Anthropic chat, OpenAI embeddings, Realtime WebRTC, optional ONNX rerank, and OpenNLP sanitizer',
+        'Docker Compose (db + API + nginx), Actuator/Prometheus, Bucket4j, and PostHog LLM capture',
       ] as const),
 )
 
 const stackHeading = computed(() => (isNo.value ? 'Teknologistakk (kort)' : 'Tech stack (summary)'))
 
-const sectionsHeading = computed(() =>
-  isNo.value ? 'Hovedgrep' : 'Main ideas',
-)
+const sectionsHeading = computed(() => (isNo.value ? 'Hovedgrep' : 'Main ideas'))
 
 const sectionsIntro = computed(() =>
   isNo.value
-    ? 'Fokus på det som faktisk bærer løsningen — resten ligger i kode og README.'
+    ? 'Fokus på det som faktisk bærer løsningen; resten ligger i kode og README.'
     : 'Focus on what actually carries the solution; the rest lives in code and the README.',
 )
 
 const footerText = computed(() =>
   isNo.value
-    ? 'Mer om oppgaven og retningen finner du i bachelor-seksjonen på denne siden. Full brukerhistorier og krav ligger i avtale og veiledning med oppdragsgiver.'
-    : 'More about the thesis and direction is in the Bachelor section on this page. Full user stories and requirements live in agreements and supervision with the industry partner.',
+    ? 'Denne oversikten speiler funksjonene som er i appen nå. README-en har mer om kjøring, konfigurasjon, API-er og tester.'
+    : 'This overview mirrors the functionality currently in the app. The README has more on running, configuration, APIs, and tests.',
 )
 
 const footerHome = computed(() => (isNo.value ? 'Til forsiden' : 'Back to home'))
@@ -244,7 +232,7 @@ const sections = computed<Section[]>(() => {
         id: 'principle',
         heading: 'Prinsipp',
         paragraphs: [
-          'Modne rammer på server (Spring) der det lønner seg, og et moderne SPA-skall (Vue) som er raskt å endre. Målet er forutsigbar kode og en stakk som er enkel å kjøre lokalt og i produksjon.',
+          'Modne rammer på server der det lønner seg, og et moderne SPA-skall som er raskt å endre. Målet er forutsigbar kode og en stack som er enkel å kjøre lokalt, i Docker og i produksjon.',
         ],
         icon: Layers,
         category: 'all',
@@ -254,18 +242,28 @@ const sections = computed<Section[]>(() => {
         id: 'ai-rag',
         heading: 'KI og RAG',
         paragraphs: [
-          'Spring AI 2 (BOM) kobler chat mot OpenAI og valgfritt Anthropic; embeddings og chunk-lagring ligger i PostgreSQL med pgvector. Dokumenter kommer inn via Spring AI (Tika der det trengs), og det som indekseres er kuratert via admin-flyten.',
-          'Henting støtter norsk og engelsk i samme spørsmål; valgfri ONNX-rerank og leverandørspesifikke prompt-maler finnes når man trenger finere kontroll.',
+          'Spring AI 2 (BOM) kobler chat mot OpenAI og valgfritt Anthropic. Embeddings og chunk-lagring ligger i PostgreSQL med pgvector, slik at relasjonsdata og vector store lever i samme database.',
+          'Dokumentpipeline, chunks, promptversjoner og RAG-eksperimenter styres fra adminflatene. Valgfri ONNX-rerank og leverandørspesifikke promptmaler finnes når man trenger finere kontroll.',
         ],
         icon: BrainCircuit,
         category: 'ai',
-        badges: ['Spring AI 2', 'pgvector', 'OpenAI', 'Anthropic'],
+        badges: ['Spring AI 2', 'pgvector', 'OpenAI', 'Anthropic', 'ONNX'],
+      },
+      {
+        id: 'voice',
+        heading: 'Live stemme',
+        paragraphs: [
+          'OpenAI Realtime kjøres via WebRTC fra `/voice`, med backend-endepunkter for status, SDP-session og RAG-oppslag. Funksjonen er av som standard og aktiveres med miljøvariabler.',
+        ],
+        icon: MonitorSmartphone,
+        category: 'integration',
+        badges: ['Realtime', 'WebRTC', 'RAG lookup'],
       },
       {
         id: 'server-api',
         heading: 'Backend og API',
         paragraphs: [
-          'Spring Boot 4 på Java 21 med sikkerhet, JPA og Bucket4j på åpne endepunkter. OpenNLP inngår i sanitering der det er aktuelt.',
+          'Spring Boot 4 på Java 21 med sikkerhet, JPA, Bucket4j på offentlige endepunkter, AI-budsjett og kill switch. OpenNLP inngår i sanitering der det er aktuelt.',
           'REST er dokumentert med OpenAPI (SpringDoc); Vite proxier `/api` i utvikling, og Orval holder frontend-klienten i tråd med skjemaet.',
         ],
         icon: Server,
@@ -277,7 +275,7 @@ const sections = computed<Section[]>(() => {
         heading: 'Klient og kjøring',
         paragraphs: [
           'Vue 3, Vite 8, TypeScript, Pinia, Tailwind 4 og Reka UI for UI og tilstand.',
-          'Docker Compose binder sammen Postgres, API og nginx-bygget frontend. Actuator og Prometheus gir grunnleggende innsyn; PostHog (nettleser og valgfritt serversporing) kan skrus på etter behov.',
+          'Docker Compose binder sammen Postgres, API og nginx-bygget frontend. Actuator og Prometheus gir grunnleggende innsyn; PostHog i nettleser og valgfri serversporing kan skrus på etter behov.',
         ],
         icon: Globe,
         category: 'devops',
@@ -290,7 +288,7 @@ const sections = computed<Section[]>(() => {
       id: 'principle',
       heading: 'Principle',
       paragraphs: [
-        'Mature server-side frameworks (Spring) where they pay off, and a modern Vue SPA that is quick to change. The goal is predictable code and a stack that is easy to run locally and in production.',
+        'Mature server-side frameworks where they pay off, and a modern SPA shell that is quick to change. The goal is predictable code and a stack that is easy to run locally, in Docker, and in production.',
       ],
       icon: Layers,
       category: 'all',
@@ -300,18 +298,28 @@ const sections = computed<Section[]>(() => {
       id: 'ai-rag',
       heading: 'AI and RAG',
       paragraphs: [
-        'Spring AI 2 (BOM) wires chat to OpenAI and optionally Anthropic; embeddings and chunk storage live in PostgreSQL with pgvector. Documents enter through Spring AI (Tika where needed), and what gets indexed is curated through the admin pipeline.',
-        'Retrieval spans Norwegian and English in one question; optional ONNX rerank and provider-specific prompt templates are there when you need finer control.',
+        'Spring AI 2 (BOM) wires chat to OpenAI and optionally Anthropic. Embeddings and chunk storage live in PostgreSQL with pgvector, so relational data and the vector store share one database.',
+        'Document ingestion, chunks, prompt versions, and RAG experiments are managed from the admin surfaces. Optional ONNX rerank and provider-specific prompt templates are there when finer control is needed.',
       ],
       icon: BrainCircuit,
       category: 'ai',
-      badges: ['Spring AI 2', 'pgvector', 'OpenAI', 'Anthropic'],
+      badges: ['Spring AI 2', 'pgvector', 'OpenAI', 'Anthropic', 'ONNX'],
+    },
+    {
+      id: 'voice',
+      heading: 'Live voice',
+      paragraphs: [
+        'OpenAI Realtime runs through WebRTC from `/voice`, with backend endpoints for status, SDP sessions, and RAG lookup. The feature is off by default and enabled with environment variables.',
+      ],
+      icon: MonitorSmartphone,
+      category: 'integration',
+      badges: ['Realtime', 'WebRTC', 'RAG lookup'],
     },
     {
       id: 'server-api',
       heading: 'Backend and API',
       paragraphs: [
-        'Spring Boot 4 on Java 21 with security, JPA, and Bucket4j on public endpoints. OpenNLP participates in sanitization where relevant.',
+        'Spring Boot 4 on Java 21 with security, JPA, Bucket4j on public endpoints, AI budgets, and a kill switch. OpenNLP participates in sanitization where relevant.',
         'REST is documented with OpenAPI (SpringDoc); Vite proxies `/api` in development, and Orval keeps the frontend client aligned with the schema.',
       ],
       icon: Server,
@@ -323,7 +331,7 @@ const sections = computed<Section[]>(() => {
       heading: 'Client and runtime',
       paragraphs: [
         'Vue 3, Vite 8, TypeScript, Pinia, Tailwind 4, and Reka UI for UI and state.',
-        'Docker Compose ties together Postgres, the API, and the nginx-built frontend. Actuator and Prometheus give basic insight; PostHog (browser and optional server-side capture) can be enabled as needed.',
+        'Docker Compose ties together Postgres, the API, and the nginx-built frontend. Actuator and Prometheus give basic insight; PostHog in the browser and optional server-side capture can be enabled as needed.',
       ],
       icon: Globe,
       category: 'devops',
@@ -400,7 +408,7 @@ function sectionIconWrapClass(cat: Category): string {
                 <button
                   type="button"
                   class="text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                  @click="onReadMoreBachelor"
+                  @click="onOpenChat"
                 >
                   {{ contextLinkLabel }}
                 </button>
@@ -416,7 +424,11 @@ function sectionIconWrapClass(cat: Category): string {
             {{ isNo ? 'Hovedspor i løsningen' : 'Main tracks in the solution' }}
           </h2>
           <p class="mt-1 text-slate-600">
-            {{ isNo ? 'Tre innganger som speiler kjernen i arkitekturen.' : 'Three entry points that mirror the core architecture.' }}
+            {{
+              isNo
+                ? 'Tre innganger som speiler kjernen i arkitekturen.'
+                : 'Three entry points that mirror the core architecture.'
+            }}
           </p>
         </div>
         <div class="grid gap-5 md:grid-cols-3">
@@ -504,11 +516,14 @@ function sectionIconWrapClass(cat: Category): string {
           >
             <div class="mb-4 flex items-center gap-2 text-slate-900">
               <MonitorSmartphone class="h-5 w-5 text-blue-600" aria-hidden="true" />
-              <h3 class="text-lg font-semibold">{{ isNo ? 'Frontend' : 'Frontend' }}</h3>
+              <h3 class="text-lg font-semibold">Frontend</h3>
             </div>
             <ul class="space-y-2 text-sm text-slate-700">
               <li v-for="line in stackFront" :key="line" class="flex gap-2">
-                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" aria-hidden="true" />
+                <span
+                  class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500"
+                  aria-hidden="true"
+                />
                 <span>{{ line }}</span>
               </li>
             </ul>
@@ -518,7 +533,7 @@ function sectionIconWrapClass(cat: Category): string {
           >
             <div class="mb-4 flex items-center gap-2 text-slate-900">
               <Server class="h-5 w-5 text-emerald-600" aria-hidden="true" />
-              <h3 class="text-lg font-semibold">{{ isNo ? 'Backend' : 'Backend' }}</h3>
+              <h3 class="text-lg font-semibold">Backend</h3>
             </div>
             <ul class="space-y-2 text-sm text-slate-700">
               <li v-for="line in stackBack" :key="line" class="flex gap-2">
