@@ -141,8 +141,8 @@ portfolio:
     window-seconds: 3600
   realtime-lookup-rate-limit:
     enabled: true
-    capacity: 20
-    window-seconds: 180
+    capacity: 200
+    window-seconds: 1800
   retrieval:
     # Optional ONNX rerank; Docker image sets paths under /app/rerank (see backend/Dockerfile).
     rerank-enabled: false
