@@ -43,6 +43,12 @@ describe('realtime-voice', () => {
     await expect(fetchRealtimeVoiceEnabled()).resolves.toBe(false)
   })
 
+  it('fetchRealtimeVoiceEnabled is false when fetch rejects', async () => {
+    mockCustomFetch.mockRejectedValue(new Error('network'))
+    const { fetchRealtimeVoiceEnabled } = await import('../realtime-voice')
+    await expect(fetchRealtimeVoiceEnabled()).resolves.toBe(false)
+  })
+
   it('exchangeRealtimeSdp returns SDP answer when customFetch resolves 2xx with string body', async () => {
     mockCustomFetch.mockResolvedValue({
       status: 201,
@@ -67,7 +73,7 @@ describe('realtime-voice', () => {
   it('exchangeRealtimeSdp returns failure with parsed error JSON when backend sends ApiError', async () => {
     mockCustomFetch.mockResolvedValue({
       status: 503,
-      data: { error: 'offline' },
+      data: { error: 'offline', code: 'CIRCUIT_OPEN' },
     })
     const { exchangeRealtimeSdp } = await import('../realtime-voice')
 
@@ -75,6 +81,24 @@ describe('realtime-voice', () => {
       ok: false,
       status: 503,
       message: 'offline',
+      code: 'CIRCUIT_OPEN',
+    })
+  })
+
+  it('exchangeRealtimeSdp passes Retry-After as retryAfterSeconds', async () => {
+    mockCustomFetch.mockResolvedValue({
+      status: 429,
+      data: { error: 'Too many', code: 'RATE_LIMITED' },
+      headers: new Headers({ 'Retry-After': '120' }),
+    })
+    const { exchangeRealtimeSdp } = await import('../realtime-voice')
+
+    await expect(exchangeRealtimeSdp('offer', 'en')).resolves.toEqual({
+      ok: false,
+      status: 429,
+      message: 'Too many',
+      code: 'RATE_LIMITED',
+      retryAfterSeconds: 120,
     })
   })
 

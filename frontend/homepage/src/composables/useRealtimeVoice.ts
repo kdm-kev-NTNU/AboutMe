@@ -1,10 +1,89 @@
 import { ref, onUnmounted, type Ref } from 'vue'
-import type { SpeechUiLang } from '@/lib/realtime-voice'
+import type { RealtimeSdpFailure, SpeechUiLang } from '@/lib/realtime-voice'
 import { exchangeRealtimeSdp, REALTIME_SESSION_MAX_MS } from '@/lib/realtime-voice'
 import { captureProductAnalyticsEvent, captureClientException } from '@/lib/analytics'
 import { POSTHOG_VOICE_EVENTS } from '@/lib/posthog-sdk'
 
 export type RealtimeConnectionState = 'idle' | 'connecting' | 'connected' | 'error'
+
+function mapGetUserMediaError(e: unknown, lang: SpeechUiLang): string {
+  const en = lang === 'en'
+  if (e instanceof DOMException) {
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+      return en ? 'Microphone permission denied.' : 'Mikrofontilgang ble nektet.'
+    }
+    if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
+      return en ? 'No microphone found.' : 'Ingen mikrofon funnet.'
+    }
+    if (e.name === 'NotReadableError' || e.name === 'TrackStartError') {
+      return en ? 'Microphone is busy or unavailable.' : 'Mikrofonen er opptatt eller utilgjengelig.'
+    }
+  }
+  if (e instanceof Error && e.message) return e.message
+  return en ? 'Could not access the microphone.' : 'Kunne ikke bruke mikrofonen.'
+}
+
+function openAiRejectedDetail(msg: string): string {
+  const p = 'OpenAI rejected the session: '
+  return msg.startsWith(p) ? msg.slice(p.length).trim() : msg
+}
+
+function isLikelyGetUserMediaError(e: unknown): boolean {
+  if (!(e instanceof DOMException)) return false
+  const n = e.name
+  return (
+    n === 'NotAllowedError' ||
+    n === 'PermissionDeniedError' ||
+    n === 'NotFoundError' ||
+    n === 'NotReadableError' ||
+    n === 'TrackStartError' ||
+    n === 'DevicesNotFoundError'
+  )
+}
+
+function mapSdpFailureToUserMessage(lang: SpeechUiLang, f: RealtimeSdpFailure): string {
+  const en = lang === 'en'
+  const code = f.code ?? (f.status === 429 ? 'RATE_LIMITED' : undefined)
+
+  switch (code) {
+    case 'RATE_LIMITED': {
+      const sec = f.retryAfterSeconds
+      if (sec != null && sec > 0) {
+        return en
+          ? `Too many voice requests. Try again in about ${sec} seconds.`
+          : `For mange stemme-forespørsler. Prøv igjen om ca. ${sec} sekunder.`
+      }
+      return en
+        ? 'Too many voice sessions. Please wait and try again.'
+        : 'Du har startet stemme for mange ganger. Vent litt og prøv igjen.'
+    }
+    case 'BUDGET_EXCEEDED':
+      return en ? 'AI budget limit reached for now.' : 'AI-budsjettet er brukt opp for nå.'
+    case 'CIRCUIT_OPEN':
+      return en ? 'AI is temporarily unavailable.' : 'AI er midlertidig utilgjengelig.'
+    case 'OPENAI_REJECTED': {
+      const d = openAiRejectedDetail(f.message)
+      return en
+        ? `The service could not start the session${d ? `: ${d}` : '.'}`
+        : `Tjenesten kunne ikke starte samtalen${d ? `: ${d}` : '.'}`
+    }
+    case 'OPENAI_SERVER_ERROR':
+      return en
+        ? 'Voice service returned an error. Please try again in a moment.'
+        : 'Talesvaret fra tjenesten feilet. Prøv igjen om litt.'
+    case 'OPENAI_UNREACHABLE':
+      return en ? 'Could not reach the voice server. Try again.' : 'Kunne ikke nå taleserveren. Prøv igjen.'
+    case 'SESSION_CONFIG_FAILED':
+      return en
+        ? 'Voice session could not be configured. Please try again later.'
+        : 'Stemmeøkta kunne ikke settes opp. Prøv igjen senere.'
+    case 'API_KEY_MISSING':
+    case 'REALTIME_DISABLED':
+      return en ? 'Voice chat is not available on the server right now.' : 'Stemmechat er ikke tilgjengelig på serveren nå.'
+    default:
+      return f.message || (en ? 'Could not start voice session.' : 'Kunne ikke starte stemmeøkt.')
+  }
+}
 
 /**
  * WebRTC + OpenAI Realtime (oai-events) for live speech with Kevin's AI.
@@ -25,6 +104,9 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
   let remoteAudio: HTMLAudioElement | null = null
   let sessionTimer: ReturnType<typeof setTimeout> | null = null
   let sessionStartedAt = 0
+  /** True while user clicked disconnect / timeout / we are tearing down on purpose. */
+  let userEndedSession = false
+  let midSessionFailureHandled = false
 
   function stopSessionTimer() {
     if (sessionTimer !== null) {
@@ -64,6 +146,22 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
     }
   }
 
+  function handleMidSessionFailure(msg: string) {
+    if (midSessionFailureHandled) return
+    midSessionFailureHandled = true
+    userEndedSession = true
+    captureClientException(new Error(`voice_mid_session: ${msg}`))
+    sessionStartedAt = 0
+    teardownMedia()
+    connectionState.value = 'error'
+    errorMessage.value = msg
+    captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_ERROR, {
+      message: msg,
+      language: language.value,
+      reason: 'mid_session',
+    })
+  }
+
   function handleDataMessage(raw: string) {
     try {
       const ev = JSON.parse(raw) as {
@@ -101,6 +199,8 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
     sessionNotice.value = ''
     assistantTranscript.value = ''
     userTranscript.value = ''
+    userEndedSession = false
+    midSessionFailureHandled = false
     connectionState.value = 'connecting'
 
     if (typeof RTCPeerConnection === 'undefined') {
@@ -120,6 +220,15 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       })
 
+      pc.onconnectionstatechange = () => {
+        if (!pc || userEndedSession || midSessionFailureHandled) return
+        if (pc.connectionState === 'failed' && connectionState.value === 'connected') {
+          const msg =
+            language.value === 'no' ? 'Stemmekoblingen falt ut.' : 'Voice connection failed.'
+          handleMidSessionFailure(msg)
+        }
+      }
+
       remoteAudio = document.createElement('audio')
       remoteAudio.autoplay = true
       pc.ontrack = (e) => {
@@ -134,6 +243,13 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
       dc.addEventListener('message', (e) => {
         if (typeof e.data === 'string') handleDataMessage(e.data)
       })
+      dc.addEventListener('close', () => {
+        if (connectionState.value === 'connected' && !userEndedSession && !midSessionFailureHandled) {
+          const msg =
+            language.value === 'no' ? 'Stemmesesjonen ble avbrutt.' : 'Voice session was interrupted.'
+          handleMidSessionFailure(msg)
+        }
+      })
 
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
@@ -144,7 +260,7 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
 
       const result = await exchangeRealtimeSdp(offerSdp, language.value)
       if (!result.ok) {
-        throw new Error(result.message || `Session failed (${result.status})`)
+        throw new Error(mapSdpFailureToUserMessage(language.value, result))
       }
 
       await pc.setRemoteDescription({ type: 'answer', sdp: result.answerSdp })
@@ -162,8 +278,20 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
       captureClientException(e)
       teardownMedia()
       connectionState.value = 'error'
-      errorMessage.value =
-        e instanceof Error ? e.message : language.value === 'no' ? 'Kunne ikke starte samtalen.' : 'Could not start voice session.'
+      let msg: string
+      if (isLikelyGetUserMediaError(e)) {
+        msg = mapGetUserMediaError(e, language.value)
+      } else if (e instanceof Error && e.message === 'Missing local SDP') {
+        msg =
+          language.value === 'no'
+            ? 'Kunne ikke forberede lydtilkoblingen.'
+            : 'Could not prepare the audio connection.'
+      } else if (e instanceof Error && e.message) {
+        msg = e.message
+      } else {
+        msg = language.value === 'no' ? 'Kunne ikke starte samtalen.' : 'Could not start voice session.'
+      }
+      errorMessage.value = msg
       captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_ERROR, {
         message: errorMessage.value,
         language: language.value,
@@ -181,6 +309,7 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
         language: language.value,
       })
     }
+    userEndedSession = true
     sessionStartedAt = 0
     teardownMedia()
     connectionState.value = 'idle'

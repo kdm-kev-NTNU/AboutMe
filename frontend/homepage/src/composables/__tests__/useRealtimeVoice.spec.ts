@@ -22,10 +22,13 @@ vi.mock('@/lib/analytics', () => ({
 }))
 
 type MessageListener = (ev: MessageEvent) => void
+type CloseListener = (ev: Event) => void
 
 describe('useRealtimeVoice', () => {
-  let latestRtc: { dispatchRemoteTrack(): void } | null = null
+  let latestRtc: { dispatchRemoteTrack(): void; failConnection(): void; fireDataChannelClose(): void } | null =
+    null
   let messageListeners: MessageListener[] = []
+  let closeListeners: CloseListener[] = []
 
   beforeEach(async () => {
     vi.restoreAllMocks()
@@ -33,6 +36,7 @@ describe('useRealtimeVoice', () => {
 
     exchangeRealtimeSdpMock.mockReset()
     messageListeners = []
+    closeListeners = []
     latestRtc = null
 
     const { captureProductAnalyticsEvent, captureClientException } = await import('@/lib/analytics')
@@ -48,9 +52,13 @@ describe('useRealtimeVoice', () => {
       readonly label = ''
       readonly readyState: RTCDataChannelState = 'open'
 
-      addEventListener(_type: string, listener: EventListenerOrEventListenerObject | null): void {
-        if (listener && typeof listener === 'function') {
+      addEventListener(type: string, listener: EventListenerOrEventListenerObject | null): void {
+        if (!listener || typeof listener !== 'function') return
+        if (type === 'message') {
           messageListeners.push(listener as MessageListener)
+        }
+        if (type === 'close') {
+          closeListeners.push(listener as CloseListener)
         }
       }
 
@@ -78,16 +86,36 @@ describe('useRealtimeVoice', () => {
         ontrack:
           | ((this: RTCPeerConnection, ev: RTCTrackEvent) => void)
           | null = null
+        onconnectionstatechange: ((this: RTCPeerConnection, ev: Event) => void) | null = null
+        private _connectionState: RTCPeerConnectionState = 'new'
+
+        get connectionState(): RTCPeerConnectionState {
+          return this._connectionState
+        }
 
         constructor() {
+          const self = this
           latestRtc = {
             dispatchRemoteTrack: () => {
               const fakeStream = new MediaStream([])
               const ev = new Event('track') as unknown as RTCTrackEvent
               Object.assign(ev, { streams: [fakeStream], track: {} })
-              const handler = this.ontrack
+              const handler = self.ontrack
               if (handler) {
-                handler.call(this as RTCPeerConnection, ev as RTCTrackEvent)
+                handler.call(self as RTCPeerConnection, ev as RTCTrackEvent)
+              }
+            },
+            failConnection: () => {
+              self._connectionState = 'failed'
+              const h = self.onconnectionstatechange
+              if (h) {
+                h.call(self as RTCPeerConnection, new Event('connectionstatechange'))
+              }
+            },
+            fireDataChannelClose: () => {
+              const ev = new Event('close')
+              for (const l of [...closeListeners]) {
+                l(ev)
               }
             },
           }
@@ -109,7 +137,9 @@ describe('useRealtimeVoice', () => {
               : this.localDescription
         }
 
-        async setRemoteDescription(): Promise<void> {}
+        async setRemoteDescription(): Promise<void> {
+          this._connectionState = 'connected'
+        }
 
         addTrack(): void {}
 
@@ -224,6 +254,7 @@ describe('useRealtimeVoice', () => {
     await flushPromises()
 
     expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toBe('Could not start voice session.')
     expect(captureProductAnalyticsEvent).toHaveBeenCalledWith('portfolio_voice_session_error', {
       message: expect.any(String),
       language: 'en',
@@ -232,8 +263,59 @@ describe('useRealtimeVoice', () => {
     scope.stop()
   })
 
+  it('maps BUDGET_EXCEEDED to localized copy', async () => {
+    exchangeRealtimeSdpMock.mockResolvedValue({
+      ok: false,
+      status: 429,
+      message: 'Daily cap',
+      code: 'BUDGET_EXCEEDED',
+    })
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const no = ref<SpeechUiLang>('no')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(no)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('budsjett')
+
+    scope.stop()
+  })
+
+  it('maps OPENAI_REJECTED to English copy with detail', async () => {
+    exchangeRealtimeSdpMock.mockResolvedValue({
+      ok: false,
+      status: 502,
+      message: 'OpenAI rejected the session: invalid model xyz',
+      code: 'OPENAI_REJECTED',
+    })
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const en = ref<SpeechUiLang>('en')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(en)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.errorMessage.value).toContain('invalid model xyz')
+
+    scope.stop()
+  })
+
   it('maps getUserMedia failures to localized errors', async () => {
-    vi.mocked(navigator.mediaDevices!.getUserMedia).mockRejectedValue(new Error('denied'))
+    vi.mocked(navigator.mediaDevices!.getUserMedia).mockRejectedValue(
+      new DOMException('blocked', 'NotAllowedError'),
+    )
 
     const { useRealtimeVoice } = await import('../useRealtimeVoice')
 
@@ -246,7 +328,7 @@ describe('useRealtimeVoice', () => {
     await noApi.connect()
 
     expect(noApi.connectionState.value).toBe('error')
-    expect(noApi.errorMessage.value).toBe('denied')
+    expect(noApi.errorMessage.value).toContain('Mikrofontilgang')
 
     scopeNo.stop()
   })
@@ -297,6 +379,61 @@ describe('useRealtimeVoice', () => {
     expect(api.userTranscript.value).toContain('u')
 
     api.disconnect()
+
+    scope.stop()
+  })
+
+  it('surfaces WebRTC connection failure after connect', async () => {
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const { captureProductAnalyticsEvent } = await import('@/lib/analytics')
+
+    const lang = ref<SpeechUiLang>('en')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang)
+    })
+
+    const connectPromise = api.connect()
+    await flushPromises()
+    latestRtc?.dispatchRemoteTrack()
+    await connectPromise
+
+    expect(api.connectionState.value).toBe('connected')
+
+    latestRtc?.failConnection()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('Voice connection failed')
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_error',
+      expect.objectContaining({ reason: 'mid_session' }),
+    )
+
+    scope.stop()
+  })
+
+  it('surfaces data channel close as interrupted session', async () => {
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+
+    const lang = ref<SpeechUiLang>('en')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang)
+    })
+
+    const connectPromise = api.connect()
+    await flushPromises()
+    latestRtc?.dispatchRemoteTrack()
+    await connectPromise
+
+    latestRtc?.fireDataChannelClose()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('interrupted')
 
     scope.stop()
   })
