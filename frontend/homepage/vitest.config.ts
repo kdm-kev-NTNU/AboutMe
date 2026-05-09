@@ -39,10 +39,10 @@ export default mergeConfig(
         // Branch % stays lowest on template-heavy Vue (many ternaries). If the branch gate fails, add tests
         // in the worst-covered files (often views) rather than micro-testing defensive catch paths elsewhere.
         thresholds: {
-          lines: 84,
-          statements: 83,
-          branches: 70,
-          functions: 80,
+          lines: 86,
+          statements: 85,
+          branches: 73,
+          functions: 82,
         },
       },
     },
