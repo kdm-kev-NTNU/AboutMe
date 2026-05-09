@@ -154,6 +154,12 @@ public class RealtimeSessionService {
       String openAiSummary = summarizeOpenAiErrorBody(responseBody);
       RealtimeErrorCode code =
           status >= 500 ? RealtimeErrorCode.OPENAI_SERVER_ERROR : RealtimeErrorCode.OPENAI_REJECTED;
+      if (code == RealtimeErrorCode.OPENAI_REJECTED) {
+        log.warn(
+            "openai_realtime_sdp_rejected sdpChars={} sdpFirstLine={}",
+            sdp.length(),
+            sdpFirstLineForLog(sdp));
+      }
       log.warn(
           "openai_realtime_calls_failed budgetUserId={} httpStatus={} errorCode={} openAiDetail={} bodyTrunc={}",
           truncateId(budgetUserId),
@@ -255,16 +261,32 @@ public class RealtimeSessionService {
     return objectMapper.writeValueAsString(root);
   }
 
+  /**
+   * SDP is defined with CRLF line endings (RFC 8866). Normalizing avoids multipart parsers seeing a lone
+   * {@code \n} immediately before {@code --boundary}, which can yield an empty extracted SDP on some servers.
+   */
+  private static String normalizeSdpLineEndings(String sdp) {
+    return sdp.replace("\r\n", "\n").replace('\r', '\n').replace("\n", "\r\n");
+  }
+
+  private static String sdpFirstLineForLog(String sdp) {
+    if (!StringUtils.hasText(sdp)) {
+      return "";
+    }
+    String[] lines = sdp.split("\\R", 2);
+    String first = lines[0].trim();
+    return first.length() <= 120 ? first : first.substring(0, 120) + "...";
+  }
+
   private static byte[] buildMultipartBody(String boundary, String sdp, String sessionJson) {
+    String sdpNorm = normalizeSdpLineEndings(sdp);
     String sep = "--" + boundary + "\r\n";
     StringBuilder sb = new StringBuilder();
     sb.append(sep);
     sb.append("Content-Disposition: form-data; name=\"sdp\"\r\n");
     sb.append("Content-Type: application/sdp\r\n\r\n");
-    sb.append(sdp);
-    if (!sdp.endsWith("\n")) {
-      sb.append("\r\n");
-    }
+    sb.append(sdpNorm);
+    sb.append("\r\n");
     sb.append(sep);
     sb.append("Content-Disposition: form-data; name=\"session\"\r\n");
     sb.append("Content-Type: application/json\r\n\r\n");

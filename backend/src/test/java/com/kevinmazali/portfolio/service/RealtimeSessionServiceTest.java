@@ -242,6 +242,26 @@ class RealtimeSessionServiceTest {
   }
 
   @Test
+  void createRealtimeCall_multipartUsesCrlfBeforeBoundary_afterLfOnlySdp() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(200);
+    when(response.body()).thenReturn("ok");
+    ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+
+    String sdpLfOnly = "v=0\no=LF_ONLY_TERMINATOR\n";
+    service.createRealtimeCall(sdpLfOnly, null);
+
+    String raw = utf8Drain(captor.getValue());
+    assertThat(raw).contains("o=LF_ONLY_TERMINATOR\r\n");
+    int marker = raw.indexOf("o=LF_ONLY_TERMINATOR");
+    assertThat(marker).isGreaterThan(0);
+    String afterOfferLine =
+        raw.substring(marker + "o=LF_ONLY_TERMINATOR".length());
+    assertThat(afterOfferLine).startsWith("\r\n\r\n--");
+  }
+
+  @Test
   void createRealtimeCall_usesNorwegianInstructionsForNb() throws Exception {
     HttpResponse<String> response = mock(HttpResponse.class);
     when(response.statusCode()).thenReturn(200);
