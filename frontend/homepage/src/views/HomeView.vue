@@ -1,51 +1,18 @@
 <script setup lang="ts">
 import { useRouter, RouterLink } from 'vue-router'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useLangStore } from '../stores/lang'
-import { useChatModelStore } from '../stores/model'
-import { ChatModelOptionProvider } from '@/api/generated/portfolio'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Info, MessageSquare, ChevronRight, Mic, Headphones } from 'lucide-vue-next'
 import { fetchRealtimeVoiceEnabled } from '@/lib/realtime-voice'
-import {
-  pickRotatingShortcuts,
-  shortcutRotationBucket,
-} from '@/utils/shortcutQuestions'
 
 const router = useRouter()
 
 const langStore = useLangStore()
-const chatModelStore = useChatModelStore()
 
 const language = computed({
   get: () => langStore.language,
   set: (v: 'en' | 'no') => langStore.setLanguage(v),
-})
-
-/** Bumps when the 6h rotation bucket changes so shortcut list refreshes for long-lived tabs */
-const rotationEpoch = ref(0)
-const lastShortcutBucket = ref(shortcutRotationBucket(Date.now()))
-
-const visibleQuestions = computed(() => {
-  // Evaluate rotationEpoch first so this computed re-runs when the 6h bucket ticks (see onMounted).
-  return (rotationEpoch.value, pickRotatingShortcuts(language.value, Date.now()))
-})
-
-const chatDisclaimer = computed(() => {
-  if (language.value === 'no') {
-    return {
-      title: 'Før du chatter',
-      body:
-        'Svarene lages av en språkmodell og kan være helt feil. Ikke del private eller sensitive ting her. Tekstchat er på denne siden; live stemmechat (når slått på) sender lyd direkte til OpenAI i sanntid via WebRTC — bruk Snakk-knappen eller stemmesiden.',
-    }
-  }
-  return {
-    title: 'Before you chat',
-    body:
-      'Replies come from a language model and can be wrong. Do not share private or sensitive information here. Text chat lives on this page; live voice chat (when enabled) streams audio directly to OpenAI in real time via WebRTC — use the Speak button or the voice page.',
-  }
 })
 
 const feedbackInvite = computed(() => {
@@ -76,14 +43,9 @@ const futureWorkHomeLink = computed(() => {
   }
 })
 
-const quickQuestion = ref('')
-
 /** Null until loaded from GET /realtime/status */
 const voiceFeatureEnabled = ref<boolean | null>(null)
 
-const voiceCta = computed(() =>
-  language.value === 'no' ? 'Snakk med Kevin sin AI' : "Talk to Kevin's AI",
-)
 const voiceCtaAria = computed(() =>
   language.value === 'no' ? 'Gå til live stemmechat' : 'Go to live voice chat',
 )
@@ -103,62 +65,11 @@ const voiceStatus = computed(() => {
   return 'Checking voice status'
 })
 
-const providerLabels = computed(() =>
-  language.value === 'no'
-    ? { heading: 'AI-leverandør', openai: 'OpenAI', anthropic: 'Anthropic' }
-    : { heading: 'AI provider', openai: 'OpenAI', anthropic: 'Anthropic' },
-)
-
-const modelLabel = computed(() => (language.value === 'no' ? 'Modell' : 'Model'))
-
-const modelsForActiveProvider = computed(() => {
-  const p = chatModelStore.activeProvider
-  if (!p) return chatModelStore.models
-  return chatModelStore.modelsForProvider(p)
-})
-
-const selectedModelId = computed({
-  get: () => chatModelStore.selectedModelId,
-  set: (id: string) => chatModelStore.setSelectedModelId(id),
-})
-
-const showProviderToggle = computed(
-  () => chatModelStore.hasOpenAI && chatModelStore.hasAnthropic,
-)
-
-let shortcutBucketInterval: ReturnType<typeof setInterval> | undefined
-
 onMounted(() => {
-  void chatModelStore.ensureModelsLoaded()
   void fetchRealtimeVoiceEnabled().then((ok) => {
     voiceFeatureEnabled.value = ok
   })
-  lastShortcutBucket.value = shortcutRotationBucket(Date.now())
-  shortcutBucketInterval = setInterval(() => {
-    const b = shortcutRotationBucket(Date.now())
-    if (b !== lastShortcutBucket.value) {
-      lastShortcutBucket.value = b
-      rotationEpoch.value += 1
-    }
-  }, 60_000)
 })
-
-onUnmounted(() => {
-  if (shortcutBucketInterval !== undefined) {
-    clearInterval(shortcutBucketInterval)
-    shortcutBucketInterval = undefined
-  }
-})
-
-function ask(q: string) {
-  router.push({ name: 'chat', query: { q } })
-}
-
-function submitQuick() {
-  const q = quickQuestion.value.trim()
-  if (!q) return
-  ask(q)
-}
 </script>
 
 <template>
@@ -282,88 +193,6 @@ function submitQuick() {
               </button>
             </div>
           </div>
-
-          <!-- Provider + model (same session keys as chat page) -->
-          <div
-            v-if="chatModelStore.models.length > 0"
-            class="mt-6 flex flex-col items-center gap-4 w-full max-w-md px-2"
-          >
-            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
-              {{ providerLabels.heading }}
-            </p>
-            <div v-if="showProviderToggle" class="flex justify-center w-full">
-              <div
-                class="relative rounded-full p-1 flex bg-gradient-to-r from-slate-200 to-slate-300 shadow-md border-2 border-transparent bg-clip-padding"
-              >
-                <div
-                  class="absolute top-1 bottom-1 w-28 rounded-full shadow-lg transition-transform duration-300 ease-in-out bg-gradient-to-r from-white to-slate-50 border border-blue-200"
-                  :class="
-                    chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
-                      ? 'translate-x-0'
-                      : 'translate-x-28'
-                  "
-                ></div>
-                <button
-                  type="button"
-                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden"
-                  :class="
-                    chatModelStore.activeProvider === ChatModelOptionProvider.OPENAI
-                      ? 'text-blue-700 font-semibold'
-                      : 'text-gray-500'
-                  "
-                  :disabled="!chatModelStore.hasOpenAI"
-                  @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.OPENAI)"
-                >
-                  {{ providerLabels.openai }}
-                </button>
-                <button
-                  type="button"
-                  class="relative z-10 w-28 py-2 text-sm font-medium transition-all duration-300 cursor-pointer rounded-full overflow-hidden"
-                  :class="
-                    chatModelStore.activeProvider === ChatModelOptionProvider.ANTHROPIC
-                      ? 'text-blue-700 font-semibold'
-                      : 'text-gray-500'
-                  "
-                  :disabled="!chatModelStore.hasAnthropic"
-                  @click="chatModelStore.selectFirstForProvider(ChatModelOptionProvider.ANTHROPIC)"
-                >
-                  {{ providerLabels.anthropic }}
-                </button>
-              </div>
-            </div>
-            <div class="flex flex-col gap-2 w-full">
-              <label
-                for="home-model-select"
-                class="text-center text-xs font-medium uppercase tracking-wide text-slate-500"
-              >
-                {{ modelLabel }}
-              </label>
-              <select
-                id="home-model-select"
-                v-model="selectedModelId"
-                class="w-full rounded-lg border-2 border-blue-200/40 bg-white/90 px-3 py-2 text-sm text-slate-800 focus:border-blue-400 focus:outline-none"
-              >
-                <option v-for="m in modelsForActiveProvider" :key="m.id" :value="m.id">
-                  {{ m.label }} ({{ m.provider }})
-                </option>
-              </select>
-            </div>
-          </div>
-        </section>
-
-        <section class="quick">
-          <div class="grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
-            <button
-              v-for="q in visibleQuestions"
-              :key="q"
-              class="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-4 text-left transition-all duration-300 hover:border-blue-300 hover:shadow-xl group hover:bg-gradient-to-br hover:from-white/90 hover:to-slate-50/90 hover:backdrop-blur-sm sm:p-6"
-              @click="ask(q)"
-            >
-              <div class="text-gray-800 font-medium text-sm leading-relaxed group-hover:text-gray-900 transition-colors duration-300 cursor-pointer">
-                {{ q }}
-              </div>
-            </button>
-          </div>
         </section>
 
         <RouterLink
@@ -380,18 +209,8 @@ function submitQuick() {
       </div>
     </div>
 
-    <!-- Chat area: inline disclaimer, links, and input -->
-    <div class="pb-8 flex-shrink-0 relative z-10 w-full max-w-2xl mx-auto px-4 space-y-3">
-      <Alert
-        class="border-blue-200/80 bg-blue-50/90 text-slate-800 shadow-sm backdrop-blur-sm [&>svg]:text-blue-600"
-      >
-        <Info class="size-4 shrink-0" aria-hidden="true" />
-        <AlertTitle>{{ chatDisclaimer.title }}</AlertTitle>
-        <AlertDescription>
-          <p>{{ chatDisclaimer.body }}</p>
-        </AlertDescription>
-      </Alert>
-
+    <!-- Social links -->
+    <div class="pb-8 flex-shrink-0 relative z-10 w-full max-w-2xl mx-auto px-4">
       <div class="flex justify-center gap-3">
         <a
           href="https://github.com/kdm-kev-NTNU"
@@ -420,47 +239,6 @@ function submitQuick() {
           </svg>
         </a>
       </div>
-
-      <form
-        class="relative mx-auto flex max-w-md gap-3 rounded-xl border-2 border-blue-200/20 bg-white/90 p-2 backdrop-blur-sm transition-all duration-300 hover:border-blue-300/40 hover:bg-white/95 hover:shadow-lg hover:shadow-blue-500/15 focus-within:border-blue-300/60 focus-within:bg-white/98 focus-within:shadow-lg focus-within:shadow-blue-500/25"
-        @submit.prevent="submitQuick"
-      >
-        <Button
-          type="button"
-          variant="outline"
-          :aria-label="voiceCtaAria"
-          class="relative shrink-0 rounded-lg border border-blue-200/80 bg-white/90 px-2 text-slate-700 hover:bg-blue-50/80 sm:px-3"
-          @click="goToVoiceChat"
-        >
-          <Mic class="h-5 w-5 shrink-0" />
-          <span class="hidden min-w-[3rem] ps-1 text-sm font-medium sm:inline">{{
-            language === 'no' ? 'Snakk' : 'Speak'
-          }}</span>
-        </Button>
-        <Input
-          v-model="quickQuestion"
-          type="text"
-          class="flex-1 border-2 border-blue-200/20 bg-white/80 rounded-lg transition-all duration-300 focus:bg-white/95 focus:border-blue-300/50 focus:shadow-sm focus:shadow-blue-500/10 focus:outline-none placeholder:text-blue-600/60 placeholder:font-medium"
-          :placeholder="language === 'en' ? `Curious? Kevin's AI is here to answer!` : `Nysgjerrig? Kevin sin AI svarer gjerne!`"
-        />
-        <Button
-          type="submit"
-          :disabled="!quickQuestion.trim()"
-          class="cursor-pointer shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:shadow-blue-500/40 relative overflow-hidden"
-        >
-          Send →
-        </Button>
-      </form>
-
-      <RouterLink
-        v-if="voiceFeatureEnabled === true"
-        to="/voice"
-        class="mx-auto flex max-w-md items-center justify-center gap-2 rounded-xl border-2 border-blue-300/80 bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:from-blue-700 hover:to-indigo-800 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        :aria-label="voiceCta"
-      >
-        <Headphones class="size-5 shrink-0" aria-hidden="true" />
-        {{ voiceCta }}
-      </RouterLink>
     </div>
 
     <!-- Mobile: compact FAB; sm+: card with copy -->

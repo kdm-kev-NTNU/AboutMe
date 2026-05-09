@@ -13,7 +13,7 @@ describe('customFetch', () => {
     globalThis.fetch = originalFetch
   })
 
-  it('prefixes relative paths with /api', async () => {
+  it('prefixes relative paths with the configured API prefix', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,

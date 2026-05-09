@@ -13,10 +13,10 @@
     {
       "id": "portfolio-project-2025",
       "projectName": "Portfolio Project (RAG & AI)",
-      "projectDescription": "A personal project that combines self-presentation with exploring Retrieval-Augmented Generation (RAG) and Spring AI. The website serves as both a digital CV and a demonstration of AI technology: users can ask questions to a chatbot trained on documents about me (education, projects, interests). The project demonstrates how RAG can be used in practice to retrieve personalized and context-sensitive information.",
+      "projectDescription": "A full-stack personal website that doubles as a digital CV and a live AI demo. Visitors can talk to an AI through realtime voice (OpenAI Realtime API over WebRTC) or ask deeper questions in a RAG-powered text chat grounded in documents about me. The backend uses Spring AI with multi-model support (OpenAI + Anthropic), PGVector for vector search, and a local ONNX cross-encoder for reranking. The project includes an LLM-as-judge evaluation framework, prompt versioning, an admin panel, and a full CI/CD pipeline with automated tests, coverage gates, and multi-arch Docker images.",
       "startDate": "2025-09-01",
       "endDate": null,
-      "technologies": ["Vue.js", "TypeScript", "Spring AI", "RAG", "OpenAI API"],
+      "technologies": ["Vue.js", "TypeScript", "Tailwind CSS", "Spring Boot", "Spring AI", "RAG", "PGVector", "OpenAI API", "Anthropic API", "WebRTC", "Docker", "GitHub Actions"],
       "status": "ongoing",
       "githubUrl": "https://github.com/kdm-kev-NTNU/AboutMe",
       "liveUrl": "https://kevindmazali.me"

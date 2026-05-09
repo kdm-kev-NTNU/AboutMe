@@ -38,7 +38,7 @@ import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/u
 import { apiErrorMessage } from '@/lib/api-error'
 import { Loader2, Mic, Square, Headphones } from 'lucide-vue-next'
 
-// RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
+// RAG chat: sessionStorage transcript, optional ?conversationId= hydrate from server, askQuestion with optional model id; clear stays on chat route.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
 // --- Route + local UI state ---
@@ -219,7 +219,7 @@ watch(showInfoPopup, (isOpen, wasOpen) => {
   }
 })
 
-// Calls the portfolio backend; auth store is restored so optional future authenticated /ask works the same way.
+// Calls the portfolio backend; auth store is restored so optional future authenticated asks use the same path.
 async function send(text: string) {
   if (!text.trim() || isLoading.value || isTranscribing.value) return
   // client-side validation to mirror backend

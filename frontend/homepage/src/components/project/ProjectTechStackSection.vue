@@ -12,6 +12,8 @@ import {
   Layers,
   MonitorSmartphone,
   BookOpen,
+  Mic,
+  Rocket,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -122,7 +124,7 @@ const pillarCards = computed(() =>
         {
           to: '/projects' as const,
           title: 'Backend',
-          body: 'Spring Boot 4 med sikkerhet, OpenAPI, AI-budsjett, Realtime og admin-API-er.',
+          body: 'Spring Boot 4 med sikkerhet, SpringDoc-skjema for klientgenerering, AI-budsjett, Realtime og adminflate.',
           cta: 'Se prosjekter',
           icon: Server,
           accentBorder: 'hover:border-emerald-200',
@@ -157,7 +159,7 @@ const pillarCards = computed(() =>
         {
           to: '/projects' as const,
           title: 'Backend',
-          body: 'Spring Boot 4 with security, OpenAPI, AI budgets, Realtime, and admin APIs.',
+          body: 'Spring Boot 4 with security, SpringDoc-backed schema for codegen, AI budgets, Realtime, and admin surfaces.',
           cta: 'View projects',
           icon: Server,
           accentBorder: 'hover:border-emerald-200',
@@ -182,13 +184,13 @@ const pillarCards = computed(() =>
 const stackFront = computed(() =>
   isNo.value
     ? ([
-        'Vue 3, TypeScript, Vite 8, Pinia, Vue Router, Tailwind 4 og Reka UI',
-        'Orval-generert klient mot OpenAPI; PostHog i nettleseren etter samtykke',
+        'Vue 3, TypeScript, Vite 8, Pinia, Vue Router, Tailwind 4, Reka UI og VueUse',
+        'Orval-generert klient fra SpringDoc-skjema; markdown-it + DOMPurify for trygg chat-rendering; PostHog i nettleseren etter samtykke',
         'Vitest for enhetstester og Cypress for E2E, inkludert Realtime voice-smoke',
       ] as const)
     : ([
-        'Vue 3, TypeScript, Vite 8, Pinia, Vue Router, Tailwind 4, and Reka UI',
-        'Orval-generated client from OpenAPI; PostHog in the browser after consent',
+        'Vue 3, TypeScript, Vite 8, Pinia, Vue Router, Tailwind 4, Reka UI, and VueUse',
+        'Orval-generated client from the SpringDoc schema; markdown-it + DOMPurify for safe chat rendering; PostHog in the browser after consent',
         'Vitest for unit tests and Cypress for E2E, including Realtime voice smoke',
       ] as const),
 )
@@ -197,13 +199,15 @@ const stackBack = computed(() =>
   isNo.value
     ? ([
         'Java 21, Spring Boot 4, Spring AI 2 (BOM), Spring Security og JPA mot PostgreSQL 17/pgvector',
-        'OpenAI/Anthropic-chat, OpenAI embeddings, Realtime WebRTC, valgfri ONNX-rerank og OpenNLP-sanitizer',
-        'Docker Compose (db + API + nginx), Actuator/Prometheus, Bucket4j og PostHog LLM-sporing',
+        'OpenAI/Anthropic-chat, OpenAI embeddings, Realtime WebRTC + Whisper, valgfri ONNX-rerank og OpenNLP-sanitizer',
+        'Bucket4j, AI-budsjett og kill switch; Actuator/Prometheus + Micrometer/OpenTelemetry-tracing',
+        'Docker (multi-arch via Build Cloud) til Docker Hub; Railway + Postgres/pgvector i prod',
       ] as const)
     : ([
         'Java 21, Spring Boot 4, Spring AI 2 (BOM), Spring Security, and JPA against PostgreSQL 17/pgvector',
-        'OpenAI/Anthropic chat, OpenAI embeddings, Realtime WebRTC, optional ONNX rerank, and OpenNLP sanitizer',
-        'Docker Compose (db + API + nginx), Actuator/Prometheus, Bucket4j, and PostHog LLM capture',
+        'OpenAI/Anthropic chat, OpenAI embeddings, Realtime WebRTC + Whisper, optional ONNX rerank, and OpenNLP sanitizer',
+        'Bucket4j, AI budgets, and a kill switch; Actuator/Prometheus + Micrometer/OpenTelemetry tracing',
+        'Docker (multi-arch via Build Cloud) to Docker Hub; Railway + Postgres/pgvector in production',
       ] as const),
 )
 
@@ -219,8 +223,8 @@ const sectionsIntro = computed(() =>
 
 const footerText = computed(() =>
   isNo.value
-    ? 'Denne oversikten speiler funksjonene som er i appen nå. README-en har mer om kjøring, konfigurasjon, API-er og tester.'
-    : 'This overview mirrors the functionality currently in the app. The README has more on running, configuration, APIs, and tests.',
+    ? 'Denne oversikten speiler funksjonene som er i appen nå. README-en har mer om kjøring, konfigurasjon, integrasjon og tester.'
+    : 'This overview mirrors the functionality currently in the app. The README has more on running, configuration, integration, and tests.',
 )
 
 const footerHome = computed(() => (isNo.value ? 'Til forsiden' : 'Back to home'))
@@ -253,33 +257,56 @@ const sections = computed<Section[]>(() => {
         id: 'voice',
         heading: 'Live stemme',
         paragraphs: [
-          'OpenAI Realtime kjøres via WebRTC fra `/voice`, med backend-endepunkter for status, SDP-session og RAG-oppslag. Funksjonen er av som standard og aktiveres med miljøvariabler.',
+          'OpenAI Realtime (gpt-realtime) kjøres via WebRTC fra stemmesiden, med støtte på serversiden for tilkoblingsstatus, SDP-økter og RAG-oppslag. Whisper-transkripsjon brukes også der det trengs på server.',
+          'Funksjonen er av som standard og aktiveres med miljøvariabler; sesjonslengde og budsjett begrenses fra `application.yaml`.',
         ],
-        icon: MonitorSmartphone,
+        icon: Mic,
         category: 'integration',
-        badges: ['Realtime', 'WebRTC', 'RAG lookup'],
+        badges: ['OpenAI Realtime', 'WebRTC', 'Whisper', 'RAG lookup'],
       },
       {
         id: 'server-api',
-        heading: 'Backend og API',
+        heading: 'Backend og tjenester',
         paragraphs: [
-          'Spring Boot 4 på Java 21 med sikkerhet, JPA, Bucket4j på offentlige endepunkter, AI-budsjett og kill switch. OpenNLP inngår i sanitering der det er aktuelt.',
-          'REST er dokumentert med OpenAPI (SpringDoc); Vite proxier `/api` i utvikling, og Orval holder frontend-klienten i tråd med skjemaet.',
+          'Spring Boot 4 på Java 21 med Spring Security, JPA og Bucket4j for hastighetsbegrensning på utsatte grensesnitt. AI-budsjett (per bruker, daglig/månedlig) og en global kill switch begrenser kostnader; OpenNLP brukes i sanitering der det er aktuelt.',
+          'Standardmodellene er gpt-5.4-mini for chat, claude-haiku-4-5 som alternativ og text-embedding-3-large for embeddings, med konfigurasjon i `application.yaml`.',
+          'Tjenestekontrakten er dokumentert med SpringDoc; i utvikling proxier Vite kall til backend, og Orval holder frontend-klienten i tråd med skjemaet. Actuator + Micrometer eksponerer Prometheus-metrikker og OpenTelemetry-tracing.',
         ],
         icon: Server,
         category: 'backend',
-        badges: ['Spring Boot 4', 'Java 21', 'OpenAPI', 'Orval'],
+        badges: [
+          'Spring Boot 4',
+          'Java 21',
+          'Bucket4j',
+          'AI budsjett',
+          'SpringDoc',
+          'Orval',
+          'Micrometer',
+          'OpenTelemetry',
+        ],
       },
       {
         id: 'client-ops',
         heading: 'Klient og kjøring',
         paragraphs: [
-          'Vue 3, Vite 8, TypeScript, Pinia, Tailwind 4 og Reka UI for UI og tilstand.',
-          'Docker Compose binder sammen Postgres, API og nginx-bygget frontend. Actuator og Prometheus gir grunnleggende innsyn; PostHog i nettleser og valgfri serversporing kan skrus på etter behov.',
+          'Vue 3, Vite 8, TypeScript, Pinia, Tailwind 4 og Reka UI for UI og tilstand. VueUse gir komposisjoner og animasjoner, mens markdown-it og DOMPurify renderer chat-svar trygt.',
+          'Docker Compose binder sammen Postgres, backend og nginx-bygget frontend. Actuator, Prometheus og Micrometer/OpenTelemetry-tracing gir grunnleggende innsyn; PostHog i nettleser og valgfri serversporing kan skrus på etter behov.',
         ],
         icon: Globe,
         category: 'devops',
-        badges: ['Vue 3', 'Docker Compose', 'nginx', 'Actuator'],
+        badges: ['Vue 3', 'VueUse', 'Docker Compose', 'nginx', 'Actuator', 'OpenTelemetry'],
+      },
+      {
+        id: 'deploy-ci',
+        heading: 'Drift og CI/CD',
+        paragraphs: [
+          'Backend og frontend bygges som multi-arch (amd64/arm64) Docker-images via GitHub Actions med Docker Build Cloud, og publiseres til Docker Hub med provenance og SBOM.',
+          'Tests-workflowen kjører Maven verify med JaCoCo for backend og typecheck, lint, Vitest med dekningsterskler og Cypress E2E for frontend. Semgrep skanner kode i en egen workflow, og Dependabot holder npm-, Maven- og Actions-avhengigheter oppdatert.',
+          'Produksjonsmiljøet kjøres på Railway med Postgres + pgvector; en valgfri synkroniseringsjobb kan kopiere vector_store fra Railway til lokal database for utvikling.',
+        ],
+        icon: Rocket,
+        category: 'devops',
+        badges: ['Railway', 'GitHub Actions', 'Docker Build Cloud', 'Semgrep', 'Dependabot'],
       },
     ]
   }
@@ -309,33 +336,56 @@ const sections = computed<Section[]>(() => {
       id: 'voice',
       heading: 'Live voice',
       paragraphs: [
-        'OpenAI Realtime runs through WebRTC from `/voice`, with backend endpoints for status, SDP sessions, and RAG lookup. The feature is off by default and enabled with environment variables.',
+        'OpenAI Realtime (gpt-realtime) runs through WebRTC from the voice experience, with server-side support for connection status, SDP sessions, and RAG lookup. Whisper transcription is used on the server where needed.',
+        'The feature is off by default and enabled with environment variables; session length and budgets are bounded in `application.yaml`.',
       ],
-      icon: MonitorSmartphone,
+      icon: Mic,
       category: 'integration',
-      badges: ['Realtime', 'WebRTC', 'RAG lookup'],
+      badges: ['OpenAI Realtime', 'WebRTC', 'Whisper', 'RAG lookup'],
     },
     {
       id: 'server-api',
-      heading: 'Backend and API',
+      heading: 'Backend and services',
       paragraphs: [
-        'Spring Boot 4 on Java 21 with security, JPA, Bucket4j on public endpoints, AI budgets, and a kill switch. OpenNLP participates in sanitization where relevant.',
-        'REST is documented with OpenAPI (SpringDoc); Vite proxies `/api` in development, and Orval keeps the frontend client aligned with the schema.',
+        'Spring Boot 4 on Java 21 with Spring Security, JPA, and Bucket4j rate limiting on exposed interfaces. AI budgets (per-user, daily/monthly) and a global kill switch cap spend; OpenNLP participates in sanitization where relevant.',
+        'Default models are gpt-5.4-mini for chat, claude-haiku-4-5 as an alternative, and text-embedding-3-large for embeddings, configured in `application.yaml`.',
+        'The service contract is documented with SpringDoc; in development Vite proxies traffic to the backend, and Orval keeps the frontend client aligned with the schema. Actuator + Micrometer expose Prometheus metrics and OpenTelemetry tracing.',
       ],
       icon: Server,
       category: 'backend',
-      badges: ['Spring Boot 4', 'Java 21', 'OpenAPI', 'Orval'],
+      badges: [
+        'Spring Boot 4',
+        'Java 21',
+        'Bucket4j',
+        'AI budgets',
+        'SpringDoc',
+        'Orval',
+        'Micrometer',
+        'OpenTelemetry',
+      ],
     },
     {
       id: 'client-ops',
       heading: 'Client and runtime',
       paragraphs: [
-        'Vue 3, Vite 8, TypeScript, Pinia, Tailwind 4, and Reka UI for UI and state.',
-        'Docker Compose ties together Postgres, the API, and the nginx-built frontend. Actuator and Prometheus give basic insight; PostHog in the browser and optional server-side capture can be enabled as needed.',
+        'Vue 3, Vite 8, TypeScript, Pinia, Tailwind 4, and Reka UI for UI and state. VueUse provides composables and motion, while markdown-it and DOMPurify render chat answers safely.',
+        'Docker Compose ties together Postgres, the backend, and the nginx-built frontend. Actuator, Prometheus, and Micrometer/OpenTelemetry tracing give basic insight; PostHog in the browser and optional server-side capture can be enabled as needed.',
       ],
       icon: Globe,
       category: 'devops',
-      badges: ['Vue 3', 'Docker Compose', 'nginx', 'Actuator'],
+      badges: ['Vue 3', 'VueUse', 'Docker Compose', 'nginx', 'Actuator', 'OpenTelemetry'],
+    },
+    {
+      id: 'deploy-ci',
+      heading: 'Delivery and CI/CD',
+      paragraphs: [
+        'Backend and frontend ship as multi-arch (amd64/arm64) Docker images built through GitHub Actions with Docker Build Cloud, and are published to Docker Hub with provenance and SBOM.',
+        'The tests workflow runs Maven verify with JaCoCo for the backend and typecheck, lint, Vitest with coverage thresholds, and Cypress E2E for the frontend. Semgrep runs in its own workflow, and Dependabot keeps npm, Maven, and Actions dependencies current.',
+        'Production runs on Railway with Postgres + pgvector; an optional sync job can copy the vector_store from Railway into a local database during development.',
+      ],
+      icon: Rocket,
+      category: 'devops',
+      badges: ['Railway', 'GitHub Actions', 'Docker Build Cloud', 'Semgrep', 'Dependabot'],
     },
   ]
 })
