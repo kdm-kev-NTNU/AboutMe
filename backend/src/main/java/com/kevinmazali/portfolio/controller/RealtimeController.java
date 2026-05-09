@@ -68,7 +68,7 @@ public class RealtimeController {
       String answer = realtimeSessionService.createRealtimeCall(sdp, chatLanguage);
       return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/sdp")).body(answer);
     } catch (IllegalArgumentException e) {
-      return ResponseEntity.badRequest().body(new ApiError(e.getMessage()));
+      return ResponseEntity.badRequest().body(new ApiError(e.getMessage(), "BAD_REQUEST"));
     } catch (RealtimeSessionException e) {
       log.warn(
           "realtime session: code={} status={} message={}",

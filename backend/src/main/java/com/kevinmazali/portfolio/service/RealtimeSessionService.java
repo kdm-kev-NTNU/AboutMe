@@ -256,11 +256,14 @@ public class RealtimeSessionService {
     ObjectNode output = objectMapper.createObjectNode();
     output.put("voice", realtimeProperties.getVoice());
     audio.set("output", output);
-    root.set("audio", audio);
 
-    ObjectNode inputTx = objectMapper.createObjectNode();
-    inputTx.put("model", "whisper-1");
-    root.set("input_audio_transcription", inputTx);
+    ObjectNode input = objectMapper.createObjectNode();
+    ObjectNode transcription = objectMapper.createObjectNode();
+    transcription.put("model", "whisper-1");
+    input.set("transcription", transcription);
+    audio.set("input", input);
+
+    root.set("audio", audio);
 
     return objectMapper.writeValueAsString(root);
   }
