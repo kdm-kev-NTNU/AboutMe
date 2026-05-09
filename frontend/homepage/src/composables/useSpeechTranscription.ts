@@ -16,7 +16,7 @@ export type UseSpeechTranscriptionOptions = {
 }
 
 /**
- * Microphone capture + POST /transcribe; shared by chat and home landing.
+ * Microphone capture + POST /transcribe; used from the chat composer (ChatView).
  */
 export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
   const voiceError = ref('')
