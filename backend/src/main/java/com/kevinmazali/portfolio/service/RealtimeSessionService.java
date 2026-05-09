@@ -38,8 +38,8 @@ public class RealtimeSessionService {
   private final AiBudgetProperties budgetProperties;
   private final AiCircuitBreaker aiCircuitBreaker;
   private final OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker;
+  private final ObjectMapper objectMapper;
   private final String openAiApiKey;
-  private final ObjectMapper objectMapper = new ObjectMapper();
 
   private String instructionsEn;
   private String instructionsNo;
@@ -50,12 +50,14 @@ public class RealtimeSessionService {
       AiBudgetProperties budgetProperties,
       AiCircuitBreaker aiCircuitBreaker,
       OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker,
+      ObjectMapper objectMapper,
       @Value("${spring.ai.openai.api-key:}") String openAiApiKey) {
     this.realtimeProperties = realtimeProperties;
     this.aiBudgetService = aiBudgetService;
     this.budgetProperties = budgetProperties;
     this.aiCircuitBreaker = aiCircuitBreaker;
     this.openAiRealtimeHttpInvoker = openAiRealtimeHttpInvoker;
+    this.objectMapper = objectMapper;
     this.openAiApiKey = openAiApiKey;
   }
 
@@ -190,13 +192,13 @@ public class RealtimeSessionService {
   }
 
   /** Best-effort summary of OpenAI JSON error body for logs and user-facing text. */
-  static String summarizeOpenAiErrorBody(String body) {
+  String summarizeOpenAiErrorBody(String body) {
     if (!StringUtils.hasText(body)) {
       return "";
     }
     String trimmed = body.trim();
     try {
-      JsonNode root = new ObjectMapper().readTree(trimmed);
+      JsonNode root = objectMapper.readTree(trimmed);
       JsonNode err = root.path("error");
       if (err.isMissingNode() || err.isNull()) {
         return trimmed.length() > 500 ? trimmed.substring(0, 500) + "..." : trimmed;

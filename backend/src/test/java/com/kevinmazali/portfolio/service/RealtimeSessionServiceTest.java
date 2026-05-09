@@ -90,6 +90,7 @@ class RealtimeSessionServiceTest {
             budgetProperties,
             aiCircuitBreaker,
             openAiRealtimeHttpInvoker,
+            mapper,
             "sk-test-openai-key");
   }
 
@@ -104,7 +105,7 @@ class RealtimeSessionServiceTest {
   void summarizeOpenAiErrorBody_extractsMessageAndCode() {
     String body =
         "{\"error\":{\"message\":\"Invalid model\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}";
-    assertThat(RealtimeSessionService.summarizeOpenAiErrorBody(body)).contains("Invalid model").contains("model_not_found");
+    assertThat(service.summarizeOpenAiErrorBody(body)).contains("Invalid model").contains("model_not_found");
   }
 
   @Test
@@ -159,6 +160,7 @@ class RealtimeSessionServiceTest {
             budgetProperties,
             aiCircuitBreaker,
             openAiRealtimeHttpInvoker,
+            mapper,
             "  ");
 
     assertThatThrownBy(() -> svc.createRealtimeCall("v=0", "en"))
