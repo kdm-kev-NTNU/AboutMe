@@ -320,9 +320,9 @@ class RealtimeSessionServiceTest {
     service.createRealtimeCall("v=0\r\noffer", null);
 
     String safety = captor.getValue().headers().firstValue("OpenAI-Safety-Identifier").orElseThrow();
-    assertThat(safety).hasSize(128);
-    // "user:" (5 chars) plus 123 "u"s = first 128 characters of identifier
-    assertThat(safety).isEqualTo("user:" + "u".repeat(123));
+    assertThat(safety).hasSize(64);
+    // "user:" (5 chars) plus 59 "u"s = first 64 characters of identifier
+    assertThat(safety).isEqualTo("user:" + "u".repeat(59));
     verify(aiBudgetService).assertWithinBudget(eq("user:" + username), eq(false));
   }
 
