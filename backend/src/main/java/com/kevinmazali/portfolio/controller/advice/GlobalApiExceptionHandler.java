@@ -5,16 +5,23 @@ import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.exception.PremiumModelForbiddenException;
 import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.model.ApiError;
+import com.kevinmazali.portfolio.model.FieldViolation;
+import jakarta.validation.ConstraintViolationException;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -43,16 +50,68 @@ public class GlobalApiExceptionHandler {
    */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiError> methodArgumentNotValid(MethodArgumentNotValidException ex) {
-    String message =
-        ex.getBindingResult().getFieldErrors().stream()
-            .findFirst()
-            .map(FieldError::getDefaultMessage)
-            .orElseGet(
-                () -> ex.getBindingResult().getGlobalErrors().stream()
-                    .findFirst()
-                    .map(err -> err.getDefaultMessage())
-                    .orElse("Validation failed"));
-    return ResponseEntity.badRequest().body(new ApiError(message));
+    List<FieldViolation> violations = new ArrayList<>();
+    for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
+      String msg = fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "Invalid";
+      violations.add(new FieldViolation(fe.getField(), msg));
+    }
+    if (violations.isEmpty()) {
+      ex.getBindingResult()
+          .getGlobalErrors()
+          .forEach(
+              ge -> {
+                String msg = ge.getDefaultMessage() != null ? ge.getDefaultMessage() : "Invalid";
+                violations.add(new FieldViolation(ge.getObjectName(), msg));
+              });
+    }
+    String summary =
+        violations.isEmpty()
+            ? "Validation failed"
+            : "Validation failed (" + violations.size() + " issue(s))";
+    return ResponseEntity.badRequest()
+        .body(new ApiError(summary, "VALIDATION_FAILED", violations));
+  }
+
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<ApiError> constraintViolation(ConstraintViolationException ex) {
+    List<FieldViolation> violations =
+        ex.getConstraintViolations().stream()
+            .map(
+                cv ->
+                    new FieldViolation(
+                        cv.getPropertyPath().toString(),
+                        cv.getMessage() != null ? cv.getMessage() : "Invalid"))
+            .toList();
+    String summary =
+        violations.isEmpty()
+            ? "Validation failed"
+            : "Validation failed (" + violations.size() + " issue(s))";
+    return ResponseEntity.badRequest()
+        .body(new ApiError(summary, "VALIDATION_FAILED", violations));
+  }
+
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ApiError> notReadable(HttpMessageNotReadableException ex) {
+    log.warn(
+        "Unreadable HTTP message: {}",
+        ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage());
+    return ResponseEntity.badRequest()
+        .body(new ApiError("Invalid request body", "INVALID_JSON"));
+  }
+
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  public ResponseEntity<ApiError> missingParameter(MissingServletRequestParameterException ex) {
+    return ResponseEntity.badRequest()
+        .body(
+            new ApiError(
+                "Missing required parameter: " + ex.getParameterName(), "MISSING_PARAMETER"));
+  }
+
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ApiError> typeMismatch(MethodArgumentTypeMismatchException ex) {
+    String name = ex.getName() != null ? ex.getName() : "parameter";
+    return ResponseEntity.badRequest()
+        .body(new ApiError("Invalid value for parameter: " + name, "TYPE_MISMATCH"));
   }
 
   @ExceptionHandler(BudgetExceededException.class)
@@ -83,6 +142,8 @@ public class GlobalApiExceptionHandler {
   public ResponseEntity<ApiError> unexpected(Exception e) {
     log.error("Unhandled exception in API: {}", e.getMessage(), e);
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .body(new ApiError("An unexpected error occurred. Please try again."));
+        .body(
+            new ApiError(
+                "An unexpected error occurred. Please try again.", "INTERNAL_ERROR"));
   }
 }

@@ -37,6 +37,10 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
 		<!-- RestClientCustomizer (Brotli workaround) lives in this module; Spring AI M5 no longer brings it transitively. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -204,7 +208,7 @@
 						<exclude>**/com/kevinmazali/portfolio/model/**</exclude>
 						<exclude>**/com/kevinmazali/portfolio/config/**</exclude>
 						<exclude>**/com/kevinmazali/portfolio/PortfolioApplication.class</exclude>
-						<!-- Large ingestion + JDBC/pgvector paths; covered by dedicated tests + manual re-ingest verification. -->
+						<!-- Large ingestion + JDBC/pgvector paths; bundle gates stay meaningful—include when coverage catches up. -->
 						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService.class</exclude>
 						<exclude>**/com/kevinmazali/portfolio/service/DocumentIngestionService$*.class</exclude>
 						<!-- Optional native ONNX stack; CI/dev typically run without model weights. -->

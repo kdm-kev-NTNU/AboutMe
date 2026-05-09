@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.controller;
 import com.kevinmazali.portfolio.MockConfig;
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.controller.advice.GlobalApiExceptionHandler;
+import com.kevinmazali.portfolio.config.ApiErrorConfiguration;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.model.Answer;
@@ -47,7 +48,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
   DatasetGenerateRateLimitProperties.class,
   RealtimeRateLimitProperties.class
 })
-@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class, GlobalApiExceptionHandler.class })
+@Import({
+  WebConfig.class,
+  SecurityConfig.class,
+  MvcTestUserDetailsConfig.class,
+  MockConfig.class,
+  GlobalApiExceptionHandler.class,
+  ApiErrorConfiguration.class
+})
 class QuestionControllerTest {
 
 	@Autowired
@@ -66,6 +74,15 @@ class QuestionControllerTest {
 	void resetCatalogStub() {
 		reset(openAIService, chatModelCatalog);
 		when(chatModelCatalog.isModelConfigured(any(SupportedChatModel.class))).thenReturn(true);
+	}
+
+	@Test
+	void askRejectsMalformedJson() throws Exception {
+		mockMvc.perform(post("/ask").contentType(MediaType.APPLICATION_JSON).content("{"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_JSON"));
+
+		verify(openAIService, never()).getAnswer(any());
 	}
 
 	@Test
