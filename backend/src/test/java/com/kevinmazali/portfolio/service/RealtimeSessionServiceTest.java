@@ -91,7 +91,6 @@ class RealtimeSessionServiceTest {
             budgetProperties,
             aiCircuitBreaker,
             openAiRealtimeHttpInvoker,
-            mapper,
             "sk-test-openai-key");
   }
 
@@ -161,7 +160,6 @@ class RealtimeSessionServiceTest {
             budgetProperties,
             aiCircuitBreaker,
             openAiRealtimeHttpInvoker,
-            mapper,
             "  ");
 
     assertThatThrownBy(() -> svc.createRealtimeCall("v=0", "en"))
