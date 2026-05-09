@@ -8,6 +8,8 @@ import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.config.RealtimeRateLimitProperties;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.WebConfig;
+import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
+import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
 import org.junit.jupiter.api.AfterEach;
@@ -16,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -105,7 +108,8 @@ class RealtimeControllerTest {
             .content("v=0")
             .contentType("application/sdp"))
         .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.error").exists());
+        .andExpect(jsonPath("$.error").exists())
+        .andExpect(jsonPath("$.code").value("REALTIME_DISABLED"));
 
     verify(realtimeSessionService, never()).createRealtimeCall(any(), any());
     verify(requestLogService, never()).save(any(), any(), any(), any());
@@ -124,15 +128,20 @@ class RealtimeControllerTest {
   }
 
   @Test
-  void sessionReturns503WhenServiceFailsOpenAi() throws Exception {
+  void sessionReturns502WhenServiceFailsOpenAi() throws Exception {
     when(realtimeSessionService.createRealtimeCall(any(), any()))
-        .thenThrow(new IllegalStateException("upstream"));
+        .thenThrow(
+            new RealtimeSessionException(
+                HttpStatus.BAD_GATEWAY,
+                RealtimeErrorCode.OPENAI_REJECTED,
+                "OpenAI rejected the session: invalid model"));
 
     mockMvc.perform(post("/realtime/session")
             .content("v=0")
             .contentType("application/sdp"))
-        .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.error").value("upstream"));
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.error").value("OpenAI rejected the session: invalid model"))
+        .andExpect(jsonPath("$.code").value("OPENAI_REJECTED"));
   }
 
   @Test
@@ -204,7 +213,8 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
             .content("v=0")
             .contentType("application/sdp"))
         .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.error").exists());
+        .andExpect(jsonPath("$.error").exists())
+        .andExpect(jsonPath("$.code").value("API_KEY_MISSING"));
 
     verify(realtimeSessionService, never()).createRealtimeCall(any(), any());
     verify(requestLogService, never()).save(any(), any(), any(), any());

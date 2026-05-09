@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.config.RealtimeProperties;
+import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.model.ApiError;
 import com.kevinmazali.portfolio.model.RealtimeStatusResponse;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
@@ -55,10 +56,12 @@ public class RealtimeController {
       @RequestBody String sdp,
       @RequestHeader(value = "X-Chat-Language", required = false) String chatLanguage) {
     if (!realtimeProperties.isEnabled()) {
-      return ResponseEntity.status(503).body(new ApiError("Voice chat is disabled."));
+      return ResponseEntity.status(503)
+          .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
     }
     if (!StringUtils.hasText(openAiApiKey)) {
-      return ResponseEntity.status(503).body(new ApiError("Voice chat is not configured."));
+      return ResponseEntity.status(503)
+          .body(new ApiError("Voice chat is not configured.", "API_KEY_MISSING"));
     }
     requestLogService.save("/realtime/session", "POST", "sdp-bytes", null);
     try {
@@ -66,8 +69,16 @@ public class RealtimeController {
       return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/sdp")).body(answer);
     } catch (IllegalArgumentException e) {
       return ResponseEntity.badRequest().body(new ApiError(e.getMessage()));
+    } catch (RealtimeSessionException e) {
+      log.warn(
+          "realtime session: code={} status={} message={}",
+          e.getErrorCode(),
+          e.getHttpStatus().value(),
+          e.getMessage());
+      return ResponseEntity.status(e.getHttpStatus())
+          .body(new ApiError(e.getMessage(), e.getErrorCode().name()));
     } catch (IllegalStateException e) {
-      log.warn("realtime session: {}", e.getMessage());
+      log.warn("realtime session (legacy): {}", e.getMessage());
       return ResponseEntity.status(503).body(new ApiError(e.getMessage()));
     }
   }

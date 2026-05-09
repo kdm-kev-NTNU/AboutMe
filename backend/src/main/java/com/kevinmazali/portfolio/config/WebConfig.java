@@ -146,12 +146,14 @@ public class WebConfig {
         return "realtime:ip:" + req.getRemoteAddr();
     }
 
-    private static void write429(HttpServletResponse response, ConsumptionProbe probe) throws IOException {
+    private static void write429(HttpServletResponse response, ConsumptionProbe probe, String message) throws IOException {
         response.setStatus(429);
         response.setContentType("application/json");
         long seconds = TimeUnit.NANOSECONDS.toSeconds(probe.getNanosToWaitForRefill()) + 1;
         response.setHeader("Retry-After", String.valueOf(Math.max(1, seconds)));
-        response.getWriter().write("{\"error\":\"Too Many Requests\"}");
+        String escaped = message.replace("\\", "\\\\").replace("\"", "\\\"");
+        response.getWriter().write(
+            "{\"error\":\"" + escaped + "\",\"code\":\"RATE_LIMITED\"}");
     }
 
     @Bean
@@ -172,7 +174,7 @@ public class WebConfig {
                 if (probe.isConsumed()) {
                     filterChain.doFilter(request, response);
                 } else {
-                    write429(response, probe);
+                    write429(response, probe, "Too Many Requests");
                 }
             }
         });
@@ -199,7 +201,7 @@ public class WebConfig {
                 if (probe.isConsumed()) {
                     filterChain.doFilter(request, response);
                 } else {
-                    write429(response, probe);
+                    write429(response, probe, "Too Many Requests");
                 }
             }
         });
@@ -226,7 +228,7 @@ public class WebConfig {
                 if (probe.isConsumed()) {
                     filterChain.doFilter(request, response);
                 } else {
-                    write429(response, probe);
+                    write429(response, probe, "Too Many Requests");
                 }
             }
         });
@@ -256,7 +258,7 @@ public class WebConfig {
                 if (probe.isConsumed()) {
                     filterChain.doFilter(request, response);
                 } else {
-                    write429(response, probe);
+                    write429(response, probe, "Too Many Requests");
                 }
             }
         });
@@ -286,7 +288,7 @@ public class WebConfig {
                 if (probe.isConsumed()) {
                     filterChain.doFilter(request, response);
                 } else {
-                    write429(response, probe);
+                    write429(response, probe, "Too Many Requests");
                 }
             }
         });
@@ -313,7 +315,10 @@ public class WebConfig {
                 if (probe.isConsumed()) {
                     filterChain.doFilter(request, response);
                 } else {
-                    write429(response, probe);
+                    write429(
+                        response,
+                        probe,
+                        "Too many voice session starts from this network. Please wait before trying again.");
                 }
             }
         });

@@ -1,9 +1,12 @@
 package com.kevinmazali.portfolio.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
+import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
+import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.util.AiRequestContext;
 import java.io.IOException;
 import java.net.URI;
@@ -16,6 +19,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
@@ -69,11 +73,12 @@ public class RealtimeSessionService {
     return instructionsEn;
   }
 
-  private static String loadPromptFile(String path) {
+  private String loadPromptFile(String path) {
     try {
       var res = new ClassPathResource(path);
       return StreamUtils.copyToString(res.getInputStream(), StandardCharsets.UTF_8).trim();
     } catch (IOException e) {
+      log.warn("Could not load realtime prompt {}: {}", path, e.getMessage());
       return "You are a helpful assistant for Kevin's portfolio website.";
     }
   }
@@ -85,7 +90,10 @@ public class RealtimeSessionService {
    */
   public String createRealtimeCall(String sdp, String chatLanguage) {
     if (!StringUtils.hasText(openAiApiKey)) {
-      throw new IllegalStateException("OpenAI API key is not configured.");
+      throw new RealtimeSessionException(
+          HttpStatus.SERVICE_UNAVAILABLE,
+          RealtimeErrorCode.API_KEY_MISSING,
+          "OpenAI API key is not configured.");
     }
     if (!StringUtils.hasText(sdp)) {
       throw new IllegalArgumentException("SDP body is required.");
@@ -102,7 +110,15 @@ public class RealtimeSessionService {
     try {
       sessionJson = buildSessionJson(instructions);
     } catch (IOException e) {
-      throw new IllegalStateException("Could not build Realtime session config.", e);
+      log.warn(
+          "realtime_session_config_failed budgetUserId={} message={}",
+          truncateId(budgetUserId),
+          e.getMessage());
+      throw new RealtimeSessionException(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          RealtimeErrorCode.SESSION_CONFIG_FAILED,
+          "Could not build Realtime session config.",
+          e);
     }
 
     String boundary = "----PortfolioBoundary" + UUID.randomUUID();
@@ -134,14 +150,76 @@ public class RealtimeSessionService {
             "realtime_voice_session");
         return response.body();
       }
-      log.warn("OpenAI realtime/calls failed: status={} body={}", status, truncate(response.body(), 2000));
-      throw new IllegalStateException("OpenAI Realtime session failed (HTTP " + status + ").");
+      String responseBody = response.body();
+      String openAiSummary = summarizeOpenAiErrorBody(responseBody);
+      RealtimeErrorCode code =
+          status >= 500 ? RealtimeErrorCode.OPENAI_SERVER_ERROR : RealtimeErrorCode.OPENAI_REJECTED;
+      log.warn(
+          "openai_realtime_calls_failed budgetUserId={} httpStatus={} errorCode={} openAiDetail={} bodyTrunc={}",
+          truncateId(budgetUserId),
+          status,
+          code,
+          openAiSummary,
+          truncate(responseBody, 2000));
+      String userMessage =
+          StringUtils.hasText(openAiSummary)
+              ? "OpenAI rejected the session: " + openAiSummary
+              : "OpenAI Realtime session failed (HTTP " + status + ").";
+      throw new RealtimeSessionException(HttpStatus.BAD_GATEWAY, code, userMessage);
     } catch (IOException | InterruptedException e) {
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
-      throw new IllegalStateException("Could not reach OpenAI Realtime API: " + e.getMessage(), e);
+      log.warn(
+          "openai_realtime_unreachable budgetUserId={} errorCode={} message={}",
+          truncateId(budgetUserId),
+          RealtimeErrorCode.OPENAI_UNREACHABLE,
+          e.getMessage());
+      throw new RealtimeSessionException(
+          HttpStatus.BAD_GATEWAY,
+          RealtimeErrorCode.OPENAI_UNREACHABLE,
+          "Could not reach OpenAI Realtime API: " + e.getMessage(),
+          e);
     }
+  }
+
+  /** Best-effort summary of OpenAI JSON error body for logs and user-facing text. */
+  static String summarizeOpenAiErrorBody(String body) {
+    if (!StringUtils.hasText(body)) {
+      return "";
+    }
+    String trimmed = body.trim();
+    try {
+      JsonNode root = new ObjectMapper().readTree(trimmed);
+      JsonNode err = root.path("error");
+      if (err.isMissingNode() || err.isNull()) {
+        return trimmed.length() > 500 ? trimmed.substring(0, 500) + "..." : trimmed;
+      }
+      if (err.isTextual()) {
+        return err.asText();
+      }
+      String msg = err.path("message").asText("");
+      String code = err.path("code").asText("");
+      if (StringUtils.hasText(msg) && StringUtils.hasText(code)) {
+        return msg + " (" + code + ")";
+      }
+      if (StringUtils.hasText(msg)) {
+        return msg;
+      }
+      if (StringUtils.hasText(code)) {
+        return code;
+      }
+      return trimmed.length() > 500 ? trimmed.substring(0, 500) + "..." : trimmed;
+    } catch (Exception parseEx) {
+      return trimmed.length() > 500 ? trimmed.substring(0, 500) + "..." : trimmed;
+    }
+  }
+
+  private static String truncateId(String id) {
+    if (id == null) {
+      return "";
+    }
+    return id.length() > 64 ? id.substring(0, 64) + "..." : id;
   }
 
   private static String normalizeLang(String raw) {
