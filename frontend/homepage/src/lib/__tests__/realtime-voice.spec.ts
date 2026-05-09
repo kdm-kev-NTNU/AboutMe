@@ -70,6 +70,47 @@ describe('realtime-voice', () => {
     expect(init.body).toBe('offer')
   })
 
+  it('lookupRealtimeInfo returns validated snippets from backend', async () => {
+    mockCustomFetch.mockResolvedValue({
+      status: 200,
+      data: {
+        found: true,
+        snippets: [
+          { sourceType: 'profile', title: 'Data engineering', text: 'Kevin studies at NTNU.' },
+          { sourceType: 'bad', title: 'Ignored', text: 'Ignored' },
+        ],
+      },
+    })
+    const { lookupRealtimeInfo } = await import('../realtime-voice')
+
+    await expect(lookupRealtimeInfo('NTNU', 'en')).resolves.toEqual({
+      found: true,
+      snippets: [{ sourceType: 'profile', title: 'Data engineering', text: 'Kevin studies at NTNU.' }],
+    })
+
+    expect(mockCustomFetch).toHaveBeenCalledWith('/realtime/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'NTNU', language: 'en' }),
+    })
+  })
+
+  it('lookupRealtimeInfo returns empty result on backend failure or invalid body', async () => {
+    mockCustomFetch.mockResolvedValue({ status: 503, data: { error: 'offline' } })
+    const { lookupRealtimeInfo } = await import('../realtime-voice')
+
+    await expect(lookupRealtimeInfo('NTNU', 'no')).resolves.toEqual({
+      found: false,
+      snippets: [],
+    })
+
+    mockCustomFetch.mockResolvedValueOnce({ status: 200, data: { found: true, snippets: [] } })
+    await expect(lookupRealtimeInfo('NTNU', 'no')).resolves.toEqual({
+      found: false,
+      snippets: [],
+    })
+  })
+
   it('exchangeRealtimeSdp returns failure with parsed error JSON when backend sends ApiError', async () => {
     mockCustomFetch.mockResolvedValue({
       status: 503,

@@ -6,12 +6,15 @@ import type { SpeechUiLang } from '@/lib/realtime-voice'
 const SESSION_MAX_MS = 180_000
 
 const exchangeRealtimeSdpMock = vi.hoisted(() => vi.fn())
+const lookupRealtimeInfoMock = vi.hoisted(() => vi.fn())
+const dataChannelSendMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/realtime-voice', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@/lib/realtime-voice')>()
   return {
     ...mod,
     exchangeRealtimeSdp: exchangeRealtimeSdpMock,
+    lookupRealtimeInfo: lookupRealtimeInfoMock,
     REALTIME_SESSION_MAX_MS: SESSION_MAX_MS,
   }
 })
@@ -35,6 +38,8 @@ describe('useRealtimeVoice', () => {
     vi.unstubAllGlobals()
 
     exchangeRealtimeSdpMock.mockReset()
+    lookupRealtimeInfoMock.mockReset()
+    dataChannelSendMock.mockReset()
     messageListeners = []
     closeListeners = []
     latestRtc = null
@@ -46,6 +51,10 @@ describe('useRealtimeVoice', () => {
     exchangeRealtimeSdpMock.mockResolvedValue({
       ok: true,
       answerSdp: 'v=0 ANSWER',
+    })
+    lookupRealtimeInfoMock.mockResolvedValue({
+      found: true,
+      snippets: [{ sourceType: 'profile', title: 'Data engineering', text: 'Kevin studies at NTNU.' }],
     })
 
     class StubRtcDataChannel implements Partial<RTCDataChannel> {
@@ -66,7 +75,9 @@ describe('useRealtimeVoice', () => {
 
       close(): void {}
 
-      send(): void {}
+      send(data: string | Blob | ArrayBuffer | ArrayBufferView): void {
+        dataChannelSendMock(data)
+      }
     }
 
     vi.stubGlobal(
@@ -489,6 +500,98 @@ describe('useRealtimeVoice', () => {
 
     api.disconnect()
 
+    scope.stop()
+  })
+
+  it('handles Realtime lookup function calls over the data channel', async () => {
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const lang = ref<SpeechUiLang>('en')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang)
+    })
+
+    const connectPromise = api.connect()
+    await flushPromises()
+    latestRtc?.dispatchRemoteTrack()
+    await connectPromise
+
+    await simulateChannelPayload(
+      JSON.stringify({
+        type: 'response.done',
+        response: {
+          output: [
+            {
+              type: 'function_call',
+              name: 'lookup_kevin_info',
+              call_id: 'call_123',
+              arguments: JSON.stringify({ query: 'NTNU' }),
+            },
+          ],
+        },
+      }),
+    )
+    await flushPromises()
+
+    expect(lookupRealtimeInfoMock).toHaveBeenCalledWith('NTNU', 'en')
+    expect(dataChannelSendMock).toHaveBeenCalledTimes(2)
+
+    const outputEvent = JSON.parse(dataChannelSendMock.mock.calls[0][0])
+    expect(outputEvent).toMatchObject({
+      type: 'conversation.item.create',
+      item: {
+        type: 'function_call_output',
+        call_id: 'call_123',
+      },
+    })
+    expect(JSON.parse(outputEvent.item.output)).toEqual({
+      found: true,
+      snippets: [{ sourceType: 'profile', title: 'Data engineering', text: 'Kevin studies at NTNU.' }],
+    })
+
+    expect(JSON.parse(dataChannelSendMock.mock.calls[1][0])).toEqual({ type: 'response.create' })
+
+    api.disconnect()
+    scope.stop()
+  })
+
+  it('returns an empty tool result when lookup function arguments are invalid', async () => {
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const lang = ref<SpeechUiLang>('en')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang)
+    })
+
+    const connectPromise = api.connect()
+    await flushPromises()
+    latestRtc?.dispatchRemoteTrack()
+    await connectPromise
+
+    await simulateChannelPayload(
+      JSON.stringify({
+        type: 'response.done',
+        response: {
+          output: [
+            {
+              type: 'function_call',
+              name: 'lookup_kevin_info',
+              call_id: 'call_bad_args',
+              arguments: '{bad json',
+            },
+          ],
+        },
+      }),
+    )
+    await flushPromises()
+
+    expect(lookupRealtimeInfoMock).not.toHaveBeenCalled()
+    const outputEvent = JSON.parse(dataChannelSendMock.mock.calls[0][0])
+    expect(JSON.parse(outputEvent.item.output)).toEqual({ found: false, snippets: [] })
+
+    api.disconnect()
     scope.stop()
   })
 
