@@ -81,7 +81,7 @@ describe('useRealtimeVoice', () => {
     vi.stubGlobal(
       'RTCPeerConnection',
       class StubRtc {
-        localDescription: any = undefined
+        localDescription: RTCSessionDescriptionInit | null = null
         readonly iceGatheringState: RTCIceGatheringState = 'complete'
         ontrack:
           | ((this: RTCPeerConnection, ev: RTCTrackEvent) => void)
@@ -94,28 +94,27 @@ describe('useRealtimeVoice', () => {
         }
 
         constructor() {
-          const self = this
           latestRtc = {
             dispatchRemoteTrack: () => {
               const fakeStream = new MediaStream([])
               const ev = new Event('track') as unknown as RTCTrackEvent
               Object.assign(ev, { streams: [fakeStream], track: {} })
-              const handler = self.ontrack
+              const handler = this.ontrack
               if (handler) {
-                handler.call(self as any, ev as RTCTrackEvent)
+                handler.call(this as unknown as RTCPeerConnection, ev)
               }
             },
             failConnection: () => {
-              self._connectionState = 'failed'
-              const h = self.onconnectionstatechange
+              this._connectionState = 'failed'
+              const h = this.onconnectionstatechange
               if (h) {
-                h.call(self as any, new Event('connectionstatechange'))
+                h.call(this as unknown as RTCPeerConnection, new Event('connectionstatechange'))
               }
             },
             fireDataChannelClose: () => {
               const ev = new Event('close')
-              for (const l of [...closeListeners]) {
-                l(ev)
+              for (const listener of [...closeListeners]) {
+                listener(ev)
               }
             },
           }
@@ -141,7 +140,9 @@ describe('useRealtimeVoice', () => {
           this._connectionState = 'connected'
         }
 
-        addTrack(): any {}
+        addTrack(): RTCRtpSender {
+          return {} as RTCRtpSender
+        }
 
         close(): void {}
       } as unknown as typeof RTCPeerConnection,
