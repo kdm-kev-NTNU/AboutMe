@@ -24,8 +24,9 @@ function scrollHomeHeroIntoPlay() {
  */
 function waitForRecordedAudioChunks() {
   // Aligns with useSpeechTranscription's 250ms MediaRecorder timeslice; stopping sooner yields an empty blob (no /transcribe).
+  // Slightly above 250ms × 2 so CI/Electron scheduling misses fewer chunks.
   // eslint-disable-next-line cypress/no-unnecessary-waiting
-  cy.wait(400)
+  cy.wait(650)
 }
 
 function withFakeMicrophone() {

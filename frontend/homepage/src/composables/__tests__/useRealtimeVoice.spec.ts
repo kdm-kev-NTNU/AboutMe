@@ -80,8 +80,8 @@ describe('useRealtimeVoice', () => {
 
     vi.stubGlobal(
       'RTCPeerConnection',
-      class StubRtc implements Partial<RTCPeerConnection> {
-        localDescription: RTCSessionDescriptionInit | undefined
+      class StubRtc {
+        localDescription: any = undefined
         readonly iceGatheringState: RTCIceGatheringState = 'complete'
         ontrack:
           | ((this: RTCPeerConnection, ev: RTCTrackEvent) => void)
@@ -102,14 +102,14 @@ describe('useRealtimeVoice', () => {
               Object.assign(ev, { streams: [fakeStream], track: {} })
               const handler = self.ontrack
               if (handler) {
-                handler.call(self as RTCPeerConnection, ev as RTCTrackEvent)
+                handler.call(self as any, ev as RTCTrackEvent)
               }
             },
             failConnection: () => {
               self._connectionState = 'failed'
               const h = self.onconnectionstatechange
               if (h) {
-                h.call(self as RTCPeerConnection, new Event('connectionstatechange'))
+                h.call(self as any, new Event('connectionstatechange'))
               }
             },
             fireDataChannelClose: () => {
@@ -126,7 +126,7 @@ describe('useRealtimeVoice', () => {
         }
 
         async createOffer() {
-          return { type: 'offer', sdp: 'v=0 OFFER_STUB' }
+          return { type: 'offer' as const, sdp: 'v=0 OFFER_STUB' }
         }
 
         async setLocalDescription(init: RTCLocalSessionDescriptionInit) {
@@ -141,7 +141,7 @@ describe('useRealtimeVoice', () => {
           this._connectionState = 'connected'
         }
 
-        addTrack(): void {}
+        addTrack(): any {}
 
         close(): void {}
       } as unknown as typeof RTCPeerConnection,
@@ -259,6 +259,114 @@ describe('useRealtimeVoice', () => {
       message: expect.any(String),
       language: 'en',
     })
+
+    scope.stop()
+  })
+
+  it('maps RATE_LIMITED with retry-after to localized copy', async () => {
+    exchangeRealtimeSdpMock.mockResolvedValue({
+      ok: false,
+      status: 429,
+      message: '',
+      code: 'RATE_LIMITED',
+      retryAfterSeconds: 33,
+    })
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const en = ref<SpeechUiLang>('en')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(en)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.errorMessage.value).toContain('33')
+    expect(api.errorMessage.value.toLowerCase()).toContain('seconds')
+
+    scope.stop()
+  })
+
+  it('maps RATE_LIMITED without retry-after to generic rate limit copy', async () => {
+    exchangeRealtimeSdpMock.mockResolvedValue({
+      ok: false,
+      status: 429,
+      message: '',
+      code: 'RATE_LIMITED',
+    })
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const no = ref<SpeechUiLang>('no')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(no)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.errorMessage.value).toContain('Vent')
+
+    scope.stop()
+  })
+
+  it('maps CIRCUIT_OPEN and OPENAI_SERVER_ERROR to localized copy', async () => {
+    exchangeRealtimeSdpMock.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      message: '',
+      code: 'CIRCUIT_OPEN',
+    })
+
+    const first = await import('../useRealtimeVoice')
+    const lang = ref<SpeechUiLang>('no')
+    const s1 = effectScope()
+    let api1!: ReturnType<typeof first.useRealtimeVoice>
+    s1.run(() => {
+      api1 = first.useRealtimeVoice(lang)
+    })
+    await api1.connect()
+    await flushPromises()
+    expect(api1.errorMessage.value).toContain('utilgjengelig')
+    s1.stop()
+
+    exchangeRealtimeSdpMock.mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      message: '',
+      code: 'OPENAI_SERVER_ERROR',
+    })
+    const second = await import('../useRealtimeVoice')
+    const s2 = effectScope()
+    let api2!: ReturnType<typeof second.useRealtimeVoice>
+    s2.run(() => {
+      api2 = second.useRealtimeVoice(ref<SpeechUiLang>('en'))
+    })
+    await api2.connect()
+    await flushPromises()
+    expect(api2.errorMessage.value.toLowerCase()).toContain('please try again')
+    s2.stop()
+  })
+
+  it('maps NotFoundError from getUserMedia to English copy', async () => {
+    vi.mocked(navigator.mediaDevices!.getUserMedia).mockRejectedValue(
+      new DOMException('none', 'NotFoundError'),
+    )
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const en = ref<SpeechUiLang>('en')
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(en)
+    })
+    await api.connect()
+    await flushPromises()
+
+    expect(api.errorMessage.value).toContain('No microphone found')
 
     scope.stop()
   })
