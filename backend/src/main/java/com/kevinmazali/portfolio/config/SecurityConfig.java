@@ -1,22 +1,28 @@
 package com.kevinmazali.portfolio.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kevinmazali.portfolio.security.JsonAccessDeniedHandler;
+import com.kevinmazali.portfolio.security.JsonAuthenticationEntryPoint;
+import io.micrometer.tracing.Tracer;
+import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.http.HttpMethod;
-
-import java.util.List;
 
 /**
  * Spring Security: HTTP Basic for authenticated routes, role-based rules for {@code /admin/**},
@@ -28,13 +34,41 @@ import java.util.List;
 public class SecurityConfig {
 
     /**
+     * Dedicated mapper so {@link org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest} slices
+     * do not require a Jackson {@link ObjectMapper} bean.
+     */
+    private static ObjectMapper securityErrorObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.findAndRegisterModules();
+        return mapper;
+    }
+
+    @Bean
+    AuthenticationEntryPoint jsonAuthenticationEntryPoint(ObjectProvider<Tracer> tracer) {
+        return new JsonAuthenticationEntryPoint(securityErrorObjectMapper(), tracer);
+    }
+
+    @Bean
+    AccessDeniedHandler jsonAccessDeniedHandler(ObjectProvider<Tracer> tracer) {
+        return new JsonAccessDeniedHandler(securityErrorObjectMapper(), tracer);
+    }
+
+    /**
      * Disables CSRF (stateless API + SPA), enables HTTP Basic and CORS, and locks {@code /admin/**} to admins.
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            AuthenticationEntryPoint jsonAuthenticationEntryPoint,
+            AccessDeniedHandler jsonAccessDeniedHandler)
+            throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
+            .exceptionHandling(
+                ex ->
+                    ex.authenticationEntryPoint(jsonAuthenticationEntryPoint)
+                        .accessDeniedHandler(jsonAccessDeniedHandler))
             .httpBasic(Customizer.withDefaults())
             .headers(headers -> headers
                 .contentTypeOptions(Customizer.withDefaults())
