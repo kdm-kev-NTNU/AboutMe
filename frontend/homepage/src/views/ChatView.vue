@@ -35,7 +35,7 @@ import {
 } from '@/lib/chat-telemetry'
 import AudioWaveform from '@/components/AudioWaveform.vue'
 import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/useSpeechTranscription'
-import { Loader2, Mic, Square } from 'lucide-vue-next'
+import { Loader2, Mic, Square, Headphones } from 'lucide-vue-next'
 
 // RAG chat: sessionStorage transcript, optional ?conversationId= REST hydrate, POST /ask with optional model id; clear stays on /chat.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
@@ -399,15 +399,23 @@ onMounted(async () => {
               {{ isLoading ? 'Thinking...' : 'Online' }}
             </span>
           </div>
-          <Button
-            v-if="state.messages.length > 0"
-            @click="clearChat"
-            variant="outline"
-            size="sm"
-            class="border border-blue-200/80 bg-white/85 text-blue-700 hover:border-blue-300/80 hover:bg-blue-50/70 hover:text-blue-800"
-          >
-            Clear chat
-          </Button>
+          <div class="flex flex-wrap items-center gap-2">
+            <Button as-child variant="outline" size="sm" class="border border-blue-200/80 bg-white/85 text-blue-700 hover:border-blue-300/80 hover:bg-blue-50/70 hover:text-blue-800">
+              <RouterLink to="/voice" class="inline-flex items-center gap-1.5">
+                <Headphones class="size-4 shrink-0" aria-hidden="true" />
+                {{ language === 'no' ? 'Stemmechat' : 'Voice chat' }}
+              </RouterLink>
+            </Button>
+            <Button
+              v-if="state.messages.length > 0"
+              @click="clearChat"
+              variant="outline"
+              size="sm"
+              class="border border-blue-200/80 bg-white/85 text-blue-700 hover:border-blue-300/80 hover:bg-blue-50/70 hover:text-blue-800"
+            >
+              Clear chat
+            </Button>
+          </div>
         </div>
       </section>
 

@@ -31,6 +31,11 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				component: ChatView,
 			},
 			{
+				path: '/voice',
+				name: 'voice',
+				component: () => import('../views/VoiceView.vue'),
+			},
+			{
 				path: '/projects',
 				name: 'projects',
 				component: () => import('../views/ProjectsView.vue'),
