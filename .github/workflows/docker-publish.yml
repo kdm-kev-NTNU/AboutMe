@@ -54,7 +54,7 @@ jobs:
           driver: cloud
           endpoint: "${{ vars.DOCKER_ACCOUNT }}/${{ vars.CLOUD_BUILDER_NAME }}"
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ vars.DOCKER_ACCOUNT }}/aboutme-backend
           tags: |
@@ -89,7 +89,7 @@ jobs:
           driver: cloud
           endpoint: "${{ vars.DOCKER_ACCOUNT }}/${{ vars.CLOUD_BUILDER_NAME }}"
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ vars.DOCKER_ACCOUNT }}/aboutme-frontend
           tags: |
