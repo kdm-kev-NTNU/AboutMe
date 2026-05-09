@@ -279,7 +279,7 @@ class RealtimeSessionServiceTest {
     assertThat(json.get("reasoning_effort").asText()).isEqualTo("low");
     assertThat(json.get("max_response_output_tokens").asInt()).isEqualTo(512);
     assertThat(json.at("/audio/output/voice").asText()).isEqualTo("marin");
-    assertThat(json.at("/input_audio_transcription/model").asText()).isEqualTo("whisper-1");
+    assertThat(json.at("/audio/input/transcription/model").asText()).isEqualTo("whisper-1");
     assertThat(json.at("/modalities").toString()).contains("text").contains("audio");
   }
 

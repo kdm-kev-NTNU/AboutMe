@@ -124,7 +124,8 @@ class RealtimeControllerTest {
             .content("x")
             .contentType(MediaType.TEXT_PLAIN))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.error").value("bad sdp"));
+        .andExpect(jsonPath("$.error").value("bad sdp"))
+        .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
   }
 
   @Test
