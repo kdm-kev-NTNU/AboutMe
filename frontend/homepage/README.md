@@ -8,7 +8,7 @@ Repo-wide setup and backend configuration live in [../../README.md](../../README
 
 - `/`: home page with quick chat entry points and live voice CTA.
 - `/chat`: text chat backed by `/ask`, with selectable models from `/chat/models`.
-- `/voice`: OpenAI Realtime WebRTC voice UI when the backend enables Realtime.
+- `/voice`: live voice over WebRTC when the backend enables Realtime — **OpenAI Realtime** and/or **ElevenLabs** depending on which models `/realtime/models` returns (user-selectable in the UI).
 - `/chat-history`: stored conversations that can reopen in `/chat`.
 - `/feedback` and `/privacy-policy`: visitor feedback and privacy information.
 - `/career`, `/projects`, `/projects/heathen-army`, `/project`: portfolio, project story, bachelor/future-work, and tech stack content.
@@ -17,6 +17,8 @@ Repo-wide setup and backend configuration live in [../../README.md](../../README
 ## Prerequisites
 
 Use the Node version from `engines` in [package.json](package.json). Recommended editor: VS Code with [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar).
+
+ElevenLabs voice sessions load the runtime package **`@elevenlabs/client`** (and types via **`@elevenlabs/types`**) when that provider is selected — no extra Vite env vars are required for the SDK itself; tokens come from the backend.
 
 Portfolio listing and career content load from `src/types/*.json` files (`projects`, `education`, `workExperience`, `courses`) — those JSON files are **gitignored** in this repo. If they are missing, Vite falls back to the tracked `*.stub.json` files (see [src/types/FILES.example](src/types/FILES.example)).
 
@@ -35,6 +37,7 @@ Portfolio listing and career content load from `src/types/*.json` files (`projec
 | `npm run test:e2e` | Cypress run against `vite preview` |
 | `npm run test:e2e:voice-live` | Realtime voice smoke without requiring a real OpenAI SDP session |
 | `npm run test:e2e:voice-live:openai` | Full live OpenAI Realtime browser smoke |
+| `npm run test:e2e:voice-live:elevenlabs` | Calls the backend to mint a real ElevenLabs conversation token (requires ElevenLabs configured on the server) |
 | `npm run lint` | ESLint with fixes |
 | `npm run lint:ci` | ESLint without fixes and with zero warnings |
 | `npm run format` | Prettier over `src/` |
@@ -48,6 +51,8 @@ Generated client code lives under `src/api/generated/`. Do not edit generated fi
 3. Run `npm run api:generate`.
 
 HTTP calls use [src/api/orval-mutator.ts](src/api/orval-mutator.ts). It adds the `/api` prefix and attaches `Authorization: Basic ...` when the auth store has an admin session. Admin route guards restore credentials from `sessionStorage` before protected route navigation.
+
+Voice helpers in [src/lib/realtime-voice.ts](src/lib/realtime-voice.ts) call realtime endpoints (including `POST /realtime/elevenlabs/token`, which `customFetch` prefixes to `/api/…` like other backend routes) with the shared fetch helper instead of the Orval client. After backend API changes, run `api:pull` then `api:generate` if you want those paths reflected in `src/api/generated/`.
 
 ## Configuration
 
@@ -65,7 +70,9 @@ Server-side LLM analytics are configured in the Spring backend with `POSTHOG_ENA
 
 ## Voice Testing
 
-The voice UI is covered by deterministic unit tests and Cypress smoke scripts. The full OpenAI smoke requires:
+The voice UI is covered by deterministic unit tests and Cypress smoke scripts.
+
+The full **OpenAI** smoke requires:
 
 - A running app and backend.
 - `PORTFOLIO_REALTIME_ENABLED=true`.
@@ -76,4 +83,16 @@ Run it with:
 
 ```bash
 npm run test:e2e:voice-live:openai -- --config baseUrl=http://localhost:5173
+```
+
+The **ElevenLabs** token smoke mints a real conversation JWT via the backend (it does not open a full browser WebRTC session). It requires:
+
+- A running app and backend with Realtime enabled.
+- `PORTFOLIO_REALTIME_ELEVENLABS_ENABLED=true`.
+- `ELEVENLABS_API_KEY` and a valid `ELEVENLABS_AGENT_ID` (see repo root `.env.example`).
+
+Run it with:
+
+```bash
+npm run test:e2e:voice-live:elevenlabs -- --config baseUrl=http://localhost:5173
 ```

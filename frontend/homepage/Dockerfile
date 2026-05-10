@@ -1,14 +1,17 @@
 # Build stage
-FROM node:22-alpine AS builder
+# Debian-based image (glibc): Vite 8 / Rolldown optional bindings omit linux-x64-musl on Alpine.
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json ./
 ENV CYPRESS_INSTALL_BINARY=0
-# npm ci can fail on Alpine when the lockfile omits a nested peer resolution (e.g. typescript 5.9.x)
-# that local npm materialized differently; install respects the lock for hoisted deps and fills gaps.
-RUN npm install --no-audit --no-fund
+# npm install respects the lock for hoisted deps and fills gaps where npm ci would fail on peer edges.
+RUN npm install --no-audit --no-fund \
+    --fetch-retries=10 \
+    --fetch-retry-mintimeout=20000 \
+    --fetch-retry-maxtimeout=120000
 
 # Copy source and build
 COPY . .
