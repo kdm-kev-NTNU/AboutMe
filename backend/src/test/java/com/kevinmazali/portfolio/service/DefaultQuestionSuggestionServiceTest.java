@@ -16,6 +16,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
+import com.kevinmazali.portfolio.exception.AiCircuitOpenException;
+import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.model.ChunkItem;
 import com.kevinmazali.portfolio.model.ChunkListResponse;
@@ -418,6 +420,58 @@ class DefaultQuestionSuggestionServiceTest {
             "Norwegian");
 
     assertThrows(IllegalArgumentException.class, () -> service.suggest(req));
+  }
+
+  @Test
+  void suggest_propagatesBudgetExceededFromModelCall() {
+    when(documentIngestionService.getChunks(null, 200, 0))
+        .thenReturn(
+            new ChunkListResponse(
+                "c",
+                1,
+                1,
+                200,
+                0,
+                List.of(new ChunkItem("id1", "D", 0, "content", Map.of()))));
+
+    when(openAiChatModel.call(any(Prompt.class))).thenThrow(new BudgetExceededException("cap"));
+
+    var req =
+        new DefaultQuestionSuggestionRequest(
+            DefaultQuestionSuggestionService.SOURCE_CURRENT,
+            null,
+            null,
+            MODEL_ID,
+            12,
+            "Norwegian");
+
+    assertThrows(BudgetExceededException.class, () -> service.suggest(req));
+  }
+
+  @Test
+  void suggest_propagatesCircuitOpenFromModelCall() {
+    when(documentIngestionService.getChunks(null, 200, 0))
+        .thenReturn(
+            new ChunkListResponse(
+                "c",
+                1,
+                1,
+                200,
+                0,
+                List.of(new ChunkItem("id1", "D", 0, "content", Map.of()))));
+
+    when(openAiChatModel.call(any(Prompt.class))).thenThrow(new AiCircuitOpenException("open"));
+
+    var req =
+        new DefaultQuestionSuggestionRequest(
+            DefaultQuestionSuggestionService.SOURCE_CURRENT,
+            null,
+            null,
+            MODEL_ID,
+            12,
+            "Norwegian");
+
+    assertThrows(AiCircuitOpenException.class, () -> service.suggest(req));
   }
 
   @Test

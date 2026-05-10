@@ -264,6 +264,20 @@ class DocumentPipelineControllerTest {
 
 	@Test
 	@WithMockUser(username = "admin", roles = "ADMIN")
+	void syncFromRemoteReturns400WhenUsernameMissing() throws Exception {
+		when(syncProperties.isEnabled()).thenReturn(true);
+		when(syncProperties.getSourceUrl()).thenReturn("jdbc:postgresql://h:5432/db");
+		when(syncProperties.getSourceUsername()).thenReturn("  ");
+
+		mockMvc.perform(post("/admin/tools/documents/sync-from-remote"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error").value(containsString("username")));
+
+		verify(vectorStoreSyncService, never()).syncFromRemote(org.mockito.ArgumentMatchers.anyBoolean());
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
 	void syncFromRemoteDelegatesToService() throws Exception {
 		when(syncProperties.isEnabled()).thenReturn(true);
 		when(syncProperties.getSourceUrl()).thenReturn("jdbc:postgresql://h:5432/db");
