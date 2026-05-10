@@ -1,0 +1,2 @@
+# Optional: pip install -r scripts/requirements-elevenlabs.txt
+elevenlabs>=1.50
