@@ -39,6 +39,7 @@ public class RealtimeSessionService {
   private final AiCircuitBreaker aiCircuitBreaker;
   private final OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker;
   private final RealtimeProfileService realtimeProfileService;
+  private final RealtimeModelCatalog realtimeModelCatalog;
   private final String openAiApiKey;
 
   // Spring Boot 4 auto-configures the new tools.jackson.databind.ObjectMapper, so injecting the
@@ -56,6 +57,7 @@ public class RealtimeSessionService {
       AiCircuitBreaker aiCircuitBreaker,
       OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker,
       RealtimeProfileService realtimeProfileService,
+      RealtimeModelCatalog realtimeModelCatalog,
       @Value("${spring.ai.openai.api-key:}") String openAiApiKey) {
     this.realtimeProperties = realtimeProperties;
     this.aiBudgetService = aiBudgetService;
@@ -63,6 +65,7 @@ public class RealtimeSessionService {
     this.aiCircuitBreaker = aiCircuitBreaker;
     this.openAiRealtimeHttpInvoker = openAiRealtimeHttpInvoker;
     this.realtimeProfileService = realtimeProfileService;
+    this.realtimeModelCatalog = realtimeModelCatalog;
     this.openAiApiKey = openAiApiKey;
   }
 
@@ -96,6 +99,35 @@ public class RealtimeSessionService {
    * @return SDP answer text from OpenAI
    */
   public String createRealtimeCall(String sdp, String chatLanguage) {
+    return createRealtimeCall(sdp, chatLanguage, null, null, null);
+  }
+
+  /**
+   * @param sdp the WebRTC SDP offer from the browser
+   * @param chatLanguage optional {@code en} or {@code no} from {@code X-Chat-Language}
+   * @param requestedVoice optional curated voice from {@code X-Realtime-Voice}
+   * @param requestedReasoningEffort optional reasoning effort from {@code X-Realtime-Reasoning-Effort}
+   * @return SDP answer text from OpenAI
+   */
+  public String createRealtimeCall(
+      String sdp, String chatLanguage, String requestedVoice, String requestedReasoningEffort) {
+    return createRealtimeCall(sdp, chatLanguage, null, requestedVoice, requestedReasoningEffort);
+  }
+
+  /**
+   * @param sdp the WebRTC SDP offer from the browser
+   * @param chatLanguage optional {@code en} or {@code no} from {@code X-Chat-Language}
+   * @param requestedModel optional configured OpenAI realtime model id from {@code X-Realtime-Model}
+   * @param requestedVoice optional curated voice from {@code X-Realtime-Voice}
+   * @param requestedReasoningEffort optional reasoning effort from {@code X-Realtime-Reasoning-Effort}
+   * @return SDP answer text from OpenAI
+   */
+  public String createRealtimeCall(
+      String sdp,
+      String chatLanguage,
+      String requestedModel,
+      String requestedVoice,
+      String requestedReasoningEffort) {
     if (!StringUtils.hasText(openAiApiKey)) {
       throw new RealtimeSessionException(
           HttpStatus.SERVICE_UNAVAILABLE,
@@ -106,6 +138,14 @@ public class RealtimeSessionService {
       throw new IllegalArgumentException("SDP body is required.");
     }
 
+    String model = realtimeModelCatalog.resolveOpenAiModelId(requestedModel);
+    if (!realtimeModelCatalog.isOpenAiModelConfigured(model)) {
+      throw new RealtimeSessionException(
+          HttpStatus.BAD_REQUEST,
+          RealtimeErrorCode.VOICE_MODEL_NOT_CONFIGURED,
+          "OpenAI voice model is not configured.");
+    }
+
     String budgetUserId = AiRequestContext.budgetUserIdentifier(budgetProperties);
     boolean anonymous = AiRequestContext.isAnonymousInteractiveUser();
     aiCircuitBreaker.assertClosed();
@@ -114,9 +154,11 @@ public class RealtimeSessionService {
     String lang = normalizeLang(chatLanguage);
     String instructions = instructionsForLanguage(lang)
         .replace("{profile_card}", realtimeProfileService.profileCard(lang));
+    String voice = realtimeProperties.resolveVoice(requestedVoice);
+    String reasoningEffort = realtimeProperties.resolveReasoningEffort(requestedReasoningEffort);
     String sessionJson;
     try {
-      sessionJson = buildSessionJson(instructions);
+      sessionJson = buildSessionJson(instructions, model, voice, reasoningEffort);
     } catch (IOException e) {
       log.warn(
           "realtime_session_config_failed budgetUserId={} message={}",
@@ -150,7 +192,7 @@ public class RealtimeSessionService {
       if (status >= 200 && status < 300) {
         aiBudgetService.recordUsage(
             budgetUserId,
-            realtimeProperties.getModel(),
+            model,
             realtimeProperties.getReservationInputTokens(),
             realtimeProperties.getReservationOutputTokens(),
             anonymous,
@@ -247,26 +289,22 @@ public class RealtimeSessionService {
     return "en";
   }
 
-  private String buildSessionJson(String instructions) throws IOException {
+  private String buildSessionJson(String instructions, String model, String voice, String reasoningEffort) throws IOException {
     ObjectNode root = objectMapper.createObjectNode();
     root.put("type", "realtime");
-    root.put("model", realtimeProperties.getModel());
+    root.put("model", model);
     root.put("instructions", instructions);
     root.put("max_output_tokens", realtimeProperties.getMaxResponseOutputTokens());
     root.putArray("output_modalities").add("audio");
     addLookupTool(root);
 
     ObjectNode reasoning = objectMapper.createObjectNode();
-    String reasoningEffort =
-        StringUtils.hasText(realtimeProperties.getReasoningEffort())
-            ? realtimeProperties.getReasoningEffort().trim()
-            : "low";
     reasoning.put("effort", reasoningEffort);
     root.set("reasoning", reasoning);
 
     ObjectNode audio = objectMapper.createObjectNode();
     ObjectNode output = objectMapper.createObjectNode();
-    output.put("voice", realtimeProperties.getVoice());
+    output.put("voice", voice);
     audio.set("output", output);
 
     ObjectNode input = objectMapper.createObjectNode();

@@ -3,17 +3,34 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Mic, MicOff, Loader2, Info, MessageSquare } from 'lucide-vue-next'
 import { useLangStore } from '@/stores/lang'
+import { useVoiceModelStore } from '@/stores/voice-model'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import AiStatusDialog from '@/components/AiStatusDialog.vue'
 import { useRealtimeVoice } from '@/composables/useRealtimeVoice'
-import { fetchRealtimeVoiceEnabled } from '@/lib/realtime-voice'
+import {
+  fetchRealtimeVoiceStatus,
+  type RealtimeReasoningEffort,
+  type RealtimeVoiceChoice,
+} from '@/lib/realtime-voice'
 
 const langStore = useLangStore()
+const voiceModelStore = useVoiceModelStore()
 const language = computed(() => langStore.language)
 
 const voiceAvailable = ref<boolean | null>(null)
+const voiceOptions = ref<RealtimeVoiceChoice[]>(['marin', 'cedar'])
+const reasoningOptions = ref<RealtimeReasoningEffort[]>(['low', 'medium', 'high'])
+const selectedVoice = ref<RealtimeVoiceChoice>('marin')
+const selectedReasoningEffort = ref<RealtimeReasoningEffort>('low')
 const aiErrorDialogOpen = ref(false)
+
+const selectedRealtimeOptions = computed(() => ({
+  voice: selectedVoice.value,
+  reasoningEffort: selectedReasoningEffort.value,
+}))
+const selectedVoiceModel = computed(() => voiceModelStore.selectedModel)
+const selectedVoiceProvider = computed(() => selectedVoiceModel.value?.provider ?? 'OPENAI')
 
 const {
   connectionState,
@@ -24,19 +41,24 @@ const {
   connect,
   disconnect,
   maxSessionMs,
-} = useRealtimeVoice(language)
+} = useRealtimeVoice(language, selectedRealtimeOptions, selectedVoiceModel)
 
 onMounted(async () => {
-  voiceAvailable.value = await fetchRealtimeVoiceEnabled()
+  const [status] = await Promise.all([
+    fetchRealtimeVoiceStatus(),
+    voiceModelStore.ensureModelsLoaded(),
+  ])
+  voiceAvailable.value = status.enabled && voiceModelStore.hasModels
+  voiceOptions.value = status.voices
+  reasoningOptions.value = status.reasoningEfforts
+  selectedVoice.value = status.voice
+  selectedReasoningEffort.value = status.reasoningEffort
 })
 
 const copy = computed(() => {
   const en = language.value === 'en'
   return {
     title: en ? "Talk with Kevin's AI" : 'Snakk med Kevin sin AI',
-    subtitle: en
-      ? 'Live voice (OpenAI GPT-Realtime-2). Audio is sent to OpenAI for real-time processing. Voice can use a small public fact lookup when needed; for deeper document-grounded answers, use text chat.'
-      : 'Live stemme (OpenAI GPT-Realtime-2). Lyd sendes til OpenAI i sanntid. Stemme kan bruke et lite offentlig faktaoppslag ved behov; for dypere dokumentforankrede svar, bruk tekstchat.',
     chatAlt: en ? 'Use text chat instead' : 'Bruk tekstchat',
     unavailable: en
       ? 'Voice chat is not enabled on the server right now.'
@@ -45,14 +67,35 @@ const copy = computed(() => {
     disconnect: en ? 'End session' : 'Avslutt',
     connecting: en ? 'Connecting…' : 'Kobler til…',
     live: en ? 'Live' : 'Aktiv',
+    modelLabel: en ? 'Provider/model' : 'Leverandør/modell',
+    voiceLabel: en ? 'Voice' : 'Stemme',
+    reasoningLabel: en ? 'Reasoning' : 'Reasoning',
     you: en ? 'You (transcript)' : 'Du (transkripsjon)',
     assistant: en ? 'Assistant (transcript)' : 'Assistent (transkripsjon)',
     disclaimerTitle: en ? 'Before you use voice' : 'Før du bruker stemme',
     disclaimerBody: en
-      ? 'You are talking to an AI, not Kevin himself. Replies can be wrong. Audio is processed by OpenAI in real time (this page uses WebRTC). Each session ends automatically after about 3 minutes.'
-      : 'Du snakker med en KI, ikke Kevin selv. Svar kan være feil. Lyd behandles av OpenAI i sanntid (denne siden bruker WebRTC). Hver økt avsluttes automatisk etter ca. 3 minutter.',
+      ? `You are talking to an AI, not Kevin himself. Replies can be wrong. Audio is processed by ${selectedVoiceProvider.value === 'ELEVENLABS' ? 'ElevenLabs' : 'OpenAI'} in real time (this page uses WebRTC). Each session ends automatically after about 3 minutes.`
+      : `Du snakker med en KI, ikke Kevin selv. Svar kan være feil. Lyd behandles av ${selectedVoiceProvider.value === 'ELEVENLABS' ? 'ElevenLabs' : 'OpenAI'} i sanntid (denne siden bruker WebRTC). Hver økt avsluttes automatisk etter ca. 3 minutter.`,
   }
 })
+
+const voiceLabels: Record<RealtimeVoiceChoice, string> = {
+  marin: 'Marin',
+  cedar: 'Cedar',
+}
+
+const reasoningLabels = computed<Record<RealtimeReasoningEffort, string>>(() => {
+  const en = language.value === 'en'
+  return {
+    low: en ? 'Fast' : 'Rask',
+    medium: en ? 'Balanced' : 'Balansert',
+    high: en ? 'Thorough' : 'Grundig',
+  }
+})
+
+const sessionControlsDisabled = computed(
+  () => connectionState.value === 'connecting' || connectionState.value === 'connected',
+)
 
 const statusLabel = computed(() => {
   if (connectionState.value === 'connecting') return copy.value.connecting
@@ -78,6 +121,13 @@ watch(errorMessage, (message) => {
 function retryVoice() {
   aiErrorDialogOpen.value = false
   void connect()
+}
+
+function setVoiceModelFromEvent(event: Event) {
+  const target = event.target
+  if (target instanceof HTMLSelectElement) {
+    voiceModelStore.setSelectedModelId(target.value)
+  }
 }
 </script>
 
@@ -110,9 +160,6 @@ function retryVoice() {
         <h1 class="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
           {{ copy.title }}
         </h1>
-        <p class="mt-2 text-sm text-slate-600">
-          {{ copy.subtitle }}
-        </p>
         <RouterLink
           to="/chat"
           class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900"
@@ -162,6 +209,54 @@ function retryVoice() {
           <p v-if="connectionState === 'connected'" class="text-sm font-medium text-green-700">
             {{ copy.live }} · ~{{ Math.round(maxSessionMs / 60_000) }} min max
           </p>
+
+          <label class="w-full max-w-md text-left text-xs font-semibold uppercase text-slate-600">
+            {{ copy.modelLabel }}
+            <select
+              :value="voiceModelStore.selectedModelId"
+              data-testid="voice-model-select"
+              class="mt-1 h-10 w-full rounded-lg border border-blue-100 bg-white/90 px-3 text-sm font-medium normal-case text-slate-800 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+              :disabled="sessionControlsDisabled"
+              @change="setVoiceModelFromEvent"
+            >
+              <option v-for="model in voiceModelStore.models" :key="model.provider + ':' + model.id" :value="model.id">
+                {{ model.label }}
+              </option>
+            </select>
+          </label>
+
+          <div
+            v-if="selectedVoiceProvider === 'OPENAI'"
+            class="grid w-full max-w-md grid-cols-1 gap-3 sm:grid-cols-2"
+          >
+            <label class="text-left text-xs font-semibold uppercase text-slate-600">
+              {{ copy.voiceLabel }}
+              <select
+                v-model="selectedVoice"
+                data-testid="voice-select"
+                class="mt-1 h-10 w-full rounded-lg border border-blue-100 bg-white/90 px-3 text-sm font-medium normal-case text-slate-800 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                :disabled="sessionControlsDisabled"
+              >
+                <option v-for="voice in voiceOptions" :key="voice" :value="voice">
+                  {{ voiceLabels[voice] }}
+                </option>
+              </select>
+            </label>
+
+            <label class="text-left text-xs font-semibold uppercase text-slate-600">
+              {{ copy.reasoningLabel }}
+              <select
+                v-model="selectedReasoningEffort"
+                data-testid="reasoning-select"
+                class="mt-1 h-10 w-full rounded-lg border border-blue-100 bg-white/90 px-3 text-sm font-medium normal-case text-slate-800 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                :disabled="sessionControlsDisabled"
+              >
+                <option v-for="effort in reasoningOptions" :key="effort" :value="effort">
+                  {{ reasoningLabels[effort] }}
+                </option>
+              </select>
+            </label>
+          </div>
 
           <div class="flex flex-wrap justify-center gap-3">
             <Button

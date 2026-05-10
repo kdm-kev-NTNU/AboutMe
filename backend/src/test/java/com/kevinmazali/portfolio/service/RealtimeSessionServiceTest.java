@@ -58,6 +58,8 @@ class RealtimeSessionServiceTest {
 
   @Mock private OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker;
 
+  @Mock private RealtimeModelCatalog realtimeModelCatalog;
+
   private AiBudgetProperties budgetProperties;
   private RealtimeProperties realtimeProperties;
   private RealtimeSessionService service;
@@ -83,6 +85,8 @@ class RealtimeSessionServiceTest {
 
     doNothing().when(aiCircuitBreaker).assertClosed();
     doNothing().when(aiBudgetService).assertWithinBudget(anyString(), anyBoolean());
+    when(realtimeModelCatalog.resolveOpenAiModelId(any())).thenReturn("gpt-realtime-2");
+    when(realtimeModelCatalog.isOpenAiModelConfigured(anyString())).thenReturn(true);
 
     service =
         new RealtimeSessionService(
@@ -92,6 +96,7 @@ class RealtimeSessionServiceTest {
             aiCircuitBreaker,
             openAiRealtimeHttpInvoker,
             new RealtimeProfileService(),
+            realtimeModelCatalog,
             "sk-test-openai-key");
   }
 
@@ -162,6 +167,7 @@ class RealtimeSessionServiceTest {
             aiCircuitBreaker,
             openAiRealtimeHttpInvoker,
             new RealtimeProfileService(),
+            realtimeModelCatalog,
             "  ");
 
     assertThatThrownBy(() -> svc.createRealtimeCall("v=0", "en"))
@@ -295,6 +301,21 @@ class RealtimeSessionServiceTest {
     assertThat(json.has("reasoning_effort")).isFalse();
     assertThat(json.has("max_response_output_tokens")).isFalse();
     assertThat(json.has("modalities")).isFalse();
+  }
+
+  @Test
+  void createRealtimeCall_usesRequestedCuratedVoiceAndReasoningEffort() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(200);
+    when(response.body()).thenReturn("ok");
+    ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+
+    service.createRealtimeCall("v=0", "en", "cedar", "high");
+
+    JsonNode json = extractSessionJson(captor.getValue());
+    assertThat(json.at("/audio/output/voice").asText()).isEqualTo("cedar");
+    assertThat(json.at("/reasoning/effort").asText()).isEqualTo("high");
   }
 
   @Test
