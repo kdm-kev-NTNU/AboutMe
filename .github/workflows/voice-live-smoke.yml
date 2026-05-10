@@ -1,6 +1,6 @@
 # Live voice smoke tests: manual/post-deploy verification for the deployed voice feature.
 # This workflow is intentionally separate from the PR merge gate because it can call a live
-# deployment and, when enabled, OpenAI Realtime.
+# deployment and, when enabled, OpenAI Realtime or ElevenLabs token minting.
 name: Voice live smoke
 
 on:
@@ -26,6 +26,14 @@ on:
         options:
           - 'false'
           - 'true'
+      run_elevenlabs_token:
+        description: 'Mint a real ElevenLabs conversation token (needs working /api/realtime/models)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 permissions:
   contents: read
@@ -38,6 +46,7 @@ jobs:
       VOICE_LIVE_BASE_URL: ${{ inputs.base_url || vars.VOICE_LIVE_BASE_URL }}
       VOICE_LIVE_EXPECT_REALTIME_ENABLED: ${{ inputs.expect_realtime_enabled || vars.VOICE_LIVE_EXPECT_REALTIME_ENABLED || 'true' }}
       VOICE_LIVE_RUN_OPENAI: ${{ inputs.run_openai_session || vars.VOICE_LIVE_RUN_OPENAI || 'false' }}
+      VOICE_LIVE_RUN_ELEVENLABS: ${{ inputs.run_elevenlabs_token || vars.VOICE_LIVE_RUN_ELEVENLABS || 'false' }}
     defaults:
       run:
         shell: pwsh
@@ -52,12 +61,14 @@ jobs:
           Write-Host "VOICE_LIVE_BASE_URL=$env:VOICE_LIVE_BASE_URL"
           Write-Host "VOICE_LIVE_EXPECT_REALTIME_ENABLED=$env:VOICE_LIVE_EXPECT_REALTIME_ENABLED"
           Write-Host "VOICE_LIVE_RUN_OPENAI=$env:VOICE_LIVE_RUN_OPENAI"
+          Write-Host "VOICE_LIVE_RUN_ELEVENLABS=$env:VOICE_LIVE_RUN_ELEVENLABS"
 
       - name: Backend realtime contract smoke
         run: |
           ./scripts/voice-live-smoke.ps1 `
             -BaseUrl $env:VOICE_LIVE_BASE_URL `
-            -ExpectRealtimeEnabled ([System.Convert]::ToBoolean($env:VOICE_LIVE_EXPECT_REALTIME_ENABLED))
+            -ExpectRealtimeEnabled ([System.Convert]::ToBoolean($env:VOICE_LIVE_EXPECT_REALTIME_ENABLED)) `
+            -CheckElevenLabsToken ([System.Convert]::ToBoolean($env:VOICE_LIVE_RUN_ELEVENLABS))
 
       - uses: actions/setup-node@v6
         with:
@@ -75,6 +86,7 @@ jobs:
           CYPRESS_VOICE_LIVE: 'true'
           CYPRESS_VOICE_LIVE_EXPECT_REALTIME_ENABLED: ${{ env.VOICE_LIVE_EXPECT_REALTIME_ENABLED }}
           CYPRESS_VOICE_LIVE_RUN_OPENAI: ${{ env.VOICE_LIVE_RUN_OPENAI }}
+          CYPRESS_VOICE_LIVE_RUN_ELEVENLABS: ${{ env.VOICE_LIVE_RUN_ELEVENLABS }}
         run: |
           npx cypress run `
             --browser electron `

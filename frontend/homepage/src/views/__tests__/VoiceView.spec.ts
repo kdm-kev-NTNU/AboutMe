@@ -219,6 +219,21 @@ describe('VoiceView.vue', () => {
     await flushPromises()
 
     expect(document.body.textContent).toContain('Snakk med Kevin sin AI')
+    expect(document.body.textContent).toContain('Sanntidsstemme med Kevin sin AI')
+
+    wrapper.unmount()
+  })
+
+  it('shows the English hero subtitle mentioning ElevenLabs and Kevin AI', async () => {
+    const { wrapper } = await factory({
+      lang: 'en',
+      fetchResult: true,
+    })
+
+    await flushPromises()
+
+    expect(document.body.textContent).toContain("Real-time voice with Kevin's AI")
+    expect(document.body.textContent).toContain('ElevenLabs')
 
     wrapper.unmount()
   })

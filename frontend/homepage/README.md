@@ -31,7 +31,7 @@ Portfolio listing and career content load from `src/types/*.json` files (`projec
 | `npm run type-check` | `vue-tsc --build` |
 | `npm run test:unit` | Vitest unit tests |
 | `npm run test:unit:coverage` | Unit tests with coverage thresholds from `vitest.config.ts` |
-| `npm run test:e2e:dev` | Cypress open mode against a Vite dev server on `:4173` |
+| `npm run test:e2e:dev` | Cypress open mode against a Vite dev server on `:5173` |
 | `npm run test:e2e` | Cypress run against `vite preview` |
 | `npm run test:e2e:voice-live` | Realtime voice smoke without requiring a real OpenAI SDP session |
 | `npm run test:e2e:voice-live:openai` | Full live OpenAI Realtime browser smoke |

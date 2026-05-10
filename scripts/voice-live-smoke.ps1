@@ -4,7 +4,11 @@ param(
 
     [bool] $ExpectRealtimeEnabled = $true,
 
-    [string] $ApiPrefix = '/api'
+    [string] $ApiPrefix = '/api',
+
+    [bool] $CheckElevenLabsToken = $false,
+
+    [string] $ElevenLabsAgentId = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -107,28 +111,32 @@ function Invoke-SmokeWebRequest {
         [string] $Body
     )
 
-    $args = @{
+    $iwrParams = @{
         Uri = $Uri
         Method = $Method
         Headers = $Headers
     }
-    if ($ContentType) {
-        $args.ContentType = $ContentType
+    if ((Get-Command Invoke-WebRequest).Parameters.ContainsKey('TimeoutSec')) {
+        $iwrParams.TimeoutSec = 60
     }
-    if ($null -ne $Body) {
-        $args.Body = $Body
+    if ($ContentType) {
+        $iwrParams.ContentType = $ContentType
+    }
+    # Windows PowerShell 5.1 rejects a body on GET/HEAD; only attach Body for other verbs when supplied.
+    if ($PSBoundParameters.ContainsKey('Body') -and $Method -notin @('GET', 'HEAD')) {
+        $iwrParams.Body = $Body
     }
     if ((Get-Command Invoke-WebRequest).Parameters.ContainsKey('SkipHttpErrorCheck')) {
-        $args.SkipHttpErrorCheck = $true
+        $iwrParams.SkipHttpErrorCheck = $true
     }
 
     try {
-        return Invoke-WebRequest @args
-    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
-        return $_.Exception.Response
-    } catch [System.Net.WebException] {
-        if ($_.Exception.Response) {
-            return $_.Exception.Response
+        return Invoke-WebRequest @iwrParams
+    } catch {
+        # Windows PowerShell 5.1 throws WebException; newer builds may throw HttpResponseException.
+        $resp = $_.Exception.Response
+        if ($null -ne $resp) {
+            return $resp
         }
         throw
     }
@@ -137,6 +145,8 @@ function Invoke-SmokeWebRequest {
 $apiPrefixNormalized = if ([string]::IsNullOrWhiteSpace($ApiPrefix)) { '' } else { '/' + $ApiPrefix.Trim('/') }
 $statusUrl = Join-Url -Base $BaseUrl -Path "$apiPrefixNormalized/realtime/status"
 $sessionUrl = Join-Url -Base $BaseUrl -Path "$apiPrefixNormalized/realtime/session"
+$modelsUrl = Join-Url -Base $BaseUrl -Path "$apiPrefixNormalized/realtime/models"
+$elevenLabsTokenUrl = Join-Url -Base $BaseUrl -Path "$apiPrefixNormalized/realtime/elevenlabs/token"
 
 Write-Host "Checking realtime status: $statusUrl"
 $statusResponse = Invoke-SmokeWebRequest -Uri $statusUrl -Method GET -Headers @{ Accept = 'application/json' }
@@ -188,3 +198,47 @@ if ([string]::IsNullOrWhiteSpace([string] $sessionJson.code)) {
 }
 
 Write-Host "Realtime session error contract OK: HTTP $statusCode code=$($sessionJson.code)"
+
+if ($CheckElevenLabsToken) {
+    Write-Host "Checking realtime models for ELEVENLABS provider: $modelsUrl"
+    $modelsResponse = Invoke-SmokeWebRequest -Uri $modelsUrl -Method GET -Headers @{ Accept = 'application/json' }
+    $modelsStatus = Get-ResponseStatusCode -Response $modelsResponse
+    if ($modelsStatus -ne 200) {
+        throw "Expected realtime/models to return HTTP 200, got HTTP $modelsStatus."
+    }
+    $modelsJson = Read-JsonResponse -Response $modelsResponse
+    $elevenLabsModels = @($modelsJson | Where-Object { $_.provider -eq 'ELEVENLABS' })
+    if ($elevenLabsModels.Count -eq 0) {
+        throw "Expected at least one ELEVENLABS provider in realtime/models response."
+    }
+
+    $agentIdToUse = if ([string]::IsNullOrWhiteSpace($ElevenLabsAgentId)) { $elevenLabsModels[0].id } else { $ElevenLabsAgentId }
+    if ([string]::IsNullOrWhiteSpace($agentIdToUse)) {
+        throw "Could not resolve an ELEVENLABS agent id from response or parameter."
+    }
+
+    Write-Host "Minting ElevenLabs conversation token for agent '$agentIdToUse': $elevenLabsTokenUrl"
+    $tokenBody = @{ modelId = $agentIdToUse } | ConvertTo-Json -Compress
+    $tokenResponse = Invoke-SmokeWebRequest `
+        -Uri $elevenLabsTokenUrl `
+        -Method POST `
+        -ContentType 'application/json' `
+        -Headers @{ Accept = 'application/json' } `
+        -Body $tokenBody
+
+    $tokenStatus = Get-ResponseStatusCode -Response $tokenResponse
+    if ($tokenStatus -ne 200) {
+        $errBody = Get-ResponseContent -Response $tokenResponse
+        throw "Expected realtime/elevenlabs/token to return HTTP 200, got HTTP $tokenStatus. Body: $errBody"
+    }
+
+    $tokenJson = Read-JsonResponse -Response $tokenResponse
+    if ([string]::IsNullOrWhiteSpace([string] $tokenJson.token)) {
+        throw "Expected realtime/elevenlabs/token response to include a non-empty 'token' field."
+    }
+    if ($tokenJson.token -notmatch '^[\w-]+\.[\w-]+\.[\w-]+$') {
+        throw "Expected realtime/elevenlabs/token to return a 3-segment JWT, got: $($tokenJson.token.Substring(0, [Math]::Min(40, $tokenJson.token.Length)))..."
+    }
+
+    Write-Host "ElevenLabs token mint OK: HTTP $tokenStatus tokenLen=$($tokenJson.token.Length)"
+}

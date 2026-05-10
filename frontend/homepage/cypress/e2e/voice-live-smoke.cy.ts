@@ -39,6 +39,8 @@ describe('Voice live smoke', () => {
   const voiceLive = envFlag('VOICE_LIVE')
   const expectRealtimeEnabled = envFlag('VOICE_LIVE_EXPECT_REALTIME_ENABLED', true)
   const runOpenAiSession = envFlag('VOICE_LIVE_RUN_OPENAI')
+  const runElevenLabsToken = envFlag('VOICE_LIVE_RUN_ELEVENLABS')
+  const elevenLabsAgentId = (Cypress.env('VOICE_LIVE_ELEVENLABS_AGENT_ID') as string | undefined) ?? ''
 
   beforeEach(function () {
     if (!voiceLive) {
@@ -98,6 +100,72 @@ describe('Voice live smoke', () => {
       expect(interception.response?.statusCode).to.be.within(200, 299)
       expect(interception.response?.headers['content-type']).to.match(/application\/sdp/i)
       expect(interception.response?.body).to.be.a('string').and.include('v=0')
+    })
+  })
+
+  it('mints a real ElevenLabs conversation token when explicitly enabled', function () {
+    if (!runElevenLabsToken) {
+      this.skip()
+    }
+
+    cy.request({
+      method: 'GET',
+      url: '/api/realtime/models',
+      failOnStatusCode: false,
+    }).then((modelsResponse) => {
+      expect(modelsResponse.status, 'realtime models endpoint').to.eq(200)
+      const elevenLabsModels = (modelsResponse.body as Array<{ id: string; provider: string }>).filter(
+        (m) => m.provider === 'ELEVENLABS',
+      )
+      expect(elevenLabsModels, 'at least one ELEVENLABS model is exposed').to.have.length.greaterThan(0)
+
+      const targetAgentId = elevenLabsAgentId || elevenLabsModels[0].id
+
+      cy.request({
+        method: 'POST',
+        url: '/api/realtime/elevenlabs/token',
+        headers: { 'Content-Type': 'application/json' },
+        body: { modelId: targetAgentId },
+        failOnStatusCode: false,
+      }).then((tokenResponse) => {
+        expect(tokenResponse.status, 'elevenlabs token mint').to.eq(200)
+        expect(tokenResponse.headers['content-type']).to.match(/application\/json/i)
+        const body = tokenResponse.body as { token?: string }
+        expect(body).to.have.property('token').that.is.a('string')
+        expect((body.token ?? '').length, 'JWT-shaped token length').to.be.greaterThan(40)
+        expect(body.token, 'three-segment JWT').to.match(/^[\w-]+\.[\w-]+\.[\w-]+$/)
+      })
+    })
+  })
+
+  it('renders the ElevenLabs option in the model selector when realtime is enabled', function () {
+    if (!expectRealtimeEnabled) {
+      this.skip()
+    }
+
+    cy.intercept('GET', '**/api/realtime/status').as('realtimeStatus')
+    cy.visit('/voice', {
+      onBeforeLoad(win) {
+        win.localStorage.setItem('lang', 'en')
+      },
+    })
+    cy.wait('@realtimeStatus').its('response.statusCode').should('eq', 200)
+
+    cy.request('/api/realtime/models').then((modelsResponse) => {
+      const hasElevenLabs = (modelsResponse.body as Array<{ provider: string }>).some(
+        (m) => m.provider === 'ELEVENLABS',
+      )
+      if (hasElevenLabs) {
+        cy.get('[data-testid="voice-model-select"]', { timeout: 15_000 })
+          .should('be.visible')
+          .find('option')
+          .then((options) => {
+            const ids = Array.from(options).map((o) => (o as HTMLOptionElement).value)
+            const expectedId = elevenLabsAgentId || ((modelsResponse.body as Array<{ id: string; provider: string }>)
+              .find((m) => m.provider === 'ELEVENLABS')?.id ?? '')
+            expect(ids, 'ELEVENLABS agent id is selectable').to.include(expectedId)
+          })
+      }
     })
   })
 })

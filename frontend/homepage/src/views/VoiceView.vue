@@ -59,6 +59,9 @@ const copy = computed(() => {
   const en = language.value === 'en'
   return {
     title: en ? "Talk with Kevin's AI" : 'Snakk med Kevin sin AI',
+    subtitle: en
+      ? "Real-time voice with Kevin's AI — powered by OpenAI or ElevenLabs."
+      : 'Sanntidsstemme med Kevin sin AI — drevet av OpenAI eller ElevenLabs.',
     chatAlt: en ? 'Use text chat instead' : 'Bruk tekstchat',
     unavailable: en
       ? 'Voice chat is not enabled on the server right now.'
@@ -160,6 +163,9 @@ function setVoiceModelFromEvent(event: Event) {
         <h1 class="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
           {{ copy.title }}
         </h1>
+        <p class="mt-2 max-w-xl mx-auto text-sm text-slate-600 sm:text-base">
+          {{ copy.subtitle }}
+        </p>
         <RouterLink
           to="/chat"
           class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900"
