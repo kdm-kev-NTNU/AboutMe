@@ -3,7 +3,8 @@
 # Triggers: push to main/master; all pull_request events; manual workflow_dispatch.
 # Green means: backend ./mvnw verify (tests + JaCoCo check); frontend npm ci,
 #   type-check, lint:ci (eslint, no autofix), unit tests with coverage thresholds;
-#   Cypress E2E (production build + headless).
+#   Cypress E2E (production build + headless; includes `critical-flows.cy.ts`).
+#   Live voice / realtime token checks are manual or `.github/workflows/voice-live-smoke.yml`.
 # Semgrep runs in a separate workflow (.github/workflows/semgrep.yml).
 name: Tests
 

@@ -4,6 +4,7 @@ param(
 
     [bool] $ExpectRealtimeEnabled = $true,
 
+    [AllowEmptyString()]
     [string] $ApiPrefix = '/api',
 
     [bool] $CheckElevenLabsToken = $false,
