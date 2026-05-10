@@ -10,3 +10,27 @@ Copy these into `backend/src/main/resources/realtime/`:
 | `elevenlabs-agent-first-message.txt` | ElevenLabs first message (sync script) |
 
 See `scripts/sync_elevenlabs_portfolio_agent.py` for how KB and ElevenLabs files are pushed to the provider.
+
+Validation / workflow debugging (Python SDK; MCP cannot update agents):
+
+- `python scripts/sync_elevenlabs_portfolio_agent.py --dump-config` — print full `conversation_config` JSON.
+- `python scripts/sync_elevenlabs_portfolio_agent.py --fix-validation --skip-kb --skip-prompt` — remove stale `transfer_to_agent` from `prompt.tools` and `prompt.built_in_tools` (and workflow node overrides), fix duplicate unconditional workflow edges, then PATCH agent (no local KB/prompt reads).
+
+## Cursor ElevenLabs MCP
+
+Project file `.cursor/mcp.json` (gitignored) can run `uvx elevenlabs-mcp`. Set `env.ELEVENLABS_API_KEY` to the same value as `ELEVENLABS_API_KEY` in `backend/.env`, then reload MCP servers in Cursor. If the key is empty, use the sync script above instead of MCP tools.
+
+### API key permissions
+
+The current key is scoped to Conversational AI only. That is enough for `get_agent`, `list_agents`, `list_conversations`, and `add_knowledge_base_to_agent`, but other MCP tools return `401 missing_permissions`. To unlock more tools, edit the key at https://elevenlabs.io/app/settings/api-keys and grant the needed scopes:
+
+| Scope | Unlocks |
+|-------|---------|
+| `user_read` | `check_subscription` |
+| `models_read` | `list_models` |
+| `voices_read` | `search_voices`, `get_voice` |
+| `voices_write` | `voice_clone`, `text_to_voice`, `create_voice_from_preview` |
+| `text_to_speech` | `text_to_speech`, `speech_to_speech` |
+| `speech_to_text` | `speech_to_text` |
+
+Use the sync script (`python scripts/sync_elevenlabs_portfolio_agent.py`) for any agent update operations the MCP cannot perform.
