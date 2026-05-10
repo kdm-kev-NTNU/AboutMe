@@ -1,4 +1,5 @@
 import { ref, onUnmounted, type Ref } from 'vue'
+import type { DisconnectionDetails } from '@elevenlabs/types'
 import type {
   RealtimeLookupResponse,
   RealtimeSdpFailure,
@@ -154,6 +155,25 @@ function mapSdpFailureToUserMessage(lang: SpeechUiLang, f: RealtimeSdpFailure): 
 
 function mapTokenFailureToUserMessage(lang: SpeechUiLang, f: RealtimeTokenFailure): string {
   return mapSdpFailureToUserMessage(lang, f)
+}
+
+function formatElevenLabsDisconnectMessage(details: DisconnectionDetails, lang: SpeechUiLang): string {
+  const en = lang === 'en'
+  if (details.reason === 'error') {
+    const m = details.message.trim()
+    if (m !== '') return m
+    return en ? 'Voice connection error.' : 'Feil i stemmekoblingen.'
+  }
+  if (details.reason === 'agent') {
+    const cr = details.closeReason?.trim()
+    if (cr) return cr
+    const ctx = details.context
+    if (ctx instanceof CloseEvent && typeof ctx.reason === 'string' && ctx.reason.trim() !== '') {
+      return ctx.reason.trim()
+    }
+    return en ? 'Voice session was interrupted.' : 'Stemmesesjonen ble avbrutt.'
+  }
+  return en ? 'Voice session was interrupted.' : 'Stemmesesjonen ble avbrutt.'
 }
 
 /**
@@ -516,11 +536,9 @@ export function useRealtimeVoice(
           if (userEndedSession || midSessionFailureHandled) return
           connectionState.value = 'connected'
         },
-        onDisconnect: () => {
+        onDisconnect: (details: DisconnectionDetails) => {
           if (userEndedSession || midSessionFailureHandled) return
-          const msg =
-            language.value === 'no' ? 'Stemmesesjonen ble avbrutt.' : 'Voice session was interrupted.'
-          handleMidSessionFailure(msg)
+          handleMidSessionFailure(formatElevenLabsDisconnectMessage(details, language.value))
         },
         onMessage: (message: unknown) => {
           handleElevenLabsMessage(message)
@@ -535,7 +553,13 @@ export function useRealtimeVoice(
         },
       })) as ElevenLabsConversation
 
-      connectionState.value = 'connected'
+      if (userEndedSession || midSessionFailureHandled) {
+        return
+      }
+
+      if (connectionState.value !== 'connected') {
+        connectionState.value = 'connected'
+      }
       sessionStartedAt = Date.now()
       captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_STARTED, {
         language: language.value,

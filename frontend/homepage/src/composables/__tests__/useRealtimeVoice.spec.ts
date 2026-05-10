@@ -338,6 +338,54 @@ describe('useRealtimeVoice', () => {
     scope.stop()
   })
 
+  it('does not overwrite ElevenLabs error state when onDisconnect runs before startSession resolves', async () => {
+    elevenLabsStartSessionMock.mockImplementation(
+      async (opts: { onDisconnect?: (details: unknown) => void }) => {
+        opts.onDisconnect?.({
+          reason: 'error',
+          message: 'LiveKit room closed',
+          context: new Event('test'),
+        })
+        return {
+          endSession: elevenLabsEndSessionMock,
+          getId: () => 'conv_123',
+        }
+      },
+    )
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const { captureProductAnalyticsEvent } = await import('@/lib/analytics')
+
+    const lang = ref<SpeechUiLang>('en')
+    const selectedModel = ref({
+      provider: 'ELEVENLABS' as const,
+      id: 'agent_1',
+      label: 'ElevenLabs Agent',
+      defaultOption: false,
+    })
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang, undefined, selectedModel)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('LiveKit room closed')
+    expect(captureProductAnalyticsEvent).not.toHaveBeenCalledWith(
+      'portfolio_voice_session_started',
+      expect.objectContaining({ provider: 'ELEVENLABS' }),
+    )
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_error',
+      expect.objectContaining({ reason: 'mid_session', message: expect.stringContaining('LiveKit') }),
+    )
+
+    scope.stop()
+  })
+
   it('surfaces ElevenLabs token failures', async () => {
     createElevenLabsConversationTokenMock.mockResolvedValue({
       ok: false,
