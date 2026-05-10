@@ -79,6 +79,12 @@ describe('application router (index)', () => {
 
 		await router.push('/feedback')
 		expect(router.currentRoute.value.name).toBe('feedback')
+
+		await router.push('/voice')
+		expect(router.currentRoute.value.name).toBe('voice')
+
+		await router.push('/chat-history')
+		expect(router.currentRoute.value.name).toBe('chat-history')
 	})
 
 	it('allows admin routes when ADMIN session is restored', async () => {
