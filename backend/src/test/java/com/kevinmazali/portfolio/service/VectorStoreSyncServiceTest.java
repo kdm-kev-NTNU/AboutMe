@@ -182,7 +182,7 @@ class VectorStoreSyncServiceTest {
               when(rs.getString("id")).thenReturn(" ", "ok", "skip-me");
               when(rs.getString("content")).thenReturn("x", "y", "z");
               when(rs.getString("metadata")).thenReturn("{}", "{}", "{}");
-              when(rs.getString("embedding")).thenReturn("[1]", "[2]", "");
+              when(rs.getString("embedding")).thenReturn("[1]", "");
               return ex.extractData(rs);
             });
 
