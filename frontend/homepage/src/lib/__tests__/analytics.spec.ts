@@ -5,6 +5,7 @@ vi.mock('posthog-js', () => ({
   default: {
     capture: vi.fn(),
     captureException: vi.fn(),
+    get_session_id: vi.fn(),
   },
 }))
 
@@ -26,6 +27,7 @@ vi.mock('../posthog-sdk', () => ({
 import {
   captureClientException,
   captureProductAnalyticsEvent,
+  getPosthogSessionIdForVoiceAnalytics,
   trackEvent,
 } from '../analytics'
 import {
@@ -47,6 +49,7 @@ describe('analytics helpers', () => {
         captureException: Mock
       }
     ).captureException = vi.fn()
+    ;(posthog as unknown as { get_session_id: Mock }).get_session_id = vi.fn(() => 'sess-1')
     vi.mocked(isPosthogEnabled).mockReturnValue(true)
     vi.mocked(hasPageviewConsent).mockReturnValue(true)
     vi.mocked(hasErrorTrackingConsent).mockReturnValue(true)
@@ -111,6 +114,31 @@ describe('analytics helpers', () => {
     vi.mocked(hasErrorTrackingConsent).mockReturnValue(false)
     captureClientException(new Error('boom'))
     expect(posthog.captureException).not.toHaveBeenCalled()
+  })
+
+  it('returns trimmed PostHog session id for voice analytics when ready', () => {
+    vi.mocked(posthog.get_session_id as Mock).mockReturnValue('  abc  ')
+    expect(getPosthogSessionIdForVoiceAnalytics()).toBe('abc')
+  })
+
+  it('returns undefined for voice session id when get_session_id is missing or blank', () => {
+    vi.mocked(posthog.get_session_id as Mock).mockReturnValue(undefined)
+    expect(getPosthogSessionIdForVoiceAnalytics()).toBeUndefined()
+    vi.mocked(posthog.get_session_id as Mock).mockReturnValue('   ')
+    expect(getPosthogSessionIdForVoiceAnalytics()).toBeUndefined()
+  })
+
+  it('returns undefined when get_session_id throws', () => {
+    vi.mocked(posthog.get_session_id as Mock).mockImplementation(() => {
+      throw new Error('no session')
+    })
+    expect(getPosthogSessionIdForVoiceAnalytics()).toBeUndefined()
+  })
+
+  it('does not expose session id when track pipeline is not ready', () => {
+    vi.mocked(hasPageviewConsent).mockReturnValue(false)
+    vi.mocked(posthog.get_session_id as Mock).mockReturnValue('sess')
+    expect(getPosthogSessionIdForVoiceAnalytics()).toBeUndefined()
   })
 
   it('does nothing when analytics is not enabled or initialized', () => {

@@ -5,6 +5,11 @@ import type { SpeechUiLang } from '@/lib/realtime-voice'
 
 const SESSION_MAX_MS = 180_000
 
+/** Matches `RealtimeVoiceAnalytics` passed into SDP / lookup / ElevenLabs token calls (trace id only when PostHog session is absent). */
+function traceVoiceAnalyticsMatcher(): unknown {
+  return expect.objectContaining({ traceId: expect.any(String) })
+}
+
 const exchangeRealtimeSdpMock = vi.hoisted(() => vi.fn())
 const createElevenLabsConversationTokenMock = vi.hoisted(() => vi.fn())
 const lookupRealtimeInfoMock = vi.hoisted(() => vi.fn())
@@ -32,6 +37,7 @@ vi.mock('@elevenlabs/client', () => ({
 vi.mock('@/lib/analytics', () => ({
   captureProductAnalyticsEvent: vi.fn(),
   captureClientException: vi.fn(),
+  getPosthogSessionIdForVoiceAnalytics: vi.fn(() => undefined),
 }))
 
 type MessageListener = (ev: MessageEvent) => void
@@ -57,9 +63,12 @@ describe('useRealtimeVoice', () => {
     closeListeners = []
     latestRtc = null
 
-    const { captureProductAnalyticsEvent, captureClientException } = await import('@/lib/analytics')
+    const { captureProductAnalyticsEvent, captureClientException, getPosthogSessionIdForVoiceAnalytics } =
+      await import('@/lib/analytics')
     vi.mocked(captureProductAnalyticsEvent).mockReset()
     vi.mocked(captureClientException).mockReset()
+    vi.mocked(getPosthogSessionIdForVoiceAnalytics).mockReset()
+    vi.mocked(getPosthogSessionIdForVoiceAnalytics).mockReturnValue(undefined)
 
     exchangeRealtimeSdpMock.mockResolvedValue({
       ok: true,
@@ -258,7 +267,13 @@ describe('useRealtimeVoice', () => {
     await connectPromise
 
     expect(api.connectionState.value).toBe('connected')
-    expect(exchangeRealtimeSdpMock).toHaveBeenCalledWith('v=0 OFFER_STUB', 'en', undefined, undefined)
+    expect(exchangeRealtimeSdpMock).toHaveBeenCalledWith(
+      'v=0 OFFER_STUB',
+      'en',
+      undefined,
+      undefined,
+      traceVoiceAnalyticsMatcher(),
+    )
     expect(captureProductAnalyticsEvent).toHaveBeenCalledWith('portfolio_voice_session_started', expect.objectContaining({
       language: 'en',
       provider: 'OPENAI',
@@ -293,6 +308,7 @@ describe('useRealtimeVoice', () => {
         reasoningEffort: 'high',
       },
       undefined,
+      traceVoiceAnalyticsMatcher(),
     )
 
     api.disconnect()
@@ -319,7 +335,7 @@ describe('useRealtimeVoice', () => {
     await api.connect()
     await flushPromises()
 
-    expect(createElevenLabsConversationTokenMock).toHaveBeenCalledWith('agent_1')
+    expect(createElevenLabsConversationTokenMock).toHaveBeenCalledWith('agent_1', traceVoiceAnalyticsMatcher())
     expect(elevenLabsStartSessionMock).toHaveBeenCalledWith(expect.objectContaining({
       conversationToken: 'eleven-token',
       connectionType: 'webrtc',
@@ -440,10 +456,14 @@ describe('useRealtimeVoice', () => {
 
     expect(api.connectionState.value).toBe('error')
     expect(api.errorMessage.value).toBe('Could not start voice session.')
-    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith('portfolio_voice_session_error', {
-      message: expect.any(String),
-      language: 'en',
-    })
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_error',
+      expect.objectContaining({
+        message: expect.any(String),
+        language: 'en',
+        ai_trace_id: expect.any(String),
+      }),
+    )
 
     scope.stop()
   })
@@ -707,7 +727,7 @@ describe('useRealtimeVoice', () => {
     )
     await flushPromises()
 
-    expect(lookupRealtimeInfoMock).toHaveBeenCalledWith('NTNU', 'en')
+    expect(lookupRealtimeInfoMock).toHaveBeenCalledWith('NTNU', 'en', traceVoiceAnalyticsMatcher())
     expect(dataChannelSendMock).toHaveBeenCalledTimes(2)
 
     const outputEvent = JSON.parse(dataChannelSendMock.mock.calls[0][0])
