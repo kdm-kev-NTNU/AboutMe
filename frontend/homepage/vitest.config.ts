@@ -1,15 +1,24 @@
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { UserConfig } from 'vite'
 import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
 import viteConfig from './vite.config'
 
-const ciTestOptions =
-  process.env.CI === 'true'
-    ? {
-        reporters: ['default', 'junit'],
-        outputFile: { junit: 'test-results/vitest-junit.xml' },
-      }
-    : {}
+const isCi = process.env.CI === 'true'
+const vitestRoot = fileURLToPath(new URL('./', import.meta.url))
+
+/** Avoid collisions when two Vitest processes share ./coverage (IDE watcher + terminal / duplicate runners). */
+const ciCoverageReportsDirectory = path.join(
+  vitestRoot,
+  `.vitest-coverage-${process.pid}-${process.env.GITHUB_RUN_ID ?? 'job'}`,
+)
+
+const ciTestOptions = isCi
+  ? {
+      reporters: ['default', 'junit'],
+      outputFile: { junit: 'test-results/vitest-junit.xml' },
+    }
+  : {}
 
 export default mergeConfig(
   viteConfig as UserConfig,
@@ -18,10 +27,17 @@ export default mergeConfig(
       fileParallelism: false,
       environment: 'jsdom',
       exclude: [...configDefaults.exclude, 'e2e/**'],
-      root: fileURLToPath(new URL('./', import.meta.url)),
+      root: vitestRoot,
       ...ciTestOptions,
       coverage: {
         provider: 'v8',
+        reportOnFailure: true,
+        ...(isCi
+          ? {
+              reportsDirectory: ciCoverageReportsDirectory,
+              processingConcurrency: 1,
+            }
+          : {}),
         reporter: ['text', 'html'],
         include: ['src/**/*.{ts,vue}'],
         exclude: [

@@ -33,14 +33,14 @@ const E2E_MINIMAL_CONSENT = {
   source: 'banner_necessary_only',
 } as const
 
-beforeEach(() => {
-  if (Cypress.spec.relative.includes('cookie-consent')) return
+// Register once: per-test cy.on() stacks listeners and can duplicate work across specs on CI.
+Cypress.on('window:before:load', (win) => {
+  const rel = Cypress.spec?.relative ?? ''
+  if (rel.includes('cookie-consent')) return
 
-  cy.on('window:before:load', (win) => {
-    try {
-      win.localStorage.setItem('aboutme_cookie_consent_v2', JSON.stringify(E2E_MINIMAL_CONSENT))
-    } catch {
-      /* ignore */
-    }
-  })
+  try {
+    win.localStorage.setItem('aboutme_cookie_consent_v2', JSON.stringify(E2E_MINIMAL_CONSENT))
+  } catch {
+    /* ignore */
+  }
 })

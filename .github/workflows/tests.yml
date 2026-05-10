@@ -38,6 +38,8 @@ jobs:
           cache: 'maven'
           cache-dependency-path: backend/pom.xml
       - name: Maven verify (tests + JaCoCo)
+        env:
+          MAVEN_OPTS: '-Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.retryHandler.requestSentEnabled=true -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 -Daether.connector.http.retryHandler.count=5'
         run: ./mvnw -B verify
       - name: List test and coverage report paths
         if: always()
@@ -87,7 +89,7 @@ jobs:
           name: frontend-test-reports
           path: |
             frontend/homepage/test-results
-            frontend/homepage/coverage
+            frontend/homepage/.vitest-coverage-*
           if-no-files-found: ignore
 
   frontend-e2e:
