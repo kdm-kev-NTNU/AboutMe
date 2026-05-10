@@ -18,6 +18,10 @@ class RealtimePropertiesTest {
     assertThat(p.getMaxResponseOutputTokens()).isEqualTo(1024);
     assertThat(p.getReservationInputTokens()).isEqualTo(2000);
     assertThat(p.getReservationOutputTokens()).isEqualTo(2000);
+    assertThat(p.defaultVoice()).isEqualTo("marin");
+    assertThat(p.defaultReasoningEffort()).isEqualTo("low");
+    assertThat(RealtimeProperties.ALLOWED_VOICES).containsExactly("marin", "cedar");
+    assertThat(RealtimeProperties.ALLOWED_REASONING_EFFORTS).containsExactly("low", "medium", "high");
   }
 
   @Test
@@ -39,5 +43,36 @@ class RealtimePropertiesTest {
     assertThat(p.getMaxResponseOutputTokens()).isEqualTo(99);
     assertThat(p.getReservationInputTokens()).isEqualTo(111);
     assertThat(p.getReservationOutputTokens()).isEqualTo(222);
+  }
+
+  @Test
+  void curated_voice_and_reasoning_values_are_normalized_and_validated() {
+    RealtimeProperties p = new RealtimeProperties();
+    p.setVoice("cedar");
+    p.setReasoningEffort("medium");
+
+    assertThat(p.resolveVoice(null)).isEqualTo("cedar");
+    assertThat(p.resolveVoice(" MARIN ")).isEqualTo("marin");
+    assertThat(p.resolveVoice("bad")).isEqualTo("cedar");
+    assertThat(p.isAllowedVoice(null)).isTrue();
+    assertThat(p.isAllowedVoice(" cedar ")).isTrue();
+    assertThat(p.isAllowedVoice("alloy")).isFalse();
+
+    assertThat(p.resolveReasoningEffort(null)).isEqualTo("medium");
+    assertThat(p.resolveReasoningEffort(" HIGH ")).isEqualTo("high");
+    assertThat(p.resolveReasoningEffort("xhigh")).isEqualTo("medium");
+    assertThat(p.isAllowedReasoningEffort(null)).isTrue();
+    assertThat(p.isAllowedReasoningEffort("low")).isTrue();
+    assertThat(p.isAllowedReasoningEffort("minimal")).isFalse();
+  }
+
+  @Test
+  void invalid_config_defaults_fall_back_to_product_defaults() {
+    RealtimeProperties p = new RealtimeProperties();
+    p.setVoice("alloy");
+    p.setReasoningEffort("xhigh");
+
+    assertThat(p.defaultVoice()).isEqualTo("marin");
+    assertThat(p.defaultReasoningEffort()).isEqualTo("low");
   }
 }
