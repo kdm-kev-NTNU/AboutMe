@@ -257,6 +257,39 @@ class DatasetGenerationAsyncRunnerTest {
   }
 
   @Test
+  void missingGenerationRowDoesNotAttemptSave() {
+    when(datasetGenerationRepository.findById(99L)).thenReturn(Optional.empty());
+
+    runner.executeGeneration(99L);
+
+    verify(datasetGenerationRepository, never()).save(any(DatasetGeneration.class));
+  }
+
+  @Test
+  void createDatasetFailureMarksGenerationFailedWithTruncatedMessage() {
+    DatasetGeneration gen = baseGen(10L, OPENAI_MODEL);
+    gen.setMaxQuestions(1);
+    when(datasetGenerationRepository.findById(10L)).thenReturn(Optional.of(gen));
+    ChunkItem chunk =
+        new ChunkItem("id1", "f.txt", 0, "content", Map.of("document_id", "d"));
+    when(documentIngestionService.getChunks(null, 200, 0))
+        .thenReturn(new ChunkListResponse("c", 1, 1, 200, 0, List.of(chunk)));
+    stubOpenAiReturns(
+        "{\"question\":\"What is the capital of Norway?\",\"answer\":\"The capital is Oslo.\"}");
+    String longMsg = "e".repeat(2500);
+    when(evalDatasetService.createDataset(any(CreateEvalDatasetRequest.class)))
+        .thenThrow(new RuntimeException(longMsg));
+
+    runner.executeGeneration(10L);
+
+    ArgumentCaptor<DatasetGeneration> cap = ArgumentCaptor.forClass(DatasetGeneration.class);
+    verify(datasetGenerationRepository, atLeast(1)).save(cap.capture());
+    DatasetGeneration last = cap.getAllValues().get(cap.getAllValues().size() - 1);
+    assertEquals(DatasetGenerationStatus.FAILED, last.getStatus());
+    assertEquals(2000, last.getErrorMessage().length());
+  }
+
+  @Test
   void allLowQualityOutputsFailsSanitization() {
     DatasetGeneration gen = baseGen(8L, OPENAI_MODEL);
     gen.setMaxQuestions(1);

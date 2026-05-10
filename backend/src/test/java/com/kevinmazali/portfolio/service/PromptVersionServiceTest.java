@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class PromptVersionServiceTest {
@@ -169,5 +171,91 @@ class PromptVersionServiceTest {
 		assertThat(d.hasCodeFallback()).isTrue();
 		assertThat(d.dbContent()).isEqualTo("db-only");
 		assertThat(d.fallbackContent()).isNotNull();
+	}
+
+	@Test
+	void diffUnknownVariantHasNeitherDbNorClasspathFallback() {
+		when(repo.findActiveVariant("custom_xyz", null, null)).thenReturn(Optional.empty());
+
+		PromptDiffResponse d = service.diff("custom_xyz", null, null);
+
+		assertThat(d.hasDbActive()).isFalse();
+		assertThat(d.hasCodeFallback()).isFalse();
+		assertThat(d.isEqual()).isFalse();
+		assertThat(d.dbContent()).isNull();
+		assertThat(d.fallbackContent()).isNull();
+	}
+
+	@Test
+	void invalidateCacheForNameForcesReloadFromRepository() {
+		PromptVersion rowA =
+			PromptVersion.builder()
+				.id(1L)
+				.name("cache-me")
+				.version(1)
+				.language(null)
+				.provider("openai")
+				.content("v1")
+				.contentHash("h")
+				.isActive(true)
+				.build();
+		when(repo.findActiveVariant("cache-me", null, "openai")).thenReturn(Optional.of(rowA));
+
+		assertEquals("v1", service.loadPromptContent("cache-me", null, "openai"));
+		assertEquals("v1", service.loadPromptContent("cache-me", null, "openai"));
+		verify(repo, times(1)).findActiveVariant("cache-me", null, "openai");
+
+		PromptVersion rowB =
+			PromptVersion.builder()
+				.id(2L)
+				.name("cache-me")
+				.version(2)
+				.language(null)
+				.provider("openai")
+				.content("v2")
+				.contentHash("h2")
+				.isActive(true)
+				.build();
+		when(repo.findActiveVariant("cache-me", null, "openai")).thenReturn(Optional.of(rowB));
+		service.invalidateCache("cache-me");
+
+		assertEquals("v2", service.loadPromptContent("cache-me", null, "openai"));
+		verify(repo, times(2)).findActiveVariant("cache-me", null, "openai");
+	}
+
+	@Test
+	void seedFromClasspathSkipsWhenVariantAlreadyExists() {
+		when(repo.countVariant("rag_portfolio", null, "openai")).thenReturn(1L);
+		when(repo.countVariant("rag_portfolio", null, "anthropic")).thenReturn(1L);
+
+		Map<String, Object> result = service.seedFromClasspath();
+
+		assertThat((Integer) result.get("skipped")).isGreaterThan(0);
+		verify(repo, never()).save(any(PromptVersion.class));
+	}
+
+	@Test
+	void createVersionStartsAtOneWhenNoPriorVersions() {
+		when(repo.findMaxVersion("fresh", null, null)).thenReturn(Optional.empty());
+		when(repo.save(any(PromptVersion.class)))
+			.thenAnswer(
+				invocation -> {
+					PromptVersion pv = invocation.getArgument(0);
+					pv.setId(50L);
+					return pv;
+				});
+
+		PromptVersionResponse res = service.createVersion("fresh", "body", null, null, "first");
+
+		assertThat(res.version()).isEqualTo(1);
+	}
+
+	@Test
+	void blankLanguageAndProviderAreNormalizedForLookup() {
+		when(repo.findActiveVariant("rag_portfolio", null, "openai")).thenReturn(Optional.empty());
+
+		service.loadPromptContent("rag_portfolio", "   ", "openai");
+
+		verify(repo).findActiveVariant("rag_portfolio", null, "openai");
 	}
 }
