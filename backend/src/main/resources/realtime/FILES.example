@@ -18,7 +18,7 @@ Validation / workflow debugging (Python SDK; MCP cannot update agents):
 
 ## Cursor ElevenLabs MCP
 
-Project file `.cursor/mcp.json` (gitignored) can run `uvx elevenlabs-mcp`. Set `env.ELEVENLABS_API_KEY` to the same value as `ELEVENLABS_API_KEY` in `backend/.env`, then reload MCP servers in Cursor. If the key is empty, use the sync script above instead of MCP tools.
+Copy [`cursor/mcp.elevenlabs.example.json`](../../../../../cursor/mcp.elevenlabs.example.json) to `.cursor/mcp.json` (merge with other MCP servers if needed). That file runs `uvx elevenlabs-mcp`. Set `env.ELEVENLABS_API_KEY` to the same value as `ELEVENLABS_API_KEY` in `backend/.env`, then reload MCP servers in Cursor. If the key is empty, use the sync script above instead of MCP tools.
 
 ### API key permissions
 
