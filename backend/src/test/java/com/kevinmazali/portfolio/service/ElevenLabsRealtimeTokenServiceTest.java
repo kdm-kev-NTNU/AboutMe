@@ -3,8 +3,6 @@ package com.kevinmazali.portfolio.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -134,5 +132,95 @@ class ElevenLabsRealtimeTokenServiceTest {
         .isInstanceOf(RealtimeSessionException.class)
         .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.ELEVENLABS_UNREACHABLE)
         .hasCauseInstanceOf(IOException.class);
+  }
+
+  @Test
+  void createConversationTokenMapsUpstream5xxToServerError() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(502);
+    when(response.body()).thenReturn("bad gateway");
+    when(elevenLabsRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    assertThatThrownBy(() -> service.createConversationToken("agent_123"))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.ELEVENLABS_SERVER_ERROR);
+  }
+
+  @Test
+  void createConversationTokenUsesHttpStatusWhenErrorBodyEmpty() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(403);
+    when(response.body()).thenReturn("   ");
+    when(elevenLabsRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    assertThatThrownBy(() -> service.createConversationToken("agent_123"))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.ELEVENLABS_REJECTED)
+        .hasMessageContaining("HTTP 403");
+  }
+
+  @Test
+  void createConversationTokenUsesMessageFieldWhenDetailMissing() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(400);
+    when(response.body()).thenReturn("{\"message\":\"rate limited\"}");
+    when(elevenLabsRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    assertThatThrownBy(() -> service.createConversationToken("agent_123"))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasMessageContaining("rate limited");
+  }
+
+  @Test
+  void createConversationTokenTruncatesLongNonJsonErrorBody() throws Exception {
+    String longBody = "x".repeat(520);
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(401);
+    when(response.body()).thenReturn(longBody);
+    when(elevenLabsRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    assertThatThrownBy(() -> service.createConversationToken("agent_123"))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasMessageContaining("x".repeat(500) + "...");
+  }
+
+  @Test
+  void createConversationTokenRejectsBlankTokenInSuccessResponse() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(200);
+    when(response.body()).thenReturn("{\"token\":\"\"}");
+    when(elevenLabsRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    assertThatThrownBy(() -> service.createConversationToken("agent_123"))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.ELEVENLABS_REJECTED);
+  }
+
+  @Test
+  void createConversationTokenRestoresInterruptStatusOnInterruptedException() throws Exception {
+    when(elevenLabsRealtimeHttpInvoker.invoke(any())).thenThrow(new InterruptedException("stop"));
+
+    assertThatThrownBy(() -> service.createConversationToken("agent_123"))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.ELEVENLABS_UNREACHABLE);
+
+    assertThat(Thread.interrupted()).isTrue();
+  }
+
+  @Test
+  void createConversationTokenOmitsOptionalQueryParamsWhenUnset() throws Exception {
+    props.getProviders().getElevenlabs().getAgents().getFirst().setEnvironment(null);
+    props.getProviders().getElevenlabs().getAgents().getFirst().setBranchId(null);
+
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(200);
+    when(response.body()).thenReturn("{\"token\":\"tok\"}");
+    ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+    when(elevenLabsRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+
+    assertThat(service.createConversationToken("agent_123")).isEqualTo("tok");
+    assertThat(captor.getValue().uri())
+        .isEqualTo(URI.create(
+            "https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=agent_123"));
   }
 }
