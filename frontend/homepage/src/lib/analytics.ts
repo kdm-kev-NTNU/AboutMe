@@ -31,6 +31,17 @@ export function captureProductAnalyticsEvent(
   captureAnalyticsEvent(event, properties)
 }
 
+/** PostHog session id when analytics consent + SDK are active; for correlating voice LLM traces. */
+export function getPosthogSessionIdForVoiceAnalytics(): string | undefined {
+  if (!isTrackEventReady()) return undefined
+  try {
+    const id = posthog.get_session_id?.()
+    return typeof id === 'string' && id.trim() !== '' ? id.trim() : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export function captureClientException(err: unknown): void {
   if (!isErrorTrackingReady()) return
 

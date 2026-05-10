@@ -1,5 +1,25 @@
 import { customFetch } from '@/api/orval-mutator'
 
+/** Mirrors backend {@link com.kevinmazali.portfolio.model.analytics.RealtimeVoiceAnalyticsContext} headers. */
+export type RealtimeVoiceAnalytics = {
+  traceId: string
+  sessionId?: string
+}
+
+export const VOICE_ANALYTICS_HEADERS = {
+  AI_TRACE_ID: 'X-AI-Trace-Id',
+  POSTHOG_SESSION_ID: 'X-PostHog-Session-Id',
+} as const
+
+function voiceAnalyticsHeaders(a?: RealtimeVoiceAnalytics): Record<string, string> {
+  if (!a?.traceId || a.traceId.trim() === '') return {}
+  const h: Record<string, string> = { [VOICE_ANALYTICS_HEADERS.AI_TRACE_ID]: a.traceId.trim() }
+  if (a.sessionId && a.sessionId.trim() !== '') {
+    h[VOICE_ANALYTICS_HEADERS.POSTHOG_SESSION_ID] = a.sessionId.trim()
+  }
+  return h
+}
+
 export type SpeechUiLang = 'en' | 'no'
 export type RealtimeVoiceProvider = 'OPENAI' | 'ELEVENLABS'
 
@@ -166,11 +186,15 @@ function isLookupSnippet(value: unknown): value is RealtimeLookupSnippet {
 export async function lookupRealtimeInfo(
   query: string,
   language: SpeechUiLang,
+  analytics?: RealtimeVoiceAnalytics,
 ): Promise<RealtimeLookupResponse> {
   try {
     const r = await customFetch<{ data: unknown; status: number }>('/realtime/lookup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...voiceAnalyticsHeaders(analytics),
+      },
       body: JSON.stringify({ query, language }),
     })
     if (r.status < 200 || r.status >= 300 || r.data === null || typeof r.data !== 'object') {
@@ -192,6 +216,7 @@ export async function exchangeRealtimeSdp(
   language: SpeechUiLang,
   options?: Partial<RealtimeVoiceSessionOptions>,
   modelId?: string,
+  analytics?: RealtimeVoiceAnalytics,
 ): Promise<{ ok: true; answerSdp: string } | RealtimeSdpFailure> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/sdp',
@@ -200,6 +225,7 @@ export async function exchangeRealtimeSdp(
     'X-Realtime-Reasoning-Effort': isRealtimeReasoningEffort(options?.reasoningEffort)
       ? options.reasoningEffort
       : DEFAULT_REALTIME_REASONING_EFFORT,
+    ...voiceAnalyticsHeaders(analytics),
   }
   if (modelId && modelId.trim() !== '') {
     headers['X-Realtime-Model'] = modelId.trim()
@@ -238,12 +264,16 @@ export async function exchangeRealtimeSdp(
 
 export async function createElevenLabsConversationToken(
   modelId: string,
+  analytics?: RealtimeVoiceAnalytics,
 ): Promise<{ ok: true; token: string } | RealtimeTokenFailure> {
   const r = await customFetch<{ data: unknown; status: number; headers?: Headers }>(
     '/realtime/elevenlabs/token',
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...voiceAnalyticsHeaders(analytics),
+      },
       body: JSON.stringify({ modelId }),
     },
   )
@@ -283,3 +313,28 @@ export async function createElevenLabsConversationToken(
 
 /** Auto-disconnect after this many ms (aligned with backend cost controls). */
 export const REALTIME_SESSION_MAX_MS = 180_000
+
+/** POST {@code /realtime/analytics/voice-trace} — closes PostHog {@code $ai_trace} for the voice session. */
+export async function completeVoiceTrace(payload: {
+  traceId: string
+  sessionId?: string
+  durationSeconds: number
+  error: boolean
+  errorMessage?: string
+}): Promise<void> {
+  try {
+    await customFetch<{ data: unknown; status: number }>('/realtime/analytics/voice-trace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        traceId: payload.traceId,
+        ...(payload.sessionId !== undefined ? { sessionId: payload.sessionId } : {}),
+        durationSeconds: payload.durationSeconds,
+        error: payload.error,
+        ...(payload.errorMessage !== undefined ? { errorMessage: payload.errorMessage } : {}),
+      }),
+    })
+  } catch {
+    /* best-effort beacon */
+  }
+}
