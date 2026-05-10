@@ -4,17 +4,23 @@ import type {
   RealtimeLookupResponse,
   RealtimeSdpFailure,
   RealtimeTokenFailure,
+  RealtimeVoiceAnalytics,
   RealtimeVoiceModelOption,
   RealtimeVoiceSessionOptions,
   SpeechUiLang,
 } from '@/lib/realtime-voice'
 import {
+  completeVoiceTrace,
   createElevenLabsConversationToken,
   exchangeRealtimeSdp,
   lookupRealtimeInfo,
   REALTIME_SESSION_MAX_MS,
 } from '@/lib/realtime-voice'
-import { captureProductAnalyticsEvent, captureClientException } from '@/lib/analytics'
+import {
+  captureProductAnalyticsEvent,
+  captureClientException,
+  getPosthogSessionIdForVoiceAnalytics,
+} from '@/lib/analytics'
 import { POSTHOG_VOICE_EVENTS } from '@/lib/posthog-sdk'
 
 export type RealtimeConnectionState = 'idle' | 'connecting' | 'connected' | 'error'
@@ -204,6 +210,40 @@ export function useRealtimeVoice(
   let userEndedSession = false
   let midSessionFailureHandled = false
 
+  /** PostHog voice trace: set after mic OK, marked when first realtime API call runs. */
+  let voiceTraceSession: {
+    analytics: RealtimeVoiceAnalytics
+    backendContacted: boolean
+    finalized: boolean
+  } | null = null
+
+  function finalizeVoiceTraceIfNeeded(opts: {
+    error: boolean
+    errorMessage?: string
+    durationSeconds?: number
+  }) {
+    const s = voiceTraceSession
+    if (!s?.backendContacted || s.finalized) return
+    s.finalized = true
+    void completeVoiceTrace({
+      traceId: s.analytics.traceId,
+      ...(s.analytics.sessionId !== undefined ? { sessionId: s.analytics.sessionId } : {}),
+      durationSeconds: Math.max(0, opts.durationSeconds ?? 0),
+      error: opts.error,
+      ...(opts.errorMessage !== undefined ? { errorMessage: opts.errorMessage } : {}),
+    })
+  }
+
+  function voiceTraceProps(): Record<string, string> {
+    const a = voiceTraceSession?.analytics
+    if (!a) return {}
+    const o: Record<string, string> = { ai_trace_id: a.traceId }
+    if (a.sessionId !== undefined && a.sessionId.trim() !== '') {
+      o.posthog_session_id = a.sessionId.trim()
+    }
+    return o
+  }
+
   function stopSessionTimer() {
     if (sessionTimer !== null) {
       clearTimeout(sessionTimer)
@@ -268,6 +308,13 @@ export function useRealtimeVoice(
       message: msg,
       language: language.value,
       reason: 'mid_session',
+      ...voiceTraceProps(),
+    })
+    finalizeVoiceTraceIfNeeded({
+      error: true,
+      errorMessage: msg,
+      durationSeconds:
+        sessionStartedAt > 0 ? Math.max(0, Math.round((Date.now() - sessionStartedAt) / 1000)) : 0,
     })
   }
 
@@ -299,7 +346,7 @@ export function useRealtimeVoice(
     let output: RealtimeLookupResponse = { found: false, snippets: [] }
     if (query !== '') {
       try {
-        output = await lookupRealtimeInfo(query, language.value)
+        output = await lookupRealtimeInfo(query, language.value, voiceTraceSession?.analytics)
       } catch {
         output = { found: false, snippets: [] }
       }
@@ -411,7 +458,7 @@ export function useRealtimeVoice(
     return id && id.trim() !== '' ? id.trim() : undefined
   }
 
-  async function connectOpenAi() {
+  async function connectOpenAi(analytics: RealtimeVoiceAnalytics) {
     if (typeof RTCPeerConnection === 'undefined') {
       errorMessage.value =
         language.value === 'no'
@@ -424,6 +471,7 @@ export function useRealtimeVoice(
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       localStream = stream
+      voiceTraceSession = { analytics, backendContacted: false, finalized: false }
 
       pc = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -468,7 +516,16 @@ export function useRealtimeVoice(
         throw new Error('Missing local SDP')
       }
 
-      const result = await exchangeRealtimeSdp(offerSdp, language.value, sessionOptions?.value, selectedModelId())
+      if (voiceTraceSession) {
+        voiceTraceSession.backendContacted = true
+      }
+      const result = await exchangeRealtimeSdp(
+        offerSdp,
+        language.value,
+        sessionOptions?.value,
+        selectedModelId(),
+        analytics,
+      )
       if (!result.ok) {
         throw new Error(mapSdpFailureToUserMessage(language.value, result))
       }
@@ -481,6 +538,7 @@ export function useRealtimeVoice(
         language: language.value,
         provider: 'OPENAI',
         model_id: selectedModelId(),
+        ...voiceTraceProps(),
       })
 
       sessionTimer = setTimeout(() => {
@@ -488,6 +546,7 @@ export function useRealtimeVoice(
       }, REALTIME_SESSION_MAX_MS)
     } catch (e) {
       captureClientException(e)
+      const contacted = voiceTraceSession?.backendContacted === true
       teardownMedia()
       connectionState.value = 'error'
       let msg: string
@@ -507,11 +566,16 @@ export function useRealtimeVoice(
       captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_ERROR, {
         message: errorMessage.value,
         language: language.value,
+        ...voiceTraceProps(),
       })
+      if (contacted) {
+        finalizeVoiceTraceIfNeeded({ error: true, errorMessage: msg, durationSeconds: 0 })
+      }
+      voiceTraceSession = null
     }
   }
 
-  async function connectElevenLabs() {
+  async function connectElevenLabs(analytics: RealtimeVoiceAnalytics) {
     if (!selectedModelId()) {
       throw new Error(
         language.value === 'no'
@@ -523,7 +587,8 @@ export function useRealtimeVoice(
       const permissionProbe = await navigator.mediaDevices.getUserMedia({ audio: true })
       permissionProbe.getTracks().forEach((track) => track.stop())
 
-      const tokenResult = await createElevenLabsConversationToken(selectedModelId()!)
+      voiceTraceSession = { analytics, backendContacted: true, finalized: false }
+      const tokenResult = await createElevenLabsConversationToken(selectedModelId()!, analytics)
       if (!tokenResult.ok) {
         throw new Error(mapTokenFailureToUserMessage(language.value, tokenResult))
       }
@@ -566,6 +631,7 @@ export function useRealtimeVoice(
         provider: 'ELEVENLABS',
         model_id: selectedModelId(),
         conversation_id: elevenLabsConversation?.getId?.(),
+        ...voiceTraceProps(),
       })
 
       sessionTimer = setTimeout(() => {
@@ -573,6 +639,7 @@ export function useRealtimeVoice(
       }, REALTIME_SESSION_MAX_MS)
     } catch (e) {
       captureClientException(e)
+      const contacted = voiceTraceSession?.backendContacted === true
       teardownMedia()
       connectionState.value = 'error'
       let msg: string
@@ -588,7 +655,12 @@ export function useRealtimeVoice(
         message: errorMessage.value,
         language: language.value,
         provider: 'ELEVENLABS',
+        ...voiceTraceProps(),
       })
+      if (contacted) {
+        finalizeVoiceTraceIfNeeded({ error: true, errorMessage: msg, durationSeconds: 0 })
+      }
+      voiceTraceSession = null
     }
   }
 
@@ -600,12 +672,18 @@ export function useRealtimeVoice(
     userTranscript.value = ''
     userEndedSession = false
     midSessionFailureHandled = false
+    voiceTraceSession = null
     connectionState.value = 'connecting'
 
+    const traceId = crypto.randomUUID()
+    const sessionIdPh = getPosthogSessionIdForVoiceAnalytics()
+    const analytics: RealtimeVoiceAnalytics =
+      sessionIdPh !== undefined ? { traceId, sessionId: sessionIdPh } : { traceId }
+
     if (selectedProvider() === 'ELEVENLABS') {
-      await connectElevenLabs()
+      await connectElevenLabs(analytics)
     } else {
-      await connectOpenAi()
+      await connectOpenAi(analytics)
     }
   }
 
@@ -617,10 +695,13 @@ export function useRealtimeVoice(
         duration_seconds: durationSec,
         reason: reason ?? 'user',
         language: language.value,
+        ...voiceTraceProps(),
       })
+      finalizeVoiceTraceIfNeeded({ error: false, durationSeconds: durationSec })
     }
     userEndedSession = true
     sessionStartedAt = 0
+    voiceTraceSession = null
     teardownMedia()
     connectionState.value = 'idle'
     if (reason === 'timeout') {
