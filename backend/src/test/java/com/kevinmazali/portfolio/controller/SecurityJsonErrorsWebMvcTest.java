@@ -7,6 +7,9 @@ import com.kevinmazali.portfolio.config.SyncProperties;
 import com.kevinmazali.portfolio.service.DefaultQuestionSuggestionService;
 import com.kevinmazali.portfolio.service.DocumentIngestionService;
 import com.kevinmazali.portfolio.service.VectorStoreSyncService;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.TraceContext;
+import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -15,6 +18,9 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -41,6 +47,8 @@ class SecurityJsonErrorsWebMvcTest {
 
   @MockitoBean private SyncProperties syncProperties;
 
+  @MockitoBean private Tracer tracer;
+
   @Test
   void adminRoute_withoutCredentials_returns401ApiErrorJson() throws Exception {
     mockMvc
@@ -60,5 +68,35 @@ class SecurityJsonErrorsWebMvcTest {
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$.error").value("Access denied"))
         .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+  }
+
+  @Test
+  void adminRoute_withoutCredentials_includesTraceIdWhenTracingActive() throws Exception {
+    Span span = mock(Span.class);
+    TraceContext ctx = mock(TraceContext.class);
+    when(tracer.currentSpan()).thenReturn(span);
+    when(span.context()).thenReturn(ctx);
+    when(ctx.traceId()).thenReturn("trace-from-webmvc-test");
+
+    mockMvc
+        .perform(get("/admin/tools/documents").accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.traceId").value("trace-from-webmvc-test"))
+        .andExpect(jsonPath("$.timestamp").exists());
+  }
+
+  @Test
+  @WithMockUser(username = "user", roles = "USER")
+  void adminRoute_withoutAdminRole_includesTraceIdWhenTracingActive() throws Exception {
+    Span span = mock(Span.class);
+    TraceContext ctx = mock(TraceContext.class);
+    when(tracer.currentSpan()).thenReturn(span);
+    when(span.context()).thenReturn(ctx);
+    when(ctx.traceId()).thenReturn("trace-forbidden-webmvc");
+
+    mockMvc
+        .perform(get("/admin/tools/documents").accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.traceId").value("trace-forbidden-webmvc"));
   }
 }

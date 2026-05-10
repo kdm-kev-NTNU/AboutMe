@@ -16,6 +16,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,6 +25,8 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 class GlobalApiExceptionHandlerTest {
 
@@ -120,6 +123,39 @@ class GlobalApiExceptionHandlerTest {
         .andExpect(jsonPath("$.code").value("INVALID_JSON"));
   }
 
+  @Test
+  void missingRequiredParameter_returnsMissingParameterCode() throws Exception {
+    mockMvc
+        .perform(get("/__probe/q-required").accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("MISSING_PARAMETER"))
+        .andExpect(jsonPath("$.error").value("Missing required parameter: q"));
+  }
+
+  @Test
+  void typeMismatch_returnsTypeMismatchCode() throws Exception {
+    mockMvc
+        .perform(get("/__probe/int-id").param("id", "nan").accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("TYPE_MISMATCH"));
+  }
+
+  @Test
+  void responseStatusException_blankReasonUsesGenericMessage() throws Exception {
+    mockMvc
+        .perform(get("/__probe/rs-blank").accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error").value("Request rejected"));
+  }
+
+  @Test
+  void responseStatusException_includesReasonWhenPresent() throws Exception {
+    mockMvc
+        .perform(get("/__probe/rs-reason").accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.error").value("gone"));
+  }
+
   @Controller
   static class ThrowingProbe {
 
@@ -152,5 +188,21 @@ class GlobalApiExceptionHandlerTest {
 
     @PostMapping(value = "/__probe/valid", consumes = MediaType.APPLICATION_JSON_VALUE)
     void validBody(@RequestBody @Valid ValidNameBody body) {}
+
+    @GetMapping("/__probe/q-required")
+    void qRequired(@RequestParam String q) {}
+
+    @GetMapping("/__probe/int-id")
+    void intId(@RequestParam int id) {}
+
+    @GetMapping("/__probe/rs-blank")
+    void rsBlank() {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+    }
+
+    @GetMapping("/__probe/rs-reason")
+    void rsReason() {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "gone");
+    }
   }
 }
