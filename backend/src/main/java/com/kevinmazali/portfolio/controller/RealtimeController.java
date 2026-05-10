@@ -199,16 +199,16 @@ public class RealtimeController {
       return ResponseEntity.status(503)
           .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
     }
-    PostHogLlmService ph = postHogLlmService;
-    if (ph == null || !ph.isEnabled()) {
-      return ResponseEntity.noContent().build();
-    }
     if (body == null || body.traceId() == null || body.traceId().isBlank()) {
       return ResponseEntity.badRequest().body(new ApiError("traceId is required.", "BAD_REQUEST"));
     }
     String traceId = RealtimeVoiceAnalyticsContext.parseTraceId(body.traceId());
     if (traceId == null) {
       return ResponseEntity.badRequest().body(new ApiError("traceId must be a valid UUID.", "BAD_REQUEST"));
+    }
+    PostHogLlmService ph = postHogLlmService;
+    if (ph == null || !ph.isEnabled()) {
+      return ResponseEntity.noContent().build();
     }
     String sessionId = RealtimeVoiceAnalyticsContext.sanitizePosthogSessionId(body.sessionId());
     double duration = body.durationSeconds() != null ? body.durationSeconds() : 0;
