@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreProperties;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 
@@ -17,10 +18,13 @@ import java.sql.ResultSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -109,4 +113,83 @@ class VectorStoreSyncServiceTest {
     syncProperties.setSourceUsername("  ");
     assertThrows(IllegalArgumentException.class, () -> service.syncFromRemote(false));
   }
+
+  @Test
+  void doSync_wrapsRemoteReadFailures() {
+    when(remoteJdbc.query(contains("public.vector_store"), ArgumentMatchers.<ResultSetExtractor<?>>any()))
+        .thenThrow(new DataAccessException("remote down") {});
+
+    IllegalStateException ex =
+        assertThrows(IllegalStateException.class, () -> service.doSync(remoteJdbc, false));
+    assertEquals("Failed to read remote vector_store: remote down", ex.getMessage());
+  }
+
+  @Test
+  void doSync_wrapsLocalUpsertFailures() throws Exception {
+    when(remoteJdbc.query(contains("public.vector_store"), ArgumentMatchers.<ResultSetExtractor<?>>any()))
+        .thenAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              ResultSetExtractor<Object> ex = invocation.getArgument(1);
+              ResultSet rs = mock(ResultSet.class);
+              when(rs.next()).thenReturn(true, false);
+              when(rs.getString("id")).thenReturn("id1");
+              when(rs.getString("content")).thenReturn("c");
+              when(rs.getString("metadata")).thenReturn("{}");
+              when(rs.getString("embedding")).thenReturn("[1,2]");
+              return ex.extractData(rs);
+            });
+    doThrow(new DataAccessException("upsert failed") {})
+        .when(localJdbc)
+        .batchUpdate(anyString(), any(BatchPreparedStatementSetter.class));
+
+    IllegalStateException ex =
+        assertThrows(IllegalStateException.class, () -> service.doSync(remoteJdbc, false));
+    assertEquals("Failed to upsert local vector_store: upsert failed", ex.getMessage());
+  }
+
+  @Test
+  void doSync_batchesLargeImports() throws Exception {
+    when(remoteJdbc.query(contains("public.vector_store"), ArgumentMatchers.<ResultSetExtractor<?>>any()))
+        .thenAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              ResultSetExtractor<Object> ex = invocation.getArgument(1);
+              ResultSet rs = mock(ResultSet.class);
+              when(rs.next()).thenReturn(true, true, false);
+              when(rs.getString("id")).thenReturn("a", "b");
+              when(rs.getString("content")).thenReturn("c1", "c2");
+              when(rs.getString("metadata")).thenReturn("{}", "{}");
+              when(rs.getString("embedding")).thenReturn("[1]", "[2]");
+              return ex.extractData(rs);
+            });
+
+    VectorStoreSyncResult result = service.doSync(remoteJdbc, false);
+
+    verify(localJdbc, times(1)).batchUpdate(contains("INSERT"), any(BatchPreparedStatementSetter.class));
+    assertEquals(2L, result.rowsSynced());
+  }
+
+  @Test
+  void doSync_skipsRowsWithBlankIdOrEmbedding() throws Exception {
+    when(remoteJdbc.query(contains("public.vector_store"), ArgumentMatchers.<ResultSetExtractor<?>>any()))
+        .thenAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              ResultSetExtractor<Object> ex = invocation.getArgument(1);
+              ResultSet rs = mock(ResultSet.class);
+              when(rs.next()).thenReturn(true, true, true, false);
+              when(rs.getString("id")).thenReturn(" ", "ok", "skip-me");
+              when(rs.getString("content")).thenReturn("x", "y", "z");
+              when(rs.getString("metadata")).thenReturn("{}", "{}", "{}");
+              when(rs.getString("embedding")).thenReturn("[1]", "[2]", "");
+              return ex.extractData(rs);
+            });
+
+    VectorStoreSyncResult result = service.doSync(remoteJdbc, false);
+
+    assertEquals(1L, result.rowsSynced());
+    verify(localJdbc).batchUpdate(contains("INSERT"), any(BatchPreparedStatementSetter.class));
+  }
+
 }

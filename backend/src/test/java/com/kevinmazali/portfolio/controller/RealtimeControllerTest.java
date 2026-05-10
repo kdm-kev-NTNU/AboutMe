@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
+import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
@@ -13,6 +14,7 @@ import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.model.RealtimeLookupResponse;
 import com.kevinmazali.portfolio.model.RealtimeLookupSnippet;
 import com.kevinmazali.portfolio.model.RealtimeModelOption;
+import com.kevinmazali.portfolio.model.analytics.RealtimeVoiceAnalyticsContext;
 import com.kevinmazali.portfolio.service.ElevenLabsRealtimeTokenService;
 import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
@@ -32,6 +34,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
@@ -46,6 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = RealtimeController.class)
 @EnableConfigurationProperties({
   AskRateLimitProperties.class,
+  AiBudgetProperties.class,
   ExperimentRunRateLimitProperties.class,
   DatasetGenerateRateLimitProperties.class,
   RealtimeRateLimitProperties.class,
@@ -55,7 +60,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
   "spring.ai.openai.api-key=sk-test",
   "portfolio.realtime.enabled=true",
   "portfolio.ask-rate-limit.enabled=false",
-  "portfolio.realtime-rate-limit.enabled=false"
+  "portfolio.realtime-rate-limit.enabled=false",
+  "portfolio.ai.budget.anon-identity-salt=test-salt"
 })
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
 class RealtimeControllerTest {
@@ -81,6 +87,9 @@ class RealtimeControllerTest {
   @MockitoBean
   private RequestLogService requestLogService;
 
+  @MockitoBean
+  private com.kevinmazali.portfolio.service.PostHogLlmService postHogLlmService;
+
   @AfterEach
   void restoreRealtimeDefaults() {
     realtimeProperties.setEnabled(true);
@@ -104,7 +113,7 @@ class RealtimeControllerTest {
 
   @Test
   void sessionReturnsSdpAnswer() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any())).thenReturn("v=0\r\no=-");
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any())).thenReturn("v=0\r\no=-");
 
     mockMvc.perform(post("/realtime/session")
             .content("v=0\r\no=offer")
@@ -116,7 +125,35 @@ class RealtimeControllerTest {
         .andExpect(content().contentTypeCompatibleWith("application/sdp"))
         .andExpect(content().string("v=0\r\no=-"));
 
-    verify(realtimeSessionService).createRealtimeCall(eq("v=0\r\no=offer"), eq("en"), isNull(), eq("cedar"), eq("medium"));
+    verify(realtimeSessionService)
+        .createRealtimeCall(eq("v=0\r\no=offer"), eq("en"), isNull(), eq("cedar"), eq("medium"), isNull());
+  }
+
+  @Test
+  void sessionForwardsPostHogAnalyticsHeadersWhenTraceIdValid() throws Exception {
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any())).thenReturn("ok");
+    String tid = "550e8400-e29b-41d4-a716-446655440000";
+    String sid = "0123456789abcdef";
+
+    mockMvc.perform(post("/realtime/session")
+            .content("v=0")
+            .contentType("application/sdp")
+            .header(RealtimeVoiceAnalyticsContext.HEADER_AI_TRACE_ID, tid)
+            .header(RealtimeVoiceAnalyticsContext.HEADER_POSTHOG_SESSION_ID, sid))
+        .andExpect(status().isOk());
+
+    verify(realtimeSessionService)
+        .createRealtimeCall(
+            eq("v=0"),
+            isNull(),
+            isNull(),
+            isNull(),
+            isNull(),
+            argThat(
+                ctx ->
+                    ctx != null
+                        && tid.equals(ctx.traceId())
+                        && sid.equals(ctx.sessionId())));
   }
 
   @Test
@@ -151,7 +188,7 @@ class RealtimeControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
 
-    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any());
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any(), any());
     verify(requestLogService, never()).save(any(), any(), any(), any());
   }
 
@@ -164,7 +201,7 @@ class RealtimeControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
 
-    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any());
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any(), any());
     verify(requestLogService, never()).save(any(), any(), any(), any());
   }
 
@@ -179,13 +216,13 @@ class RealtimeControllerTest {
         .andExpect(jsonPath("$.error").exists())
         .andExpect(jsonPath("$.code").value("REALTIME_DISABLED"));
 
-    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any());
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any(), any());
     verify(requestLogService, never()).save(any(), any(), any(), any());
   }
 
   @Test
   void sessionReturns400WhenServiceRejectsOffer() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any()))
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any()))
         .thenThrow(new IllegalArgumentException("bad sdp"));
 
     mockMvc.perform(post("/realtime/session")
@@ -198,7 +235,7 @@ class RealtimeControllerTest {
 
   @Test
   void sessionReturns502WhenServiceFailsOpenAi() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any()))
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any()))
         .thenThrow(
             new RealtimeSessionException(
                 HttpStatus.BAD_GATEWAY,
@@ -215,7 +252,7 @@ class RealtimeControllerTest {
 
   @Test
   void sessionPassesNorwegianLanguageHeaderThrough() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any())).thenReturn("sdp-answer");
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any())).thenReturn("sdp-answer");
 
     mockMvc.perform(post("/realtime/session")
             .content("offer")
@@ -223,25 +260,25 @@ class RealtimeControllerTest {
             .header("X-Chat-Language", "NO"))
         .andExpect(status().isOk());
 
-    verify(realtimeSessionService).createRealtimeCall(eq("offer"), eq("NO"), isNull(), isNull(), isNull());
+    verify(realtimeSessionService).createRealtimeCall(eq("offer"), eq("NO"), isNull(), isNull(), isNull(), isNull());
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
   }
 
   @Test
   void sessionRecordsRequestBeforeCallingServiceOnSuccessPath() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any())).thenReturn("ok");
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any())).thenReturn("ok");
 
     mockMvc.perform(post("/realtime/session")
             .content("v")
             .contentType("application/sdp"));
 
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
-    verify(realtimeSessionService).createRealtimeCall(eq("v"), isNull(), isNull(), isNull(), isNull());
+    verify(realtimeSessionService).createRealtimeCall(eq("v"), isNull(), isNull(), isNull(), isNull(), isNull());
   }
 
   @Test
   void lookupReturnsSnippets() throws Exception {
-    when(realtimeLookupService.lookup(eq("NTNU"), eq("en")))
+    when(realtimeLookupService.lookup(eq("NTNU"), eq("en"), any()))
         .thenReturn(new RealtimeLookupResponse(
             true,
             List.of(new RealtimeLookupSnippet("profile", "Data engineering", "Kevin studies at NTNU."))));
@@ -254,7 +291,7 @@ class RealtimeControllerTest {
         .andExpect(jsonPath("$.snippets[0].sourceType").value("profile"))
         .andExpect(jsonPath("$.snippets[0].title").value("Data engineering"));
 
-    verify(realtimeLookupService).lookup(eq("NTNU"), eq("en"));
+    verify(realtimeLookupService).lookup(eq("NTNU"), eq("en"), isNull());
   }
 
   @Test
@@ -267,12 +304,12 @@ class RealtimeControllerTest {
         .andExpect(status().isServiceUnavailable())
         .andExpect(jsonPath("$.code").value("REALTIME_DISABLED"));
 
-    verify(realtimeLookupService, never()).lookup(any(), any());
+    verify(realtimeLookupService, never()).lookup(any(), any(), any());
   }
 
   @Test
   void lookupReturns400WhenServiceRejectsQuery() throws Exception {
-    when(realtimeLookupService.lookup(any(), any()))
+    when(realtimeLookupService.lookup(any(), any(), any()))
         .thenThrow(new IllegalArgumentException("Lookup query is required."));
 
     mockMvc.perform(post("/realtime/lookup")
@@ -282,6 +319,29 @@ class RealtimeControllerTest {
         .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
         .andExpect(jsonPath("$.error").value("Lookup query is required."));
   }
+
+  @Test
+  void voiceTraceReturns400WhenTraceIdInvalid() throws Exception {
+    mockMvc.perform(post("/realtime/analytics/voice-trace")
+            .content("{\"traceId\":\"not-a-uuid\",\"durationSeconds\":1,\"error\":false}")
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+  }
+
+  @Test
+  void voiceTraceAcceptedWhenPostHogConfigured() throws Exception {
+    when(postHogLlmService.isEnabled()).thenReturn(true);
+    String tid = "550e8400-e29b-41d4-a716-446655440000";
+
+    mockMvc.perform(post("/realtime/analytics/voice-trace")
+            .content("{\"traceId\":\"" + tid + "\",\"durationSeconds\":12.5,\"error\":false}")
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isAccepted());
+
+    verify(postHogLlmService)
+        .captureTraceAsync(any(), eq(tid), isNull(), eq("voice_session"), eq(12.5), eq(false), isNull(), anyBoolean());
+  }
 }
 
 /**
@@ -290,6 +350,7 @@ class RealtimeControllerTest {
 @WebMvcTest(controllers = RealtimeController.class)
 @EnableConfigurationProperties({
   AskRateLimitProperties.class,
+  AiBudgetProperties.class,
   ExperimentRunRateLimitProperties.class,
   DatasetGenerateRateLimitProperties.class,
   RealtimeRateLimitProperties.class,
@@ -299,7 +360,8 @@ class RealtimeControllerTest {
     "spring.ai.openai.api-key=",
     "portfolio.realtime.enabled=true",
     "portfolio.ask-rate-limit.enabled=false",
-    "portfolio.realtime-rate-limit.enabled=false"
+    "portfolio.realtime-rate-limit.enabled=false",
+    "portfolio.ai.budget.anon-identity-salt=test-salt"
 })
 @Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
 class RealtimeControllerMissingOpenAiKeyMvcTest {
@@ -322,6 +384,9 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
   @MockitoBean
   private RequestLogService requestLogService;
 
+  @MockitoBean
+  private com.kevinmazali.portfolio.service.PostHogLlmService postHogLlmService;
+
   @Test
   void statusDisabledWhenApiKeyUnset() throws Exception {
     mockMvc.perform(get("/realtime/status"))
@@ -331,7 +396,7 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
 
   @Test
   void sessionPropagatesApiKeyMissingFromService() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any()))
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any()))
         .thenThrow(
             new RealtimeSessionException(
                 HttpStatus.SERVICE_UNAVAILABLE,
@@ -345,13 +410,13 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
         .andExpect(jsonPath("$.error").exists())
         .andExpect(jsonPath("$.code").value("API_KEY_MISSING"));
 
-    verify(realtimeSessionService).createRealtimeCall(eq("v=0"), isNull(), isNull(), isNull(), isNull());
+    verify(realtimeSessionService).createRealtimeCall(eq("v=0"), isNull(), isNull(), isNull(), isNull(), isNull());
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
   }
 
   @Test
   void elevenLabsTokenEndpointReturnsToken() throws Exception {
-    when(elevenLabsRealtimeTokenService.createConversationToken("agent_123")).thenReturn("token_abc");
+    when(elevenLabsRealtimeTokenService.createConversationToken("agent_123", null)).thenReturn("token_abc");
 
     mockMvc.perform(post("/realtime/elevenlabs/token")
             .content("{\"modelId\":\"agent_123\"}")
@@ -364,7 +429,7 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
 
   @Test
   void elevenLabsTokenEndpointMapsRealtimeErrors() throws Exception {
-    when(elevenLabsRealtimeTokenService.createConversationToken("agent_123"))
+    when(elevenLabsRealtimeTokenService.createConversationToken("agent_123", null))
         .thenThrow(new RealtimeSessionException(
             HttpStatus.BAD_GATEWAY,
             RealtimeErrorCode.ELEVENLABS_REJECTED,
