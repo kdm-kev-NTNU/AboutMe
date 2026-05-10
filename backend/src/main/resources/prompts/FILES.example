@@ -1,0 +1,12 @@
+# Required prompt files (copy or rename without `.example`; not tracked in git)
+
+Place these files in `backend/src/main/resources/prompts/`:
+
+| File | Used by |
+|------|---------|
+| `default_chat_questions.txt` | Starter question suggestions for chat (`DefaultQuestionSuggestionService`) |
+| `question_generation.txt` | Dataset / Q&A generation (`DatasetGenerationAsyncRunner`) |
+| `realtime-voice-en.txt` | OpenAI Realtime voice instructions (English path) |
+| `realtime-voice-no.txt` | OpenAI Realtime voice instructions (Norwegian path) |
+
+Voice prompts must include the `{profile_card}` placeholder where the server injects the public profile card.

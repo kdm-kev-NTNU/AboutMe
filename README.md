@@ -19,6 +19,14 @@ Nettsiden er bygget som en moderne webapp: Vue på brukerflaten, Java/Spring på
 
 Du trenger Docker og en OpenAI API-nøkkel.
 
+### Profil, prompts og RAG-maler (ikke i git)
+
+Filer under `backend/src/main/resources/prompts/`, `…/templates/` og `…/realtime/` (system prompts, RAG-maler, `kevin-profile.json`, ElevenLabs-tekster m.m.) er **ikke** versjonert her — legg inn egne kopier lokalt før du bygger eller kjører. Se de sporede filene `FILES.example` og `*.st.example` i disse mappene for hvilke filnavn som forventes.
+
+For `docker compose build` / produksjonsimage må du sørge for at disse filene finnes i `backend/src/main/resources/…` før image bygges (eller kopier dem inn i build-steget ditt).
+
+### Miljø og oppstart
+
 1. Kopier [`.env.example`](.env.example) til `backend/.env` og sett `OPENAI_API_KEY`.  
 2. Kjør:
 

@@ -214,7 +214,7 @@ class RagPromptLanguageRulesTest {
   void templateContainsNorwegianPersonaExample(String path) throws IOException {
     String template = loadTemplate(path);
     assertTrue(
-        template.contains("Kevin studerer dataingeniør ved NTNU"),
+        template.contains("Eksempelperson studerer dataingeniør ved NTNU"),
         path + " must contain a Norwegian persona example showing third-person + Norwegian"
     );
   }
@@ -227,7 +227,7 @@ class RagPromptLanguageRulesTest {
   void templateContainsEnglishPersonaExample(String path) throws IOException {
     String template = loadTemplate(path);
     assertTrue(
-        template.contains("Kevin studies data engineering at NTNU"),
+        template.contains("ExamplePerson studies data engineering at NTNU"),
         path + " must contain an English persona example showing third-person + English"
     );
   }

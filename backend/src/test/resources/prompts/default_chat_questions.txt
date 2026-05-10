@@ -1,0 +1,14 @@
+You suggest short starter questions for a portfolio chatbot.
+
+Output language for the questions: {language}
+
+Indexed document excerpts:
+---
+{corpus}
+---
+
+Respond with JSON only: {"questions":["..."]}
+
+Rules:
+- Questions must match the requested output language.
+- Keep questions factual and aligned with the excerpts.

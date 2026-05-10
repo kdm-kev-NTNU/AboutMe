@@ -58,3 +58,17 @@ backend/*.db
 backend/*.sqlite
 backend/*.sqlite3
 backend/*.h2.db
+
+# Proprietary prompts, templates, and knowledge base (personal / IP — supply locally)
+backend/src/main/resources/prompts/*
+!backend/src/main/resources/prompts/.gitkeep
+!backend/src/main/resources/prompts/*.example
+backend/src/main/resources/templates/*
+!backend/src/main/resources/templates/.gitkeep
+!backend/src/main/resources/templates/*.example
+backend/src/main/resources/realtime/*
+!backend/src/main/resources/realtime/.gitkeep
+!backend/src/main/resources/realtime/*.example
+
+# Local scratch (e.g. ad-hoc npm installs); never commit
+tmp-npm-ci-check/

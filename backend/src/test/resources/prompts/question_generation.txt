@@ -1,0 +1,6 @@
+Generate one short question and one concise answer based on the following text.
+
+Text:
+{text}
+
+Respond with a single JSON object only: {"question": "<question>", "answer": "<answer>"}.

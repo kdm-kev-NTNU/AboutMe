@@ -1,0 +1,12 @@
+# Required realtime assets (not tracked in git)
+
+Copy these into `backend/src/main/resources/realtime/`:
+
+| File | Purpose |
+|------|---------|
+| `kevin-profile.json` | Structured profile + facts for voice lookup (`RealtimeProfileService`) |
+| `kevin-profile-knowledge-base.txt` | Optional text KB for ElevenLabs sync (`scripts/sync_elevenlabs_portfolio_agent.py`) |
+| `elevenlabs-agent-system-prompt.txt` | ElevenLabs agent system prompt (sync script) |
+| `elevenlabs-agent-first-message.txt` | ElevenLabs first message (sync script) |
+
+See `scripts/sync_elevenlabs_portfolio_agent.py` for how KB and ElevenLabs files are pushed to the provider.

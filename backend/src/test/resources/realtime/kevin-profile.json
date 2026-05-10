@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "languages": {
+    "no": {
+      "profileCard": "Kevin studerer dataingeniør ved NTNU i Trondheim. Denne teksten er en minimal test-fixture for CI."
+    },
+    "en": {
+      "profileCard": "Kevin studies data engineering at NTNU in Trondheim. This text is a minimal CI test fixture."
+    }
+  },
+  "facts": [
+    {
+      "id": "education-ntnu-data-engineering",
+      "category": "education",
+      "title": {
+        "no": "NTNU dataingeniør",
+        "en": "NTNU data engineering"
+      },
+      "text": {
+        "no": "Kevin tar bachelor i dataingeniør ved NTNU.",
+        "en": "Kevin is pursuing a bachelor's in data engineering at NTNU."
+      },
+      "tags": ["ntnu", "data engineering", "dataingeniør", "studies"]
+    },
+    {
+      "id": "portfolio-project-rag-ai",
+      "category": "project",
+      "title": {
+        "no": "Portefølje med RAG",
+        "en": "Portfolio with RAG"
+      },
+      "text": {
+        "no": "Porteføljeprosjekt med RAG og Spring AI ved NTNU.",
+        "en": "Portfolio project using RAG and Spring AI at NTNU."
+      },
+      "tags": ["portefolje", "portfolio", "rag", "spring ai", "ntnu"]
+    }
+  ]
+}
