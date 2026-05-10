@@ -172,6 +172,47 @@ class ElevenLabsRealtimeTokenServiceTest {
   }
 
   @Test
+  void createConversationTokenSummarizesDetailArrayValidationErrors() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(422);
+    when(response.body())
+        .thenReturn(
+            "{\"detail\":[{\"loc\":[\"query\",\"agent_id\"],\"msg\":\"agent not found\",\"type\":\"value_error\"}]}");
+    when(elevenLabsRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    assertThatThrownBy(() -> service.createConversationToken("agent_123"))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasMessageContaining("agent not found");
+  }
+
+  @Test
+  void createConversationTokenSummarizesRootValidationDetails() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(400);
+    when(response.body())
+        .thenReturn(
+            "{\"validation_details\":[{\"description\":\"branch_id is invalid\",\"field\":\"branch_id\"}]}");
+    when(elevenLabsRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    assertThatThrownBy(() -> service.createConversationToken("agent_123"))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasMessageContaining("branch_id is invalid");
+  }
+
+  @Test
+  void createConversationTokenSummarizesNestedValidationDetailsUnderDetailObject() throws Exception {
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(422);
+    when(response.body())
+        .thenReturn("{\"detail\":{\"validation_details\":[{\"msg\":\"bad environment\"}]}}");
+    when(elevenLabsRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    assertThatThrownBy(() -> service.createConversationToken("agent_123"))
+        .isInstanceOf(RealtimeSessionException.class)
+        .hasMessageContaining("bad environment");
+  }
+
+  @Test
   void createConversationTokenTruncatesLongNonJsonErrorBody() throws Exception {
     String longBody = "x".repeat(520);
     HttpResponse<String> response = mock(HttpResponse.class);

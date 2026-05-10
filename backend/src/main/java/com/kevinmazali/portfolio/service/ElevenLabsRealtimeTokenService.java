@@ -1,5 +1,6 @@
 package com.kevinmazali.portfolio.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
@@ -147,18 +148,135 @@ public class ElevenLabsRealtimeTokenService {
     String trimmed = body.trim();
     try {
       JsonNode root = objectMapper.readTree(trimmed);
-      String detail = root.path("detail").asText("");
-      if (StringUtils.hasText(detail)) {
-        return detail;
+      String summarized = summarizeJsonError(root);
+      if (StringUtils.hasText(summarized)) {
+        return truncateErrorSummary(summarized);
       }
-      String message = root.path("message").asText("");
-      if (StringUtils.hasText(message)) {
-        return message;
-      }
-      return trimmed.length() > 500 ? trimmed.substring(0, 500) + "..." : trimmed;
+      return truncateErrorSummary(trimmed);
     } catch (Exception e) {
-      return trimmed.length() > 500 ? trimmed.substring(0, 500) + "..." : trimmed;
+      return truncateErrorSummary(trimmed);
     }
+  }
+
+  private static String truncateErrorSummary(String value) {
+    return value.length() > 500 ? value.substring(0, 500) + "..." : value;
+  }
+
+  /**
+   * ElevenLabs and shared infrastructure often return structured errors: {@code detail} may be a
+   * string, array, or object, and {@code validation_details} may list field-level issues.
+   */
+  private String summarizeJsonError(JsonNode root) {
+    String fromDetail = summarizeDetailNode(root.path("detail"));
+    if (StringUtils.hasText(fromDetail)) {
+      return fromDetail;
+    }
+    String fromValidation = summarizeValidationDetailsArray(root.path("validation_details"));
+    if (StringUtils.hasText(fromValidation)) {
+      return fromValidation;
+    }
+    String message = root.path("message").asText("");
+    if (StringUtils.hasText(message)) {
+      return message;
+    }
+    return "";
+  }
+
+  private String summarizeDetailNode(JsonNode detail) {
+    if (detail.isMissingNode() || detail.isNull()) {
+      return "";
+    }
+    if (detail.isTextual()) {
+      return detail.asText("");
+    }
+    if (detail.isArray()) {
+      return summarizeValidationLikeArray(detail);
+    }
+    if (detail.isObject()) {
+      String innerMessage = detail.path("message").asText("");
+      if (StringUtils.hasText(innerMessage)) {
+        return innerMessage;
+      }
+      String fromNested = summarizeValidationDetailsArray(detail.path("validation_details"));
+      if (StringUtils.hasText(fromNested)) {
+        return fromNested;
+      }
+    }
+    return "";
+  }
+
+  private String summarizeValidationDetailsArray(JsonNode node) {
+    if (!node.isArray() || node.isEmpty()) {
+      return "";
+    }
+    return summarizeValidationLikeArray(node);
+  }
+
+  private String summarizeValidationLikeArray(JsonNode arr) {
+    StringBuilder sb = new StringBuilder();
+    for (JsonNode item : arr) {
+      String part = summarizeValidationEntry(item);
+      if (StringUtils.hasText(part)) {
+        if (sb.length() > 0) {
+          sb.append("; ");
+        }
+        sb.append(part);
+      }
+    }
+    return sb.toString();
+  }
+
+  private String summarizeValidationEntry(JsonNode item) {
+    if (item.isTextual()) {
+      return item.asText("");
+    }
+    if (!item.isObject()) {
+      return "";
+    }
+    String msg = firstNonBlankText(
+        item,
+        "msg",
+        "message",
+        "detail",
+        "description",
+        "error",
+        "reason",
+        "issue");
+    if (StringUtils.hasText(msg)) {
+      return msg;
+    }
+    JsonNode loc = item.path("loc");
+    String locStr = joinLocSegments(loc);
+    try {
+      String compact = objectMapper.writeValueAsString(item);
+      return StringUtils.hasText(locStr) ? locStr + ": " + compact : compact;
+    } catch (JsonProcessingException e) {
+      return locStr;
+    }
+  }
+
+  private static String firstNonBlankText(JsonNode object, String... fieldNames) {
+    for (String name : fieldNames) {
+      String v = object.path(name).asText("");
+      if (StringUtils.hasText(v)) {
+        return v;
+      }
+    }
+    return "";
+  }
+
+  private static String joinLocSegments(JsonNode loc) {
+    if (!loc.isArray() || loc.isEmpty()) {
+      return "";
+    }
+    StringBuilder lb = new StringBuilder();
+    for (JsonNode segment : loc) {
+      if (lb.length() > 0) {
+        lb.append('.');
+      }
+      lb.append(segment.asText(""));
+    }
+    return lb.toString();
   }
 
   private static String urlEncode(String value) {
