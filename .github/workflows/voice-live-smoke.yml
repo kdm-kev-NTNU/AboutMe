@@ -37,6 +37,7 @@ on:
 
 permissions:
   contents: read
+  actions: write # upload-artifact on failure needs actions:write when workflow permissions are explicit
 
 jobs:
   voice-live-smoke:

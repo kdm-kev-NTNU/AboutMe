@@ -32,12 +32,20 @@ jobs:
     name: Scan
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      # secrets.* cannot be used in step/job `if:`; expose a boolean string for gating steps.
+      SEMGREP_HAS_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Skip Semgrep (missing SEMGREP_APP_TOKEN)
+        if: env.SEMGREP_HAS_TOKEN != 'true'
+        run: echo 'Skipping Semgrep scan; add SEMGREP_APP_TOKEN in Actions secrets to enable (see workflow header).'
+
       - name: Semgrep CI (scan + SARIF)
+        if: env.SEMGREP_HAS_TOKEN == 'true'
         run: |
           docker run --rm \
             -v "${GITHUB_WORKSPACE}:/src" \
@@ -61,7 +69,7 @@ jobs:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
       - name: Upload SARIF file
-        if: always() && hashFiles('semgrep.sarif') != ''
+        if: always() && env.SEMGREP_HAS_TOKEN == 'true' && hashFiles('semgrep.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif

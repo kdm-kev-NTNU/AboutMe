@@ -14,8 +14,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+  actions: write # upload-artifact requires actions:write when workflow permissions are explicit
 
 jobs:
   backend:
