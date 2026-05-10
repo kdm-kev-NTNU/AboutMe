@@ -7,6 +7,14 @@
     "types": ["node", "jsdom"],
     "paths": {
       "@/*": ["./src/*"],
+      "@/types/projects.en.json": ["./src/types/projects.en.stub.json"],
+      "@/types/projects.no.json": ["./src/types/projects.no.stub.json"],
+      "@/types/education.en.json": ["./src/types/education.en.stub.json"],
+      "@/types/education.no.json": ["./src/types/education.no.stub.json"],
+      "@/types/workExperience.en.json": ["./src/types/workExperience.en.stub.json"],
+      "@/types/workExperience.no.json": ["./src/types/workExperience.no.stub.json"],
+      "@/types/courses.en.json": ["./src/types/courses.en.stub.json"],
+      "@/types/courses.no.json": ["./src/types/courses.no.stub.json"],
       "@vue/test-utils": ["./node_modules/@vue/test-utils/dist/src/index.d.ts"]
     }
   }

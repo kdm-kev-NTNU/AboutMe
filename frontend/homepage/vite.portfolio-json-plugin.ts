@@ -19,9 +19,14 @@ export const PORTFOLIO_JSON_FILES = new Set([
  * so CI and fresh clones build without committing proprietary content.
  */
 export function portfolioJsonFallbackPlugin(): Plugin {
+  let root = process.cwd()
+
   return {
     name: 'portfolio-json-fallback',
     enforce: 'pre',
+    configResolved(config) {
+      root = config.root
+    },
     resolveId(source, importer) {
       const cleanSource = source.replace(/\0/g, '').split('?', 1)[0]
       const base = path.basename(cleanSource)
@@ -30,7 +35,9 @@ export function portfolioJsonFallbackPlugin(): Plugin {
       }
 
       let resolved: string
-      if (path.isAbsolute(cleanSource)) {
+      if (cleanSource.startsWith('@/')) {
+        resolved = path.normalize(path.join(root, 'src', cleanSource.slice(2)))
+      } else if (path.isAbsolute(cleanSource)) {
         resolved = cleanSource
       } else if (importer) {
         resolved = path.normalize(path.resolve(path.dirname(importer), cleanSource))

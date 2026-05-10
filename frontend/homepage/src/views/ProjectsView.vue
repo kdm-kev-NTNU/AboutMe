@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button'
 import type { ProjectsData } from '../types/projects'
 
 // Import JSON data
-import projectsEn from '../types/projects.en.json'
-import projectsNo from '../types/projects.no.json'
+import projectsEn from '@/types/projects.en.json'
+import projectsNo from '@/types/projects.no.json'
 
 const langStore = useLangStore()
 
@@ -19,7 +19,7 @@ const pageTitle = computed(() => langStore.language === 'no' ? 'Prosjekter' : 'P
 const projectsData = computed(() => {
   const rawData = langStore.language === 'no' ? projectsNo : projectsEn
   const data: ProjectsData = {
-    projects: rawData.projects.map(project => ({
+    projects: rawData.projects.map((project: (typeof rawData.projects)[number]) => ({
       ...project,
       status: project.status as 'completed' | 'ongoing' | 'planned'
     }))

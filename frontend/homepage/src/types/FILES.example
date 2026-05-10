@@ -7,7 +7,7 @@ These filenames are imported by `CareerView.vue` and `ProjectsView.vue`:
 - `workExperience.en.json` / `workExperience.no.json`
 - `courses.en.json` / `courses.no.json`
 
-They are **gitignored**. Fresh clones and CI use the tracked `*.stub.json` companions via `portfolioJsonFallbackPlugin` in [`vite.portfolio-json-plugin.ts`](../vite.portfolio-json-plugin.ts) (wired from `vite.config.ts`).
+They are **gitignored**. Fresh clones and CI use the tracked `*.stub.json` companions via `portfolioJsonFallbackPlugin` in [`vite.portfolio-json-plugin.ts`](../vite.portfolio-json-plugin.ts) (wired from `vite.config.ts`). Imports use `@/types/*.json`; `vue-tsc` maps those specifiers to the stubs via `paths` in [`tsconfig.app.json`](../tsconfig.app.json).
 
 Copy the stubs or export from your private vault:
 

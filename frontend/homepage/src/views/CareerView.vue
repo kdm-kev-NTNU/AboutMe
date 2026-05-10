@@ -8,12 +8,12 @@ import type { WorkExperienceData } from '../types/workExperience'
 import type { EducationData } from '../types/education'
 import type { Course, CourseData } from '../types/courses'
 
-import workExperienceEn from '../types/workExperience.en.json'
-import workExperienceNo from '../types/workExperience.no.json'
-import educationEn from '../types/education.en.json'
-import educationNo from '../types/education.no.json'
-import coursesEn from '../types/courses.en.json'
-import coursesNo from '../types/courses.no.json'
+import workExperienceEn from '@/types/workExperience.en.json'
+import workExperienceNo from '@/types/workExperience.no.json'
+import educationEn from '@/types/education.en.json'
+import educationNo from '@/types/education.no.json'
+import coursesEn from '@/types/courses.en.json'
+import coursesNo from '@/types/courses.no.json'
 
 const langStore = useLangStore()
 
@@ -31,7 +31,7 @@ const coursesTitle = computed(() => (langStore.language === 'no' ? 'Emner' : 'Co
 const workExperienceData = computed(() => {
   const rawData = langStore.language === 'no' ? workExperienceNo : workExperienceEn
   const data: WorkExperienceData = {
-    experiences: rawData.experiences.map((experience) => ({
+    experiences: rawData.experiences.map((experience: (typeof rawData.experiences)[number]) => ({
       ...experience,
       type: experience.type as
         | 'full-time'
@@ -48,7 +48,7 @@ const workExperienceData = computed(() => {
 const educationData = computed(() => {
   const rawData = langStore.language === 'no' ? educationNo : educationEn
   const data: EducationData = {
-    education: rawData.education.map((edu) => ({
+    education: rawData.education.map((edu: (typeof rawData.education)[number]) => ({
       ...edu,
       status: edu.status as 'completed' | 'ongoing' | 'graduated' | undefined,
     })),
@@ -59,7 +59,7 @@ const educationData = computed(() => {
 const coursesData = computed(() => {
   const rawData = langStore.language === 'no' ? coursesNo : coursesEn
   const data: CourseData = {
-    courses: rawData.courses.map((course) => ({
+    courses: rawData.courses.map((course: (typeof rawData.courses)[number]) => ({
       ...course,
       status: course.status as 'completed' | 'ongoing' | 'planned',
     })),
