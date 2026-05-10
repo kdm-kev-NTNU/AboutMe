@@ -300,6 +300,7 @@ export function useRealtimeVoice(
     midSessionFailureHandled = true
     userEndedSession = true
     captureClientException(new Error(`voice_mid_session: ${msg}`))
+    const sessionStartForTrace = sessionStartedAt
     sessionStartedAt = 0
     teardownMedia()
     connectionState.value = 'error'
@@ -314,7 +315,9 @@ export function useRealtimeVoice(
       error: true,
       errorMessage: msg,
       durationSeconds:
-        sessionStartedAt > 0 ? Math.max(0, Math.round((Date.now() - sessionStartedAt) / 1000)) : 0,
+        sessionStartForTrace > 0
+          ? Math.max(0, Math.round((Date.now() - sessionStartForTrace) / 1000))
+          : 0,
     })
   }
 
