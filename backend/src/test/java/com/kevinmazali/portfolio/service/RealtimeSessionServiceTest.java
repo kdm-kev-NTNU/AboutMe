@@ -9,18 +9,22 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.nullable;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
+import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
+import com.kevinmazali.portfolio.model.analytics.RealtimeVoiceAnalyticsContext;
 import com.kevinmazali.portfolio.util.AiRequestContext;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -113,6 +117,19 @@ class RealtimeSessionServiceTest {
     String body =
         "{\"error\":{\"message\":\"Invalid model\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}";
     assertThat(service.summarizeOpenAiErrorBody(body)).contains("Invalid model").contains("model_not_found");
+  }
+
+  @Test
+  void createRealtimeCall_propagatesBudgetExceededBeforeHttp() throws Exception {
+    doThrow(new BudgetExceededException("daily cap"))
+        .when(aiBudgetService)
+        .assertWithinBudget(anyString(), anyBoolean());
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> service.createRealtimeCall("v=0\r\no=offer", "en"))
+        .isInstanceOf(BudgetExceededException.class);
+
+    verify(openAiRealtimeHttpInvoker, never()).invoke(any());
   }
 
   @Test
@@ -396,6 +413,44 @@ class RealtimeSessionServiceTest {
 
     ByteArrayOutputStream bos = done.get(5, TimeUnit.SECONDS);
     return bos.toString(StandardCharsets.UTF_8);
+  }
+
+  @Test
+  void createRealtimeCall_emitsPostHogSpanWhenVoiceAnalyticsPresent() throws Exception {
+    PostHogLlmService ph = mock(PostHogLlmService.class);
+    when(ph.isEnabled()).thenReturn(true);
+    RealtimeSessionService svc =
+        new RealtimeSessionService(
+            realtimeProperties,
+            aiBudgetService,
+            budgetProperties,
+            aiCircuitBreaker,
+            openAiRealtimeHttpInvoker,
+            new RealtimeProfileService(),
+            realtimeModelCatalog,
+            ph,
+            "sk-test-openai-key");
+
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(200);
+    when(response.body()).thenReturn("ok");
+    when(openAiRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+
+    String tid = "550e8400-e29b-41d4-a716-446655440000";
+    RealtimeVoiceAnalyticsContext ctx = new RealtimeVoiceAnalyticsContext(tid, "sess-1");
+    assertThat(svc.createRealtimeCall("v=0", "en", null, null, null, ctx)).isEqualTo("ok");
+
+    verify(ph)
+        .captureSpanAsync(
+            anyString(),
+            eq(tid),
+            eq("sess-1"),
+            anyString(),
+            eq(tid),
+            eq("realtime_openai_sdp"),
+            anyDouble(),
+            eq(false),
+            anyBoolean());
   }
 
   private JsonNode extractSessionJson(HttpRequest request) throws IOException {
