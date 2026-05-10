@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.model.RealtimeLookupResponse;
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +31,9 @@ class RealtimeLookupServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new RealtimeLookupService(new RealtimeProfileService(), vectorStore);
+    service =
+        new RealtimeLookupService(
+            new RealtimeProfileService(), vectorStore, new AiBudgetProperties(), null);
   }
 
   @Test

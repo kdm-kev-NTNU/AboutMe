@@ -7,6 +7,7 @@ import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
+import com.kevinmazali.portfolio.model.analytics.RealtimeVoiceAnalyticsContext;
 import com.kevinmazali.portfolio.util.AiRequestContext;
 import java.io.IOException;
 import java.net.URI;
@@ -17,9 +18,11 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
@@ -40,6 +43,7 @@ public class RealtimeSessionService {
   private final OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker;
   private final RealtimeProfileService realtimeProfileService;
   private final RealtimeModelCatalog realtimeModelCatalog;
+  @Nullable private final PostHogLlmService postHogLlmService;
   private final String openAiApiKey;
 
   // Spring Boot 4 auto-configures the new tools.jackson.databind.ObjectMapper, so injecting the
@@ -58,6 +62,7 @@ public class RealtimeSessionService {
       OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker,
       RealtimeProfileService realtimeProfileService,
       RealtimeModelCatalog realtimeModelCatalog,
+      @Autowired(required = false) @Nullable PostHogLlmService postHogLlmService,
       @Value("${spring.ai.openai.api-key:}") String openAiApiKey) {
     this.realtimeProperties = realtimeProperties;
     this.aiBudgetService = aiBudgetService;
@@ -66,6 +71,7 @@ public class RealtimeSessionService {
     this.openAiRealtimeHttpInvoker = openAiRealtimeHttpInvoker;
     this.realtimeProfileService = realtimeProfileService;
     this.realtimeModelCatalog = realtimeModelCatalog;
+    this.postHogLlmService = postHogLlmService;
     this.openAiApiKey = openAiApiKey;
   }
 
@@ -99,7 +105,7 @@ public class RealtimeSessionService {
    * @return SDP answer text from OpenAI
    */
   public String createRealtimeCall(String sdp, String chatLanguage) {
-    return createRealtimeCall(sdp, chatLanguage, null, null, null);
+    return createRealtimeCall(sdp, chatLanguage, null, null, null, null);
   }
 
   /**
@@ -111,7 +117,7 @@ public class RealtimeSessionService {
    */
   public String createRealtimeCall(
       String sdp, String chatLanguage, String requestedVoice, String requestedReasoningEffort) {
-    return createRealtimeCall(sdp, chatLanguage, null, requestedVoice, requestedReasoningEffort);
+    return createRealtimeCall(sdp, chatLanguage, null, requestedVoice, requestedReasoningEffort, null);
   }
 
   /**
@@ -128,6 +134,20 @@ public class RealtimeSessionService {
       String requestedModel,
       String requestedVoice,
       String requestedReasoningEffort) {
+    return createRealtimeCall(
+        sdp, chatLanguage, requestedModel, requestedVoice, requestedReasoningEffort, null);
+  }
+
+  /**
+   * @param voiceAnalytics optional PostHog correlation from {@link RealtimeVoiceAnalyticsContext#HEADER_AI_TRACE_ID}
+   */
+  public String createRealtimeCall(
+      String sdp,
+      String chatLanguage,
+      String requestedModel,
+      String requestedVoice,
+      String requestedReasoningEffort,
+      @Nullable RealtimeVoiceAnalyticsContext voiceAnalytics) {
     if (!StringUtils.hasText(openAiApiKey)) {
       throw new RealtimeSessionException(
           HttpStatus.SERVICE_UNAVAILABLE,
@@ -186,10 +206,13 @@ public class RealtimeSessionService {
             .POST(HttpRequest.BodyPublishers.ofByteArray(body))
             .build();
 
+    long sdpSpanStartNs = System.nanoTime();
     try {
       HttpResponse<String> response = openAiRealtimeHttpInvoker.invoke(request);
       int status = response.statusCode();
       if (status >= 200 && status < 300) {
+        captureRealtimeVoiceSpan(
+            voiceAnalytics, budgetUserId, anonymous, sdpSpanStartNs, "realtime_openai_sdp", false);
         aiBudgetService.recordUsage(
             budgetUserId,
             model,
@@ -200,6 +223,8 @@ public class RealtimeSessionService {
             "realtime_voice_session");
         return response.body();
       }
+      captureRealtimeVoiceSpan(
+          voiceAnalytics, budgetUserId, anonymous, sdpSpanStartNs, "realtime_openai_sdp", true);
       String responseBody = response.body();
       String openAiSummary = summarizeOpenAiErrorBody(responseBody);
       RealtimeErrorCode code =
@@ -223,6 +248,8 @@ public class RealtimeSessionService {
               : "OpenAI Realtime session failed (HTTP " + status + ").";
       throw new RealtimeSessionException(HttpStatus.BAD_GATEWAY, code, userMessage);
     } catch (IOException | InterruptedException e) {
+      captureRealtimeVoiceSpan(
+          voiceAnalytics, budgetUserId, anonymous, sdpSpanStartNs, "realtime_openai_sdp", true);
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
@@ -237,6 +264,31 @@ public class RealtimeSessionService {
           "Could not reach OpenAI Realtime API: " + e.getMessage(),
           e);
     }
+  }
+
+  private void captureRealtimeVoiceSpan(
+      @Nullable RealtimeVoiceAnalyticsContext ctx,
+      String distinctId,
+      boolean anonymous,
+      long startNanos,
+      String spanName,
+      boolean error) {
+    PostHogLlmService ph = postHogLlmService;
+    if (ph == null || !ph.isEnabled() || ctx == null) {
+      return;
+    }
+    double latencySec = (System.nanoTime() - startNanos) / 1_000_000_000.0;
+    String spanId = UUID.randomUUID().toString();
+    ph.captureSpanAsync(
+        distinctId,
+        ctx.traceId(),
+        ctx.sessionId(),
+        spanId,
+        ctx.traceId(),
+        spanName,
+        latencySec,
+        error,
+        anonymous);
   }
 
   /** Best-effort summary of OpenAI JSON error body for logs and user-facing text. */

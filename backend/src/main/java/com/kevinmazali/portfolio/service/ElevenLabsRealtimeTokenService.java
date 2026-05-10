@@ -7,6 +7,7 @@ import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
+import com.kevinmazali.portfolio.model.analytics.RealtimeVoiceAnalyticsContext;
 import com.kevinmazali.portfolio.util.AiRequestContext;
 import java.io.IOException;
 import java.net.URI;
@@ -15,7 +16,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -34,6 +38,7 @@ public class ElevenLabsRealtimeTokenService {
   private final AiBudgetService aiBudgetService;
   private final AiCircuitBreaker aiCircuitBreaker;
   private final ElevenLabsRealtimeHttpInvoker elevenLabsRealtimeHttpInvoker;
+  @Nullable private final PostHogLlmService postHogLlmService;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   public ElevenLabsRealtimeTokenService(
@@ -42,16 +47,22 @@ public class ElevenLabsRealtimeTokenService {
       AiBudgetProperties budgetProperties,
       AiBudgetService aiBudgetService,
       AiCircuitBreaker aiCircuitBreaker,
-      ElevenLabsRealtimeHttpInvoker elevenLabsRealtimeHttpInvoker) {
+      ElevenLabsRealtimeHttpInvoker elevenLabsRealtimeHttpInvoker,
+      @Autowired(required = false) @Nullable PostHogLlmService postHogLlmService) {
     this.realtimeProperties = realtimeProperties;
     this.realtimeModelCatalog = realtimeModelCatalog;
     this.budgetProperties = budgetProperties;
     this.aiBudgetService = aiBudgetService;
     this.aiCircuitBreaker = aiCircuitBreaker;
     this.elevenLabsRealtimeHttpInvoker = elevenLabsRealtimeHttpInvoker;
+    this.postHogLlmService = postHogLlmService;
   }
 
   public String createConversationToken(String modelId) {
+    return createConversationToken(modelId, null);
+  }
+
+  public String createConversationToken(String modelId, @Nullable RealtimeVoiceAnalyticsContext voiceAnalytics) {
     var agent = realtimeModelCatalog.findElevenLabsAgent(modelId);
     if (agent == null) {
       throw new RealtimeSessionException(
@@ -80,17 +91,22 @@ public class ElevenLabsRealtimeTokenService {
         .GET()
         .build();
 
+    long spanStartNs = System.nanoTime();
     try {
       HttpResponse<String> response = elevenLabsRealtimeHttpInvoker.invoke(request);
       int status = response.statusCode();
       if (status >= 200 && status < 300) {
         String token = parseToken(response.body());
         if (!StringUtils.hasText(token)) {
+          captureElevenLabsTokenSpan(
+              voiceAnalytics, budgetUserId, anonymous, spanStartNs, true);
           throw new RealtimeSessionException(
               HttpStatus.BAD_GATEWAY,
               RealtimeErrorCode.ELEVENLABS_REJECTED,
               "ElevenLabs did not return a conversation token.");
         }
+        captureElevenLabsTokenSpan(
+            voiceAnalytics, budgetUserId, anonymous, spanStartNs, false);
         aiBudgetService.recordUsage(
             budgetUserId,
             "elevenlabs:" + agent.getAgentId().trim(),
@@ -101,6 +117,8 @@ public class ElevenLabsRealtimeTokenService {
             "elevenlabs_voice_session");
         return token;
       }
+      captureElevenLabsTokenSpan(
+          voiceAnalytics, budgetUserId, anonymous, spanStartNs, true);
       RealtimeErrorCode code =
           status >= 500 ? RealtimeErrorCode.ELEVENLABS_SERVER_ERROR : RealtimeErrorCode.ELEVENLABS_REJECTED;
       String detail = summarizeErrorBody(response.body());
@@ -109,6 +127,8 @@ public class ElevenLabsRealtimeTokenService {
           : "ElevenLabs session token failed (HTTP " + status + ").";
       throw new RealtimeSessionException(HttpStatus.BAD_GATEWAY, code, message);
     } catch (IOException | InterruptedException e) {
+      captureElevenLabsTokenSpan(
+          voiceAnalytics, budgetUserId, anonymous, spanStartNs, true);
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
@@ -118,6 +138,30 @@ public class ElevenLabsRealtimeTokenService {
           "Could not reach ElevenLabs API: " + e.getMessage(),
           e);
     }
+  }
+
+  private void captureElevenLabsTokenSpan(
+      @Nullable RealtimeVoiceAnalyticsContext ctx,
+      String distinctId,
+      boolean anonymous,
+      long startNanos,
+      boolean error) {
+    PostHogLlmService ph = postHogLlmService;
+    if (ph == null || !ph.isEnabled() || ctx == null) {
+      return;
+    }
+    double latencySec = (System.nanoTime() - startNanos) / 1_000_000_000.0;
+    String spanId = UUID.randomUUID().toString();
+    ph.captureSpanAsync(
+        distinctId,
+        ctx.traceId(),
+        ctx.sessionId(),
+        spanId,
+        ctx.traceId(),
+        "realtime_elevenlabs_token",
+        latencySec,
+        error,
+        anonymous);
   }
 
   private URI buildTokenUri(RealtimeProperties.ElevenLabsAgent agent) {

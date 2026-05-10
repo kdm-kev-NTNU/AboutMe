@@ -115,7 +115,9 @@ public class SecurityConfig {
             "X-Realtime-Model",
             "X-Realtime-Voice",
             "X-Realtime-Reasoning-Effort",
-            "X-Conversation-Id"
+            "X-Conversation-Id",
+            "X-AI-Trace-Id",
+            "X-PostHog-Session-Id"
         ));
         configuration.setAllowCredentials(true);
 

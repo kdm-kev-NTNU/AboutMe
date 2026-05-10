@@ -23,7 +23,8 @@ import org.springframework.lang.NonNull;
 
 /**
  * Registers servlet filters that rate-limit {@code POST /ask}, {@code POST /transcribe}, {@code POST /realtime/session},
- * {@code POST /realtime/elevenlabs/token}, {@code POST /realtime/lookup}, {@code POST /auth/login},
+ * {@code POST /realtime/elevenlabs/token}, {@code POST /realtime/lookup}, {@code POST /realtime/analytics/voice-trace},
+ * {@code POST /auth/login},
  * {@code POST /feedback}, {@code POST /admin/tools/experiments/run}, and
  * {@code POST /admin/tools/experiments/datasets/generate} (token buckets per client key or IP).
  * <p>
@@ -371,7 +372,7 @@ public class WebConfig {
                 }
             }
         });
-        registration.addUrlPatterns("/realtime/lookup");
+        registration.addUrlPatterns("/realtime/lookup", "/realtime/analytics/voice-trace");
         registration.setName("realtimeLookupRateLimitFilter");
         registration.setOrder(6);
         return registration;

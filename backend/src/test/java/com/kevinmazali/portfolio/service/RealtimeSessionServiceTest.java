@@ -97,6 +97,7 @@ class RealtimeSessionServiceTest {
             openAiRealtimeHttpInvoker,
             new RealtimeProfileService(),
             realtimeModelCatalog,
+            null,
             "sk-test-openai-key");
   }
 
@@ -168,6 +169,7 @@ class RealtimeSessionServiceTest {
             openAiRealtimeHttpInvoker,
             new RealtimeProfileService(),
             realtimeModelCatalog,
+            null,
             "  ");
 
     assertThatThrownBy(() -> svc.createRealtimeCall("v=0", "en"))

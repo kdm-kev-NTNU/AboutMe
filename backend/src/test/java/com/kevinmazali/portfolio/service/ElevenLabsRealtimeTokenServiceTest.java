@@ -54,13 +54,15 @@ class ElevenLabsRealtimeTokenServiceTest {
     budgetProperties.setAnonIdentitySalt("test-salt");
     budgetProperties.setEnabled(false);
 
-    service = new ElevenLabsRealtimeTokenService(
-        props,
-        new RealtimeModelCatalog(props, ""),
-        budgetProperties,
-        aiBudgetService,
-        aiCircuitBreaker,
-        elevenLabsRealtimeHttpInvoker);
+    service =
+        new ElevenLabsRealtimeTokenService(
+            props,
+            new RealtimeModelCatalog(props, ""),
+            budgetProperties,
+            aiBudgetService,
+            aiCircuitBreaker,
+            elevenLabsRealtimeHttpInvoker,
+            null);
   }
 
   @Test
