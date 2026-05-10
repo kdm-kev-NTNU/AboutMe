@@ -112,6 +112,9 @@ public class SecurityConfig {
             "Access-Control-Request-Method",
             "Access-Control-Request-Headers",
             "X-Chat-Language",
+            "X-Realtime-Model",
+            "X-Realtime-Voice",
+            "X-Realtime-Reasoning-Effort",
             "X-Conversation-Id"
         ));
         configuration.setAllowCredentials(true);

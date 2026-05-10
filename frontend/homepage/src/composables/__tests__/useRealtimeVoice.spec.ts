@@ -6,18 +6,28 @@ import type { SpeechUiLang } from '@/lib/realtime-voice'
 const SESSION_MAX_MS = 180_000
 
 const exchangeRealtimeSdpMock = vi.hoisted(() => vi.fn())
+const createElevenLabsConversationTokenMock = vi.hoisted(() => vi.fn())
 const lookupRealtimeInfoMock = vi.hoisted(() => vi.fn())
 const dataChannelSendMock = vi.hoisted(() => vi.fn())
+const elevenLabsStartSessionMock = vi.hoisted(() => vi.fn())
+const elevenLabsEndSessionMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/realtime-voice', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@/lib/realtime-voice')>()
   return {
     ...mod,
     exchangeRealtimeSdp: exchangeRealtimeSdpMock,
+    createElevenLabsConversationToken: createElevenLabsConversationTokenMock,
     lookupRealtimeInfo: lookupRealtimeInfoMock,
     REALTIME_SESSION_MAX_MS: SESSION_MAX_MS,
   }
 })
+
+vi.mock('@elevenlabs/client', () => ({
+  Conversation: {
+    startSession: elevenLabsStartSessionMock,
+  },
+}))
 
 vi.mock('@/lib/analytics', () => ({
   captureProductAnalyticsEvent: vi.fn(),
@@ -38,8 +48,11 @@ describe('useRealtimeVoice', () => {
     vi.unstubAllGlobals()
 
     exchangeRealtimeSdpMock.mockReset()
+    createElevenLabsConversationTokenMock.mockReset()
     lookupRealtimeInfoMock.mockReset()
     dataChannelSendMock.mockReset()
+    elevenLabsStartSessionMock.mockReset()
+    elevenLabsEndSessionMock.mockReset()
     messageListeners = []
     closeListeners = []
     latestRtc = null
@@ -55,6 +68,15 @@ describe('useRealtimeVoice', () => {
     lookupRealtimeInfoMock.mockResolvedValue({
       found: true,
       snippets: [{ sourceType: 'profile', title: 'Data engineering', text: 'Kevin studies at NTNU.' }],
+    })
+    createElevenLabsConversationTokenMock.mockResolvedValue({
+      ok: true,
+      token: 'eleven-token',
+    })
+    elevenLabsEndSessionMock.mockResolvedValue(undefined)
+    elevenLabsStartSessionMock.mockResolvedValue({
+      endSession: elevenLabsEndSessionMock,
+      getId: () => 'conv_123',
     })
 
     class StubRtcDataChannel implements Partial<RTCDataChannel> {
@@ -236,11 +258,114 @@ describe('useRealtimeVoice', () => {
     await connectPromise
 
     expect(api.connectionState.value).toBe('connected')
-    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith('portfolio_voice_session_started', {
+    expect(exchangeRealtimeSdpMock).toHaveBeenCalledWith('v=0 OFFER_STUB', 'en', undefined, undefined)
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith('portfolio_voice_session_started', expect.objectContaining({
       language: 'en',
-    })
+      provider: 'OPENAI',
+    }))
 
     api.disconnect()
+
+    scope.stop()
+  })
+
+  it('passes selected voice session options to SDP exchange', async () => {
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+
+    const lang = ref<SpeechUiLang>('no')
+    const options = ref({ voice: 'cedar' as const, reasoningEffort: 'high' as const })
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang, options)
+    })
+
+    const connectPromise = api.connect()
+    await flushPromises()
+    latestRtc?.dispatchRemoteTrack()
+    await connectPromise
+
+    expect(exchangeRealtimeSdpMock).toHaveBeenCalledWith(
+      'v=0 OFFER_STUB',
+      'no',
+      {
+        voice: 'cedar',
+        reasoningEffort: 'high',
+      },
+      undefined,
+    )
+
+    api.disconnect()
+    scope.stop()
+  })
+
+  it('starts ElevenLabs sessions with a backend conversation token', async () => {
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const { captureProductAnalyticsEvent } = await import('@/lib/analytics')
+
+    const lang = ref<SpeechUiLang>('en')
+    const selectedModel = ref({
+      provider: 'ELEVENLABS' as const,
+      id: 'agent_1',
+      label: 'ElevenLabs Agent',
+      defaultOption: false,
+    })
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang, undefined, selectedModel)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(createElevenLabsConversationTokenMock).toHaveBeenCalledWith('agent_1')
+    expect(elevenLabsStartSessionMock).toHaveBeenCalledWith(expect.objectContaining({
+      conversationToken: 'eleven-token',
+      connectionType: 'webrtc',
+    }))
+    expect(exchangeRealtimeSdpMock).not.toHaveBeenCalled()
+    expect(api.connectionState.value).toBe('connected')
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_started',
+      expect.objectContaining({ provider: 'ELEVENLABS', model_id: 'agent_1' }),
+    )
+
+    api.disconnect()
+    await flushPromises()
+    expect(elevenLabsEndSessionMock).toHaveBeenCalled()
+
+    scope.stop()
+  })
+
+  it('surfaces ElevenLabs token failures', async () => {
+    createElevenLabsConversationTokenMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      message: 'missing',
+      code: 'VOICE_MODEL_NOT_CONFIGURED',
+    })
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const lang = ref<SpeechUiLang>('en')
+    const selectedModel = ref({
+      provider: 'ELEVENLABS' as const,
+      id: 'agent_1',
+      label: 'ElevenLabs Agent',
+      defaultOption: false,
+    })
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang, undefined, selectedModel)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('selected voice model')
+    expect(elevenLabsStartSessionMock).not.toHaveBeenCalled()
 
     scope.stop()
   })

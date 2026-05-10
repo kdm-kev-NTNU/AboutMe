@@ -27,6 +27,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@elevenlabs/client": "^1.7.0",
     "@tailwindcss/vite": "^4.3.0",
     "@vueuse/core": "^14.3.0",
     "@vueuse/motion": "^3.0.3",

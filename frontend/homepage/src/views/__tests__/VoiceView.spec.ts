@@ -9,13 +9,15 @@ import VoiceView from '../VoiceView.vue'
 import { useLangStore } from '@/stores/lang'
 
 const fetchRealtimeVoiceEnabledMock = vi.hoisted(() => vi.fn())
+const fetchRealtimeVoiceModelsMock = vi.hoisted(() => vi.fn())
 const mockedUseRealtimeVoiceImpl = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/realtime-voice', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/realtime-voice')>()
   return {
     ...actual,
-    fetchRealtimeVoiceEnabled: (...args: unknown[]) => fetchRealtimeVoiceEnabledMock(...args),
+    fetchRealtimeVoiceStatus: (...args: unknown[]) => fetchRealtimeVoiceEnabledMock(...args),
+    fetchRealtimeVoiceModels: (...args: unknown[]) => fetchRealtimeVoiceModelsMock(...args),
   }
 })
 
@@ -36,15 +38,42 @@ describe('VoiceView.vue', () => {
     vi.clearAllMocks()
 
     fetchRealtimeVoiceEnabledMock.mockReset()
+    fetchRealtimeVoiceModelsMock.mockReset()
+    fetchRealtimeVoiceModelsMock.mockResolvedValue([
+      { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
+      { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: false },
+    ])
 
     let resolveAvail: ((v: boolean) => void) | undefined
 
     if (opts.fetchResult === 'pending') {
       fetchRealtimeVoiceEnabledMock.mockImplementation(
-        () => new Promise<boolean>((resolve) => (resolveAvail = resolve)),
+        () =>
+          new Promise<{
+            enabled: boolean
+            voices: ['marin', 'cedar']
+            reasoningEfforts: ['low', 'medium', 'high']
+            voice: 'cedar'
+            reasoningEffort: 'medium'
+          }>((resolve) => {
+            resolveAvail = (v: boolean) =>
+              resolve({
+                enabled: v,
+                voices: ['marin', 'cedar'],
+                reasoningEfforts: ['low', 'medium', 'high'],
+                voice: 'cedar',
+                reasoningEffort: 'medium',
+              })
+          }),
       )
     } else {
-      fetchRealtimeVoiceEnabledMock.mockResolvedValue(opts.fetchResult)
+      fetchRealtimeVoiceEnabledMock.mockResolvedValue({
+        enabled: opts.fetchResult,
+        voices: ['marin', 'cedar'],
+        reasoningEfforts: ['low', 'medium', 'high'],
+        voice: 'cedar',
+        reasoningEffort: 'medium',
+      })
     }
 
     const stubConnect = vi.fn()
@@ -137,6 +166,7 @@ describe('VoiceView.vue', () => {
 
   beforeEach(async () => {
     document.body.innerHTML = ''
+    sessionStorage.clear()
     vi.clearAllMocks()
   })
 
@@ -180,7 +210,7 @@ describe('VoiceView.vue', () => {
     wrapper.unmount()
   })
 
-  it('shows the Norwegian hero subtitle when realtime is enabled and language is Norwegian', async () => {
+  it('shows the Norwegian hero title when realtime is enabled and language is Norwegian', async () => {
     const { wrapper } = await factory({
       lang: 'no',
       fetchResult: true,
@@ -188,7 +218,70 @@ describe('VoiceView.vue', () => {
 
     await flushPromises()
 
-    expect(document.body.textContent).toContain('Live stemme (OpenAI GPT-Realtime-2)')
+    expect(document.body.textContent).toContain('Snakk med Kevin sin AI')
+
+    wrapper.unmount()
+  })
+
+  it('renders voice controls with backend defaults and localized labels', async () => {
+    const { wrapper } = await factory({
+      lang: 'en',
+      fetchResult: true,
+    })
+
+    await flushPromises()
+
+    const voiceSelect = wrapper.get('[data-testid="voice-select"]').element as HTMLSelectElement
+    const reasoningSelect = wrapper.get('[data-testid="reasoning-select"]').element as HTMLSelectElement
+
+    expect(document.body.textContent).toContain('Voice')
+    expect(document.body.textContent).toContain('Reasoning')
+    expect(document.body.textContent).toContain('Marin')
+    expect(document.body.textContent).toContain('Cedar')
+    expect(document.body.textContent).toContain('Fast')
+    expect(document.body.textContent).toContain('Balanced')
+    expect(document.body.textContent).toContain('Thorough')
+    expect(voiceSelect.value).toBe('cedar')
+    expect(reasoningSelect.value).toBe('medium')
+
+    wrapper.unmount()
+  })
+
+  it('renders and persists the visitor voice model selection', async () => {
+    const { wrapper } = await factory({
+      lang: 'en',
+      fetchResult: true,
+    })
+
+    await flushPromises()
+
+    const select = wrapper.get('[data-testid="voice-model-select"]').element as HTMLSelectElement
+    expect(document.body.textContent).toContain('Provider/model')
+    expect(document.body.textContent).toContain('OpenAI GPT-Realtime-2')
+    expect(document.body.textContent).toContain('ElevenLabs Agent')
+    expect(select.value).toBe('gpt-realtime-2')
+
+    select.value = 'agent_1'
+    await wrapper.get('[data-testid="voice-model-select"]').trigger('change')
+
+    expect(sessionStorage.getItem('voiceSelectedModel')).toBe('agent_1')
+
+    wrapper.unmount()
+  })
+
+  it('disables voice controls while realtime is connected', async () => {
+    const { wrapper, refs } = await factory({
+      lang: 'en',
+      fetchResult: true,
+    })
+
+    await flushPromises()
+
+    refs.connectionState.value = 'connected'
+    await wrapper.vm.$nextTick()
+
+    expect((wrapper.get('[data-testid="voice-select"]').element as HTMLSelectElement).disabled).toBe(true)
+    expect((wrapper.get('[data-testid="reasoning-select"]').element as HTMLSelectElement).disabled).toBe(true)
 
     wrapper.unmount()
   })

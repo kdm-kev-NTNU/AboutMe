@@ -3,18 +3,23 @@ package com.kevinmazali.portfolio.controller;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.model.ApiError;
+import com.kevinmazali.portfolio.model.ElevenLabsTokenRequest;
+import com.kevinmazali.portfolio.model.ElevenLabsTokenResponse;
 import com.kevinmazali.portfolio.model.RealtimeLookupRequest;
+import com.kevinmazali.portfolio.model.RealtimeModelOption;
 import com.kevinmazali.portfolio.model.RealtimeStatusResponse;
+import com.kevinmazali.portfolio.service.ElevenLabsRealtimeTokenService;
 import com.kevinmazali.portfolio.service.RealtimeLookupService;
+import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,27 +36,42 @@ public class RealtimeController {
   private final RealtimeProperties realtimeProperties;
   private final RealtimeSessionService realtimeSessionService;
   private final RealtimeLookupService realtimeLookupService;
+  private final RealtimeModelCatalog realtimeModelCatalog;
+  private final ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
   private final RequestLogService requestLogService;
-  private final String openAiApiKey;
 
   public RealtimeController(
       RealtimeProperties realtimeProperties,
       RealtimeSessionService realtimeSessionService,
       RealtimeLookupService realtimeLookupService,
+      RealtimeModelCatalog realtimeModelCatalog,
+      ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService,
       RequestLogService requestLogService,
-      @Value("${spring.ai.openai.api-key:}") String openAiApiKey) {
+      @Value("${spring.ai.openai.api-key:}") String ignoredOpenAiApiKey) {
     this.realtimeProperties = realtimeProperties;
     this.realtimeSessionService = realtimeSessionService;
     this.realtimeLookupService = realtimeLookupService;
+    this.realtimeModelCatalog = realtimeModelCatalog;
+    this.elevenLabsRealtimeTokenService = elevenLabsRealtimeTokenService;
     this.requestLogService = requestLogService;
-    this.openAiApiKey = openAiApiKey;
   }
 
-  @Operation(summary = "Realtime voice available", description = "True when realtime voice is enabled and OpenAI is configured.")
+  @Operation(summary = "Realtime voice available", description = "True when at least one realtime voice provider is configured.")
   @GetMapping("/realtime/status")
   public ResponseEntity<RealtimeStatusResponse> status() {
-    boolean ok = realtimeProperties.isEnabled() && StringUtils.hasText(openAiApiKey);
-    return ResponseEntity.ok(new RealtimeStatusResponse(ok));
+    boolean ok = realtimeModelCatalog.hasAvailableModels();
+    return ResponseEntity.ok(new RealtimeStatusResponse(
+        ok,
+        RealtimeProperties.ALLOWED_VOICES,
+        RealtimeProperties.ALLOWED_REASONING_EFFORTS,
+        realtimeProperties.defaultVoice(),
+        realtimeProperties.defaultReasoningEffort()));
+  }
+
+  @Operation(summary = "List realtime voice models", description = "Configured voice provider/model options.")
+  @GetMapping("/realtime/models")
+  public ResponseEntity<List<RealtimeModelOption>> models() {
+    return ResponseEntity.ok(realtimeModelCatalog.listAvailableModels());
   }
 
   @Operation(summary = "Create Realtime WebRTC session", description = "POST SDP offer as raw body; returns SDP answer for RTCPeerConnection.")
@@ -59,18 +79,23 @@ public class RealtimeController {
   @PostMapping(value = "/realtime/session", consumes = { "application/sdp", "text/plain" })
   public ResponseEntity<?> createSession(
       @RequestBody String sdp,
-      @RequestHeader(value = "X-Chat-Language", required = false) String chatLanguage) {
+      @RequestHeader(value = "X-Chat-Language", required = false) String chatLanguage,
+      @RequestHeader(value = "X-Realtime-Model", required = false) String model,
+      @RequestHeader(value = "X-Realtime-Voice", required = false) String voice,
+      @RequestHeader(value = "X-Realtime-Reasoning-Effort", required = false) String reasoningEffort) {
     if (!realtimeProperties.isEnabled()) {
       return ResponseEntity.status(503)
           .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
     }
-    if (!StringUtils.hasText(openAiApiKey)) {
-      return ResponseEntity.status(503)
-          .body(new ApiError("Voice chat is not configured.", "API_KEY_MISSING"));
+    if (!realtimeProperties.isAllowedVoice(voice)) {
+      return ResponseEntity.badRequest().body(new ApiError("Unsupported realtime voice.", "BAD_REQUEST"));
+    }
+    if (!realtimeProperties.isAllowedReasoningEffort(reasoningEffort)) {
+      return ResponseEntity.badRequest().body(new ApiError("Unsupported realtime reasoning effort.", "BAD_REQUEST"));
     }
     requestLogService.save("/realtime/session", "POST", "sdp-bytes", null);
     try {
-      String answer = realtimeSessionService.createRealtimeCall(sdp, chatLanguage);
+      String answer = realtimeSessionService.createRealtimeCall(sdp, chatLanguage, model, voice, reasoningEffort);
       return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/sdp")).body(answer);
     } catch (IllegalArgumentException e) {
       return ResponseEntity.badRequest().body(new ApiError(e.getMessage(), "BAD_REQUEST"));
@@ -85,6 +110,28 @@ public class RealtimeController {
     } catch (IllegalStateException e) {
       log.warn("realtime session (legacy): {}", e.getMessage());
       return ResponseEntity.status(503).body(new ApiError(e.getMessage()));
+    }
+  }
+
+  @Operation(summary = "Create ElevenLabs WebRTC token", description = "Returns a browser-safe token for a configured ElevenLabs agent.")
+  @PostMapping(value = "/realtime/elevenlabs/token", consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<?> createElevenLabsToken(@RequestBody(required = false) ElevenLabsTokenRequest request) {
+    if (!realtimeProperties.isEnabled()) {
+      return ResponseEntity.status(503)
+          .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
+    }
+    try {
+      String token = elevenLabsRealtimeTokenService.createConversationToken(request == null ? null : request.modelId());
+      requestLogService.save("/realtime/elevenlabs/token", "POST", "token", null);
+      return ResponseEntity.ok(new ElevenLabsTokenResponse(token));
+    } catch (RealtimeSessionException e) {
+      log.warn(
+          "elevenlabs realtime token: code={} status={} message={}",
+          e.getErrorCode(),
+          e.getHttpStatus().value(),
+          e.getMessage());
+      return ResponseEntity.status(e.getHttpStatus())
+          .body(new ApiError(e.getMessage(), e.getErrorCode().name()));
     }
   }
 

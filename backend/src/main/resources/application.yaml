@@ -129,12 +129,30 @@ portfolio:
   # OpenAI Realtime (WebRTC) — disabled by default; set PORTFOLIO_REALTIME_ENABLED=true and OPENAI_API_KEY to enable.
   realtime:
     enabled: ${PORTFOLIO_REALTIME_ENABLED:false}
-    model: gpt-realtime-2
-    voice: marin
-    reasoning-effort: low
+    model: ${PORTFOLIO_REALTIME_MODEL:gpt-realtime-2}
+    voice: ${PORTFOLIO_REALTIME_VOICE:marin}
+    reasoning-effort: ${PORTFOLIO_REALTIME_REASONING_EFFORT:low}
     max-response-output-tokens: 1024
     reservation-input-tokens: 2000
     reservation-output-tokens: 2000
+    providers:
+      openai:
+        enabled: ${PORTFOLIO_REALTIME_OPENAI_ENABLED:true}
+        default-model-id: ${PORTFOLIO_REALTIME_MODEL:gpt-realtime-2}
+        models:
+          - id: ${PORTFOLIO_REALTIME_MODEL:gpt-realtime-2}
+            label: OpenAI GPT-Realtime-2
+            default-model: true
+      elevenlabs:
+        enabled: ${PORTFOLIO_REALTIME_ELEVENLABS_ENABLED:false}
+        api-key: ${ELEVENLABS_API_KEY:}
+        default-agent-id: ${ELEVENLABS_AGENT_ID:}
+        agents:
+          - agent-id: ${ELEVENLABS_AGENT_ID:}
+            label: ${ELEVENLABS_AGENT_LABEL:ElevenLabs Agent}
+            default-agent: true
+            environment: ${ELEVENLABS_AGENT_ENVIRONMENT:}
+            branch-id: ${ELEVENLABS_AGENT_BRANCH_ID:}
   realtime-rate-limit:
     enabled: true
     capacity: 3
