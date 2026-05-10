@@ -25,3 +25,6 @@ test-results
 *.sw?
 
 *.tsbuildinfo
+
+# Stray JS emitted next to sources (project uses .ts / .vue only under src/)
+src/**/*.js
