@@ -18,6 +18,8 @@ Repo-wide setup and backend configuration live in [../../README.md](../../README
 
 Use the Node version from `engines` in [package.json](package.json). Recommended editor: VS Code with [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar).
 
+Portfolio listing and career content load from `src/types/*.json` files (`projects`, `education`, `workExperience`, `courses`) — those JSON files are **gitignored** in this repo. If they are missing, Vite falls back to the tracked `*.stub.json` files (see [src/types/FILES.example](src/types/FILES.example)).
+
 ## Scripts
 
 | Command | Purpose |

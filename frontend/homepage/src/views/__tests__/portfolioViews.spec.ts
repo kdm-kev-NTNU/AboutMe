@@ -153,7 +153,9 @@ describe('portfolio views (smoke)', () => {
 		await flushPromises()
 		expect(wrapper.text()).toContain('Experience & education')
 		expect(wrapper.text()).toContain('Work Experience')
-		expect(wrapper.text()).toMatch(/NTNU|Oslo Municipality/i)
+		expect(wrapper.text()).toMatch(
+			/NTNU|Oslo Municipality|Example Company|Example University|Eksempel AS|Eksempel universitet/i,
+		)
 		expect(wrapper.text()).toContain('Education')
 		expect(wrapper.text()).toMatch(/Courses|Emner/)
 	})

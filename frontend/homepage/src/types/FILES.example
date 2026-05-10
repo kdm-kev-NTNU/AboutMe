@@ -1,0 +1,17 @@
+# Portfolio content JSON (optional local overrides)
+
+These filenames are imported by `CareerView.vue` and `ProjectsView.vue`:
+
+- `projects.en.json` / `projects.no.json`
+- `education.en.json` / `education.no.json`
+- `workExperience.en.json` / `workExperience.no.json`
+- `courses.en.json` / `courses.no.json`
+
+They are **gitignored**. Fresh clones and CI use the tracked `*.stub.json` companions via `portfolioJsonFallbackPlugin` in [`vite.portfolio-json-plugin.ts`](../vite.portfolio-json-plugin.ts) (wired from `vite.config.ts`).
+
+Copy the stubs or export from your private vault:
+
+```bash
+cp src/types/projects.en.stub.json src/types/projects.en.json
+# …then edit with your real content.
+```

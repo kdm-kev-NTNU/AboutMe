@@ -1,0 +1,14 @@
+{
+  "experiences": [
+    {
+      "id": "stub-intern",
+      "startDate": "2024-06-01",
+      "endDate": "2024-08-31",
+      "company": "Eksempel AS",
+      "position": "Sommerintern",
+      "description": "Plassholder. Bytt ut med workExperience.no.json lokalt.",
+      "location": "Eksempel by",
+      "type": "summer-job"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "projects": [
+    {
+      "id": "heathen-army-blog",
+      "projectName": "Eksempel prosjektfortelling",
+      "projectDescription": "Plassholder slik at ruter som /projects/heathen-army fortsatt vises i lista.",
+      "startDate": "2020-01-01",
+      "endDate": "2021-01-01",
+      "technologies": ["Eksempel"],
+      "status": "completed",
+      "detailUrl": "/projects/heathen-army"
+    },
+    {
+      "id": "portfolio-placeholder",
+      "projectName": "Porteføljemal",
+      "projectDescription": "Bytt ut med din ekte projects.no.json (ignorert av git).",
+      "startDate": "2025-01-01",
+      "endDate": null,
+      "technologies": ["Vue", "TypeScript"],
+      "status": "ongoing",
+      "githubUrl": "https://example.com/repo",
+      "liveUrl": "https://example.com"
+    }
+  ]
+}

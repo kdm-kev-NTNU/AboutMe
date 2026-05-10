@@ -1,0 +1,20 @@
+{
+  "courses": [
+    {
+      "id": "stub-course-1",
+      "courseCode": "EXMP1000",
+      "courseName": "Introduction to Example Studies",
+      "credits": 7.5,
+      "semester": "Semester 1 (Autumn 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "stub-course-2",
+      "courseCode": "EXMP1001",
+      "courseName": "Example Methods",
+      "credits": 7.5,
+      "semester": "Semester 2 (Spring 2024)",
+      "status": "completed"
+    }
+  ]
+}

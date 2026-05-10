@@ -25,6 +25,10 @@ Filer under `backend/src/main/resources/prompts/`, `…/templates/` og `…/real
 
 For `docker compose build` / produksjonsimage må du sørge for at disse filene finnes i `backend/src/main/resources/…` før image bygges (eller kopier dem inn i build-steget ditt).
 
+### Frontend: portfolio-JSON (prosjekter, karriere, emner)
+
+Filene `projects.*.json`, `education.*.json`, `workExperience.*.json` og `courses.*.json` under [`frontend/homepage/src/types/`](frontend/homepage/src/types/) er **ikke** versjonert. Uten lokale kopier bruker Vite de sporede `*.stub.json`-filene slik at bygg og tester fungerer. Se [`FILES.example`](frontend/homepage/src/types/FILES.example) der.
+
 ### Miljø og oppstart
 
 1. Kopier [`.env.example`](.env.example) til `backend/.env` og sett `OPENAI_API_KEY`.  

@@ -70,5 +70,10 @@ backend/src/main/resources/realtime/*
 !backend/src/main/resources/realtime/.gitkeep
 !backend/src/main/resources/realtime/*.example
 
+# Frontend portfolio content (projects, CV JSON) — supply locally; stubs keep CI/build working
+frontend/homepage/src/types/*.json
+!frontend/homepage/src/types/*.stub.json
+!frontend/homepage/src/types/*.example
+
 # Local scratch (e.g. ad-hoc npm installs); never commit
 tmp-npm-ci-check/

@@ -1,0 +1,25 @@
+{
+  "projects": [
+    {
+      "id": "heathen-army-blog",
+      "projectName": "Example narrative project",
+      "projectDescription": "Placeholder entry so routes like /projects/heathen-army stay wired in the listing.",
+      "startDate": "2020-01-01",
+      "endDate": "2021-01-01",
+      "technologies": ["Example stack"],
+      "status": "completed",
+      "detailUrl": "/projects/heathen-army"
+    },
+    {
+      "id": "portfolio-placeholder",
+      "projectName": "Portfolio template",
+      "projectDescription": "Replace this file with your real projects.en.json (ignored by git).",
+      "startDate": "2025-01-01",
+      "endDate": null,
+      "technologies": ["Vue", "TypeScript"],
+      "status": "ongoing",
+      "githubUrl": "https://example.com/repo",
+      "liveUrl": "https://example.com"
+    }
+  ]
+}

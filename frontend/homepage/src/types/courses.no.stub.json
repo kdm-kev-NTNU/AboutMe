@@ -1,0 +1,20 @@
+{
+  "courses": [
+    {
+      "id": "stub-course-1",
+      "courseCode": "EXMP1000",
+      "courseName": "Innføring i eksempelstudier",
+      "credits": 7.5,
+      "semester": "Semester 1 (høst 2023)",
+      "status": "completed"
+    },
+    {
+      "id": "stub-course-2",
+      "courseCode": "EXMP1001",
+      "courseName": "Eksempelmetoder",
+      "credits": 7.5,
+      "semester": "Semester 2 (vår 2024)",
+      "status": "completed"
+    }
+  ]
+}
