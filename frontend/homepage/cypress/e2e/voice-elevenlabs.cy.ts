@@ -153,9 +153,8 @@ function visitVoiceWithStub(mode: StubMode) {
 
 function selectElevenLabsModel() {
   cy.get('[data-testid="voice-model-select"]', { timeout: 15_000 }).should('be.visible')
-  cy.get('[data-testid="voice-model-select"]', { timeout: 15_000 })
-    .select('agent_test')
-    .should('have.value', 'agent_test')
+  cy.get('[data-testid="voice-model-select"]', { timeout: 15_000 }).select('agent_test')
+  cy.get('[data-testid="voice-model-select"]', { timeout: 15_000 }).should('have.value', 'agent_test')
 }
 
 describe('Voice ElevenLabs E2E', () => {
@@ -206,6 +205,7 @@ describe('Voice ElevenLabs E2E', () => {
     cy.contains('The live AI service needs a fresh session before it can continue.').should('be.visible')
     cy.contains(
       'Voice server connection failed. The agent may be misconfigured or temporarily unavailable.',
+      { timeout: 15_000 },
     ).should('be.visible')
     cy.contains('button', 'Start voice', { timeout: 15_000 }).should('be.visible')
   })
@@ -236,8 +236,9 @@ describe('Voice ElevenLabs E2E', () => {
     cy.contains('The live AI service needs a fresh session before it can continue.').should('be.visible')
     cy.contains('ElevenLabs could not start the session: branch_id is invalid').should('be.visible')
     cy.window().then((win) => {
-      expect((win as typeof win & { __ABOUTME_E2E_END_SESSION_CALLS__?: number }).__ABOUTME_E2E_END_SESSION_CALLS__)
-        .to.be.undefined
+      expect(
+        (win as typeof win & { __ABOUTME_E2E_END_SESSION_CALLS__?: number }).__ABOUTME_E2E_END_SESSION_CALLS__,
+      ).to.equal(undefined)
     })
   })
 })
