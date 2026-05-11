@@ -37,7 +37,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Semgrep preflight
+        id: preflight
+        shell: bash
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SEMGREP_APP_TOKEN:-}" ]; then
+            echo "::warning title=Semgrep skipped::SEMGREP_APP_TOKEN is not set, so the Semgrep scan will be skipped."
+            echo "token_present=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "token_present=true" >> "$GITHUB_OUTPUT"
+          echo "Semgrep token detected."
+
       - name: Semgrep CI (scan + SARIF)
+        if: steps.preflight.outputs.token_present == 'true'
         run: |
           docker run --rm \
             -v "${GITHUB_WORKSPACE}:/src" \
@@ -61,7 +77,7 @@ jobs:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
       - name: Upload SARIF file
-        if: always() && hashFiles('semgrep.sarif') != ''
+        if: steps.preflight.outputs.token_present == 'true' && always() && hashFiles('semgrep.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
