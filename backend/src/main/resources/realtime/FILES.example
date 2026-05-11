@@ -14,7 +14,7 @@ See `scripts/sync_elevenlabs_portfolio_agent.py` for how KB and ElevenLabs files
 Validation / workflow debugging (Python SDK; MCP cannot update agents):
 
 - `python scripts/sync_elevenlabs_portfolio_agent.py --dump-config` — print full `conversation_config` JSON.
-- `python scripts/sync_elevenlabs_portfolio_agent.py --fix-validation --skip-kb --skip-prompt` — remove stale `transfer_to_agent` from `prompt.tools` and `prompt.built_in_tools` (and workflow node overrides), fix duplicate unconditional workflow edges, then PATCH agent (no local KB/prompt reads).
+- `python scripts/sync_elevenlabs_portfolio_agent.py --fix-validation --skip-kb --skip-prompt` — remove stale `transfer_to_agent` from `prompt.tools` and `prompt.built_in_tools` (and workflow node overrides), fix duplicate unconditional workflow edges, drop/normalize invalid `auth.allowlist` hostnames (e.g. stray `1` or pasted URLs), then PATCH agent (no local KB/prompt reads).
 
 ## Cursor ElevenLabs MCP
 

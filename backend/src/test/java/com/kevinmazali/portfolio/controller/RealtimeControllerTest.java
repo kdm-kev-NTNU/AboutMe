@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
@@ -177,6 +178,17 @@ class RealtimeControllerTest {
         .andExpect(jsonPath("$[0].id").value("gpt-realtime-2"))
         .andExpect(jsonPath("$[1].provider").value("ELEVENLABS"))
         .andExpect(jsonPath("$[1].id").value("agent_123"));
+  }
+
+  @Test
+  void elevenLabsTokenCorsPreflightAllowsAlternateLocalDevPort() throws Exception {
+    mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/realtime/elevenlabs/token")
+            .header(HttpHeaders.ORIGIN, "http://localhost:5174")
+            .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+            .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Content-Type,X-AI-Trace-Id"))
+        .andExpect(status().isOk())
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+            .string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5174"));
   }
 
   @Test

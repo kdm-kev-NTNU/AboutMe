@@ -16,7 +16,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
@@ -28,6 +32,8 @@ import org.springframework.util.StringUtils;
  */
 @Service
 public class ElevenLabsRealtimeTokenService {
+
+  private static final Logger log = LoggerFactory.getLogger(ElevenLabsRealtimeTokenService.class);
 
   private static final String ELEVENLABS_TOKEN_URL =
       "https://api.elevenlabs.io/v1/convai/conversation/token";
@@ -84,17 +90,28 @@ public class ElevenLabsRealtimeTokenService {
     aiCircuitBreaker.assertClosed();
     aiBudgetService.assertWithinBudget(budgetUserId, anonymous);
 
+    URI tokenUri = buildTokenUri(agent);
     HttpRequest request = HttpRequest.newBuilder()
-        .uri(buildTokenUri(agent))
+        .uri(tokenUri)
         .timeout(Duration.ofSeconds(30))
         .header("xi-api-key", apiKey)
         .GET()
         .build();
 
+    log.info(
+        "ElevenLabs token request starting: requested_model_id={} agent_id={} environment={} branch_id={} trace_id={}",
+        safe(modelId),
+        safe(agent.getAgentId()),
+        describeEnvironment(agent),
+        describeBranch(agent),
+        voiceAnalytics != null ? safe(voiceAnalytics.traceId()) : "n/a");
+    log.debug("ElevenLabs token request: GET {}", tokenUri);
+
     long spanStartNs = System.nanoTime();
     try {
       HttpResponse<String> response = elevenLabsRealtimeHttpInvoker.invoke(request);
       int status = response.statusCode();
+      log.debug("ElevenLabs token response: status={}", status);
       if (status >= 200 && status < 300) {
         String token = parseToken(response.body());
         if (!StringUtils.hasText(token)) {
@@ -105,6 +122,8 @@ public class ElevenLabsRealtimeTokenService {
               RealtimeErrorCode.ELEVENLABS_REJECTED,
               "ElevenLabs did not return a conversation token.");
         }
+        TokenDiagnostics tokenDiagnostics = decodeTokenDiagnostics(token);
+        logTokenIssued(agent, tokenDiagnostics, voiceAnalytics);
         captureElevenLabsTokenSpan(
             voiceAnalytics, budgetUserId, anonymous, spanStartNs, false);
         aiBudgetService.recordUsage(
@@ -122,6 +141,15 @@ public class ElevenLabsRealtimeTokenService {
       RealtimeErrorCode code =
           status >= 500 ? RealtimeErrorCode.ELEVENLABS_SERVER_ERROR : RealtimeErrorCode.ELEVENLABS_REJECTED;
       String detail = summarizeErrorBody(response.body());
+      log.warn(
+          "ElevenLabs token request rejected: status={} code={} agent_id={} environment={} branch_id={} detail={} trace_id={}",
+          status,
+          code,
+          safe(agent.getAgentId()),
+          describeEnvironment(agent),
+          describeBranch(agent),
+          StringUtils.hasText(detail) ? detail : "n/a",
+          voiceAnalytics != null ? safe(voiceAnalytics.traceId()) : "n/a");
       String message = StringUtils.hasText(detail)
           ? "ElevenLabs rejected the session: " + detail
           : "ElevenLabs session token failed (HTTP " + status + ").";
@@ -132,6 +160,13 @@ public class ElevenLabsRealtimeTokenService {
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
+      log.warn(
+          "ElevenLabs token request failed: agent_id={} environment={} branch_id={} exception={} trace_id={}",
+          safe(agent.getAgentId()),
+          describeEnvironment(agent),
+          describeBranch(agent),
+          e.toString(),
+          voiceAnalytics != null ? safe(voiceAnalytics.traceId()) : "n/a");
       throw new RealtimeSessionException(
           HttpStatus.BAD_GATEWAY,
           RealtimeErrorCode.ELEVENLABS_UNREACHABLE,
@@ -162,6 +197,57 @@ public class ElevenLabsRealtimeTokenService {
         latencySec,
         error,
         anonymous);
+  }
+
+  private void logTokenIssued(
+      RealtimeProperties.ElevenLabsAgent agent,
+      TokenDiagnostics tokenDiagnostics,
+      @Nullable RealtimeVoiceAnalyticsContext voiceAnalytics) {
+    log.info(
+        "ElevenLabs token issued: agent_id={} environment={} branch_id={} issuer={} room={} subject={} participant_name={} expires_at={} trace_id={}",
+        safe(agent.getAgentId()),
+        describeEnvironment(agent),
+        describeBranch(agent),
+        tokenDiagnostics.issuer(),
+        tokenDiagnostics.room(),
+        tokenDiagnostics.subject(),
+        tokenDiagnostics.participantName(),
+        tokenDiagnostics.expiresAt(),
+        voiceAnalytics != null ? safe(voiceAnalytics.traceId()) : "n/a");
+    if (!log.isDebugEnabled()) {
+      return;
+    }
+    log.debug(
+        "ElevenLabs token diagnostics: not_before={} raw_exp={} raw_nbf={}",
+        tokenDiagnostics.notBefore(),
+        tokenDiagnostics.rawExp(),
+        tokenDiagnostics.rawNbf());
+  }
+
+  /**
+   * Decode the JWT payload to log embedded LiveKit routing data without exposing the token itself.
+   */
+  private TokenDiagnostics decodeTokenDiagnostics(String token) {
+    try {
+      String[] parts = token.split("\\.");
+      if (parts.length < 2) {
+        return TokenDiagnostics.unknown();
+      }
+      String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+      JsonNode claims = objectMapper.readTree(payload);
+      return new TokenDiagnostics(
+          safe(claims.path("iss").asText("")),
+          safe(claims.path("sub").asText("")),
+          safe(claims.path("name").asText("")),
+          safe(claims.path("video").path("room").asText("")),
+          formatUnixTimestamp(claims.path("exp")),
+          formatUnixTimestamp(claims.path("nbf")),
+          claims.path("exp").asLong(0),
+          claims.path("nbf").asLong(0));
+    } catch (Exception e) {
+      log.debug("ElevenLabs token: could not decode JWT claims: {}", e.getMessage());
+      return TokenDiagnostics.unknown();
+    }
   }
 
   private URI buildTokenUri(RealtimeProperties.ElevenLabsAgent agent) {
@@ -325,5 +411,44 @@ public class ElevenLabsRealtimeTokenService {
 
   private static String urlEncode(String value) {
     return URLEncoder.encode(value, StandardCharsets.UTF_8);
+  }
+
+  private static String describeEnvironment(RealtimeProperties.ElevenLabsAgent agent) {
+    return StringUtils.hasText(agent.getEnvironment()) ? agent.getEnvironment().trim() : "production";
+  }
+
+  private static String describeBranch(RealtimeProperties.ElevenLabsAgent agent) {
+    return StringUtils.hasText(agent.getBranchId()) ? agent.getBranchId().trim() : "default";
+  }
+
+  private static String safe(@Nullable String value) {
+    return StringUtils.hasText(value) ? value.trim() : "n/a";
+  }
+
+  private static String formatUnixTimestamp(JsonNode value) {
+    long raw = value.asLong(0);
+    if (raw <= 0) {
+      return "n/a";
+    }
+    try {
+      return Instant.ofEpochSecond(raw).toString();
+    } catch (Exception e) {
+      return Long.toString(raw);
+    }
+  }
+
+  private record TokenDiagnostics(
+      String issuer,
+      String subject,
+      String participantName,
+      String room,
+      String expiresAt,
+      String notBefore,
+      long rawExp,
+      long rawNbf) {
+
+    private static TokenDiagnostics unknown() {
+      return new TokenDiagnostics("n/a", "n/a", "n/a", "n/a", "n/a", "n/a", 0, 0);
+    }
   }
 }

@@ -30,7 +30,56 @@ type ElevenLabsConversation = {
   getId?: () => string
 }
 
+type ElevenLabsStartSessionOptions = {
+  conversationToken: string
+  connectionType: 'webrtc'
+  onConnect?: () => void
+  onDisconnect?: (details: DisconnectionDetails) => void
+  onMessage?: (payload: MessagePayload) => void
+  onError?: (message: string) => void
+}
+
+type ElevenLabsConversationStarter = {
+  startSession: (options: ElevenLabsStartSessionOptions) => Promise<ElevenLabsConversation>
+}
+
 type VoiceErrorDiagnostics = Record<string, string | number | boolean>
+
+type ElevenLabsTokenDiagnostics = {
+  issuer?: string
+  subject?: string
+  participantName?: string
+  room?: string
+  expiresAt?: string
+}
+
+type ElevenLabsClientDiagnostics = {
+  reason?: string
+  closeCode?: number
+  closeReason?: string
+  message?: string
+}
+
+type VoiceDebugSnapshot = {
+  provider: 'ELEVENLABS'
+  event: string
+  at: string
+  details: Record<string, unknown>
+}
+
+function writeElevenLabsDebugSnapshot(event: string, details: Record<string, unknown>) {
+  const maybeWindow =
+    typeof window !== 'undefined'
+      ? (window as Window & { __ABOUTME_VOICE_DEBUG__?: VoiceDebugSnapshot })
+      : undefined
+  if (!maybeWindow) return
+  maybeWindow.__ABOUTME_VOICE_DEBUG__ = {
+    provider: 'ELEVENLABS',
+    event,
+    at: new Date().toISOString(),
+    details,
+  }
+}
 
 function mapGetUserMediaError(e: unknown, lang: SpeechUiLang): string {
   const en = lang === 'en'
@@ -63,6 +112,64 @@ function compactWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split('.')
+  if (parts.length < 2 || parts[1].trim() === '') return null
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    const json = atob(padded)
+    const parsed = JSON.parse(json) as unknown
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
+}
+
+function decodeElevenLabsTokenDiagnostics(token: string): ElevenLabsTokenDiagnostics | undefined {
+  const payload = decodeJwtPayload(token)
+  if (!payload) return undefined
+  const video = payload.video
+  const room =
+    video && typeof video === 'object' && typeof (video as Record<string, unknown>).room === 'string'
+      ? compactWhitespace((video as Record<string, string>).room)
+      : undefined
+  const expiresAt =
+    typeof payload.exp === 'number' && Number.isFinite(payload.exp)
+      ? new Date(payload.exp * 1000).toISOString()
+      : undefined
+  return {
+    ...(typeof payload.iss === 'string' && payload.iss.trim() !== ''
+      ? { issuer: compactWhitespace(payload.iss) }
+      : {}),
+    ...(typeof payload.sub === 'string' && payload.sub.trim() !== ''
+      ? { subject: compactWhitespace(payload.sub) }
+      : {}),
+    ...(typeof payload.name === 'string' && payload.name.trim() !== ''
+      ? { participantName: compactWhitespace(payload.name) }
+      : {}),
+    ...(room ? { room } : {}),
+    ...(expiresAt ? { expiresAt } : {}),
+  }
+}
+
+function logElevenLabsLifecycle(event: string, details: Record<string, unknown>) {
+  console.info(`[voice] ${event}`, details)
+  writeElevenLabsDebugSnapshot(event, details)
+}
+
+async function resolveElevenLabsConversationStarter(): Promise<ElevenLabsConversationStarter> {
+  const maybeWindow =
+    typeof window !== 'undefined'
+      ? (window as Window & { __ABOUTME_E2E_ELEVENLABS_CLIENT__?: ElevenLabsConversationStarter })
+      : undefined
+  if (maybeWindow?.__ABOUTME_E2E_ELEVENLABS_CLIENT__) {
+    return maybeWindow.__ABOUTME_E2E_ELEVENLABS_CLIENT__
+  }
+  const { Conversation } = await import('@elevenlabs/client')
+  return Conversation as ElevenLabsConversationStarter
+}
+
 function appendDiagnosticSuffix(
   message: string,
   diagnostics?: { closeCode?: number; closeReason?: string },
@@ -72,9 +179,44 @@ function appendDiagnosticSuffix(
   if (closeCode == null && closeReason === '') return message
 
   const parts: string[] = []
-  if (closeCode != null) parts.push(`close code ${closeCode}`)
-  if (closeReason !== '') parts.push(closeReason)
+  if (closeCode != null && !message.includes(`close code ${closeCode}`)) parts.push(`close code ${closeCode}`)
+  if (closeReason !== '' && !message.includes(closeReason)) parts.push(closeReason)
+  if (parts.length === 0) return message
   return `${message} (${parts.join(': ')})`
+}
+
+function normalizeElevenLabsClientDiagnostics(
+  details:
+    | {
+      reason?: string
+      closeCode?: number
+      closeReason?: string
+      message?: string
+      context?: unknown
+    }
+    | null
+    | undefined,
+): ElevenLabsClientDiagnostics | undefined {
+  if (!details) return undefined
+  const normalized: ElevenLabsClientDiagnostics = {}
+  if (typeof details.reason === 'string' && details.reason.trim() !== '') {
+    normalized.reason = compactWhitespace(details.reason)
+  }
+  if (typeof details.closeCode === 'number') {
+    normalized.closeCode = details.closeCode
+  }
+  const contextCloseReason =
+    details.context instanceof CloseEvent && typeof details.context.reason === 'string'
+      ? details.context.reason
+      : ''
+  const closeReason = details.closeReason?.trim() || contextCloseReason.trim()
+  if (closeReason !== '') {
+    normalized.closeReason = compactWhitespace(closeReason)
+  }
+  if (typeof details.message === 'string' && details.message.trim() !== '') {
+    normalized.message = compactWhitespace(details.message)
+  }
+  return Object.keys(normalized).length > 0 ? normalized : undefined
 }
 
 function extractElevenLabsDiagnostics(
@@ -84,21 +226,55 @@ function extractElevenLabsDiagnostics(
       closeCode?: number
       closeReason?: string
       message?: string
+      context?: unknown
     }
     | null
     | undefined,
   stage: string,
 ): VoiceErrorDiagnostics {
   const diagnostics: VoiceErrorDiagnostics = { provider: 'ELEVENLABS', stage }
-  if (details?.reason) diagnostics.disconnect_reason = details.reason
-  if (typeof details?.closeCode === 'number') diagnostics.close_code = details.closeCode
-  if (typeof details?.closeReason === 'string' && details.closeReason.trim() !== '') {
-    diagnostics.close_reason = compactWhitespace(details.closeReason)
+  const normalized = normalizeElevenLabsClientDiagnostics(details)
+  if (normalized?.reason) diagnostics.disconnect_reason = normalized.reason
+  if (typeof normalized?.closeCode === 'number') diagnostics.close_code = normalized.closeCode
+  if (typeof normalized?.closeReason === 'string' && normalized.closeReason !== '') {
+    diagnostics.close_reason = normalized.closeReason
   }
-  if (typeof details?.message === 'string' && details.message.trim() !== '') {
-    diagnostics.message = compactWhitespace(details.message)
+  if (typeof normalized?.message === 'string' && normalized.message !== '') {
+    diagnostics.message = normalized.message
   }
   return diagnostics
+}
+
+function mergeElevenLabsDiagnostics(
+  primary: VoiceErrorDiagnostics,
+  fallback?: ElevenLabsClientDiagnostics,
+): VoiceErrorDiagnostics {
+  if (!fallback) return primary
+  const merged: VoiceErrorDiagnostics = { ...primary }
+  if (merged.disconnect_reason === undefined && fallback.reason) {
+    merged.disconnect_reason = fallback.reason
+  }
+  if (merged.close_code === undefined && typeof fallback.closeCode === 'number') {
+    merged.close_code = fallback.closeCode
+  }
+  if (merged.close_reason === undefined && fallback.closeReason) {
+    merged.close_reason = fallback.closeReason
+  }
+  if (merged.message === undefined && fallback.message) {
+    merged.message = fallback.message
+  }
+  return merged
+}
+
+const LIVEKIT_VALIDATE_PATTERNS = [
+  /rtc.*path.*not found/i,
+  /v1.*rtc.*not found/i,
+  /ServiceNotFound/i,
+  /rtc\/v1\/validate/i,
+]
+
+function isLiveKitValidationError(message: string): boolean {
+  return LIVEKIT_VALIDATE_PATTERNS.some((p) => p.test(message))
 }
 
 function formatElevenLabsStartupError(error: unknown, lang: SpeechUiLang): {
@@ -127,6 +303,14 @@ function formatElevenLabsStartupError(error: unknown, lang: SpeechUiLang): {
   }
   if (closeCode != null) diagnostics.close_code = closeCode
   if (closeReason !== '') diagnostics.close_reason = closeReason
+
+  if (isLiveKitValidationError(rawMessage) || isLiveKitValidationError(closeReason)) {
+    diagnostics.livekit_validate_404 = true
+    const userMessage = en
+      ? 'Voice server connection failed. The agent may be misconfigured or temporarily unavailable.'
+      : 'Tilkobling til taleserveren feilet. Agenten kan være feilkonfigurert eller midlertidig utilgjengelig.'
+    return { message: userMessage, diagnostics }
+  }
 
   return {
     message: appendDiagnosticSuffix(
@@ -665,34 +849,73 @@ export function useRealtimeVoice(
   }
 
   async function connectElevenLabs(analytics: RealtimeVoiceAnalytics) {
-    if (!selectedModelId()) {
+    const modelId = selectedModelId()
+    if (!modelId) {
       throw new Error(
         language.value === 'no'
           ? 'Ingen ElevenLabs-agent er konfigurert.'
-          : 'No ElevenLabs agent is configured.',
+        : 'No ElevenLabs agent is configured.',
       )
     }
+    let latestElevenLabsClientDiagnostics: ElevenLabsClientDiagnostics | undefined
     try {
       const permissionProbe = await navigator.mediaDevices.getUserMedia({ audio: true })
       permissionProbe.getTracks().forEach((track) => track.stop())
 
       voiceTraceSession = { analytics, backendContacted: true, finalized: false }
-      const tokenResult = await createElevenLabsConversationToken(selectedModelId()!, analytics)
+      logElevenLabsLifecycle('ElevenLabs token request starting', {
+        provider: 'ELEVENLABS',
+        model_id: modelId,
+        language: language.value,
+        ai_trace_id: analytics.traceId,
+      })
+      const tokenResult = await createElevenLabsConversationToken(modelId, analytics)
       if (!tokenResult.ok) {
+        console.warn('[voice] ElevenLabs token request failed', {
+          provider: 'ELEVENLABS',
+          model_id: modelId,
+          status: tokenResult.status,
+          code: tokenResult.code ?? 'n/a',
+          message: compactWhitespace(tokenResult.message || ''),
+          ai_trace_id: analytics.traceId,
+        })
         throw new Error(mapTokenFailureToUserMessage(language.value, tokenResult))
       }
+      const tokenDiagnostics = decodeElevenLabsTokenDiagnostics(tokenResult.token)
+      logElevenLabsLifecycle('ElevenLabs token issued', {
+        provider: 'ELEVENLABS',
+        model_id: modelId,
+        ai_trace_id: analytics.traceId,
+        ...(tokenDiagnostics ?? {}),
+      })
 
-      const { Conversation } = await import('@elevenlabs/client')
-      elevenLabsConversation = (await Conversation.startSession({
+      const conversationStarter = await resolveElevenLabsConversationStarter()
+      logElevenLabsLifecycle('ElevenLabs startSession starting', {
+        provider: 'ELEVENLABS',
+        model_id: modelId,
+        connection_type: 'webrtc',
+        ai_trace_id: analytics.traceId,
+        ...(tokenDiagnostics ?? {}),
+      })
+      elevenLabsConversation = (await conversationStarter.startSession({
         conversationToken: tokenResult.token,
         connectionType: 'webrtc',
         onConnect: () => {
           if (userEndedSession || midSessionFailureHandled) return
+          logElevenLabsLifecycle('ElevenLabs startSession connected', {
+            provider: 'ELEVENLABS',
+            model_id: modelId,
+            conversation_id: elevenLabsConversation?.getId?.() ?? 'n/a',
+            ai_trace_id: analytics.traceId,
+            ...(tokenDiagnostics ?? {}),
+          })
           connectionState.value = 'connected'
         },
         onDisconnect: (details: DisconnectionDetails) => {
+          latestElevenLabsClientDiagnostics = normalizeElevenLabsClientDiagnostics(details)
           if (userEndedSession || midSessionFailureHandled) return
           const diagnostics = extractElevenLabsDiagnostics(details, 'disconnect')
+          writeElevenLabsDebugSnapshot('ElevenLabs disconnect', diagnostics)
           console.warn('[voice] ElevenLabs disconnect', diagnostics)
           handleMidSessionFailure(formatElevenLabsDisconnectMessage(details, language.value), diagnostics)
         },
@@ -705,12 +928,18 @@ export function useRealtimeVoice(
             : language.value === 'no'
               ? 'ElevenLabs-sesjonen returnerte en feil.'
               : 'ElevenLabs session returned an error.'
+          latestElevenLabsClientDiagnostics = {
+            ...latestElevenLabsClientDiagnostics,
+            reason: latestElevenLabsClientDiagnostics?.reason ?? 'error',
+            message: compactWhitespace(msg),
+          }
           captureClientException(new Error(`elevenlabs_onError: ${msg}`))
           const diagnostics: VoiceErrorDiagnostics = {
             provider: 'ELEVENLABS',
             stage: 'onError',
             message: compactWhitespace(msg),
           }
+          writeElevenLabsDebugSnapshot('ElevenLabs onError', diagnostics)
           console.warn('[voice] ElevenLabs onError', diagnostics)
           handleMidSessionFailure(msg, diagnostics)
         },
@@ -720,6 +949,13 @@ export function useRealtimeVoice(
         return
       }
 
+      logElevenLabsLifecycle('ElevenLabs startSession resolved', {
+        provider: 'ELEVENLABS',
+        model_id: modelId,
+        conversation_id: elevenLabsConversation?.getId?.() ?? 'n/a',
+        ai_trace_id: analytics.traceId,
+        ...(tokenDiagnostics ?? {}),
+      })
       if (connectionState.value !== 'connected') {
         connectionState.value = 'connected'
       }
@@ -747,7 +983,23 @@ export function useRealtimeVoice(
       } else if (e instanceof Error && e.message) {
         const formatted = formatElevenLabsStartupError(e, language.value)
         msg = formatted.message
-        diagnostics = formatted.diagnostics
+        diagnostics = mergeElevenLabsDiagnostics(formatted.diagnostics, latestElevenLabsClientDiagnostics)
+        msg = appendDiagnosticSuffix(msg, {
+          closeCode: typeof diagnostics.close_code === 'number' ? diagnostics.close_code : undefined,
+          closeReason: typeof diagnostics.close_reason === 'string' ? diagnostics.close_reason : undefined,
+        })
+        writeElevenLabsDebugSnapshot('ElevenLabs startSession failed', {
+          provider: 'ELEVENLABS',
+          model_id: modelId,
+          ai_trace_id: analytics.traceId,
+          ...diagnostics,
+        })
+        console.warn('[voice] ElevenLabs startSession failed', {
+          provider: 'ELEVENLABS',
+          model_id: modelId,
+          ai_trace_id: analytics.traceId,
+          ...(diagnostics ?? {}),
+        })
       } else {
         msg = language.value === 'no' ? 'Kunne ikke starte samtalen.' : 'Could not start voice session.'
       }

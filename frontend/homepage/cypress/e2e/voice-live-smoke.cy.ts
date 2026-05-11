@@ -16,6 +16,25 @@ function withSyntheticMicrophone() {
   return {
     onBeforeLoad(win: Cypress.AUTWindow) {
       win.localStorage.setItem('lang', 'en')
+      win.sessionStorage.removeItem('auth')
+      ;(win as typeof win & { __ABOUTME_E2E_BROWSER_LOGS__?: string[] }).__ABOUTME_E2E_BROWSER_LOGS__ = []
+      for (const level of ['info', 'warn', 'error'] as const) {
+        const original = win.console[level].bind(win.console)
+        win.console[level] = (...args: unknown[]) => {
+          const rendered = args.map((arg) => {
+            if (typeof arg === 'string') return arg
+            try {
+              return JSON.stringify(arg)
+            } catch {
+              return String(arg)
+            }
+          }).join(' ')
+          const current = (win as typeof win & { __ABOUTME_E2E_BROWSER_LOGS__?: string[] }).__ABOUTME_E2E_BROWSER_LOGS__ ?? []
+          current.push(`[${level}] ${rendered}`)
+          ;(win as typeof win & { __ABOUTME_E2E_BROWSER_LOGS__?: string[] }).__ABOUTME_E2E_BROWSER_LOGS__ = current.slice(-20)
+          original(...args)
+        }
+      }
       Object.defineProperty(win.navigator, 'mediaDevices', {
         configurable: true,
         value: {
@@ -33,6 +52,43 @@ function withSyntheticMicrophone() {
       })
     },
   }
+}
+
+type VoiceDebugSnapshot = {
+  provider: 'ELEVENLABS'
+  event: string
+  at: string
+  details: Record<string, unknown>
+}
+
+function formatVoiceDebugSnapshot(snapshot: VoiceDebugSnapshot | undefined): string {
+  if (!snapshot) return 'none'
+  return JSON.stringify(snapshot)
+}
+
+function waitForElevenLabsSessionOutcome() {
+  cy.window({ log: false, timeout: 30_000 }).should((win) => {
+    const bodyText = win.document.body.textContent ?? ''
+    const hasConnectedUi = bodyText.includes('End session')
+    const hasErrorUi = bodyText.includes('Voice could not start') || bodyText.includes('Voice agent disconnected')
+    expect(
+      hasConnectedUi || hasErrorUi,
+      `waiting for ElevenLabs session outcome; latest debug=${formatVoiceDebugSnapshot(
+        (win as typeof win & { __ABOUTME_VOICE_DEBUG__?: VoiceDebugSnapshot }).__ABOUTME_VOICE_DEBUG__,
+      )}`,
+    ).to.eq(true)
+  })
+
+  cy.window({ log: false }).then((win) => {
+    const bodyText = win.document.body.textContent ?? ''
+    const debug = (win as typeof win & { __ABOUTME_VOICE_DEBUG__?: VoiceDebugSnapshot }).__ABOUTME_VOICE_DEBUG__
+    const browserLogs = (win as typeof win & { __ABOUTME_E2E_BROWSER_LOGS__?: string[] }).__ABOUTME_E2E_BROWSER_LOGS__ ?? []
+    if (bodyText.includes('Voice could not start') || bodyText.includes('Voice agent disconnected')) {
+      throw new Error(
+        `ElevenLabs live browser session failed. latest debug=${formatVoiceDebugSnapshot(debug)} browserLogs=${JSON.stringify(browserLogs)}`,
+      )
+    }
+  })
 }
 
 describe('Voice live smoke', () => {
@@ -167,8 +223,15 @@ describe('Voice live smoke', () => {
 
       cy.wait('@elevenLabsToken', { timeout: 30_000 }).then((interception) => {
         expect(interception.request.body).to.deep.equal({ modelId: targetAgentId })
-        expect(interception.response?.statusCode).to.eq(200)
+        expect(
+          interception.response?.statusCode,
+          `elevenlabs token response body=${JSON.stringify(interception.response?.body)} headers=${JSON.stringify(
+            interception.response?.headers,
+          )}`,
+        ).to.eq(200)
       })
+
+      waitForElevenLabsSessionOutcome()
 
       cy.contains('button', 'End session', { timeout: 30_000 }).should('be.visible')
       cy.contains('Voice could not start').should('not.exist')

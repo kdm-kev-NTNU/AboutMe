@@ -74,5 +74,36 @@ public class ConfigLogging implements ApplicationRunner {
                 "portfolio.realtime.enabled=true but spring.ai.openai.api-key is blank; "
                     + "voice status will show disabled and POST /realtime/session will return 503 until a key is set.");
         }
+
+        boolean elevenLabsOn =
+            realtimeOn
+                && Boolean.parseBoolean(
+                    environment.getProperty("portfolio.realtime.providers.elevenlabs.enabled", "false"));
+        if (elevenLabsOn) {
+            String elApiKey = environment.getProperty("ELEVENLABS_API_KEY", "");
+            String elAgentId = environment.getProperty("ELEVENLABS_AGENT_ID", "");
+            log.info("Config: ElevenLabs provider enabled=true, agent-id={}, api-key={}",
+                elAgentId == null || elAgentId.isBlank() ? "<empty>" : elAgentId,
+                elApiKey == null || elApiKey.isBlank() ? "<empty>" : "***");
+            if (elAgentId == null || elAgentId.isBlank()) {
+                log.warn(
+                    "ElevenLabs provider is enabled but ELEVENLABS_AGENT_ID is blank; "
+                        + "token requests will fail with VOICE_MODEL_NOT_CONFIGURED. "
+                        + "Set a valid agent ID from the ElevenLabs dashboard.");
+            }
+            if (elApiKey == null || elApiKey.isBlank()) {
+                log.warn(
+                    "ElevenLabs provider is enabled but ELEVENLABS_API_KEY is blank; "
+                        + "token requests will fail with API_KEY_MISSING.");
+            }
+            String elEnv = environment.getProperty("ELEVENLABS_AGENT_ENVIRONMENT", "");
+            String elBranch = environment.getProperty("ELEVENLABS_AGENT_BRANCH_ID", "");
+            if (elEnv != null && !elEnv.isBlank()) {
+                log.info("Config: ElevenLabs agent environment={}", elEnv);
+            }
+            if (elBranch != null && !elBranch.isBlank()) {
+                log.info("Config: ElevenLabs agent branch-id={}", elBranch);
+            }
+        }
     }
 }

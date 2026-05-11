@@ -477,6 +477,117 @@ describe('useRealtimeVoice', () => {
     scope.stop()
   })
 
+  it('merges browser disconnect diagnostics when ElevenLabs rejects after onDisconnect fires', async () => {
+    elevenLabsStartSessionMock.mockImplementation(
+      async (opts: { onDisconnect?: (details: unknown) => void }) => {
+        opts.onDisconnect?.({
+          reason: 'error',
+          closeCode: 4010,
+          context: new CloseEvent('close', { reason: 'browser-side close reason' }),
+        })
+        throw new Error('LiveKit validation failed')
+      },
+    )
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const { captureProductAnalyticsEvent } = await import('@/lib/analytics')
+    const lang = ref<SpeechUiLang>('en')
+    const selectedModel = ref({
+      provider: 'ELEVENLABS' as const,
+      id: 'agent_1',
+      label: 'ElevenLabs Agent',
+      defaultOption: false,
+    })
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang, undefined, selectedModel)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('close code 4010')
+    expect(api.errorMessage.value).toContain('browser-side close reason')
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_error',
+      expect.objectContaining({
+        provider: 'ELEVENLABS',
+        stage: 'start_exception',
+        disconnect_reason: 'error',
+        close_code: 4010,
+        close_reason: 'browser-side close reason',
+      }),
+    )
+
+    scope.stop()
+  })
+
+  it('shows actionable message when ElevenLabs startSession fails with LiveKit validate 404', async () => {
+    const startupError = new Error('Initial connection failed: v1 RTC path not found. Consider upgrading your LiveKit server version')
+    elevenLabsStartSessionMock.mockRejectedValue(startupError)
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const { captureProductAnalyticsEvent } = await import('@/lib/analytics')
+    const lang = ref<SpeechUiLang>('en')
+    const selectedModel = ref({
+      provider: 'ELEVENLABS' as const,
+      id: 'agent_1',
+      label: 'ElevenLabs Agent',
+      defaultOption: false,
+    })
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang, undefined, selectedModel)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('Voice server connection failed')
+    expect(api.errorMessage.value).toContain('misconfigured')
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_error',
+      expect.objectContaining({
+        provider: 'ELEVENLABS',
+        livekit_validate_404: true,
+      }),
+    )
+
+    scope.stop()
+  })
+
+  it('shows Norwegian actionable message for LiveKit validate 404', async () => {
+    const startupError = new Error('ServiceNotFound: rtc/v1/validate returned 404')
+    elevenLabsStartSessionMock.mockRejectedValue(startupError)
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const lang = ref<SpeechUiLang>('no')
+    const selectedModel = ref({
+      provider: 'ELEVENLABS' as const,
+      id: 'agent_1',
+      label: 'ElevenLabs Agent',
+      defaultOption: false,
+    })
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang, undefined, selectedModel)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('taleserveren feilet')
+    expect(api.errorMessage.value).toContain('feilkonfigurert')
+
+    scope.stop()
+  })
+
   it('captures SDP exchange failures as errors without leaving the UI connected', async () => {
     exchangeRealtimeSdpMock.mockResolvedValue({
       ok: false,

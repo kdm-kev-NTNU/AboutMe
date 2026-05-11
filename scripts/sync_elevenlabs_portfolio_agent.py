@@ -15,7 +15,8 @@ Options:
   --dry-run              Print planned reads only (no API calls)
   --print-agent          GET agent and print a short summary (prompt length, KB count, voice)
   --dump-config          GET agent and print full conversation_config JSON (tools, workflow, edges)
-  --fix-validation       Remove stale transfer_to_agent tool and fix duplicate unconditional workflow edges
+  --fix-validation       Remove stale transfer_to_agent tool, fix duplicate unconditional workflow edges,
+                         and drop/normalize invalid auth.allowlist hostnames (dashboard validation)
   --skip-kb              Do not create or attach knowledge base
   --skip-prompt          Do not update system prompt / first message
 
@@ -31,6 +32,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 # Maven layout: src/main/resources
@@ -227,11 +229,97 @@ def fix_duplicate_unconditional_workflow_edges(cc_dump: dict) -> list[str]:
     return messages
 
 
+def normalize_allowlist_hostname(raw: object) -> str | None:
+    """
+    ElevenLabs: "Hostname must consist of a domain and an optional port".
+    Accepts bare host:port, strips accidental paths / schemes / userinfo.
+    """
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    if s.isdigit():
+        return None
+
+    if "://" in s:
+        parsed = urlparse(s)
+        if not parsed.hostname:
+            return None
+        return f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
+
+    hostport = s.split("/", 1)[0].strip()
+    if "@" in hostport:
+        hostport = hostport.split("@")[-1].strip()
+
+    host: str
+    port: str | None = None
+    if hostport.startswith("["):
+        end = hostport.find("]")
+        if end == -1:
+            return None
+        inner = hostport[1:end].strip()
+        rest = hostport[end + 1 :].lstrip()
+        if rest.startswith(":") and rest[1:].isdigit():
+            port = rest[1:]
+        host = inner
+    elif ":" in hostport:
+        left, right = hostport.rsplit(":", 1)
+        if right.isdigit():
+            host, port = left, right
+        else:
+            host = hostport
+    else:
+        host = hostport
+
+    host = host.strip()
+    if not host or host.isdigit():
+        return None
+
+    return f"{host}:{port}" if port else host
+
+
+def sanitize_auth_allowlist_hostnames(obj: object, path: str, messages: list[str]) -> None:
+    """Walk conversation_config JSON and fix auth.allowlist[].hostname entries anywhere they appear."""
+    if isinstance(obj, dict):
+        allow = obj.get("allowlist")
+        if isinstance(allow, list):
+            kept: list = []
+            allow_changed = False
+            for i, item in enumerate(allow):
+                if isinstance(item, dict) and "hostname" in item:
+                    raw_h = item.get("hostname")
+                    raw_s = str(raw_h).strip() if raw_h is not None else ""
+                    fixed = normalize_allowlist_hostname(raw_h)
+                    ctx = f"{path}.allowlist[{i}]" if path else f"allowlist[{i}]"
+                    if fixed is None:
+                        messages.append(f"{ctx}: removed invalid hostname {raw_h!r}")
+                        allow_changed = True
+                        continue
+                    new_item = dict(item)
+                    new_item["hostname"] = fixed
+                    kept.append(new_item)
+                    if fixed != raw_s:
+                        messages.append(f"{ctx}: normalized hostname {raw_h!r} -> {fixed!r}")
+                        allow_changed = True
+                else:
+                    kept.append(item)
+            if allow_changed:
+                obj["allowlist"] = kept
+        for key, val in obj.items():
+            child = f"{path}.{key}" if path else str(key)
+            sanitize_auth_allowlist_hostnames(val, child, messages)
+    elif isinstance(obj, list):
+        for i, val in enumerate(obj):
+            sanitize_auth_allowlist_hostnames(val, f"{path}[{i}]", messages)
+
+
 def apply_validation_fixes(cc_dump: dict) -> list[str]:
     """Apply all ElevenLabs validation fixes; mutates cc_dump."""
     out: list[str] = []
     out.extend(strip_transfer_to_agent_tool(cc_dump))
     out.extend(fix_duplicate_unconditional_workflow_edges(cc_dump))
+    sanitize_auth_allowlist_hostnames(cc_dump, "", out)
     return out
 
 
