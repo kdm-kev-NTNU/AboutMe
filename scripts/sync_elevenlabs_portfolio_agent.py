@@ -131,12 +131,13 @@ def strip_transfer_from_prompt_dict(prompt: dict, context: str) -> list[str]:
 
     bit = prompt.get("built_in_tools")
     if isinstance(bit, dict) and "transfer_to_agent" in bit:
-        new_bit = {k: v for k, v in bit.items() if k != "transfer_to_agent"}
-        messages.append(f"{context}: removed built_in_tools.transfer_to_agent.")
-        if new_bit:
-            prompt["built_in_tools"] = new_bit
+        # ElevenLabs PATCH keeps omitted nested fields. Send explicit null so the
+        # invalid transfer tool is actually cleared server-side.
+        if bit.get("transfer_to_agent") is not None:
+            messages.append(f"{context}: nulled built_in_tools.transfer_to_agent.")
         else:
-            prompt.pop("built_in_tools", None)
+            messages.append(f"{context}: kept built_in_tools.transfer_to_agent=null.")
+        bit["transfer_to_agent"] = None
 
     return messages
 
