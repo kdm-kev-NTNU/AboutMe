@@ -1,0 +1,49 @@
+# GitGuardian: secret scanning gate for pull requests and pushes.
+#
+# Requires GITGUARDIAN_API_KEY in GitHub Actions secrets. This workflow fails
+# hard when the token is missing so secret scanning remains a real merge gate.
+name: GitGuardian scan
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '37 18 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: GitGuardian scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: GitGuardian preflight
+        shell: bash
+        env:
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GITGUARDIAN_API_KEY:-}" ]; then
+            echo "::error title=GitGuardian token missing::Set GITGUARDIAN_API_KEY in repository Actions secrets."
+            exit 1
+          fi
+          echo "GitGuardian token detected."
+
+      - name: GitGuardian scan
+        uses: GitGuardian/ggshield/actions/secret@v1.49.0
+        env:
+          GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_PUSH_BASE_SHA: ${{ github.event.base }}
+          GITHUB_PULL_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}

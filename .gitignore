@@ -9,7 +9,19 @@ Thumbs.db
 # Local environment (secrets / machine-specific)
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+
+# Local credentials / private key material
+**/credentials.json
+**/secrets.json
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/id_rsa
+**/id_ed25519
 
 # Local vector store exports (not used by runtime)
 backend/vectordatabase/
