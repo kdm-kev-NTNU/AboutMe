@@ -45,17 +45,24 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Validate live smoke configuration
+        shell: pwsh
         run: |
           if ([string]::IsNullOrWhiteSpace($env:VOICE_LIVE_BASE_URL)) {
             throw "Set workflow input base_url or repository variable VOICE_LIVE_BASE_URL."
           }
+          $smokeScript = Join-Path $env:GITHUB_WORKSPACE 'scripts/voice-live-smoke.ps1'
+          if (-not (Test-Path $smokeScript)) {
+            throw "Missing smoke script at $smokeScript."
+          }
           Write-Host "VOICE_LIVE_BASE_URL=$env:VOICE_LIVE_BASE_URL"
           Write-Host "VOICE_LIVE_EXPECT_REALTIME_ENABLED=$env:VOICE_LIVE_EXPECT_REALTIME_ENABLED"
           Write-Host "VOICE_LIVE_RUN_OPENAI=$env:VOICE_LIVE_RUN_OPENAI"
+          Write-Host "Smoke script=$smokeScript"
 
       - name: Backend realtime contract smoke
+        shell: pwsh
         run: |
-          ./scripts/voice-live-smoke.ps1 `
+          & (Join-Path $env:GITHUB_WORKSPACE 'scripts/voice-live-smoke.ps1') `
             -BaseUrl $env:VOICE_LIVE_BASE_URL `
             -ExpectRealtimeEnabled ([System.Convert]::ToBoolean($env:VOICE_LIVE_EXPECT_REALTIME_ENABLED))
 
