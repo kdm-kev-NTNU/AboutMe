@@ -38,6 +38,7 @@ Portfolio listing and career content load from `src/types/*.json` files (`projec
 | `npm run test:e2e:voice-live` | Realtime voice smoke without requiring a real OpenAI SDP session |
 | `npm run test:e2e:voice-live:openai` | Full live OpenAI Realtime browser smoke |
 | `npm run test:e2e:voice-live:elevenlabs` | Calls the backend to mint a real ElevenLabs conversation token (requires ElevenLabs configured on the server) |
+| `npm run test:e2e:voice-live:elevenlabs-session` | Opens a real ElevenLabs browser voice session with a synthetic microphone |
 | `npm run lint` | ESLint with fixes |
 | `npm run lint:ci` | ESLint without fixes and with zero warnings |
 | `npm run format` | Prettier over `src/` |
@@ -95,4 +96,10 @@ Run it with:
 
 ```bash
 npm run test:e2e:voice-live:elevenlabs -- --config baseUrl=http://localhost:5173
+
+The **ElevenLabs** browser smoke goes one step further and actually starts the WebRTC session in Cypress with a synthetic microphone. It uses the same backend requirements:
+
+```bash
+npm run test:e2e:voice-live:elevenlabs-session -- --config baseUrl=http://localhost:5173
+```
 ```

@@ -40,6 +40,7 @@ describe('Voice live smoke', () => {
   const expectRealtimeEnabled = envFlag('VOICE_LIVE_EXPECT_REALTIME_ENABLED', true)
   const runOpenAiSession = envFlag('VOICE_LIVE_RUN_OPENAI')
   const runElevenLabsToken = envFlag('VOICE_LIVE_RUN_ELEVENLABS')
+  const runElevenLabsSession = envFlag('VOICE_LIVE_RUN_ELEVENLABS_SESSION')
   const elevenLabsAgentId = (Cypress.env('VOICE_LIVE_ELEVENLABS_AGENT_ID') as string | undefined) ?? ''
 
   beforeEach(function () {
@@ -135,6 +136,46 @@ describe('Voice live smoke', () => {
         expect((body.token ?? '').length, 'JWT-shaped token length').to.be.greaterThan(40)
         expect(body.token, 'three-segment JWT').to.match(/^[\w-]+\.[\w-]+\.[\w-]+$/)
       })
+    })
+  })
+
+  it('starts a real ElevenLabs browser session when explicitly enabled', function () {
+    if (!runElevenLabsSession) {
+      this.skip()
+    }
+
+    cy.request('/api/realtime/models').then((modelsResponse) => {
+      expect(modelsResponse.status, 'realtime models endpoint').to.eq(200)
+      const elevenLabsModels = (modelsResponse.body as Array<{ id: string; provider: string }>).filter(
+        (m) => m.provider === 'ELEVENLABS',
+      )
+      expect(elevenLabsModels, 'at least one ELEVENLABS model is exposed').to.have.length.greaterThan(0)
+
+      const targetAgentId = elevenLabsAgentId || elevenLabsModels[0].id
+
+      cy.intercept('GET', '**/api/realtime/status').as('realtimeStatus')
+      cy.intercept('POST', '**/api/realtime/elevenlabs/token').as('elevenLabsToken')
+
+      cy.visit('/voice', withSyntheticMicrophone())
+      cy.wait('@realtimeStatus').its('response.body').should('deep.include', { enabled: true })
+
+      cy.get('[data-testid="voice-model-select"]', { timeout: 15_000 })
+        .should('be.visible')
+        .select(targetAgentId)
+
+      cy.contains('button', 'Start voice', { timeout: 15_000 }).click()
+
+      cy.wait('@elevenLabsToken', { timeout: 30_000 }).then((interception) => {
+        expect(interception.request.body).to.deep.equal({ modelId: targetAgentId })
+        expect(interception.response?.statusCode).to.eq(200)
+      })
+
+      cy.contains('button', 'End session', { timeout: 30_000 }).should('be.visible')
+      cy.contains('Voice could not start').should('not.exist')
+      cy.contains('Voice agent disconnected').should('not.exist')
+
+      cy.contains('button', 'End session').click()
+      cy.contains('button', 'Start voice', { timeout: 15_000 }).should('be.visible')
     })
   })
 
