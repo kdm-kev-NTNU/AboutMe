@@ -67,4 +67,14 @@ class InputValidatorTest {
 		assertFalse(InputValidator.isValidFeedbackMessage("see <script"));
 		assertFalse(InputValidator.isValidFeedbackMessage("ok!", 2));
 	}
+
+	@Test
+	void isValidFeedbackMessageAcceptsSafeInputAndRespectsLimits() {
+		assertFalse(InputValidator.isValidFeedbackMessage(null));
+		assertFalse(InputValidator.isValidFeedbackMessage(""));
+		assertFalse(InputValidator.isValidFeedbackMessage("   "));
+		assertTrue(InputValidator.isValidFeedbackMessage("Thanks for the portfolio!"));
+		assertTrue(InputValidator.isValidFeedbackMessage("x".repeat(4000)));
+		assertFalse(InputValidator.isValidFeedbackMessage("x".repeat(4001)));
+	}
 }

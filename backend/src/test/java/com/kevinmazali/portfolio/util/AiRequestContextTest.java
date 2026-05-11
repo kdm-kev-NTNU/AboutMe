@@ -16,6 +16,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -88,5 +89,17 @@ class AiRequestContextTest {
     RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(req));
     String id = AiRequestContext.budgetUserIdentifier(new AiBudgetProperties());
     assertTrue(id.startsWith("anon:"));
+  }
+
+  @Test
+  void openAiSafetyIdentifier_handlesNullAndEmptyInput() {
+    String nullId = AiRequestContext.openAiSafetyIdentifier(null);
+    String emptyId = AiRequestContext.openAiSafetyIdentifier("");
+    String userId = AiRequestContext.openAiSafetyIdentifier("alice");
+
+    assertEquals(64, nullId.length());
+    assertEquals(64, emptyId.length());
+    assertEquals(nullId, emptyId);
+    assertNotEquals(nullId, userId);
   }
 }
