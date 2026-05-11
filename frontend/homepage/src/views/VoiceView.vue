@@ -108,6 +108,50 @@ const statusLabel = computed(() => {
 
 const errorDialogCopy = computed(() => {
   const en = language.value === 'en'
+  const message = errorMessage.value.toLowerCase()
+  const microphoneDenied =
+    message.includes('microphone permission denied') || message.includes('mikrofontilgang ble nektet')
+  const rateLimited =
+    message.includes('too many voice requests') ||
+    message.includes('for mange stemmeforespørsler') ||
+    message.includes('too many voice session starts from this network') ||
+    message.includes('rate-limited') ||
+    message.includes('rate limited')
+  const agentDisconnected =
+    message.includes('the voice agent could not start') ||
+    message.includes('agent disconnected') ||
+    message.includes('stemmeagenten kunne ikke starte')
+
+  if (microphoneDenied) {
+    return {
+      title: en ? 'Microphone access is blocked' : 'Mikrofontilgang er blokkert',
+      description: en
+        ? 'Allow microphone access in your browser, then click Try again.'
+        : 'Gi nettleseren tilgang til mikrofonen, og trykk Prøv igjen.',
+      retry: en ? 'Try again' : 'Prøv igjen',
+    }
+  }
+
+  if (rateLimited) {
+    return {
+      title: en ? 'Voice is rate-limited' : 'Stemme er rate-limitert',
+      description: en
+        ? 'Wait for the cooldown to expire, then try again.'
+        : 'Vent til nedkjølingen er over, og prøv igjen.',
+      retry: en ? 'Try again' : 'Prøv igjen',
+    }
+  }
+
+  if (agentDisconnected) {
+    return {
+      title: en ? 'Voice agent disconnected' : 'Stemmeagenten koblet fra',
+      description: en
+        ? 'The live voice session ended unexpectedly. Start a new session and try again.'
+        : 'Stemmeøkten stoppet uventet. Start en ny økt og prøv igjen.',
+      retry: en ? 'Try again' : 'Prøv igjen',
+    }
+  }
+
   return {
     title: en ? 'Voice could not start' : 'Stemme kunne ikke starte',
     description: en

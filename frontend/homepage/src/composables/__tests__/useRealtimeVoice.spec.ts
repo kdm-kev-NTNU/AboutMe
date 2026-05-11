@@ -434,6 +434,49 @@ describe('useRealtimeVoice', () => {
     scope.stop()
   })
 
+  it('includes ElevenLabs close diagnostics when startSession rejects', async () => {
+    const startupError = Object.assign(new Error('LiveKit validation failed'), {
+      name: 'SessionConnectionError',
+      closeCode: 4001,
+      closeReason: 'agent branch mismatch',
+    })
+    elevenLabsStartSessionMock.mockRejectedValue(startupError)
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const { captureProductAnalyticsEvent } = await import('@/lib/analytics')
+    const lang = ref<SpeechUiLang>('en')
+    const selectedModel = ref({
+      provider: 'ELEVENLABS' as const,
+      id: 'agent_1',
+      label: 'ElevenLabs Agent',
+      defaultOption: false,
+    })
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang, undefined, selectedModel)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('LiveKit validation failed')
+    expect(api.errorMessage.value).toContain('close code 4001')
+    expect(api.errorMessage.value).toContain('agent branch mismatch')
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_error',
+      expect.objectContaining({
+        provider: 'ELEVENLABS',
+        stage: 'start_exception',
+        close_code: 4001,
+        close_reason: 'agent branch mismatch',
+      }),
+    )
+
+    scope.stop()
+  })
+
   it('captures SDP exchange failures as errors without leaving the UI connected', async () => {
     exchangeRealtimeSdpMock.mockResolvedValue({
       ok: false,

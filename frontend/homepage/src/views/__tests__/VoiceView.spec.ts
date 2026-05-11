@@ -136,8 +136,9 @@ describe('VoiceView.vue', () => {
       Loader2: true,
       MessageSquare: true,
       AiStatusDialog: {
-        props: ['open', 'title', 'message'],
-        template: '<div v-if="open" role="dialog"><h2>{{ title }}</h2><p>{{ message }}</p><button @click="$emit(\'update:open\', false)">OK</button></div>',
+        props: ['open', 'title', 'message', 'description'],
+        template:
+          '<div v-if="open" role="dialog"><h2>{{ title }}</h2><p>{{ description }}</p><p>{{ message }}</p><button @click="$emit(\'update:open\', false)">OK</button></div>',
       },
     }
 
@@ -315,6 +316,40 @@ describe('VoiceView.vue', () => {
     expect(document.body.querySelector('[role="dialog"]')).toBeTruthy()
     expect(document.body.textContent).toContain('Voice could not start')
     expect(document.body.textContent).toContain('Microphone unavailable')
+
+    wrapper.unmount()
+  })
+
+  it('shows microphone-specific guidance when microphone access is blocked', async () => {
+    const { wrapper, refs } = await factory({
+      lang: 'en',
+      fetchResult: true,
+    })
+
+    await flushPromises()
+
+    refs.errorMessage.value = 'Microphone permission denied.'
+    await wrapper.vm.$nextTick()
+
+    expect(document.body.textContent).toContain('Microphone access is blocked')
+    expect(document.body.textContent).toContain('Allow microphone access in your browser')
+
+    wrapper.unmount()
+  })
+
+  it('shows rate-limit guidance when the voice endpoint throttles requests', async () => {
+    const { wrapper, refs } = await factory({
+      lang: 'en',
+      fetchResult: true,
+    })
+
+    await flushPromises()
+
+    refs.errorMessage.value = 'Too many voice requests. Try again in about 841 seconds.'
+    await wrapper.vm.$nextTick()
+
+    expect(document.body.textContent).toContain('Voice is rate-limited')
+    expect(document.body.textContent).toContain('cooldown')
 
     wrapper.unmount()
   })

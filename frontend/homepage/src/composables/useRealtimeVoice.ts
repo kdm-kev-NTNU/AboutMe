@@ -1,5 +1,5 @@
 import { ref, onUnmounted, type Ref } from 'vue'
-import type { DisconnectionDetails } from '@elevenlabs/types'
+import type { DisconnectionDetails, MessagePayload } from '@elevenlabs/types'
 import type {
   RealtimeLookupResponse,
   RealtimeSdpFailure,
@@ -30,6 +30,8 @@ type ElevenLabsConversation = {
   getId?: () => string
 }
 
+type VoiceErrorDiagnostics = Record<string, string | number | boolean>
+
 function mapGetUserMediaError(e: unknown, lang: SpeechUiLang): string {
   const en = lang === 'en'
   if (e instanceof DOMException) {
@@ -55,6 +57,84 @@ function openAiRejectedDetail(msg: string): string {
 function elevenLabsRejectedDetail(msg: string): string {
   const p = 'ElevenLabs rejected the session: '
   return msg.startsWith(p) ? msg.slice(p.length).trim() : msg
+}
+
+function compactWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function appendDiagnosticSuffix(
+  message: string,
+  diagnostics?: { closeCode?: number; closeReason?: string },
+): string {
+  const closeCode = diagnostics?.closeCode
+  const closeReason = diagnostics?.closeReason ? compactWhitespace(diagnostics.closeReason) : ''
+  if (closeCode == null && closeReason === '') return message
+
+  const parts: string[] = []
+  if (closeCode != null) parts.push(`close code ${closeCode}`)
+  if (closeReason !== '') parts.push(closeReason)
+  return `${message} (${parts.join(': ')})`
+}
+
+function extractElevenLabsDiagnostics(
+  details:
+    | {
+      reason?: string
+      closeCode?: number
+      closeReason?: string
+      message?: string
+    }
+    | null
+    | undefined,
+  stage: string,
+): VoiceErrorDiagnostics {
+  const diagnostics: VoiceErrorDiagnostics = { provider: 'ELEVENLABS', stage }
+  if (details?.reason) diagnostics.disconnect_reason = details.reason
+  if (typeof details?.closeCode === 'number') diagnostics.close_code = details.closeCode
+  if (typeof details?.closeReason === 'string' && details.closeReason.trim() !== '') {
+    diagnostics.close_reason = compactWhitespace(details.closeReason)
+  }
+  if (typeof details?.message === 'string' && details.message.trim() !== '') {
+    diagnostics.message = compactWhitespace(details.message)
+  }
+  return diagnostics
+}
+
+function formatElevenLabsStartupError(error: unknown, lang: SpeechUiLang): {
+  message: string
+  diagnostics: VoiceErrorDiagnostics
+} {
+  const en = lang === 'en'
+  if (!(error instanceof Error)) {
+    return {
+      message: en ? 'Could not start voice session.' : 'Kunne ikke starte samtalen.',
+      diagnostics: { provider: 'ELEVENLABS', stage: 'start_exception', message: String(error) },
+    }
+  }
+
+  const closeCode = 'closeCode' in error && typeof error.closeCode === 'number' ? error.closeCode : undefined
+  const closeReason =
+    'closeReason' in error && typeof error.closeReason === 'string' && error.closeReason.trim() !== ''
+      ? compactWhitespace(error.closeReason)
+      : ''
+  const rawMessage = compactWhitespace(error.message || '')
+  const diagnostics: VoiceErrorDiagnostics = {
+    provider: 'ELEVENLABS',
+    stage: 'start_exception',
+    error_name: error.name || 'Error',
+    message: rawMessage || (en ? 'Unknown startup error' : 'Ukjent oppstartsfeil'),
+  }
+  if (closeCode != null) diagnostics.close_code = closeCode
+  if (closeReason !== '') diagnostics.close_reason = closeReason
+
+  return {
+    message: appendDiagnosticSuffix(
+      rawMessage || (en ? 'Could not start voice session.' : 'Kunne ikke starte samtalen.'),
+      { closeCode, closeReason },
+    ),
+    diagnostics,
+  }
 }
 
 function isLikelyGetUserMediaError(e: unknown): boolean {
@@ -167,17 +247,30 @@ function formatElevenLabsDisconnectMessage(details: DisconnectionDetails, lang: 
   const en = lang === 'en'
   if (details.reason === 'error') {
     const m = details.message.trim()
-    if (m !== '') return m
-    return en ? 'Voice connection error.' : 'Feil i stemmekoblingen.'
+    if (m !== '') {
+      return appendDiagnosticSuffix(m, {
+        closeCode: details.closeCode,
+        closeReason: details.closeReason,
+      })
+    }
+    return appendDiagnosticSuffix(en ? 'Voice connection error.' : 'Feil i stemmekoblingen.', {
+      closeCode: details.closeCode,
+      closeReason: details.closeReason,
+    })
   }
   if (details.reason === 'agent') {
-    const cr = details.closeReason?.trim()
-    if (cr) return cr
-    const ctx = details.context
-    if (ctx instanceof CloseEvent && typeof ctx.reason === 'string' && ctx.reason.trim() !== '') {
-      return ctx.reason.trim()
+    const rawReason = details.closeReason?.trim()
+      || (details.context instanceof CloseEvent ? details.context.reason?.trim() : '')
+      || ''
+    if (rawReason === 'agent disconnected' || rawReason === '') {
+      return en
+        ? 'The voice agent could not start. Please try again later.'
+        : 'Stemmeagenten kunne ikke starte. Prøv igjen senere.'
     }
-    return en ? 'Voice session was interrupted.' : 'Stemmesesjonen ble avbrutt.'
+    return appendDiagnosticSuffix(rawReason, {
+      closeCode: details.closeCode,
+      closeReason: details.closeReason,
+    })
   }
   return en ? 'Voice session was interrupted.' : 'Stemmesesjonen ble avbrutt.'
 }
@@ -295,11 +388,14 @@ export function useRealtimeVoice(
     }
   }
 
-  function handleMidSessionFailure(msg: string) {
+  function handleMidSessionFailure(msg: string, diagnostics?: VoiceErrorDiagnostics) {
     if (midSessionFailureHandled) return
     midSessionFailureHandled = true
     userEndedSession = true
     captureClientException(new Error(`voice_mid_session: ${msg}`))
+    if (diagnostics) {
+      console.warn('[voice] mid-session failure', diagnostics)
+    }
     const sessionStartForTrace = sessionStartedAt
     sessionStartedAt = 0
     teardownMedia()
@@ -309,6 +405,7 @@ export function useRealtimeVoice(
       message: msg,
       language: language.value,
       reason: 'mid_session',
+      ...(diagnostics ?? {}),
       ...voiceTraceProps(),
     })
     finalizeVoiceTraceIfNeeded({
@@ -431,21 +528,10 @@ export function useRealtimeVoice(
     }
   }
 
-  function handleElevenLabsMessage(message: unknown) {
-    if (message === null || typeof message !== 'object') return
-    const m = message as Record<string, unknown>
-    const text =
-      typeof m.message === 'string'
-        ? m.message
-        : typeof m.text === 'string'
-          ? m.text
-          : typeof m.transcript === 'string'
-            ? m.transcript
-            : ''
+  function handleElevenLabsMessage(payload: MessagePayload) {
+    const text = payload.message ?? ''
     if (text.trim() === '') return
-    const source = typeof m.source === 'string' ? m.source.toLowerCase() : ''
-    const role = typeof m.role === 'string' ? m.role.toLowerCase() : ''
-    if (source.includes('user') || role.includes('user')) {
+    if (payload.role === 'user') {
       userTranscript.value = text
     } else {
       assistantTranscript.value = text
@@ -606,18 +692,27 @@ export function useRealtimeVoice(
         },
         onDisconnect: (details: DisconnectionDetails) => {
           if (userEndedSession || midSessionFailureHandled) return
-          handleMidSessionFailure(formatElevenLabsDisconnectMessage(details, language.value))
+          const diagnostics = extractElevenLabsDiagnostics(details, 'disconnect')
+          console.warn('[voice] ElevenLabs disconnect', diagnostics)
+          handleMidSessionFailure(formatElevenLabsDisconnectMessage(details, language.value), diagnostics)
         },
-        onMessage: (message: unknown) => {
-          handleElevenLabsMessage(message)
+        onMessage: (payload) => {
+          handleElevenLabsMessage(payload)
         },
-        onError: (error: unknown) => {
-          const msg = error instanceof Error && error.message
-            ? error.message
+        onError: (message: string) => {
+          const msg = typeof message === 'string' && message.trim() !== ''
+            ? message.trim()
             : language.value === 'no'
               ? 'ElevenLabs-sesjonen returnerte en feil.'
               : 'ElevenLabs session returned an error.'
-          handleMidSessionFailure(msg)
+          captureClientException(new Error(`elevenlabs_onError: ${msg}`))
+          const diagnostics: VoiceErrorDiagnostics = {
+            provider: 'ELEVENLABS',
+            stage: 'onError',
+            message: compactWhitespace(msg),
+          }
+          console.warn('[voice] ElevenLabs onError', diagnostics)
+          handleMidSessionFailure(msg, diagnostics)
         },
       })) as ElevenLabsConversation
 
@@ -646,18 +741,25 @@ export function useRealtimeVoice(
       teardownMedia()
       connectionState.value = 'error'
       let msg: string
+      let diagnostics: VoiceErrorDiagnostics | undefined
       if (isLikelyGetUserMediaError(e)) {
         msg = mapGetUserMediaError(e, language.value)
       } else if (e instanceof Error && e.message) {
-        msg = e.message
+        const formatted = formatElevenLabsStartupError(e, language.value)
+        msg = formatted.message
+        diagnostics = formatted.diagnostics
       } else {
         msg = language.value === 'no' ? 'Kunne ikke starte samtalen.' : 'Could not start voice session.'
       }
       errorMessage.value = msg
+      if (diagnostics) {
+        console.warn('[voice] ElevenLabs start failed', diagnostics)
+      }
       captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_ERROR, {
         message: errorMessage.value,
         language: language.value,
         provider: 'ELEVENLABS',
+        ...(diagnostics ?? {}),
         ...voiceTraceProps(),
       })
       if (contacted) {
