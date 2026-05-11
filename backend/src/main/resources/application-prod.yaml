@@ -2,6 +2,17 @@
 # Activate with SPRING_PROFILES_ACTIVE=prod (e.g. Railway).
 
 portfolio:
+  ai:
+    budget:
+      enabled: true
+      daily-limit-usd: 2.00
+      monthly-limit-usd: 20.00
+      anonymous-daily-limit-usd: 0.50
+      anonymous-monthly-limit-usd: 5.00
+  realtime-rate-limit:
+    enabled: true
+    capacity: 3
+    window-seconds: 3600
   sync:
     enabled: false
 

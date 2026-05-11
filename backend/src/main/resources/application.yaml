@@ -79,8 +79,8 @@ portfolio:
       enabled: true
       daily-limit-usd: 2.00
       monthly-limit-usd: 20.00
-      anonymous-daily-limit-usd: 0.50
-      anonymous-monthly-limit-usd: 5.00
+      anonymous-daily-limit-usd: 5.00
+      anonymous-monthly-limit-usd: 50.00
       spike-hourly-multiplier: 5.0
       anon-identity-salt: ${AI_BUDGET_ANON_SALT:portfolio-ai-budget}
       models:
@@ -155,7 +155,7 @@ portfolio:
             branch-id: ${ELEVENLABS_AGENT_BRANCH_ID:}
   realtime-rate-limit:
     enabled: true
-    capacity: 3
+    capacity: ${PORTFOLIO_REALTIME_RATE_LIMIT_CAPACITY:12}
     window-seconds: 3600
   realtime-lookup-rate-limit:
     enabled: true

@@ -11,7 +11,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -81,7 +80,7 @@ class AiBudgetServiceTest {
     when(postHogLlmService.isEnabled()).thenReturn(true);
     service.recordUsage("user:a", "gpt-5.4-mini", 10, 20, false, 0.42, "rag_completion");
     verify(usageRepository).save(any());
-    verify(postHogLlmService, timeout(5_000))
+    verify(postHogLlmService)
         .captureGenerationAsync(
             eq("user:a"),
             eq("gpt-5.4-mini"),
@@ -109,7 +108,7 @@ class AiBudgetServiceTest {
       for (TransactionSynchronization sync : TransactionSynchronizationManager.getSynchronizations()) {
         sync.afterCommit();
       }
-      verify(postHogLlmService, timeout(5_000))
+      verify(postHogLlmService)
           .captureGenerationAsync(
               eq("user:a"),
               eq("gpt-5.4-mini"),
