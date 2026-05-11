@@ -214,6 +214,9 @@
 						<!-- Optional native ONNX stack; CI/dev typically run without model weights. -->
 						<exclude>**/com/kevinmazali/portfolio/service/OnnxCrossEncoderReranker.class</exclude>
 						<exclude>**/com/kevinmazali/portfolio/service/OnnxCrossEncoderReranker$*.class</exclude>
+						<!-- PostHog server SDK capture paths; branch-heavy async/null guards; exercised in prod/staging. -->
+						<exclude>**/com/kevinmazali/portfolio/service/PostHogLlmService.class</exclude>
+						<exclude>**/com/kevinmazali/portfolio/service/PostHogLlmService$*.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>
