@@ -152,8 +152,8 @@ function visitVoiceWithStub(mode: StubMode) {
 }
 
 function selectElevenLabsModel() {
+  cy.get('[data-testid="voice-model-select"]', { timeout: 15_000 }).should('be.visible')
   cy.get('[data-testid="voice-model-select"]', { timeout: 15_000 })
-    .should('be.visible')
     .select('agent_test')
     .should('have.value', 'agent_test')
 }
@@ -204,8 +204,9 @@ describe('Voice ElevenLabs E2E', () => {
 
     cy.contains('Voice could not start', { timeout: 15_000 }).should('be.visible')
     cy.contains('The live AI service needs a fresh session before it can continue.').should('be.visible')
-    cy.contains('Voice server connection failed. The agent may be misconfigured or temporarily unavailable.')
-      .should('be.visible')
+    cy.contains(
+      'Voice server connection failed. The agent may be misconfigured or temporarily unavailable.',
+    ).should('be.visible')
     cy.contains('button', 'Start voice', { timeout: 15_000 }).should('be.visible')
   })
 
