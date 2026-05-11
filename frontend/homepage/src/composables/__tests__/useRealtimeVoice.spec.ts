@@ -246,10 +246,16 @@ describe('useRealtimeVoice', () => {
     const { captureProductAnalyticsEvent } = await import('@/lib/analytics')
 
     const lang = ref<SpeechUiLang>('en')
+    const selectedModel = ref({
+      provider: 'OPENAI' as const,
+      id: 'gpt-realtime-2',
+      label: 'OpenAI GPT-Realtime-2',
+      defaultOption: true,
+    })
     const scope = effectScope()
     let api!: ReturnType<typeof useRealtimeVoice>
     scope.run(() => {
-      api = useRealtimeVoice(lang)
+      api = useRealtimeVoice(lang, undefined, selectedModel)
     })
 
     const connectPromise = api.connect()
@@ -258,13 +264,31 @@ describe('useRealtimeVoice', () => {
     await connectPromise
 
     expect(api.connectionState.value).toBe('connected')
-    expect(exchangeRealtimeSdpMock).toHaveBeenCalledWith('v=0 OFFER_STUB', 'en', undefined, undefined)
-    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith('portfolio_voice_session_started', expect.objectContaining({
-      language: 'en',
-      provider: 'OPENAI',
-    }))
+    expect(exchangeRealtimeSdpMock).toHaveBeenCalledWith(
+      'v=0 OFFER_STUB',
+      'en',
+      undefined,
+      'gpt-realtime-2',
+    )
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_started',
+      expect.objectContaining({
+        language: 'en',
+        provider: 'OPENAI',
+        model_id: 'gpt-realtime-2',
+      }),
+    )
 
     api.disconnect()
+    await flushPromises()
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_ended',
+      expect.objectContaining({
+        language: 'en',
+        provider: 'OPENAI',
+        model_id: 'gpt-realtime-2',
+      }),
+    )
 
     scope.stop()
   })
@@ -334,6 +358,14 @@ describe('useRealtimeVoice', () => {
     api.disconnect()
     await flushPromises()
     expect(elevenLabsEndSessionMock).toHaveBeenCalled()
+    expect(captureProductAnalyticsEvent).toHaveBeenCalledWith(
+      'portfolio_voice_session_ended',
+      expect.objectContaining({
+        provider: 'ELEVENLABS',
+        model_id: 'agent_1',
+        conversation_id: 'conv_123',
+      }),
+    )
 
     scope.stop()
   })

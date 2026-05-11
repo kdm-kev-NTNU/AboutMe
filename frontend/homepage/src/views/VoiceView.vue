@@ -69,7 +69,7 @@ const copy = computed(() => {
     live: en ? 'Live' : 'Aktiv',
     modelLabel: en ? 'Provider/model' : 'Leverandør/modell',
     voiceLabel: en ? 'Voice' : 'Stemme',
-    reasoningLabel: en ? 'Reasoning' : 'Reasoning',
+    reasoningLabel: en ? 'Reasoning' : 'Resonnering',
     you: en ? 'You (transcript)' : 'Du (transkripsjon)',
     assistant: en ? 'Assistant (transcript)' : 'Assistent (transkripsjon)',
     disclaimerTitle: en ? 'Before you use voice' : 'Før du bruker stemme',
@@ -92,6 +92,10 @@ const reasoningLabels = computed<Record<RealtimeReasoningEffort, string>>(() => 
     high: en ? 'Thorough' : 'Grundig',
   }
 })
+
+function makeVoiceModelValue(provider: string, id: string) {
+  return `${provider}:${id}`
+}
 
 const sessionControlsDisabled = computed(
   () => connectionState.value === 'connecting' || connectionState.value === 'connected',
@@ -219,7 +223,11 @@ function setVoiceModelFromEvent(event: Event) {
               :disabled="sessionControlsDisabled"
               @change="setVoiceModelFromEvent"
             >
-              <option v-for="model in voiceModelStore.models" :key="model.provider + ':' + model.id" :value="model.id">
+              <option
+                v-for="model in voiceModelStore.models"
+                :key="model.provider + ':' + model.id"
+                :value="makeVoiceModelValue(model.provider, model.id)"
+              >
                 {{ model.label }}
               </option>
             </select>

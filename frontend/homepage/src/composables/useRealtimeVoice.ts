@@ -589,10 +589,16 @@ export function useRealtimeVoice(
     const durationSec =
       sessionStartedAt > 0 ? Math.round((Date.now() - sessionStartedAt) / 1000) : undefined
     if (connectionState.value === 'connected' && durationSec !== undefined) {
+      const provider = selectedProvider()
+      const modelId = selectedModelId()
+      const conversationId = elevenLabsConversation?.getId?.()
       captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_ENDED, {
         duration_seconds: durationSec,
         reason: reason ?? 'user',
         language: language.value,
+        provider,
+        ...(modelId ? { model_id: modelId } : {}),
+        ...(conversationId ? { conversation_id: conversationId } : {}),
       })
     }
     userEndedSession = true

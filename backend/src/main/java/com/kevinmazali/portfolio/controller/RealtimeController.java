@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,8 +45,7 @@ public class RealtimeController {
       RealtimeLookupService realtimeLookupService,
       RealtimeModelCatalog realtimeModelCatalog,
       ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService,
-      RequestLogService requestLogService,
-      @Value("${spring.ai.openai.api-key:}") String ignoredOpenAiApiKey) {
+      RequestLogService requestLogService) {
     this.realtimeProperties = realtimeProperties;
     this.realtimeSessionService = realtimeSessionService;
     this.realtimeLookupService = realtimeLookupService;
@@ -120,9 +118,9 @@ public class RealtimeController {
       return ResponseEntity.status(503)
           .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
     }
+    requestLogService.save("/realtime/elevenlabs/token", "POST", "token", null);
     try {
       String token = elevenLabsRealtimeTokenService.createConversationToken(request == null ? null : request.modelId());
-      requestLogService.save("/realtime/elevenlabs/token", "POST", "token", null);
       return ResponseEntity.ok(new ElevenLabsTokenResponse(token));
     } catch (RealtimeSessionException e) {
       log.warn(
