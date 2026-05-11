@@ -168,9 +168,6 @@ onMounted(() => {
 
       <div class="flex flex-col items-center space-y-8">
         <section class="brand">
-          <h1 class="mb-4 px-1 text-center text-4xl font-bold sm:text-5xl md:text-6xl lg:text-7xl">
-            Kevin's <span class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x">AI</span>.
-          </h1>
           <div class="flex justify-center">
             <div class="relative rounded-full p-1 flex bg-gradient-to-r from-slate-200 to-slate-300 shadow-md border-2 border-transparent bg-clip-padding">
               <div

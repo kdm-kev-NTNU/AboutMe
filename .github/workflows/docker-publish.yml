@@ -26,6 +26,25 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v6
+      - name: Backend publish preflight
+        shell: bash
+        env:
+          DOCKER_ACCOUNT: ${{ vars.DOCKER_ACCOUNT }}
+          CLOUD_BUILDER_NAME: ${{ vars.CLOUD_BUILDER_NAME }}
+          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in DOCKER_ACCOUNT CLOUD_BUILDER_NAME DOCKER_ACCESS_TOKEN; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error title=Missing Docker publish config::Missing required values: ${missing[*]}"
+            exit 1
+          fi
+          echo "Docker publish config detected for ${DOCKER_ACCOUNT}/${CLOUD_BUILDER_NAME}."
       # Build JAR once on the runner (Maven cache) instead of inside multi-arch Docker Build Cloud,
       # avoiding Maven Central rate limits (429) when amd64 + arm64 resolve deps in parallel.
       - uses: actions/setup-java@v5
@@ -80,6 +99,39 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+      - name: Frontend publish preflight
+        shell: bash
+        env:
+          DOCKER_ACCOUNT: ${{ vars.DOCKER_ACCOUNT }}
+          CLOUD_BUILDER_NAME: ${{ vars.CLOUD_BUILDER_NAME }}
+          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+          VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
+          VITE_POSTHOG_ENABLED: ${{ secrets.VITE_POSTHOG_ENABLED }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in DOCKER_ACCOUNT CLOUD_BUILDER_NAME DOCKER_ACCESS_TOKEN; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error title=Missing Docker publish config::Missing required values: ${missing[*]}"
+            exit 1
+          fi
+
+          posthog_missing=()
+          for name in VITE_POSTHOG_KEY VITE_POSTHOG_HOST VITE_POSTHOG_ENABLED; do
+            if [ -z "${!name:-}" ]; then
+              posthog_missing+=("$name")
+            fi
+          done
+          if [ "${#posthog_missing[@]}" -gt 0 ]; then
+            echo "::warning title=Frontend PostHog args incomplete::Docker image will build without one or more PostHog build args: ${posthog_missing[*]}"
+          else
+            echo "Frontend PostHog build args detected."
+          fi
       - uses: docker/login-action@v4
         with:
           username: ${{ vars.DOCKER_ACCOUNT }}

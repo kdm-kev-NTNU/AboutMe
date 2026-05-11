@@ -12,7 +12,10 @@ import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.model.RealtimeLookupResponse;
 import com.kevinmazali.portfolio.model.RealtimeLookupSnippet;
+import com.kevinmazali.portfolio.model.RealtimeModelOption;
+import com.kevinmazali.portfolio.service.ElevenLabsRealtimeTokenService;
 import com.kevinmazali.portfolio.service.RealtimeLookupService;
+import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
 import java.util.List;
@@ -70,6 +73,12 @@ class RealtimeControllerTest {
   private RealtimeLookupService realtimeLookupService;
 
   @MockitoBean
+  private RealtimeModelCatalog realtimeModelCatalog;
+
+  @MockitoBean
+  private ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
+
+  @MockitoBean
   private RequestLogService requestLogService;
 
   @AfterEach
@@ -79,24 +88,35 @@ class RealtimeControllerTest {
 
   @Test
   void statusEnabledWhenFlagAndKey() throws Exception {
+    when(realtimeModelCatalog.hasAvailableModels()).thenReturn(true);
+
     mockMvc.perform(get("/realtime/status"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.enabled").value(true));
+        .andExpect(jsonPath("$.enabled").value(true))
+        .andExpect(jsonPath("$.voices[0]").value("marin"))
+        .andExpect(jsonPath("$.voices[1]").value("cedar"))
+        .andExpect(jsonPath("$.reasoningEfforts[0]").value("low"))
+        .andExpect(jsonPath("$.reasoningEfforts[1]").value("medium"))
+        .andExpect(jsonPath("$.reasoningEfforts[2]").value("high"))
+        .andExpect(jsonPath("$.defaultVoice").value("marin"))
+        .andExpect(jsonPath("$.defaultReasoningEffort").value("low"));
   }
 
   @Test
   void sessionReturnsSdpAnswer() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any())).thenReturn("v=0\r\no=-");
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any())).thenReturn("v=0\r\no=-");
 
     mockMvc.perform(post("/realtime/session")
             .content("v=0\r\no=offer")
             .contentType("application/sdp")
-            .header("X-Chat-Language", "en"))
+            .header("X-Chat-Language", "en")
+            .header("X-Realtime-Voice", "cedar")
+            .header("X-Realtime-Reasoning-Effort", "medium"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith("application/sdp"))
         .andExpect(content().string("v=0\r\no=-"));
 
-    verify(realtimeSessionService).createRealtimeCall(eq("v=0\r\no=offer"), eq("en"));
+    verify(realtimeSessionService).createRealtimeCall(eq("v=0\r\no=offer"), eq("en"), isNull(), eq("cedar"), eq("medium"));
   }
 
   @Test
@@ -105,6 +125,47 @@ class RealtimeControllerTest {
     mockMvc.perform(get("/realtime/status"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.enabled").value(false));
+  }
+
+  @Test
+  void modelsEndpointReturnsConfiguredVoiceCatalog() throws Exception {
+    when(realtimeModelCatalog.listAvailableModels())
+        .thenReturn(List.of(
+            new RealtimeModelOption("OPENAI", "gpt-realtime-2", "OpenAI GPT-Realtime-2", true),
+            new RealtimeModelOption("ELEVENLABS", "agent_123", "ElevenLabs Agent", false)));
+
+    mockMvc.perform(get("/realtime/models"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].provider").value("OPENAI"))
+        .andExpect(jsonPath("$[0].id").value("gpt-realtime-2"))
+        .andExpect(jsonPath("$[1].provider").value("ELEVENLABS"))
+        .andExpect(jsonPath("$[1].id").value("agent_123"));
+  }
+
+  @Test
+  void sessionRejectsUnsupportedVoiceBeforeCallingSessionService() throws Exception {
+    mockMvc.perform(post("/realtime/session")
+            .content("v=0")
+            .contentType("application/sdp")
+            .header("X-Realtime-Voice", "alloy"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any());
+    verify(requestLogService, never()).save(any(), any(), any(), any());
+  }
+
+  @Test
+  void sessionRejectsUnsupportedReasoningEffortBeforeCallingSessionService() throws Exception {
+    mockMvc.perform(post("/realtime/session")
+            .content("v=0")
+            .contentType("application/sdp")
+            .header("X-Realtime-Reasoning-Effort", "xhigh"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any());
+    verify(requestLogService, never()).save(any(), any(), any(), any());
   }
 
   @Test
@@ -118,13 +179,13 @@ class RealtimeControllerTest {
         .andExpect(jsonPath("$.error").exists())
         .andExpect(jsonPath("$.code").value("REALTIME_DISABLED"));
 
-    verify(realtimeSessionService, never()).createRealtimeCall(any(), any());
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any());
     verify(requestLogService, never()).save(any(), any(), any(), any());
   }
 
   @Test
   void sessionReturns400WhenServiceRejectsOffer() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any()))
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any()))
         .thenThrow(new IllegalArgumentException("bad sdp"));
 
     mockMvc.perform(post("/realtime/session")
@@ -137,7 +198,7 @@ class RealtimeControllerTest {
 
   @Test
   void sessionReturns502WhenServiceFailsOpenAi() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any()))
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any()))
         .thenThrow(
             new RealtimeSessionException(
                 HttpStatus.BAD_GATEWAY,
@@ -154,7 +215,7 @@ class RealtimeControllerTest {
 
   @Test
   void sessionPassesNorwegianLanguageHeaderThrough() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any())).thenReturn("sdp-answer");
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any())).thenReturn("sdp-answer");
 
     mockMvc.perform(post("/realtime/session")
             .content("offer")
@@ -162,20 +223,20 @@ class RealtimeControllerTest {
             .header("X-Chat-Language", "NO"))
         .andExpect(status().isOk());
 
-    verify(realtimeSessionService).createRealtimeCall(eq("offer"), eq("NO"));
+    verify(realtimeSessionService).createRealtimeCall(eq("offer"), eq("NO"), isNull(), isNull(), isNull());
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
   }
 
   @Test
   void sessionRecordsRequestBeforeCallingServiceOnSuccessPath() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any())).thenReturn("ok");
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any())).thenReturn("ok");
 
     mockMvc.perform(post("/realtime/session")
             .content("v")
             .contentType("application/sdp"));
 
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
-    verify(realtimeSessionService).createRealtimeCall(eq("v"), isNull());
+    verify(realtimeSessionService).createRealtimeCall(eq("v"), isNull(), isNull(), isNull(), isNull());
   }
 
   @Test
@@ -253,6 +314,12 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
   private RealtimeLookupService realtimeLookupService;
 
   @MockitoBean
+  private RealtimeModelCatalog realtimeModelCatalog;
+
+  @MockitoBean
+  private ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
+
+  @MockitoBean
   private RequestLogService requestLogService;
 
   @Test
@@ -263,7 +330,14 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
   }
 
   @Test
-  void sessionRequiresApiKeyReturns503WithoutLogging() throws Exception {
+  void sessionPropagatesApiKeyMissingFromService() throws Exception {
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any()))
+        .thenThrow(
+            new RealtimeSessionException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                RealtimeErrorCode.API_KEY_MISSING,
+                "OpenAI API key is not configured."));
+
     mockMvc.perform(post("/realtime/session")
             .content("v=0")
             .contentType("application/sdp"))
@@ -271,7 +345,36 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
         .andExpect(jsonPath("$.error").exists())
         .andExpect(jsonPath("$.code").value("API_KEY_MISSING"));
 
-    verify(realtimeSessionService, never()).createRealtimeCall(any(), any());
-    verify(requestLogService, never()).save(any(), any(), any(), any());
+    verify(realtimeSessionService).createRealtimeCall(eq("v=0"), isNull(), isNull(), isNull(), isNull());
+    verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
+  }
+
+  @Test
+  void elevenLabsTokenEndpointReturnsToken() throws Exception {
+    when(elevenLabsRealtimeTokenService.createConversationToken("agent_123")).thenReturn("token_abc");
+
+    mockMvc.perform(post("/realtime/elevenlabs/token")
+            .content("{\"modelId\":\"agent_123\"}")
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.token").value("token_abc"));
+
+    verify(requestLogService).save("/realtime/elevenlabs/token", "POST", "token", null);
+  }
+
+  @Test
+  void elevenLabsTokenEndpointMapsRealtimeErrors() throws Exception {
+    when(elevenLabsRealtimeTokenService.createConversationToken("agent_123"))
+        .thenThrow(new RealtimeSessionException(
+            HttpStatus.BAD_GATEWAY,
+            RealtimeErrorCode.ELEVENLABS_REJECTED,
+            "ElevenLabs rejected the session: invalid agent"));
+
+    mockMvc.perform(post("/realtime/elevenlabs/token")
+            .content("{\"modelId\":\"agent_123\"}")
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.code").value("ELEVENLABS_REJECTED"))
+        .andExpect(jsonPath("$.error").value("ElevenLabs rejected the session: invalid agent"));
   }
 }

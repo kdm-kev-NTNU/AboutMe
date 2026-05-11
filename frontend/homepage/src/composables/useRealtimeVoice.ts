@@ -1,10 +1,27 @@
 import { ref, onUnmounted, type Ref } from 'vue'
-import type { RealtimeLookupResponse, RealtimeSdpFailure, SpeechUiLang } from '@/lib/realtime-voice'
-import { exchangeRealtimeSdp, lookupRealtimeInfo, REALTIME_SESSION_MAX_MS } from '@/lib/realtime-voice'
+import type {
+  RealtimeLookupResponse,
+  RealtimeSdpFailure,
+  RealtimeTokenFailure,
+  RealtimeVoiceModelOption,
+  RealtimeVoiceSessionOptions,
+  SpeechUiLang,
+} from '@/lib/realtime-voice'
+import {
+  createElevenLabsConversationToken,
+  exchangeRealtimeSdp,
+  lookupRealtimeInfo,
+  REALTIME_SESSION_MAX_MS,
+} from '@/lib/realtime-voice'
 import { captureProductAnalyticsEvent, captureClientException } from '@/lib/analytics'
 import { POSTHOG_VOICE_EVENTS } from '@/lib/posthog-sdk'
 
 export type RealtimeConnectionState = 'idle' | 'connecting' | 'connected' | 'error'
+
+type ElevenLabsConversation = {
+  endSession?: () => Promise<void>
+  getId?: () => string
+}
 
 function mapGetUserMediaError(e: unknown, lang: SpeechUiLang): string {
   const en = lang === 'en'
@@ -25,6 +42,11 @@ function mapGetUserMediaError(e: unknown, lang: SpeechUiLang): string {
 
 function openAiRejectedDetail(msg: string): string {
   const p = 'OpenAI rejected the session: '
+  return msg.startsWith(p) ? msg.slice(p.length).trim() : msg
+}
+
+function elevenLabsRejectedDetail(msg: string): string {
+  const p = 'ElevenLabs rejected the session: '
   return msg.startsWith(p) ? msg.slice(p.length).trim() : msg
 }
 
@@ -102,6 +124,22 @@ function mapSdpFailureToUserMessage(lang: SpeechUiLang, f: RealtimeSdpFailure): 
         : 'Talesvaret fra tjenesten feilet. Prøv igjen om litt.'
     case 'OPENAI_UNREACHABLE':
       return en ? 'Could not reach the voice server. Try again.' : 'Kunne ikke nå taleserveren. Prøv igjen.'
+    case 'ELEVENLABS_REJECTED': {
+      const d = elevenLabsRejectedDetail(f.message)
+      return en
+        ? `ElevenLabs could not start the session${d ? `: ${d}` : '.'}`
+        : `ElevenLabs kunne ikke starte samtalen${d ? `: ${d}` : '.'}`
+    }
+    case 'ELEVENLABS_SERVER_ERROR':
+      return en
+        ? 'ElevenLabs returned an error. Please try again in a moment.'
+        : 'ElevenLabs feilet. Prøv igjen om litt.'
+    case 'ELEVENLABS_UNREACHABLE':
+      return en ? 'Could not reach ElevenLabs. Try again.' : 'Kunne ikke nå ElevenLabs. Prøv igjen.'
+    case 'VOICE_MODEL_NOT_CONFIGURED':
+      return en
+        ? 'The selected voice model is not available.'
+        : 'Den valgte stemmemodellen er ikke tilgjengelig.'
     case 'SESSION_CONFIG_FAILED':
       return en
         ? 'Voice session could not be configured. Please try again later.'
@@ -114,10 +152,18 @@ function mapSdpFailureToUserMessage(lang: SpeechUiLang, f: RealtimeSdpFailure): 
   }
 }
 
+function mapTokenFailureToUserMessage(lang: SpeechUiLang, f: RealtimeTokenFailure): string {
+  return mapSdpFailureToUserMessage(lang, f)
+}
+
 /**
  * WebRTC + OpenAI Realtime (oai-events) for live speech with Kevin's AI.
  */
-export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
+export function useRealtimeVoice(
+  language: Ref<SpeechUiLang>,
+  sessionOptions?: Readonly<Ref<RealtimeVoiceSessionOptions>>,
+  selectedModel?: Readonly<Ref<RealtimeVoiceModelOption | undefined>>,
+) {
   const connectionState = ref<RealtimeConnectionState>('idle')
   const errorMessage = ref('')
   /** Non-error notice (e.g. session time limit). */
@@ -131,6 +177,7 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
   let localStream: MediaStream | null = null
   let dc: RTCDataChannel | null = null
   let remoteAudio: HTMLAudioElement | null = null
+  let elevenLabsConversation: ElevenLabsConversation | null = null
   let sessionTimer: ReturnType<typeof setTimeout> | null = null
   let sessionStartedAt = 0
   /** True while user clicked disconnect / timeout / we are tearing down on purpose. */
@@ -149,9 +196,22 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
     localStream = null
   }
 
+  async function teardownElevenLabs() {
+    const conversation = elevenLabsConversation
+    elevenLabsConversation = null
+    if (conversation?.endSession) {
+      try {
+        await conversation.endSession()
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   function teardownMedia() {
     stopSessionTimer()
     cleanupTracks()
+    void teardownElevenLabs()
     if (dc) {
       try {
         dc.close()
@@ -301,16 +361,37 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
     }
   }
 
-  async function connect() {
-    if (connectionState.value === 'connecting' || connectionState.value === 'connected') return
-    errorMessage.value = ''
-    sessionNotice.value = ''
-    assistantTranscript.value = ''
-    userTranscript.value = ''
-    userEndedSession = false
-    midSessionFailureHandled = false
-    connectionState.value = 'connecting'
+  function handleElevenLabsMessage(message: unknown) {
+    if (message === null || typeof message !== 'object') return
+    const m = message as Record<string, unknown>
+    const text =
+      typeof m.message === 'string'
+        ? m.message
+        : typeof m.text === 'string'
+          ? m.text
+          : typeof m.transcript === 'string'
+            ? m.transcript
+            : ''
+    if (text.trim() === '') return
+    const source = typeof m.source === 'string' ? m.source.toLowerCase() : ''
+    const role = typeof m.role === 'string' ? m.role.toLowerCase() : ''
+    if (source.includes('user') || role.includes('user')) {
+      userTranscript.value = text
+    } else {
+      assistantTranscript.value = text
+    }
+  }
 
+  function selectedProvider(): 'OPENAI' | 'ELEVENLABS' {
+    return selectedModel?.value?.provider ?? 'OPENAI'
+  }
+
+  function selectedModelId(): string | undefined {
+    const id = selectedModel?.value?.id
+    return id && id.trim() !== '' ? id.trim() : undefined
+  }
+
+  async function connectOpenAi() {
     if (typeof RTCPeerConnection === 'undefined') {
       errorMessage.value =
         language.value === 'no'
@@ -367,7 +448,7 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
         throw new Error('Missing local SDP')
       }
 
-      const result = await exchangeRealtimeSdp(offerSdp, language.value)
+      const result = await exchangeRealtimeSdp(offerSdp, language.value, sessionOptions?.value, selectedModelId())
       if (!result.ok) {
         throw new Error(mapSdpFailureToUserMessage(language.value, result))
       }
@@ -378,6 +459,8 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
       sessionStartedAt = Date.now()
       captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_STARTED, {
         language: language.value,
+        provider: 'OPENAI',
+        model_id: selectedModelId(),
       })
 
       sessionTimer = setTimeout(() => {
@@ -408,14 +491,114 @@ export function useRealtimeVoice(language: Ref<SpeechUiLang>) {
     }
   }
 
+  async function connectElevenLabs() {
+    if (!selectedModelId()) {
+      throw new Error(
+        language.value === 'no'
+          ? 'Ingen ElevenLabs-agent er konfigurert.'
+          : 'No ElevenLabs agent is configured.',
+      )
+    }
+    try {
+      const permissionProbe = await navigator.mediaDevices.getUserMedia({ audio: true })
+      permissionProbe.getTracks().forEach((track) => track.stop())
+
+      const tokenResult = await createElevenLabsConversationToken(selectedModelId()!)
+      if (!tokenResult.ok) {
+        throw new Error(mapTokenFailureToUserMessage(language.value, tokenResult))
+      }
+
+      const { Conversation } = await import('@elevenlabs/client')
+      elevenLabsConversation = (await Conversation.startSession({
+        conversationToken: tokenResult.token,
+        connectionType: 'webrtc',
+        onConnect: () => {
+          if (userEndedSession || midSessionFailureHandled) return
+          connectionState.value = 'connected'
+        },
+        onDisconnect: () => {
+          if (userEndedSession || midSessionFailureHandled) return
+          const msg =
+            language.value === 'no' ? 'Stemmesesjonen ble avbrutt.' : 'Voice session was interrupted.'
+          handleMidSessionFailure(msg)
+        },
+        onMessage: (message: unknown) => {
+          handleElevenLabsMessage(message)
+        },
+        onError: (error: unknown) => {
+          const msg = error instanceof Error && error.message
+            ? error.message
+            : language.value === 'no'
+              ? 'ElevenLabs-sesjonen returnerte en feil.'
+              : 'ElevenLabs session returned an error.'
+          handleMidSessionFailure(msg)
+        },
+      })) as ElevenLabsConversation
+
+      connectionState.value = 'connected'
+      sessionStartedAt = Date.now()
+      captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_STARTED, {
+        language: language.value,
+        provider: 'ELEVENLABS',
+        model_id: selectedModelId(),
+        conversation_id: elevenLabsConversation?.getId?.(),
+      })
+
+      sessionTimer = setTimeout(() => {
+        disconnect('timeout')
+      }, REALTIME_SESSION_MAX_MS)
+    } catch (e) {
+      captureClientException(e)
+      teardownMedia()
+      connectionState.value = 'error'
+      let msg: string
+      if (isLikelyGetUserMediaError(e)) {
+        msg = mapGetUserMediaError(e, language.value)
+      } else if (e instanceof Error && e.message) {
+        msg = e.message
+      } else {
+        msg = language.value === 'no' ? 'Kunne ikke starte samtalen.' : 'Could not start voice session.'
+      }
+      errorMessage.value = msg
+      captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_ERROR, {
+        message: errorMessage.value,
+        language: language.value,
+        provider: 'ELEVENLABS',
+      })
+    }
+  }
+
+  async function connect() {
+    if (connectionState.value === 'connecting' || connectionState.value === 'connected') return
+    errorMessage.value = ''
+    sessionNotice.value = ''
+    assistantTranscript.value = ''
+    userTranscript.value = ''
+    userEndedSession = false
+    midSessionFailureHandled = false
+    connectionState.value = 'connecting'
+
+    if (selectedProvider() === 'ELEVENLABS') {
+      await connectElevenLabs()
+    } else {
+      await connectOpenAi()
+    }
+  }
+
   function disconnect(reason?: 'user' | 'timeout') {
     const durationSec =
       sessionStartedAt > 0 ? Math.round((Date.now() - sessionStartedAt) / 1000) : undefined
     if (connectionState.value === 'connected' && durationSec !== undefined) {
+      const provider = selectedProvider()
+      const modelId = selectedModelId()
+      const conversationId = elevenLabsConversation?.getId?.()
       captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_ENDED, {
         duration_seconds: durationSec,
         reason: reason ?? 'user',
         language: language.value,
+        provider,
+        ...(modelId ? { model_id: modelId } : {}),
+        ...(conversationId ? { conversation_id: conversationId } : {}),
       })
     }
     userEndedSession = true
