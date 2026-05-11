@@ -7,6 +7,26 @@ import {
 
 const VOICE_MODEL_STORAGE_KEY = 'voiceSelectedModel'
 
+function makeVoiceModelKey(provider: RealtimeVoiceProvider, id: string): string {
+  return `${provider}:${id}`
+}
+
+function resolveStoredVoiceModel(models: RealtimeVoiceModelOption[], stored: string): RealtimeVoiceModelOption | undefined {
+  const trimmed = stored.trim()
+  if (!trimmed) return undefined
+
+  const separatorIndex = trimmed.indexOf(':')
+  if (separatorIndex > 0) {
+    const provider = trimmed.slice(0, separatorIndex)
+    const id = trimmed.slice(separatorIndex + 1)
+    if (provider && id) {
+      return models.find((m) => m.provider === provider && m.id === id)
+    }
+  }
+
+  return models.find((m) => m.id === trimmed)
+}
+
 export const useVoiceModelStore = defineStore('voiceModel', {
   state: () => ({
     models: [] as RealtimeVoiceModelOption[],
@@ -16,7 +36,7 @@ export const useVoiceModelStore = defineStore('voiceModel', {
 
   getters: {
     selectedModel(state): RealtimeVoiceModelOption | undefined {
-      return state.models.find((m) => m.id === state.selectedModelId)
+      return resolveStoredVoiceModel(state.models, state.selectedModelId)
     },
 
     selectedProvider(): RealtimeVoiceProvider | null {
@@ -39,16 +59,18 @@ export const useVoiceModelStore = defineStore('voiceModel', {
     },
 
     setSelectedModelId(id: string) {
-      if (!this.models.some((m) => m.id === id)) return
-      this.selectedModelId = id
+      const selected = resolveStoredVoiceModel(this.models, id)
+      if (!selected) return
+      this.selectedModelId = makeVoiceModelKey(selected.provider, selected.id)
       this.persistModelId()
     },
 
     applyInitialSelection() {
       try {
         const stored = sessionStorage.getItem(VOICE_MODEL_STORAGE_KEY)
-        if (stored && this.models.some((m) => m.id === stored)) {
-          this.selectedModelId = stored
+        const selected = stored ? resolveStoredVoiceModel(this.models, stored) : undefined
+        if (selected) {
+          this.selectedModelId = makeVoiceModelKey(selected.provider, selected.id)
           return
         }
       } catch {
@@ -60,7 +82,7 @@ export const useVoiceModelStore = defineStore('voiceModel', {
         this.models.find((m) => m.defaultOption) ??
         this.models[0]
       if (pick?.id) {
-        this.selectedModelId = pick.id
+        this.selectedModelId = makeVoiceModelKey(pick.provider, pick.id)
         this.persistModelId()
       }
     },

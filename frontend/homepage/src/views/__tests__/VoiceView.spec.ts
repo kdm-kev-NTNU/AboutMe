@@ -79,8 +79,7 @@ describe('VoiceView.vue', () => {
     const stubConnect = vi.fn()
     const stubDisconnect = vi.fn()
 
-    const connectionState =
-      opts.fetchResult === 'pending' ? ref<'idle' | 'connecting' | 'connected'>('idle') : ref<'idle'>('idle')
+    const connectionState = ref<'idle' | 'connecting' | 'connected' | 'error'>('idle')
     const errorMessage = ref('')
     const sessionNotice = ref('')
     const assistantTranscript = ref('')
@@ -259,12 +258,12 @@ describe('VoiceView.vue', () => {
     expect(document.body.textContent).toContain('Provider/model')
     expect(document.body.textContent).toContain('OpenAI GPT-Realtime-2')
     expect(document.body.textContent).toContain('ElevenLabs Agent')
-    expect(select.value).toBe('gpt-realtime-2')
+    expect(select.value).toBe('OPENAI:gpt-realtime-2')
 
-    select.value = 'agent_1'
+    select.value = 'ELEVENLABS:agent_1'
     await wrapper.get('[data-testid="voice-model-select"]').trigger('change')
 
-    expect(sessionStorage.getItem('voiceSelectedModel')).toBe('agent_1')
+    expect(sessionStorage.getItem('voiceSelectedModel')).toBe('ELEVENLABS:agent_1')
 
     wrapper.unmount()
   })
@@ -282,6 +281,19 @@ describe('VoiceView.vue', () => {
 
     expect((wrapper.get('[data-testid="voice-select"]').element as HTMLSelectElement).disabled).toBe(true)
     expect((wrapper.get('[data-testid="reasoning-select"]').element as HTMLSelectElement).disabled).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('shows the Norwegian reasoning label when language is Norwegian', async () => {
+    const { wrapper } = await factory({
+      lang: 'no',
+      fetchResult: true,
+    })
+
+    await flushPromises()
+
+    expect(document.body.textContent).toContain('Resonnering')
 
     wrapper.unmount()
   })

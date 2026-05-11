@@ -25,13 +25,13 @@ describe('useVoiceModelStore', () => {
     await store.ensureModelsLoaded()
 
     expect(store.models).toHaveLength(2)
-    expect(store.selectedModelId).toBe('gpt-realtime-2')
+    expect(store.selectedModelId).toBe('OPENAI:gpt-realtime-2')
     expect(store.selectedProvider).toBe('OPENAI')
-    expect(sessionStorage.getItem('voiceSelectedModel')).toBe('gpt-realtime-2')
+    expect(sessionStorage.getItem('voiceSelectedModel')).toBe('OPENAI:gpt-realtime-2')
   })
 
   it('restores a stored configured model', async () => {
-    sessionStorage.setItem('voiceSelectedModel', 'agent_1')
+    sessionStorage.setItem('voiceSelectedModel', 'ELEVENLABS:agent_1')
     vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
       { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
       { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: false },
@@ -40,7 +40,7 @@ describe('useVoiceModelStore', () => {
 
     await store.ensureModelsLoaded()
 
-    expect(store.selectedModelId).toBe('agent_1')
+    expect(store.selectedModelId).toBe('ELEVENLABS:agent_1')
     expect(store.selectedProvider).toBe('ELEVENLABS')
   })
 
@@ -53,6 +53,6 @@ describe('useVoiceModelStore', () => {
 
     store.setSelectedModelId('missing')
 
-    expect(store.selectedModelId).toBe('gpt-realtime-2')
+    expect(store.selectedModelId).toBe('OPENAI:gpt-realtime-2')
   })
 })
