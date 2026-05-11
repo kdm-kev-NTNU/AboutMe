@@ -18,7 +18,7 @@ Core stack:
 | `scripts/dev.ps1` | Windows helper that starts Docker infrastructure and opens backend + Vite terminals |
 | `docker-compose.yml` | PostgreSQL/pgvector, backend, and Nginx-hosted frontend |
 | `.env.example` | Documented runtime configuration for backend secrets and optional integrations |
-| `.github/workflows/` | Maven/frontend tests, Semgrep, and Docker image publishing |
+| `.github/workflows/` | Maven/frontend tests, GitGuardian secret scanning, Semgrep, and Docker image publishing |
 
 Seed documents for the vector store go in `backend/data/docs/` (gitignored). The backend also ships a classpath seed document for a minimal local knowledge base.
 
@@ -138,6 +138,8 @@ Public AI endpoints are rate-limited with Bucket4j. Admin routes are protected b
 
 Treat database backups as sensitive. Conversations, documents, chunks, embeddings, prompts, feedback, and experiment datasets may contain personal or project-specific information.
 
+CI uses GitGuardian as the PR/push secret scanning gate and Semgrep for SAST. Add `GITGUARDIAN_API_KEY` to GitHub Actions secrets before enabling required checks; the GitGuardian workflow fails hard when the token is missing.
+
 ## Document Pipeline and RAG
 
 The knowledge base is curated through admin tooling:
@@ -187,7 +189,7 @@ Release notes should say "Live OpenAI Realtime E2E passed" only after the full l
 CI can build multi-platform backend and frontend images and publish them to Docker Hub when the required repository variables and secrets are configured:
 
 - Variables: `DOCKER_ACCOUNT`, `CLOUD_BUILDER_NAME`
-- Secrets: `DOCKER_ACCESS_TOKEN`, plus optional frontend `VITE_POSTHOG_*` build values
+- Secrets: `GITGUARDIAN_API_KEY` for PR/push secret scanning, `DOCKER_ACCESS_TOKEN` for image publishing, plus optional frontend `VITE_POSTHOG_*` build values
 
 Use prebuilt images by replacing the `build:` blocks in `docker-compose.yml` with:
 

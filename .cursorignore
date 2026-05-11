@@ -1,0 +1,31 @@
+# Local environment (secrets / machine-specific)
+**/.env
+**/.env.*
+backend/.env
+frontend/homepage/.env
+
+# Local scratch payloads / agent artifacts
+scripts/_*
+
+# Local credentials / private key material
+**/credentials.json
+**/secrets.json
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/id_rsa
+**/id_ed25519
+
+# Build and test outputs
+backend/target/
+frontend/homepage/dist/
+frontend/homepage/dist-ssr/
+frontend/homepage/coverage/
+frontend/homepage/test-results/
+frontend/homepage/cypress/videos/
+frontend/homepage/cypress/screenshots/
+
+# Logs
+logs/
+*.log
