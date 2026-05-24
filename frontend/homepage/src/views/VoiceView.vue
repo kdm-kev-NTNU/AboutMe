@@ -1,58 +1,54 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
-import { Mic, MicOff, Loader2, Info, MessageSquare } from 'lucide-vue-next'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { MessageSquare } from 'lucide-vue-next'
 import { useLangStore } from '@/stores/lang'
 import { useVoiceModelStore } from '@/stores/voice-model'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import AiStatusDialog from '@/components/AiStatusDialog.vue'
-import { useRealtimeVoice } from '@/composables/useRealtimeVoice'
+import { useVoiceModeStore, type VoiceMode } from '@/stores/voice-mode'
+import { captureProductAnalyticsEvent } from '@/lib/analytics'
+import { POSTHOG_VOICE_EVENTS } from '@/lib/posthog-sdk'
 import {
   fetchRealtimeVoiceStatus,
   type RealtimeReasoningEffort,
   type RealtimeVoiceChoice,
 } from '@/lib/realtime-voice'
+import VoiceModeSwitcher from '@/components/voice/VoiceModeSwitcher.vue'
+import StandardVoicePanel from '@/components/voice/StandardVoicePanel.vue'
+import RealtimeVoicePanel from '@/components/voice/RealtimeVoicePanel.vue'
 
 const langStore = useLangStore()
 const voiceModelStore = useVoiceModelStore()
+const voiceModeStore = useVoiceModeStore()
 const language = computed(() => langStore.language)
+const route = useRoute()
+const router = useRouter()
 
-const voiceAvailable = ref<boolean | null>(null)
+const liveAvailable = ref<boolean | null>(null)
+const standardAvailable = ref<boolean | null>(null)
 const voiceOptions = ref<RealtimeVoiceChoice[]>(['marin', 'cedar'])
 const reasoningOptions = ref<RealtimeReasoningEffort[]>(['low', 'medium', 'high'])
-const selectedVoice = ref<RealtimeVoiceChoice>('marin')
-const selectedReasoningEffort = ref<RealtimeReasoningEffort>('low')
-const aiErrorDialogOpen = ref(false)
-
-const selectedRealtimeOptions = computed(() => ({
-  voice: selectedVoice.value,
-  reasoningEffort: selectedReasoningEffort.value,
-}))
-const selectedVoiceModel = computed(() => voiceModelStore.selectedModel)
-const selectedVoiceProvider = computed(() => selectedVoiceModel.value?.provider ?? 'OPENAI')
-
-const {
-  connectionState,
-  errorMessage,
-  sessionNotice,
-  assistantTranscript,
-  userTranscript,
-  connect,
-  disconnect,
-  maxSessionMs,
-} = useRealtimeVoice(language, selectedRealtimeOptions, selectedVoiceModel)
+const defaultVoice = ref<RealtimeVoiceChoice>('marin')
+const defaultReasoningEffort = ref<RealtimeReasoningEffort>('low')
+const selectedMode = computed<VoiceMode>({
+  get: () => voiceModeStore.mode,
+  set: (value) => voiceModeStore.setMode(value),
+})
 
 onMounted(async () => {
+  voiceModeStore.load()
+  if (route.query.mode === 'live') {
+    voiceModeStore.setMode('live')
+  }
   const [status] = await Promise.all([
     fetchRealtimeVoiceStatus(),
     voiceModelStore.ensureModelsLoaded(),
   ])
-  voiceAvailable.value = status.enabled && voiceModelStore.hasModels
+  liveAvailable.value = status.liveEnabled && voiceModelStore.hasModels
+  standardAvailable.value = status.standardEnabled
   voiceOptions.value = status.voices
   reasoningOptions.value = status.reasoningEfforts
-  selectedVoice.value = status.voice
-  selectedReasoningEffort.value = status.reasoningEffort
+  defaultVoice.value = status.voice
+  defaultReasoningEffort.value = status.reasoningEffort
 })
 
 const copy = computed(() => {
@@ -60,95 +56,28 @@ const copy = computed(() => {
   return {
     title: en ? "Talk with Kevin's AI" : 'Snakk med Kevin sin AI',
     chatAlt: en ? 'Use text chat instead' : 'Bruk tekstchat',
-    unavailable: en
-      ? 'Voice chat is not enabled on the server right now.'
-      : 'Stemmechat er ikke slått på hos serveren akkurat nå.',
-    connect: en ? 'Start voice' : 'Start stemme',
-    disconnect: en ? 'End session' : 'Avslutt',
-    connecting: en ? 'Connecting…' : 'Kobler til…',
-    live: en ? 'Live' : 'Aktiv',
-    modelLabel: en ? 'Provider/model' : 'Leverandør/modell',
-    voiceLabel: en ? 'Voice' : 'Stemme',
-    reasoningLabel: en ? 'Reasoning' : 'Resonnering',
-    you: en ? 'You (transcript)' : 'Du (transkripsjon)',
-    assistant: en ? 'Assistant (transcript)' : 'Assistent (transkripsjon)',
-    disclaimerTitle: en ? 'Before you use voice' : 'Før du bruker stemme',
-    disclaimerBody: en
-      ? `You are talking to an AI, not Kevin himself. Replies can be wrong. Audio is processed by ${selectedVoiceProvider.value === 'ELEVENLABS' ? 'ElevenLabs' : 'OpenAI'} in real time (this page uses WebRTC). Each session ends automatically after about 3 minutes.`
-      : `Du snakker med en KI, ikke Kevin selv. Svar kan være feil. Lyd behandles av ${selectedVoiceProvider.value === 'ELEVENLABS' ? 'ElevenLabs' : 'OpenAI'} i sanntid (denne siden bruker WebRTC). Hver økt avsluttes automatisk etter ca. 3 minutter.`,
+    modeHint: en
+      ? 'Choose between robust standard voice and experimental live mode.'
+      : 'Velg mellom robust standard stemme og eksperimentell live-modus.',
   }
 })
 
-const voiceLabels: Record<RealtimeVoiceChoice, string> = {
-  marin: 'Marin',
-  cedar: 'Cedar',
-}
-
-const reasoningLabels = computed<Record<RealtimeReasoningEffort, string>>(() => {
-  const en = language.value === 'en'
-  return {
-    low: en ? 'Fast' : 'Rask',
-    medium: en ? 'Balanced' : 'Balansert',
-    high: en ? 'Thorough' : 'Grundig',
+watch(
+  () => selectedMode.value,
+  (mode) => {
+    captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.MODE_SELECTED, { mode })
+    const nextQuery = { ...route.query }
+    if (mode === 'live') nextQuery.mode = 'live'
+    else delete nextQuery.mode
+    void router.replace({ query: nextQuery })
   }
-})
-
-function makeVoiceModelValue(provider: string, id: string) {
-  return `${provider}:${id}`
-}
-
-const sessionControlsDisabled = computed(
-  () => connectionState.value === 'connecting' || connectionState.value === 'connected',
 )
-
-const statusLabel = computed(() => {
-  if (connectionState.value === 'connecting') return copy.value.connecting
-  if (connectionState.value === 'connected') return copy.value.live
-  return ''
-})
-
-const errorDialogCopy = computed(() => {
-  const en = language.value === 'en'
-  return {
-    title: en ? 'Voice could not start' : 'Stemme kunne ikke starte',
-    description: en
-      ? 'The live AI service needs a fresh session before it can continue.'
-      : 'Live AI-tjenesten trenger en ny økt før den kan fortsette.',
-    retry: en ? 'Try again' : 'Prøv igjen',
-  }
-})
-
-watch(errorMessage, (message) => {
-  aiErrorDialogOpen.value = message.trim() !== ''
-})
-
-function retryVoice() {
-  aiErrorDialogOpen.value = false
-  void connect()
-}
-
-function setVoiceModelFromEvent(event: Event) {
-  const target = event.target
-  if (target instanceof HTMLSelectElement) {
-    voiceModelStore.setSelectedModelId(target.value)
-  }
-}
 </script>
 
 <template>
   <main
     class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 pt-20"
   >
-    <AiStatusDialog
-      v-model:open="aiErrorDialogOpen"
-      :title="errorDialogCopy.title"
-      :description="errorDialogCopy.description"
-      :message="errorMessage"
-      :retry-label="errorDialogCopy.retry"
-      show-retry
-      @retry="retryVoice"
-    />
-
     <div class="absolute inset-0 pointer-events-none">
       <div
         class="absolute top-0 left-0 h-full w-full"
@@ -172,163 +101,23 @@ function setVoiceModelFromEvent(event: Event) {
           {{ copy.chatAlt }}
         </RouterLink>
       </div>
+      <p class="mb-4 text-sm text-slate-600">{{ copy.modeHint }}</p>
+      <VoiceModeSwitcher v-model="selectedMode" :language="language" />
 
-      <Alert
-        class="mb-6 border-blue-200/80 bg-blue-50/90 text-slate-800 shadow-sm backdrop-blur-sm [&>svg]:text-blue-600"
-      >
-        <Info class="size-4 shrink-0" aria-hidden="true" />
-        <AlertTitle>{{ copy.disclaimerTitle }}</AlertTitle>
-        <AlertDescription>{{ copy.disclaimerBody }}</AlertDescription>
-      </Alert>
-
-      <div
-        v-if="voiceAvailable === false"
-        class="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-center text-sm text-amber-900"
-      >
-        {{ copy.unavailable }}
-      </div>
-
-      <template v-else-if="voiceAvailable === true">
-        <div class="flex flex-col items-center gap-6">
-          <div
-            class="relative flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl shadow-blue-500/25"
-            :class="{
-              'ring-4 ring-blue-400/50 animate-pulse': connectionState === 'connected',
-            }"
-          >
-            <Loader2
-              v-if="connectionState === 'connecting'"
-              class="size-14 text-white animate-spin"
-              aria-hidden="true"
-            />
-            <Mic
-              v-else-if="connectionState === 'connected'"
-              class="size-14 text-white"
-              aria-hidden="true"
-            />
-            <Mic v-else class="size-14 text-white opacity-90" aria-hidden="true" />
-            <span class="sr-only">{{ statusLabel }}</span>
-          </div>
-
-          <p v-if="connectionState === 'connected'" class="text-sm font-medium text-green-700">
-            {{ copy.live }} · ~{{ Math.round(maxSessionMs / 60_000) }} min max
-          </p>
-
-          <label class="w-full max-w-md text-left text-xs font-semibold uppercase text-slate-600">
-            {{ copy.modelLabel }}
-            <select
-              :value="voiceModelStore.selectedModelId"
-              data-testid="voice-model-select"
-              class="mt-1 h-10 w-full rounded-lg border border-blue-100 bg-white/90 px-3 text-sm font-medium normal-case text-slate-800 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-              :disabled="sessionControlsDisabled"
-              @change="setVoiceModelFromEvent"
-            >
-              <option
-                v-for="model in voiceModelStore.models"
-                :key="model.provider + ':' + model.id"
-                :value="makeVoiceModelValue(model.provider, model.id)"
-              >
-                {{ model.label }}
-              </option>
-            </select>
-          </label>
-
-          <div
-            v-if="selectedVoiceProvider === 'OPENAI'"
-            class="grid w-full max-w-md grid-cols-1 gap-3 sm:grid-cols-2"
-          >
-            <label class="text-left text-xs font-semibold uppercase text-slate-600">
-              {{ copy.voiceLabel }}
-              <select
-                v-model="selectedVoice"
-                data-testid="voice-select"
-                class="mt-1 h-10 w-full rounded-lg border border-blue-100 bg-white/90 px-3 text-sm font-medium normal-case text-slate-800 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-                :disabled="sessionControlsDisabled"
-              >
-                <option v-for="voice in voiceOptions" :key="voice" :value="voice">
-                  {{ voiceLabels[voice] }}
-                </option>
-              </select>
-            </label>
-
-            <label class="text-left text-xs font-semibold uppercase text-slate-600">
-              {{ copy.reasoningLabel }}
-              <select
-                v-model="selectedReasoningEffort"
-                data-testid="reasoning-select"
-                class="mt-1 h-10 w-full rounded-lg border border-blue-100 bg-white/90 px-3 text-sm font-medium normal-case text-slate-800 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-                :disabled="sessionControlsDisabled"
-              >
-                <option v-for="effort in reasoningOptions" :key="effort" :value="effort">
-                  {{ reasoningLabels[effort] }}
-                </option>
-              </select>
-            </label>
-          </div>
-
-          <div class="flex flex-wrap justify-center gap-3">
-            <Button
-              v-if="connectionState === 'idle' || connectionState === 'error'"
-              type="button"
-              class="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-base font-semibold"
-              @click="connect"
-            >
-              {{ copy.connect }}
-            </Button>
-            <Button
-              v-if="connectionState === 'connecting'"
-              type="button"
-              variant="secondary"
-              disabled
-            >
-              {{ copy.connecting }}
-            </Button>
-            <Button
-              v-if="connectionState === 'connected'"
-              type="button"
-              variant="outline"
-              class="rounded-2xl border-red-200 text-red-700 hover:bg-red-50"
-              @click="disconnect"
-            >
-              <MicOff class="me-2 inline size-4" aria-hidden="true" />
-              {{ copy.disconnect }}
-            </Button>
-          </div>
-        </div>
-
-        <Alert
-          v-if="sessionNotice"
-          class="mt-6 border-blue-200 bg-blue-50 text-slate-800"
-        >
-          <AlertDescription>{{ sessionNotice }}</AlertDescription>
-        </Alert>
-
-        <div
-          v-if="connectionState === 'connected' || userTranscript || assistantTranscript"
-          class="mt-8 space-y-4 rounded-2xl border border-blue-100 bg-white/85 p-4 shadow-sm backdrop-blur-md"
-        >
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {{ copy.you }}
-            </p>
-            <p class="mt-1 whitespace-pre-wrap text-sm text-slate-800">
-              {{ userTranscript || '…' }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {{ copy.assistant }}
-            </p>
-            <p class="mt-1 whitespace-pre-wrap text-sm text-slate-800">
-              {{ assistantTranscript || '…' }}
-            </p>
-          </div>
-        </div>
-      </template>
-
-      <div v-else class="flex justify-center py-12">
-        <Loader2 class="size-8 animate-spin text-blue-600" aria-hidden="true" />
-      </div>
+      <StandardVoicePanel
+        v-if="selectedMode === 'standard'"
+        :language="language"
+        :available="standardAvailable"
+      />
+      <RealtimeVoicePanel
+        v-else
+        :language="language"
+        :available="liveAvailable"
+        :voice-options="voiceOptions"
+        :reasoning-options="reasoningOptions"
+        :default-voice="defaultVoice"
+        :default-reasoning-effort="defaultReasoningEffort"
+      />
     </div>
   </main>
 </template>

@@ -34,6 +34,8 @@ export const POSTHOG_VOICE_EVENTS = {
   SESSION_STARTED: 'portfolio_voice_session_started',
   SESSION_ENDED: 'portfolio_voice_session_ended',
   SESSION_ERROR: 'portfolio_voice_session_error',
+  MODE_SELECTED: 'portfolio_voice_mode_selected',
+  STANDARD_TURN_COMPLETED: 'portfolio_standard_voice_turn_completed',
 } as const
 
 /** Feature flag keys created in PostHog (MCP / UI). */

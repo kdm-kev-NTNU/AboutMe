@@ -43,6 +43,8 @@ describe('realtime-voice', () => {
     const { fetchRealtimeVoiceStatus } = await import('../realtime-voice')
     await expect(fetchRealtimeVoiceStatus()).resolves.toEqual({
       enabled: true,
+      standardEnabled: false,
+      liveEnabled: false,
       voices: ['marin', 'cedar'],
       reasoningEfforts: ['low', 'medium', 'high'],
       voice: 'cedar',
