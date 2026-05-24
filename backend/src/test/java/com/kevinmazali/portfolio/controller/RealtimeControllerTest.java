@@ -18,6 +18,8 @@ import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
+import com.kevinmazali.portfolio.service.SpeechSynthesisService;
+import com.kevinmazali.portfolio.service.TranscriptionService;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -79,6 +81,12 @@ class RealtimeControllerTest {
   private ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
 
   @MockitoBean
+  private TranscriptionService transcriptionService;
+
+  @MockitoBean
+  private SpeechSynthesisService speechSynthesisService;
+
+  @MockitoBean
   private RequestLogService requestLogService;
 
   @AfterEach
@@ -89,10 +97,14 @@ class RealtimeControllerTest {
   @Test
   void statusEnabledWhenFlagAndKey() throws Exception {
     when(realtimeModelCatalog.hasAvailableModels()).thenReturn(true);
+    when(transcriptionService.isTranscriptionConfigured()).thenReturn(true);
+    when(speechSynthesisService.isConfigured()).thenReturn(true);
 
     mockMvc.perform(get("/realtime/status"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.enabled").value(true))
+        .andExpect(jsonPath("$.standardEnabled").value(true))
+        .andExpect(jsonPath("$.liveEnabled").value(true))
         .andExpect(jsonPath("$.voices[0]").value("marin"))
         .andExpect(jsonPath("$.voices[1]").value("cedar"))
         .andExpect(jsonPath("$.reasoningEfforts[0]").value("low"))
@@ -122,9 +134,14 @@ class RealtimeControllerTest {
   @Test
   void statusDisabledWhenFeatureFlagFalse() throws Exception {
     realtimeProperties.setEnabled(false);
+    when(realtimeModelCatalog.hasAvailableModels()).thenReturn(false);
+    when(transcriptionService.isTranscriptionConfigured()).thenReturn(false);
+    when(speechSynthesisService.isConfigured()).thenReturn(false);
     mockMvc.perform(get("/realtime/status"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.enabled").value(false));
+        .andExpect(jsonPath("$.enabled").value(false))
+        .andExpect(jsonPath("$.standardEnabled").value(false))
+        .andExpect(jsonPath("$.liveEnabled").value(false));
   }
 
   @Test
@@ -258,16 +275,18 @@ class RealtimeControllerTest {
   }
 
   @Test
-  void lookupReturns503WhenFeatureDisabled() throws Exception {
+  void lookupStillWorksWhenRealtimeFlagDisabled() throws Exception {
     realtimeProperties.setEnabled(false);
+    when(realtimeLookupService.lookup(eq("NTNU"), eq("en")))
+        .thenReturn(new RealtimeLookupResponse(true, List.of()));
 
     mockMvc.perform(post("/realtime/lookup")
             .content("{\"query\":\"NTNU\",\"language\":\"en\"}")
             .contentType(MediaType.APPLICATION_JSON))
-        .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.code").value("REALTIME_DISABLED"));
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.found").value(true));
 
-    verify(realtimeLookupService, never()).lookup(any(), any());
+    verify(realtimeLookupService).lookup(eq("NTNU"), eq("en"));
   }
 
   @Test
@@ -320,13 +339,24 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
   private ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
 
   @MockitoBean
+  private TranscriptionService transcriptionService;
+
+  @MockitoBean
+  private SpeechSynthesisService speechSynthesisService;
+
+  @MockitoBean
   private RequestLogService requestLogService;
 
   @Test
   void statusDisabledWhenApiKeyUnset() throws Exception {
+    when(realtimeModelCatalog.hasAvailableModels()).thenReturn(false);
+    when(transcriptionService.isTranscriptionConfigured()).thenReturn(false);
+    when(speechSynthesisService.isConfigured()).thenReturn(false);
     mockMvc.perform(get("/realtime/status"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.enabled").value(false));
+        .andExpect(jsonPath("$.enabled").value(false))
+        .andExpect(jsonPath("$.standardEnabled").value(false))
+        .andExpect(jsonPath("$.liveEnabled").value(false));
   }
 
   @Test
