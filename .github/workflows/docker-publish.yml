@@ -1,4 +1,5 @@
-# Build and push backend + frontend images to Docker Hub using Docker Build Cloud.
+# Build and push backend + frontend images to Docker Hub (Docker Build Cloud, with
+# GitHub-hosted amd64 fallback when Build Cloud concurrent build quota is exhausted).
 # Backend uses Dockerfile.publish: JAR is built on the runner (Maven cache) and passed via BuildKit
 # context "jar" so Docker Build Cloud does not run Maven per platform (avoids Maven Central 429).
 # Triggers: push to main, semver tags v*.*.*, manual workflow_dispatch.
@@ -101,28 +102,28 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
           sbom: true
-      - name: Wait before backend image retry
+      - name: Setup hosted buildx fallback
         if: steps.backend_push.outcome == 'failure'
-        run: sleep 90
-      - name: Build and push backend image (retry)
+        uses: docker/setup-buildx-action@v4
+      - name: Build and push backend image (hosted amd64 fallback)
         if: steps.backend_push.outcome == 'failure'
-        id: backend_push_retry
+        id: backend_push_fallback
         uses: docker/build-push-action@v7
         with:
           context: ./backend
           file: ./backend/Dockerfile.publish
           build-contexts: |
             jar=${{ steps.jarctx.outputs.path }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          provenance: true
-          sbom: true
       - name: Fail if backend image was not pushed
-        if: steps.backend_push.outcome == 'failure' && steps.backend_push_retry.outcome == 'failure'
+        if: >-
+          steps.backend_push.outcome == 'failure' &&
+          (steps.backend_push_fallback.outcome == 'failure' || steps.backend_push_fallback.outcome == 'skipped')
         run: |
-          echo "::error::Backend image push failed after retry."
+          echo "::error::Backend image push failed on Build Cloud and hosted amd64 fallback."
           exit 1
 
   frontend:
@@ -198,17 +199,17 @@ jobs:
             VITE_POSTHOG_ENABLED=${{ secrets.VITE_POSTHOG_ENABLED }}
           provenance: true
           sbom: true
-      - name: Wait before frontend image retry
+      - name: Setup hosted buildx fallback
         if: steps.frontend_push.outcome == 'failure'
-        run: sleep 90
-      - name: Build and push frontend image (retry)
+        uses: docker/setup-buildx-action@v4
+      - name: Build and push frontend image (hosted amd64 fallback)
         if: steps.frontend_push.outcome == 'failure'
-        id: frontend_push_retry
+        id: frontend_push_fallback
         uses: docker/build-push-action@v7
         with:
           context: ./frontend/homepage
           file: ./frontend/homepage/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -216,10 +217,10 @@ jobs:
             VITE_POSTHOG_KEY=${{ secrets.VITE_POSTHOG_KEY }}
             VITE_POSTHOG_HOST=${{ secrets.VITE_POSTHOG_HOST }}
             VITE_POSTHOG_ENABLED=${{ secrets.VITE_POSTHOG_ENABLED }}
-          provenance: true
-          sbom: true
       - name: Fail if frontend image was not pushed
-        if: steps.frontend_push.outcome == 'failure' && steps.frontend_push_retry.outcome == 'failure'
+        if: >-
+          steps.frontend_push.outcome == 'failure' &&
+          (steps.frontend_push_fallback.outcome == 'failure' || steps.frontend_push_fallback.outcome == 'skipped')
         run: |
-          echo "::error::Frontend image push failed after retry."
+          echo "::error::Frontend image push failed on Build Cloud and hosted amd64 fallback."
           exit 1
