@@ -39,6 +39,20 @@ describe('formatLookupForSpeech', () => {
     expect(result).toContain('rephrasing')
   })
 
+  it('prefixes low-confidence answers in Norwegian', () => {
+    const result = formatLookupForSpeech(
+      {
+        found: true,
+        confidence: 'low',
+        snippets: [{ sourceType: 'profile', title: 'A', text: 'Kevin studerer IT.' }],
+      },
+      'no',
+    )
+    expect(result).toContain('Jeg er ikke helt sikker')
+    expect(result).toContain('Kevin studerer IT.')
+    expect(result).toContain('annen måte')
+  })
+
   it('skips empty snippet text', () => {
     expect(
       formatLookupForSpeech(

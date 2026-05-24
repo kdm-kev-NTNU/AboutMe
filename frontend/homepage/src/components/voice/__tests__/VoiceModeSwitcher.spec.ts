@@ -10,4 +10,13 @@ describe('VoiceModeSwitcher', () => {
     await wrapper.get('button:nth-of-type(2)').trigger('click')
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['live'])
   })
+
+  it('renders Norwegian labels and highlights the active mode', () => {
+    const wrapper = mount(VoiceModeSwitcher, {
+      props: { modelValue: 'live', language: 'no' },
+    })
+    expect(wrapper.text()).toContain('Anbefalt')
+    expect(wrapper.text()).toContain('Mindre stabil')
+    expect(wrapper.get('button:nth-of-type(2)').classes()).toContain('bg-amber-50')
+  })
 })

@@ -19,6 +19,10 @@ vi.mock('@/lib/realtime-voice', async (importOriginal) => {
   }
 })
 
+vi.mock('@/lib/analytics', () => ({
+  captureProductAnalyticsEvent: vi.fn(),
+}))
+
 describe('VoiceView.vue', () => {
   async function factory(opts: {
     lang: 'en' | 'no'
@@ -130,6 +134,47 @@ describe('VoiceView.vue', () => {
     await flushPromises()
     expect(wrapper.find('[data-testid="live-panel"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="standard-panel"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('renders Norwegian copy', async () => {
+    const { wrapper } = await factory({
+      lang: 'no',
+      standardEnabled: true,
+      liveEnabled: false,
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Snakk med Kevin sin AI')
+    expect(wrapper.text()).toContain('Bruk tekstchat')
+    wrapper.unmount()
+  })
+
+  it('updates route query when switching to live mode', async () => {
+    const { wrapper, router } = await factory({
+      lang: 'en',
+      standardEnabled: true,
+      liveEnabled: true,
+    })
+    await flushPromises()
+    await wrapper.find('[data-testid="switch-live"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.mode).toBe('live')
+    expect(wrapper.find('[data-testid="live-panel"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('clears route query when switching back to standard mode', async () => {
+    const { wrapper, router } = await factory({
+      lang: 'en',
+      route: '/voice?mode=live',
+      standardEnabled: true,
+      liveEnabled: true,
+    })
+    await flushPromises()
+    await wrapper.find('[data-testid="switch-standard"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.mode).toBeUndefined()
+    expect(wrapper.find('[data-testid="standard-panel"]').exists()).toBe(true)
     wrapper.unmount()
   })
 })

@@ -15,6 +15,19 @@ describe('useVoiceModelStore', () => {
     vi.mocked(fetchRealtimeVoiceModels).mockReset()
   })
 
+  it('exposes the selected model through getters', async () => {
+    vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
+      { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
+    ])
+    const store = useVoiceModelStore()
+
+    await store.ensureModelsLoaded()
+
+    expect(store.selectedModel?.id).toBe('gpt-realtime-2')
+    expect(store.selectedProvider).toBe('OPENAI')
+    expect(store.hasModels).toBe(true)
+  })
+
   it('loads models and prefers the OpenAI default', async () => {
     vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
       { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: true },
@@ -54,5 +67,100 @@ describe('useVoiceModelStore', () => {
     store.setSelectedModelId('missing')
 
     expect(store.selectedModelId).toBe('OPENAI:gpt-realtime-2')
+  })
+
+  it('restores a legacy id-only stored model key', async () => {
+    sessionStorage.setItem('voiceSelectedModel', 'gpt-realtime-2')
+    vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
+      { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
+    ])
+    const store = useVoiceModelStore()
+
+    await store.ensureModelsLoaded()
+
+    expect(store.selectedModelId).toBe('OPENAI:gpt-realtime-2')
+  })
+
+  it('re-applies selection when models are cached but selection is empty', async () => {
+    vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
+      { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
+    ])
+    const store = useVoiceModelStore()
+    await store.ensureModelsLoaded()
+    store.selectedModelId = ''
+
+    await store.ensureModelsLoaded()
+
+    expect(store.selectedModelId).toBe('OPENAI:gpt-realtime-2')
+    expect(fetchRealtimeVoiceModels).toHaveBeenCalledTimes(1)
+  })
+
+  it('deduplicates concurrent model loads', async () => {
+    let resolveModels: (value: Awaited<ReturnType<typeof fetchRealtimeVoiceModels>>) => void
+    vi.mocked(fetchRealtimeVoiceModels).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveModels = resolve
+        }),
+    )
+    const store = useVoiceModelStore()
+    const first = store.ensureModelsLoaded()
+    const second = store.ensureModelsLoaded()
+
+    resolveModels!([
+      { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
+    ])
+    await Promise.all([first, second])
+    expect(fetchRealtimeVoiceModels).toHaveBeenCalledTimes(1)
+    expect(store.models).toHaveLength(1)
+  })
+
+  it('falls back to the first model when no OpenAI default exists', async () => {
+    vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
+      { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: false },
+    ])
+    const store = useVoiceModelStore()
+
+    await store.ensureModelsLoaded()
+
+    expect(store.selectedModelId).toBe('ELEVENLABS:agent_1')
+  })
+
+  it('skips persisting when no model is selected', () => {
+    const store = useVoiceModelStore()
+    store.selectedModelId = ''
+    store.persistModelId()
+    expect(sessionStorage.getItem('voiceSelectedModel')).toBeNull()
+  })
+
+  it('exposes null provider when nothing is selected', () => {
+    const store = useVoiceModelStore()
+    expect(store.selectedProvider).toBeNull()
+  })
+
+  it('ignores malformed stored model keys', async () => {
+    sessionStorage.setItem('voiceSelectedModel', ':')
+    vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
+      { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
+    ])
+    const store = useVoiceModelStore()
+
+    await store.ensureModelsLoaded()
+
+    expect(store.selectedModelId).toBe('OPENAI:gpt-realtime-2')
+  })
+
+  it('ignores sessionStorage failures when persisting selection', async () => {
+    vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
+      { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
+    ])
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    const store = useVoiceModelStore()
+    await store.ensureModelsLoaded()
+    store.setSelectedModelId('OPENAI:gpt-realtime-2')
+    expect(store.selectedModelId).toBe('OPENAI:gpt-realtime-2')
+    setItem.mockRestore()
   })
 })
