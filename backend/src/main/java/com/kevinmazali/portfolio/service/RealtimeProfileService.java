@@ -147,28 +147,73 @@ public class RealtimeProfileService {
     List<String> tagNorms = tags.stream().map(RealtimeProfileService::normalize).toList();
     int score = 0;
     if (StringUtils.hasText(normalizedQuery)) {
-      if (titleNorm.contains(normalizedQuery)) {
+      if (fieldMatches(titleNorm, normalizedQuery)) {
         score += 12;
       }
-      if (tagNorms.stream().anyMatch(t -> t.contains(normalizedQuery))) {
+      if (tagNorms.stream().anyMatch(t -> fieldMatches(t, normalizedQuery))) {
         score += 10;
       }
-      if (textNorm.contains(normalizedQuery)) {
+      if (fieldMatches(textNorm, normalizedQuery)) {
         score += 6;
       }
     }
     for (String term : terms) {
-      if (titleNorm.contains(term)) {
+      if (fieldMatches(titleNorm, term)) {
         score += 4;
       }
-      if (tagNorms.stream().anyMatch(t -> t.contains(term))) {
+      if (tagNorms.stream().anyMatch(t -> fieldMatches(t, term))) {
         score += 3;
       }
-      if (textNorm.contains(term)) {
+      if (fieldMatches(textNorm, term)) {
         score += 1;
       }
     }
     return score;
+  }
+
+  /** Substring match with light fuzzy tolerance for voice transcription typos. */
+  static boolean fieldMatches(String fieldNorm, String needle) {
+    if (!StringUtils.hasText(needle) || !StringUtils.hasText(fieldNorm)) {
+      return false;
+    }
+    if (fieldNorm.contains(needle)) {
+      return true;
+    }
+    if (needle.length() < 3) {
+      return false;
+    }
+    int maxDistance = needle.length() <= 5 ? 1 : 2;
+    for (String part : fieldNorm.split("[^\\p{L}\\p{N}]+")) {
+      if (part.length() < 2) {
+        continue;
+      }
+      if (levenshteinDistance(part, needle) <= maxDistance) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static int levenshteinDistance(String a, String b) {
+    if (a.equals(b)) {
+      return 0;
+    }
+    int[] prev = new int[b.length() + 1];
+    int[] curr = new int[b.length() + 1];
+    for (int j = 0; j <= b.length(); j++) {
+      prev[j] = j;
+    }
+    for (int i = 1; i <= a.length(); i++) {
+      curr[0] = i;
+      for (int j = 1; j <= b.length(); j++) {
+        int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+        curr[j] = Math.min(Math.min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+      }
+      int[] swap = prev;
+      prev = curr;
+      curr = swap;
+    }
+    return prev[b.length()];
   }
 
   private static Set<String> queryTerms(String raw) {

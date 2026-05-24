@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
@@ -47,8 +48,8 @@ public class RealtimeSessionService {
   // thread-safe; one private instance per service is fine.
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  private String instructionsEn;
-  private String instructionsNo;
+  private volatile String instructionsEn;
+  private volatile String instructionsNo;
 
   public RealtimeSessionService(
       RealtimeProperties realtimeProperties,
@@ -69,18 +70,35 @@ public class RealtimeSessionService {
     this.openAiApiKey = openAiApiKey;
   }
 
-  /** Lazy-load instruction files from classpath. */
+  @PostConstruct
+  void preloadInstructionPrompts() {
+    instructionsEn = loadPromptFile("prompts/realtime-voice-en.txt");
+    instructionsNo = loadPromptFile("prompts/realtime-voice-no.txt");
+  }
+
   private String instructionsForLanguage(String lang) {
     if ("no".equalsIgnoreCase(lang)) {
-      if (instructionsNo == null) {
-        instructionsNo = loadPromptFile("prompts/realtime-voice-no.txt");
+      String cached = instructionsNo;
+      if (cached != null) {
+        return cached;
       }
-      return instructionsNo;
+      synchronized (this) {
+        if (instructionsNo == null) {
+          instructionsNo = loadPromptFile("prompts/realtime-voice-no.txt");
+        }
+        return instructionsNo;
+      }
     }
-    if (instructionsEn == null) {
-      instructionsEn = loadPromptFile("prompts/realtime-voice-en.txt");
+    String cached = instructionsEn;
+    if (cached != null) {
+      return cached;
     }
-    return instructionsEn;
+    synchronized (this) {
+      if (instructionsEn == null) {
+        instructionsEn = loadPromptFile("prompts/realtime-voice-en.txt");
+      }
+      return instructionsEn;
+    }
   }
 
   private String loadPromptFile(String path) {

@@ -8,6 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -30,6 +31,7 @@ public class RealtimeLookupService {
   private static final int VECTOR_TOP_K = 5;
   private static final int MAX_SNIPPET_CHARS = 500;
   private static final long CACHE_TTL_NANOS = Duration.ofSeconds(60).toNanos();
+  private static final int MAX_CACHE_ENTRIES = 256;
   /** Profile scores at or above this are treated as high-confidence matches. */
   private static final int HIGH_CONFIDENCE_PROFILE_SCORE = 6;
   /** Snippets shorter than this with only weak matches are low-confidence. */
@@ -70,8 +72,27 @@ public class RealtimeLookupService {
         resultSnippets, profileLookup.bestScore(), !vectorResults.isEmpty());
     RealtimeLookupResponse response =
         new RealtimeLookupResponse(!resultSnippets.isEmpty(), resultSnippets, confidence);
-    cache.put(cacheKey, new CacheEntry(now, response));
+    putCacheEntry(cacheKey, new CacheEntry(now, response));
     return response;
+  }
+
+  private void putCacheEntry(String cacheKey, CacheEntry entry) {
+    cache.put(cacheKey, entry);
+    if (cache.size() > MAX_CACHE_ENTRIES) {
+      pruneExpiredEntries(System.nanoTime());
+      while (cache.size() > MAX_CACHE_ENTRIES) {
+        Iterator<String> keys = cache.keySet().iterator();
+        if (!keys.hasNext()) {
+          break;
+        }
+        keys.next();
+        keys.remove();
+      }
+    }
+  }
+
+  private void pruneExpiredEntries(long now) {
+    cache.entrySet().removeIf(e -> now - e.getValue().createdAtNanos() >= CACHE_TTL_NANOS);
   }
 
   static String computeConfidence(
@@ -157,4 +178,9 @@ public class RealtimeLookupService {
   }
 
   private record CacheEntry(long createdAtNanos, RealtimeLookupResponse response) {}
+
+  /** Visible for tests only. */
+  int cacheSizeForTests() {
+    return cache.size();
+  }
 }

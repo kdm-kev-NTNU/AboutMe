@@ -44,7 +44,25 @@ public class RealtimeModelCatalog {
   }
 
   public boolean hasAvailableModels() {
-    return !listAvailableModels().isEmpty();
+    if (!realtimeProperties.isEnabled()) {
+      return false;
+    }
+    if (hasOpenAiModels()) {
+      return true;
+    }
+    return hasElevenLabsModels();
+  }
+
+  private boolean hasOpenAiModels() {
+    return realtimeProperties.getProviders().getOpenai().isEnabled() && StringUtils.hasText(openAiApiKey);
+  }
+
+  private boolean hasElevenLabsModels() {
+    var elevenlabs = realtimeProperties.getProviders().getElevenlabs();
+    if (!elevenlabs.isEnabled() || !StringUtils.hasText(elevenlabs.getApiKey())) {
+      return false;
+    }
+    return elevenlabs.getAgents().stream().anyMatch(a -> StringUtils.hasText(a.getAgentId()));
   }
 
   public boolean isOpenAiModelConfigured(String modelId) {

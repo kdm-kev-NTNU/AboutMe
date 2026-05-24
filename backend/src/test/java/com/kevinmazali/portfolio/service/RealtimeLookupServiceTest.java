@@ -112,6 +112,17 @@ class RealtimeLookupServiceTest {
   }
 
   @Test
+  void lookupCacheIsBounded() {
+    when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of());
+
+    for (int i = 0; i < 300; i++) {
+      service.lookup("bounded-cache-query-" + i, "en");
+    }
+
+    assertThat(service.cacheSizeForTests()).isLessThanOrEqualTo(256);
+  }
+
+  @Test
   void lookupCachesForSameLanguageAndQuery() {
     when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of());
 

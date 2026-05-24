@@ -21,6 +21,13 @@ class RealtimeProfileServiceTest {
   }
 
   @Test
+  void fieldMatchesToleratesMinorTranscriptionTypos() {
+    assertThat(RealtimeProfileService.fieldMatches("kevin studies data engineering at ntnu", "enginering"))
+        .isTrue();
+    assertThat(RealtimeProfileService.levenshteinDistance("prosjekter", "projeckter")).isLessThanOrEqualTo(2);
+  }
+
+  @Test
   void lookupFindsEducationAndProjectFacts() {
     assertThat(service.lookup("NTNU data engineering", "en"))
         .extracting(snippet -> snippet.title())
