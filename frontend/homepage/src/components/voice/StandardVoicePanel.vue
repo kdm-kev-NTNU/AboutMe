@@ -25,10 +25,12 @@ const {
   transcriptText,
   answerText,
   isWorking,
+  canCancel,
   isRecording,
   isTranscribing,
   recordingMediaStream,
   toggleRecording,
+  cancel,
 } = standard
 
 const copy = computed(() => {
@@ -40,6 +42,7 @@ const copy = computed(() => {
     pickLanguage: no ? 'Velg språk før opptak' : 'Choose language before recording',
     start: no ? 'Start opptak' : 'Start recording',
     stop: no ? 'Stopp opptak' : 'Stop recording',
+    cancel: no ? 'Avbryt' : 'Cancel',
     recording: no ? 'Tar opp...' : 'Recording...',
     transcript: no ? 'Du sa' : 'You said',
     answer: no ? 'Svar' : 'Answer',
@@ -97,7 +100,7 @@ function confirmLanguage(lang: 'en' | 'no') {
           <Button
             type="button"
             class="rounded-xl"
-            :disabled="!languageConfirmed || isWorking"
+            :disabled="!languageConfirmed || (isWorking && !isRecording)"
             @click="toggleRecording"
           >
             <Square v-if="isRecording" class="me-2 size-4" aria-hidden="true" />
@@ -109,6 +112,17 @@ function confirmLanguage(lang: 'en' | 'no') {
                   ? copy.recording
                   : copy.start
             }}
+          </Button>
+          <Button
+            v-if="canCancel"
+            type="button"
+            variant="outline"
+            class="rounded-xl border-red-200 text-red-700 hover:bg-red-50"
+            data-testid="standard-voice-cancel"
+            @click="cancel"
+          >
+            <Square class="me-2 size-4" aria-hidden="true" />
+            {{ copy.cancel }}
           </Button>
           <span class="text-sm text-slate-600">
             {{ stage === 'looking_up' ? copy.looking : stage === 'speaking' ? copy.speaking : '' }}

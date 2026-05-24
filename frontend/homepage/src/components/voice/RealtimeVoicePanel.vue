@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Mic, MicOff, Loader2, TriangleAlert } from 'lucide-vue-next'
+import { Mic, MicOff, Loader2, TriangleAlert, Square } from 'lucide-vue-next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import AiStatusDialog from '@/components/AiStatusDialog.vue'
@@ -34,8 +34,10 @@ const {
   sessionNotice,
   assistantTranscript,
   userTranscript,
+  isModelSpeaking,
   connect,
   disconnect,
+  stopResponse,
   maxSessionMs,
 } = useRealtimeVoice(computed(() => props.language), selectedRealtimeOptions, selectedVoiceModel)
 
@@ -47,6 +49,7 @@ const copy = computed(() => {
       : 'Live stemmechat er ikke slått på hos serveren akkurat nå.',
     connect: en ? 'Start live voice' : 'Start live stemme',
     disconnect: en ? 'End session' : 'Avslutt',
+    stopSpeaking: en ? 'Stop speaking' : 'Stopp tale',
     connecting: en ? 'Connecting…' : 'Kobler til…',
     live: en ? 'Live' : 'Aktiv',
     modelLabel: en ? 'Provider/model' : 'Leverandør/modell',
@@ -182,6 +185,17 @@ function setVoiceModelFromEvent(event: Event) {
         </Button>
         <Button v-if="connectionState === 'connecting'" type="button" variant="secondary" disabled>
           {{ copy.connecting }}
+        </Button>
+        <Button
+          v-if="connectionState === 'connected' && isModelSpeaking && selectedVoiceProvider === 'OPENAI'"
+          type="button"
+          variant="secondary"
+          class="rounded-2xl"
+          data-testid="live-voice-stop-speaking"
+          @click="stopResponse"
+        >
+          <Square class="me-2 inline size-4" aria-hidden="true" />
+          {{ copy.stopSpeaking }}
         </Button>
         <Button
           v-if="connectionState === 'connected'"

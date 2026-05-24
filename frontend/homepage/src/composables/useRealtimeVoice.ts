@@ -172,6 +172,8 @@ export function useRealtimeVoice(
   const assistantTranscript = ref('')
   /** Latest user transcript from input audio transcription */
   const userTranscript = ref('')
+  /** True while the model is generating a spoken response */
+  const isModelSpeaking = ref(false)
 
   let pc: RTCPeerConnection | null = null
   let localStream: MediaStream | null = null
@@ -276,12 +278,12 @@ export function useRealtimeVoice(
       }
     }
 
-    let output: RealtimeLookupResponse = { found: false, snippets: [] }
+    let output: RealtimeLookupResponse = { found: false, snippets: [], confidence: 'none' }
     if (query !== '') {
       try {
         output = await lookupRealtimeInfo(query, language.value)
       } catch {
-        output = { found: false, snippets: [] }
+        output = { found: false, snippets: [], confidence: 'none' }
       }
     }
 
@@ -334,16 +336,21 @@ export function useRealtimeVoice(
         handleMidSessionFailure(message)
         return
       }
+      if (t === 'response.created') {
+        isModelSpeaking.value = true
+        return
+      }
+      if (t === 'response.done' || t === 'response.cancelled') {
+        isModelSpeaking.value = false
+        handleResponseDone(ev)
+        return
+      }
       if (t === 'response.output_audio_transcript.delta' && typeof ev.delta === 'string') {
         assistantTranscript.value += ev.delta
         return
       }
       if (t === 'response.output_audio_transcript.done' && typeof ev.transcript === 'string') {
         assistantTranscript.value = ev.transcript
-        return
-      }
-      if (t === 'response.done') {
-        handleResponseDone(ev)
         return
       }
       if (t === 'conversation.item.input_audio_transcription.delta' && typeof ev.delta === 'string') {
@@ -379,6 +386,16 @@ export function useRealtimeVoice(
       userTranscript.value = text
     } else {
       assistantTranscript.value = text
+    }
+  }
+
+  function stopResponse() {
+    if (connectionState.value !== 'connected' || userEndedSession || midSessionFailureHandled) {
+      return
+    }
+    if (selectedProvider() === 'OPENAI') {
+      sendRealtimeClientEvent({ type: 'response.cancel' })
+      isModelSpeaking.value = false
     }
   }
 
@@ -574,6 +591,7 @@ export function useRealtimeVoice(
     sessionNotice.value = ''
     assistantTranscript.value = ''
     userTranscript.value = ''
+    isModelSpeaking.value = false
     userEndedSession = false
     midSessionFailureHandled = false
     connectionState.value = 'connecting'
@@ -629,8 +647,10 @@ export function useRealtimeVoice(
     sessionNotice,
     assistantTranscript,
     userTranscript,
+    isModelSpeaking,
     connect,
     disconnect: () => disconnect('user'),
+    stopResponse,
     maxSessionMs: REALTIME_SESSION_MAX_MS,
   }
 }

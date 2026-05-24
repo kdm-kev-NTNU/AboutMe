@@ -26,6 +26,8 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
 
   let mediaRecorder: MediaRecorder | null = null
   const audioChunks: Blob[] = []
+  let transcribeAbort: AbortController | null = null
+  let cancelRequested = false
 
   const supportsSpeechInput = computed(
     () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,
@@ -38,6 +40,7 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
 
   async function startRecording() {
     voiceError.value = ''
+    cancelRequested = false
     try {
       const stream = await navigator.mediaDevices!.getUserMedia({ audio: true })
       recordingMediaStream.value = stream
@@ -87,6 +90,12 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
     stopMediaTracks()
     mediaRecorder = null
 
+    if (cancelRequested) {
+      cancelRequested = false
+      audioChunks.length = 0
+      return
+    }
+
     const blobType = audioChunks[0]?.type ?? 'audio/webm'
     const blob = new Blob(audioChunks, { type: blobType })
     audioChunks.length = 0
@@ -100,10 +109,14 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
 
     isTranscribing.value = true
     voiceError.value = ''
+    transcribeAbort = new AbortController()
     try {
       const auth = (await import('@/stores/auth')).useAuthStore()
       auth.restore()
-      const r = await transcribeSpeech(blob, options.language.value)
+      const r = await transcribeSpeech(blob, options.language.value, transcribeAbort.signal)
+      if (cancelRequested) {
+        return
+      }
       if (r.status === 200 && r.data && typeof r.data === 'object' && r.data !== null && 'text' in r.data) {
         const t = String((r.data as { text: unknown }).text ?? '').trim().slice(0, options.maxChars)
         if (t) {
@@ -142,14 +155,38 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
         (options.language.value === 'en'
           ? 'Could not transcribe audio.'
           : 'Kunne ikke transkribere lyd.')
-    } catch {
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        return
+      }
       voiceError.value =
         options.language.value === 'en'
           ? 'Network error during transcription.'
           : 'Nettverksfeil ved transkripsjon.'
     } finally {
       isTranscribing.value = false
+      transcribeAbort = null
     }
+  }
+
+  function cancel() {
+    cancelRequested = true
+    transcribeAbort?.abort()
+    transcribeAbort = null
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      try {
+        mediaRecorder.stop()
+      } catch {
+        /* ignore */
+      }
+    } else {
+      isRecording.value = false
+      isTranscribing.value = false
+      stopMediaTracks()
+      mediaRecorder = null
+      audioChunks.length = 0
+    }
+    voiceError.value = ''
   }
 
   async function toggleVoiceInput() {
@@ -179,5 +216,6 @@ export function useSpeechTranscription(options: UseSpeechTranscriptionOptions) {
     recordingMediaStream,
     voiceError,
     toggleVoiceInput,
+    cancel,
   }
 }

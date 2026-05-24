@@ -746,7 +746,7 @@ describe('useRealtimeVoice', () => {
 
     expect(lookupRealtimeInfoMock).not.toHaveBeenCalled()
     const outputEvent = JSON.parse(dataChannelSendMock.mock.calls[0][0])
-    expect(JSON.parse(outputEvent.item.output)).toEqual({ found: false, snippets: [] })
+    expect(JSON.parse(outputEvent.item.output)).toEqual({ found: false, snippets: [], confidence: 'none' })
 
     api.disconnect()
     scope.stop()

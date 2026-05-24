@@ -4,7 +4,11 @@ export type SynthesizeResult =
   | { ok: true; blob: Blob }
   | { ok: false; status: number; message: string }
 
-export async function synthesizeSpeech(text: string, language: SpeechUiLang): Promise<SynthesizeResult> {
+export async function synthesizeSpeech(
+  text: string,
+  language: SpeechUiLang,
+  signal?: AbortSignal,
+): Promise<SynthesizeResult> {
   try {
     const res = await fetch('/api/synthesize', {
       method: 'POST',
@@ -14,6 +18,7 @@ export async function synthesizeSpeech(text: string, language: SpeechUiLang): Pr
       },
       credentials: 'include',
       body: JSON.stringify({ text }),
+      signal,
     })
     if (!res.ok) {
       let message = `HTTP ${res.status}`
@@ -28,7 +33,10 @@ export async function synthesizeSpeech(text: string, language: SpeechUiLang): Pr
       return { ok: false, status: res.status, message }
     }
     return { ok: true, blob: await res.blob() }
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw e
+    }
     return { ok: false, status: 0, message: 'Network error' }
   }
 }

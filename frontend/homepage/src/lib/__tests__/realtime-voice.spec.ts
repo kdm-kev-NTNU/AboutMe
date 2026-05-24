@@ -180,6 +180,7 @@ describe('realtime-voice', () => {
 
     await expect(lookupRealtimeInfo('NTNU', 'en')).resolves.toEqual({
       found: true,
+      confidence: 'high',
       snippets: [{ sourceType: 'profile', title: 'Data engineering', text: 'Kevin studies at NTNU.' }],
     })
 
@@ -197,12 +198,14 @@ describe('realtime-voice', () => {
     await expect(lookupRealtimeInfo('NTNU', 'no')).resolves.toEqual({
       found: false,
       snippets: [],
+      confidence: 'none',
     })
 
     mockCustomFetch.mockResolvedValueOnce({ status: 200, data: { found: true, snippets: [] } })
     await expect(lookupRealtimeInfo('NTNU', 'no')).resolves.toEqual({
       found: false,
       snippets: [],
+      confidence: 'none',
     })
   })
 

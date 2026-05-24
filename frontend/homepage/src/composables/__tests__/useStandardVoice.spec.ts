@@ -52,10 +52,12 @@ describe('useStandardVoice', () => {
       toggleVoiceInput: toggleVoiceInputMock.mockImplementation(async () => {
         onTranscript('what does Kevin study')
       }),
+      cancel: vi.fn(),
     }))
 
     vi.mocked(lookupRealtimeInfo).mockResolvedValue({
       found: true,
+      confidence: 'high',
       snippets: [{ sourceType: 'profile', title: 'NTNU', text: 'Kevin studies at NTNU.' }],
     })
     vi.mocked(synthesizeSpeech).mockResolvedValue({
@@ -107,8 +109,8 @@ describe('useStandardVoice', () => {
     await api.toggleRecording()
     await flushPromises()
 
-    expect(lookupRealtimeInfo).toHaveBeenCalledWith('what does Kevin study', 'en')
-    expect(synthesizeSpeech).toHaveBeenCalledWith('Kevin studies at NTNU.', 'en')
+    expect(lookupRealtimeInfo).toHaveBeenCalledWith('what does Kevin study', 'en', expect.any(AbortSignal))
+    expect(synthesizeSpeech).toHaveBeenCalledWith('Kevin studies at NTNU.', 'en', expect.any(AbortSignal))
     expect(api.stage.value).toBe('speaking')
     expect(captureProductAnalyticsEvent).toHaveBeenCalled()
   })
@@ -147,6 +149,7 @@ describe('useStandardVoice', () => {
       recordingMediaStream,
       supportsSpeechInput: ref(true),
       toggleVoiceInput: toggleVoiceInputMock,
+      cancel: vi.fn(),
     }))
 
     const { api } = createApi(true)
@@ -155,5 +158,59 @@ describe('useStandardVoice', () => {
 
     expect(api.stage.value).toBe('error')
     expect(api.errorMessage.value).toBe('Microphone unavailable')
+  })
+
+  it('asks the user to repeat when transcript quality is uncertain', async () => {
+    toggleVoiceInputMock.mockImplementation(async ({ onTranscript }: { onTranscript: (text: string) => void }) => {
+      onTranscript('??')
+    })
+    useSpeechTranscriptionMock.mockImplementation(({ onTranscript }: { onTranscript: (text: string) => void }) => ({
+      isRecording,
+      isTranscribing,
+      voiceError,
+      recordingMediaStream,
+      supportsSpeechInput: ref(true),
+      toggleVoiceInput: toggleVoiceInputMock.mockImplementation(async () => {
+        onTranscript('??')
+      }),
+      cancel: vi.fn(),
+    }))
+
+    const { api } = createApi(true)
+    await api.toggleRecording()
+    await flushPromises()
+
+    expect(lookupRealtimeInfo).not.toHaveBeenCalled()
+    expect(synthesizeSpeech).toHaveBeenCalledWith(
+      expect.stringContaining("didn't catch that clearly"),
+      'en',
+      expect.any(AbortSignal),
+    )
+  })
+
+  it('cancels an in-flight turn and returns to idle', async () => {
+    let resolveLookup: ((value: Awaited<ReturnType<typeof lookupRealtimeInfo>>) => void) | undefined
+    vi.mocked(lookupRealtimeInfo).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveLookup = resolve
+        }),
+    )
+
+    const { api } = createApi(true)
+    await api.toggleRecording()
+    await flushPromises()
+    expect(api.stage.value).toBe('looking_up')
+
+    api.cancel()
+    expect(api.stage.value).toBe('idle')
+
+    resolveLookup?.({
+      found: true,
+      confidence: 'high',
+      snippets: [{ sourceType: 'profile', title: 'NTNU', text: 'Late answer.' }],
+    })
+    await flushPromises()
+    expect(api.stage.value).toBe('idle')
   })
 })

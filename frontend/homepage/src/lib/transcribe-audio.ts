@@ -18,6 +18,7 @@ export type TranscribeLanguage = 'en' | 'no'
 export async function transcribeSpeech(
   blob: Blob,
   language?: TranscribeLanguage,
+  signal?: AbortSignal,
 ): Promise<TranscribeSpeechResult> {
   const fd = new FormData()
   fd.append('file', blob, 'recording.webm')
@@ -30,5 +31,6 @@ export async function transcribeSpeech(
     method: 'POST',
     body: fd,
     headers,
+    signal,
   })
 }

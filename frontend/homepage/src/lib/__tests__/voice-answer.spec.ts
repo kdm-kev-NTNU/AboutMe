@@ -6,6 +6,7 @@ describe('formatLookupForSpeech', () => {
     const result = formatLookupForSpeech(
       {
         found: true,
+        confidence: 'high',
         snippets: [
           { sourceType: 'profile', title: 'A', text: 'First' },
           { sourceType: 'rag', title: 'B', text: 'Second' },
@@ -18,8 +19,24 @@ describe('formatLookupForSpeech', () => {
   })
 
   it('returns localized fallback when no snippets found', () => {
-    expect(formatLookupForSpeech({ found: false, snippets: [] }, 'en')).toContain("couldn't find")
-    expect(formatLookupForSpeech({ found: false, snippets: [] }, 'no')).toContain('Beklager')
+    expect(formatLookupForSpeech({ found: false, confidence: 'none', snippets: [] }, 'en')).toContain(
+      "don't have information",
+    )
+    expect(formatLookupForSpeech({ found: false, confidence: 'none', snippets: [] }, 'no')).toContain('Jeg har ikke')
+  })
+
+  it('prefixes low-confidence answers with uncertainty messaging', () => {
+    const result = formatLookupForSpeech(
+      {
+        found: true,
+        confidence: 'low',
+        snippets: [{ sourceType: 'profile', title: 'A', text: 'Maybe Kevin studies IT.' }],
+      },
+      'en',
+    )
+    expect(result).toContain('not sure I understood')
+    expect(result).toContain('Maybe Kevin studies IT.')
+    expect(result).toContain('rephrasing')
   })
 
   it('skips empty snippet text', () => {
@@ -27,6 +44,7 @@ describe('formatLookupForSpeech', () => {
       formatLookupForSpeech(
         {
           found: true,
+          confidence: 'high',
           snippets: [
             { sourceType: 'profile', title: 'A', text: '   ' },
             { sourceType: 'rag', title: 'B', text: 'Only this' },

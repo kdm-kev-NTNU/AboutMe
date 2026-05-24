@@ -9,9 +9,12 @@ export type RealtimeLookupSnippet = {
   text: string
 }
 
+export type RealtimeLookupConfidence = 'high' | 'low' | 'none'
+
 export type RealtimeLookupResponse = {
   found: boolean
   snippets: RealtimeLookupSnippet[]
+  confidence?: RealtimeLookupConfidence
 }
 
 export type RealtimeVoiceChoice = 'marin' | 'cedar'
@@ -176,22 +179,35 @@ function isLookupSnippet(value: unknown): value is RealtimeLookupSnippet {
 export async function lookupRealtimeInfo(
   query: string,
   language: SpeechUiLang,
+  signal?: AbortSignal,
 ): Promise<RealtimeLookupResponse> {
   try {
     const r = await customFetch<{ data: unknown; status: number }>('/realtime/lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, language }),
+      signal,
     })
     if (r.status < 200 || r.status >= 300 || r.data === null || typeof r.data !== 'object') {
-      return { found: false, snippets: [] }
+      return { found: false, snippets: [], confidence: 'none' }
     }
-    const data = r.data as { found?: unknown; snippets?: unknown }
+    const data = r.data as { found?: unknown; snippets?: unknown; confidence?: unknown }
     const snippets = Array.isArray(data.snippets) ? data.snippets.filter(isLookupSnippet) : []
-    return { found: data.found === true && snippets.length > 0, snippets }
-  } catch {
-    return { found: false, snippets: [] }
+    const confidence = parseLookupConfidence(data.confidence, data.found === true && snippets.length > 0)
+    return { found: data.found === true && snippets.length > 0, snippets, confidence }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw e
+    }
+    return { found: false, snippets: [], confidence: 'none' }
   }
+}
+
+function parseLookupConfidence(value: unknown, found: boolean): RealtimeLookupConfidence {
+  if (value === 'high' || value === 'low' || value === 'none') {
+    return value
+  }
+  return found ? 'high' : 'none'
 }
 
 /**
