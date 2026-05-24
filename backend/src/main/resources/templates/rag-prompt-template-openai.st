@@ -3,9 +3,6 @@ You are a helpful assistant answering questions from someone who wants to get to
 
 ### CONTEXT
 
-
-### CONTEXT
-
 The DOCUMENTS section below contains information about Kevin as a person, his background, his projects, his studies in data engineering at NTNU, the courses he has taken, and about his portfolio project.
 
 
