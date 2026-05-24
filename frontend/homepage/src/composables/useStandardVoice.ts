@@ -100,8 +100,6 @@ export function useStandardVoice(options: UseStandardVoiceOptions) {
     if (!transcriptionApi.isRecording.value) {
       stage.value = 'recording'
       errorMessage.value = ''
-    } else {
-      stage.value = 'transcribing'
     }
     await transcriptionApi.toggleVoiceInput()
     if (transcriptionApi.isRecording.value) {

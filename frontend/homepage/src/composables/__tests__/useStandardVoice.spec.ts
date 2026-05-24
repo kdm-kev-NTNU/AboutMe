@@ -89,6 +89,19 @@ describe('useStandardVoice', () => {
     expect(api.errorMessage.value).toContain('Choose language first')
   })
 
+  it('does not mark transcribing before stop is requested', async () => {
+    isRecording.value = true
+    const stagesDuringToggle: string[] = []
+    const { api } = createApi(true)
+    toggleVoiceInputMock.mockImplementation(async () => {
+      stagesDuringToggle.push(api.stage.value)
+    })
+    api.stage.value = 'recording'
+    await api.toggleRecording()
+    expect(stagesDuringToggle).toEqual(['recording'])
+    expect(toggleVoiceInputMock).toHaveBeenCalledTimes(1)
+  })
+
   it('runs lookup and synthesis after transcript arrives', async () => {
     const { api } = createApi(true)
     await api.toggleRecording()
