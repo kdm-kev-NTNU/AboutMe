@@ -1,0 +1,8 @@
+version: 2
+secret:
+  ignored_paths:
+    - "backend/src/test/**"
+    - ".env.docker.example"
+  ignored_matches:
+    - name: local-dev-postgres-compose
+      match: 6e0d657eb1f0fbc40cf0b8f3c3873ef627cc9cb7c4108d1c07d979c04bc8a4bb

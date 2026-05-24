@@ -1,6 +1,7 @@
 # IDE
 .idea/
 /.vscode/
+.cursor/mcp.json
 
 # OS
 .DS_Store
@@ -12,6 +13,8 @@ Thumbs.db
 **/.env
 **/.env.*
 !.env.example
+!.env.docker.example
+.env.docker
 
 # Local credentials / private key material
 **/credentials.json
