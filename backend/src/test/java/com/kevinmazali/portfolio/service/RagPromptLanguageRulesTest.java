@@ -174,6 +174,27 @@ class RagPromptLanguageRulesTest {
     }
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "templates/rag-prompt-template-openai.st",
+      "templates/rag-prompt-template-anthropic.st"
+  })
+  void templateContainsOffTopicExamples(String path) throws IOException {
+    String template = loadTemplate(path);
+    assertTrue(
+        template.contains("meaning of life"),
+        path + " must contain off-topic example: meaning of life");
+    assertTrue(
+        template.contains("CRITICAL"),
+        path + " must contain critical off-topic check");
+    assertTrue(
+        template.contains("I don't have information about that"),
+        path + " must contain English off-topic redirect");
+    assertTrue(
+        template.contains("Jeg har ikke informasjon om det"),
+        path + " must contain Norwegian off-topic redirect");
+  }
+
   @Test
   void bothTemplatesContainNorwegianPronounHandling() throws IOException {
     for (String path : TEMPLATE_PATHS) {

@@ -63,6 +63,8 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final AiCircuitBreaker aiCircuitBreaker;
   private final DocumentReranker documentReranker;
   private final RetrievalProperties retrievalProperties;
+  private final RelevanceGateService relevanceGateService;
+  private final OffTopicRedirectMessages offTopicRedirectMessages;
   private final PostHogTraceContext postHogTraceContext;
   @org.springframework.lang.Nullable
   private final PostHogFeatureFlagService postHogFeatureFlagService;
@@ -81,6 +83,8 @@ public class OpenAIServiceImpl implements OpenAIService {
       AiCircuitBreaker aiCircuitBreaker,
       DocumentReranker documentReranker,
       RetrievalProperties retrievalProperties,
+      RelevanceGateService relevanceGateService,
+      OffTopicRedirectMessages offTopicRedirectMessages,
       PostHogTraceContext postHogTraceContext,
       @Autowired(required = false) @org.springframework.lang.Nullable PostHogFeatureFlagService postHogFeatureFlagService,
       @Autowired(required = false) @org.springframework.lang.Nullable PostHogLlmService postHogLlmService) {
@@ -95,6 +99,8 @@ public class OpenAIServiceImpl implements OpenAIService {
     this.aiCircuitBreaker = aiCircuitBreaker;
     this.documentReranker = documentReranker;
     this.retrievalProperties = retrievalProperties;
+    this.relevanceGateService = relevanceGateService;
+    this.offTopicRedirectMessages = offTopicRedirectMessages;
     this.postHogTraceContext = postHogTraceContext;
     this.postHogFeatureFlagService = postHogFeatureFlagService;
     this.postHogLlmService = postHogLlmService;
@@ -134,6 +140,10 @@ public class OpenAIServiceImpl implements OpenAIService {
   private RagAnswer getAnswerWithDocumentsInner(
       Question question, SupportedChatModel model, String budgetUserId, boolean anonymous) {
 
+    if (relevanceGateService.evaluate(question.question()) == RelevanceGateService.Verdict.OFF_TOPIC) {
+      return new RagAnswer(offTopicRedirectMessages.offTopicRedirect(question.question()), List.of());
+    }
+
     long traceStartNs = System.nanoTime();
     boolean traceFailed = false;
     String traceErrorMsg = null;
@@ -150,6 +160,7 @@ public class OpenAIServiceImpl implements OpenAIService {
       int vectorTopK = Math.max(1, retrievalProperties.getVectorTopK());
       int candidateCap = Math.max(1, retrievalProperties.getCandidateLimit());
       int contextTopK = Math.max(1, retrievalProperties.getContextTopK());
+      double similarityThreshold = Math.max(0.0, Math.min(1.0, retrievalProperties.getSimilarityThreshold()));
 
       long retrievalStartNs = System.nanoTime();
       String retrievalSpanId = UUID.randomUUID().toString();
@@ -162,6 +173,7 @@ public class OpenAIServiceImpl implements OpenAIService {
                   SearchRequest.builder()
                       .query(queryText)
                       .topK(vectorTopK)
+                      .similarityThreshold(similarityThreshold)
                       .build()
               );
               return results.stream();
@@ -178,6 +190,11 @@ public class OpenAIServiceImpl implements OpenAIService {
 
       List<Document> documents =
           documentReranker.rerank(question.question(), candidates, contextTopK);
+
+      if (documents.isEmpty()) {
+        return new RagAnswer(
+            offTopicRedirectMessages.noRelevantContext(question.question()), List.of());
+      }
 
       double retrievalLatencySec = (System.nanoTime() - retrievalStartNs) / 1_000_000_000.0;
       captureRagRetrievalSpanIfEnabled(budgetUserId, anonymous, retrievalSpanId, retrievalLatencySec);

@@ -41,6 +41,12 @@ public class RetrievalProperties {
   /** Tokenizer / ONNX sequence length cap (padding target for batched tensors). */
   private int maxSequenceLength = 256;
 
+  /**
+   * Minimum vector similarity score (0..1) for a chunk to be kept after search.
+   * 0.0 accepts all results; higher values filter weak matches.
+   */
+  private double similarityThreshold = 0.35;
+
   public boolean isRerankEnabled() {
     return rerankEnabled;
   }
@@ -111,5 +117,13 @@ public class RetrievalProperties {
 
   public void setMaxSequenceLength(int maxSequenceLength) {
     this.maxSequenceLength = maxSequenceLength;
+  }
+
+  public double getSimilarityThreshold() {
+    return similarityThreshold;
+  }
+
+  public void setSimilarityThreshold(double similarityThreshold) {
+    this.similarityThreshold = similarityThreshold;
   }
 }
