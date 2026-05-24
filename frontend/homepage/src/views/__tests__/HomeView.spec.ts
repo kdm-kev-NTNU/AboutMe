@@ -6,7 +6,15 @@ import HomeView from '../HomeView.vue'
 import { useLangStore } from '@/stores/lang'
 
 vi.mock('@/lib/realtime-voice', () => ({
-	fetchRealtimeVoiceEnabled: vi.fn().mockResolvedValue(false),
+	fetchRealtimeVoiceStatus: vi.fn().mockResolvedValue({
+		enabled: false,
+		standardEnabled: false,
+		liveEnabled: false,
+		voices: ['marin', 'cedar'],
+		reasoningEfforts: ['low', 'medium', 'high'],
+		voice: 'marin',
+		reasoningEffort: 'low',
+	}),
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -115,7 +123,7 @@ describe('HomeView', () => {
 		})
 		await flushPromises()
 
-		await wrapper.find('[aria-label="Go to live voice chat"]').trigger('click')
+		await wrapper.find('[aria-label="Go to robust voice mode"]').trigger('click')
 		expect(pushSpy).toHaveBeenCalledWith({ name: 'voice' })
 	})
 
@@ -134,7 +142,7 @@ describe('HomeView', () => {
 		})
 		await flushPromises()
 
-		await wrapper.find('[aria-label="Gå til live stemmechat"]').trigger('click')
+		await wrapper.find('[aria-label="Gå til robust stemmemodus"]').trigger('click')
 		expect(pushSpy).toHaveBeenCalledWith({ name: 'voice' })
 	})
 })

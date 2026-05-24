@@ -21,4 +21,19 @@ describe('formatLookupForSpeech', () => {
     expect(formatLookupForSpeech({ found: false, snippets: [] }, 'en')).toContain("couldn't find")
     expect(formatLookupForSpeech({ found: false, snippets: [] }, 'no')).toContain('Beklager')
   })
+
+  it('skips empty snippet text', () => {
+    expect(
+      formatLookupForSpeech(
+        {
+          found: true,
+          snippets: [
+            { sourceType: 'profile', title: 'A', text: '   ' },
+            { sourceType: 'rag', title: 'B', text: 'Only this' },
+          ],
+        },
+        'en',
+      ),
+    ).toBe('Only this')
+  })
 })

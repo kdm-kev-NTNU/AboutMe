@@ -19,6 +19,17 @@ const standard = useStandardVoice({
   language: languageComputed,
   languageConfirmed: computed(() => languageConfirmed.value),
 })
+const {
+  stage,
+  errorMessage,
+  transcriptText,
+  answerText,
+  isWorking,
+  isRecording,
+  isTranscribing,
+  recordingMediaStream,
+  toggleRecording,
+} = standard
 
 const copy = computed(() => {
   const no = props.language === 'no'
@@ -86,43 +97,43 @@ function confirmLanguage(lang: 'en' | 'no') {
           <Button
             type="button"
             class="rounded-xl"
-            :disabled="!languageConfirmed || standard.isWorking"
-            @click="standard.toggleRecording"
+            :disabled="!languageConfirmed || isWorking"
+            @click="toggleRecording"
           >
-            <Square v-if="standard.isRecording" class="me-2 size-4" aria-hidden="true" />
+            <Square v-if="isRecording" class="me-2 size-4" aria-hidden="true" />
             <Mic v-else class="me-2 size-4" aria-hidden="true" />
             {{
-              standard.isRecording
+              isRecording
                 ? copy.stop
-                : standard.isTranscribing
+                : isTranscribing
                   ? copy.recording
                   : copy.start
             }}
           </Button>
           <span class="text-sm text-slate-600">
-            {{ standard.stage === 'looking_up' ? copy.looking : standard.stage === 'speaking' ? copy.speaking : '' }}
+            {{ stage === 'looking_up' ? copy.looking : stage === 'speaking' ? copy.speaking : '' }}
           </span>
         </div>
         <AudioWaveform
-          v-if="standard.isRecording"
+          v-if="isRecording"
           class="mt-3 h-12"
-          :stream="standard.recordingMediaStream"
+          :stream="recordingMediaStream"
           :aria-label="copy.recording"
         />
       </div>
 
-      <Alert v-if="standard.errorMessage" class="border-amber-200 bg-amber-50 text-amber-900">
-        <AlertDescription>{{ standard.errorMessage }}</AlertDescription>
+      <Alert v-if="errorMessage" class="border-amber-200 bg-amber-50 text-amber-900">
+        <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <div v-if="standard.transcriptText || standard.answerText" class="space-y-4 rounded-2xl border border-blue-100 bg-white/85 p-4">
+      <div v-if="transcriptText || answerText" class="space-y-4 rounded-2xl border border-blue-100 bg-white/85 p-4">
         <div>
           <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ copy.transcript }}</p>
-          <p class="mt-1 whitespace-pre-wrap text-sm text-slate-800">{{ standard.transcriptText || '…' }}</p>
+          <p class="mt-1 whitespace-pre-wrap text-sm text-slate-800">{{ transcriptText || '…' }}</p>
         </div>
         <div>
           <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ copy.answer }}</p>
-          <p class="mt-1 whitespace-pre-wrap text-sm text-slate-800">{{ standard.answerText || '…' }}</p>
+          <p class="mt-1 whitespace-pre-wrap text-sm text-slate-800">{{ answerText || '…' }}</p>
         </div>
       </div>
     </div>

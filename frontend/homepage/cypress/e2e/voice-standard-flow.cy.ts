@@ -62,7 +62,7 @@ describe('Standard voice mode', () => {
     cy.wait('@models')
     cy.contains('button', 'English').click()
     cy.contains('button', /start recording/i).click()
-    cy.wait(800)
+    cy.contains('button', /stop recording/i).should('be.visible')
     cy.contains('button', /stop recording/i).click()
     cy.wait('@transcribe')
     cy.wait('@lookup')
