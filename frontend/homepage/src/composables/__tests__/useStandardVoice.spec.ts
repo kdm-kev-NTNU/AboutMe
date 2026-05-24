@@ -306,9 +306,9 @@ describe('useStandardVoice', () => {
   })
 
   it('returns to idle when synthesized playback ends', async () => {
-    let onended: (() => void) | null = null
+    let audioRef: HTMLAudioElement | undefined
     vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(async function (this: HTMLAudioElement) {
-      onended = this.onended
+      audioRef = this
     })
 
     const { api } = createApi(true)
@@ -316,7 +316,8 @@ describe('useStandardVoice', () => {
     await flushPromises()
     expect(api.stage.value).toBe('speaking')
 
-    onended?.call(null)
+    expect(typeof audioRef?.onended).toBe('function')
+    audioRef!.onended!(new Event('ended'))
     expect(api.stage.value).toBe('idle')
   })
 
