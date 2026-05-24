@@ -6,6 +6,7 @@ import {
 } from '@/lib/realtime-voice'
 
 const VOICE_MODEL_STORAGE_KEY = 'voiceSelectedModel'
+const LEGACY_VOICE_MODEL_SESSION_KEY = 'voiceSelectedModel'
 
 function makeVoiceModelKey(provider: RealtimeVoiceProvider, id: string): string {
   return `${provider}:${id}`
@@ -25,6 +26,24 @@ function resolveStoredVoiceModel(models: RealtimeVoiceModelOption[], stored: str
   }
 
   return models.find((m) => m.id === trimmed)
+}
+
+function readStoredModelId(): string | null {
+  try {
+    const fromLocal = localStorage.getItem(VOICE_MODEL_STORAGE_KEY)
+    if (fromLocal && fromLocal.trim() !== '') {
+      return fromLocal
+    }
+    const legacy = sessionStorage.getItem(LEGACY_VOICE_MODEL_SESSION_KEY)
+    if (legacy && legacy.trim() !== '') {
+      localStorage.setItem(VOICE_MODEL_STORAGE_KEY, legacy)
+      sessionStorage.removeItem(LEGACY_VOICE_MODEL_SESSION_KEY)
+      return legacy
+    }
+  } catch {
+    // ignore
+  }
+  return null
 }
 
 export const useVoiceModelStore = defineStore('voiceModel', {
@@ -52,7 +71,7 @@ export const useVoiceModelStore = defineStore('voiceModel', {
     persistModelId() {
       if (!this.selectedModelId) return
       try {
-        sessionStorage.setItem(VOICE_MODEL_STORAGE_KEY, this.selectedModelId)
+        localStorage.setItem(VOICE_MODEL_STORAGE_KEY, this.selectedModelId)
       } catch {
         // ignore
       }
@@ -66,15 +85,11 @@ export const useVoiceModelStore = defineStore('voiceModel', {
     },
 
     applyInitialSelection() {
-      try {
-        const stored = sessionStorage.getItem(VOICE_MODEL_STORAGE_KEY)
-        const selected = stored ? resolveStoredVoiceModel(this.models, stored) : undefined
-        if (selected) {
-          this.selectedModelId = makeVoiceModelKey(selected.provider, selected.id)
-          return
-        }
-      } catch {
-        // ignore
+      const stored = readStoredModelId()
+      const selected = stored ? resolveStoredVoiceModel(this.models, stored) : undefined
+      if (selected) {
+        this.selectedModelId = makeVoiceModelKey(selected.provider, selected.id)
+        return
       }
       const pick =
         this.models.find((m) => m.provider === 'OPENAI' && m.defaultOption) ??

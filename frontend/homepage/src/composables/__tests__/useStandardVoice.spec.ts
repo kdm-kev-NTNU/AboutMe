@@ -159,6 +159,7 @@ describe('useStandardVoice', () => {
   })
 
   it('surfaces synthesis errors', async () => {
+    vi.useFakeTimers()
     vi.mocked(synthesizeSpeech).mockResolvedValue({
       ok: false,
       status: 503,
@@ -167,10 +168,56 @@ describe('useStandardVoice', () => {
 
     const { api } = createApi(true)
     await api.toggleRecording()
+    await vi.runAllTimersAsync()
     await flushPromises()
 
     expect(api.stage.value).toBe('error')
     expect(api.errorMessage.value).toContain('Speech synthesis')
+    expect(synthesizeSpeech).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
+
+  it('retries lookup once when the first lookup throws', async () => {
+    vi.useFakeTimers()
+    vi.mocked(lookupRealtimeInfo)
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({
+        found: true,
+        confidence: 'high',
+        snippets: [{ sourceType: 'profile', title: 'NTNU', text: 'Kevin studies at NTNU.' }],
+      })
+
+    const { api } = createApi(true)
+    await api.toggleRecording()
+    await vi.runAllTimersAsync()
+    await flushPromises()
+
+    expect(lookupRealtimeInfo).toHaveBeenCalledTimes(2)
+    expect(api.stage.value).toBe('speaking')
+    vi.useRealTimers()
+  })
+
+  it('retries synthesis once after a transient server failure', async () => {
+    vi.useFakeTimers()
+    vi.mocked(synthesizeSpeech)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        message: 'Speech synthesis is temporarily unavailable.',
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        blob: new Blob(['audio'], { type: 'audio/mpeg' }),
+      })
+
+    const { api } = createApi(true)
+    await api.toggleRecording()
+    await vi.runAllTimersAsync()
+    await flushPromises()
+
+    expect(synthesizeSpeech).toHaveBeenCalledTimes(2)
+    expect(api.stage.value).toBe('speaking')
+    vi.useRealTimers()
   })
 
   it('surfaces playback errors after successful synthesis', async () => {

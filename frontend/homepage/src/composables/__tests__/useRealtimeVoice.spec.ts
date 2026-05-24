@@ -74,9 +74,12 @@ describe('useRealtimeVoice', () => {
       token: 'eleven-token',
     })
     elevenLabsEndSessionMock.mockResolvedValue(undefined)
-    elevenLabsStartSessionMock.mockResolvedValue({
-      endSession: elevenLabsEndSessionMock,
-      getId: () => 'conv_123',
+    elevenLabsStartSessionMock.mockImplementation(async (options: { onConnect?: () => void }) => {
+      options.onConnect?.()
+      return {
+        endSession: elevenLabsEndSessionMock,
+        getId: () => 'conv_123',
+      }
     })
 
     class StubRtcDataChannel implements Partial<RTCDataChannel> {
@@ -691,7 +694,7 @@ describe('useRealtimeVoice', () => {
     )
     await flushPromises()
 
-    expect(lookupRealtimeInfoMock).toHaveBeenCalledWith('NTNU', 'en')
+    expect(lookupRealtimeInfoMock).toHaveBeenCalledWith('NTNU', 'en', expect.any(AbortSignal))
     expect(dataChannelSendMock).toHaveBeenCalledTimes(2)
 
     const outputEvent = JSON.parse(dataChannelSendMock.mock.calls[0][0])
@@ -753,6 +756,7 @@ describe('useRealtimeVoice', () => {
   })
 
   it('surfaces WebRTC connection failure after connect', async () => {
+    vi.useFakeTimers()
     const { useRealtimeVoice } = await import('../useRealtimeVoice')
     const { captureProductAnalyticsEvent } = await import('@/lib/analytics')
 
@@ -770,7 +774,14 @@ describe('useRealtimeVoice', () => {
 
     expect(api.connectionState.value).toBe('connected')
 
+    exchangeRealtimeSdpMock.mockResolvedValue({
+      ok: false,
+      status: 503,
+      message: 'offline',
+      code: 'OPENAI_UNREACHABLE',
+    })
     latestRtc?.failConnection()
+    await vi.advanceTimersByTimeAsync(5_000)
     await flushPromises()
 
     expect(api.connectionState.value).toBe('error')
@@ -780,10 +791,12 @@ describe('useRealtimeVoice', () => {
       expect.objectContaining({ reason: 'mid_session' }),
     )
 
+    vi.useRealTimers()
     scope.stop()
   })
 
   it('surfaces data channel close as interrupted session', async () => {
+    vi.useFakeTimers()
     const { useRealtimeVoice } = await import('../useRealtimeVoice')
 
     const lang = ref<SpeechUiLang>('en')
@@ -798,12 +811,20 @@ describe('useRealtimeVoice', () => {
     latestRtc?.dispatchRemoteTrack()
     await connectPromise
 
+    exchangeRealtimeSdpMock.mockResolvedValue({
+      ok: false,
+      status: 503,
+      message: 'offline',
+      code: 'OPENAI_UNREACHABLE',
+    })
     latestRtc?.fireDataChannelClose()
+    await vi.advanceTimersByTimeAsync(5_000)
     await flushPromises()
 
     expect(api.connectionState.value).toBe('error')
     expect(api.errorMessage.value).toContain('interrupted')
 
+    vi.useRealTimers()
     scope.stop()
   })
 
@@ -933,5 +954,33 @@ describe('useRealtimeVoice', () => {
     scope.stop()
 
     expect(api.connectionState.value).not.toBe('connected')
+  })
+
+  it('maps ElevenLabs connect failures from getUserMedia errors', async () => {
+    const getUserMedia = vi.fn().mockRejectedValue(new DOMException('denied', 'NotAllowedError'))
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } })
+
+    const { useRealtimeVoice } = await import('../useRealtimeVoice')
+    const lang = ref<SpeechUiLang>('en')
+    const selectedModel = ref({
+      provider: 'ELEVENLABS' as const,
+      id: 'agent_1',
+      label: 'ElevenLabs Agent',
+      defaultOption: false,
+    })
+    const scope = effectScope()
+    let api!: ReturnType<typeof useRealtimeVoice>
+    scope.run(() => {
+      api = useRealtimeVoice(lang, undefined, selectedModel)
+    })
+
+    await api.connect()
+    await flushPromises()
+
+    expect(api.connectionState.value).toBe('error')
+    expect(api.errorMessage.value).toContain('Microphone')
+
+    scope.stop()
+    vi.unstubAllGlobals()
   })
 })

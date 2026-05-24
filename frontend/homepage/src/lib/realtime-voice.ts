@@ -238,28 +238,7 @@ export async function exchangeRealtimeSdp(
   if (r.status >= 200 && r.status < 300 && typeof r.data === 'string') {
     return { ok: true, answerSdp: r.data }
   }
-  let msg = ''
-  let code: string | undefined
-  if (r.data && typeof r.data === 'object' && r.data !== null && 'error' in r.data) {
-    msg = String((r.data as { error?: unknown }).error ?? '')
-  }
-  const obj = r.data && typeof r.data === 'object' && r.data !== null ? (r.data as { code?: unknown }) : null
-  if (obj && 'code' in obj && obj.code != null && String(obj.code).trim() !== '') {
-    code = String(obj.code)
-  }
-  let retryAfterSeconds: number | undefined
-  const ra = r.headers?.get?.('Retry-After')
-  if (ra != null && ra !== '') {
-    const n = parseInt(ra, 10)
-    if (!Number.isNaN(n) && n > 0) retryAfterSeconds = n
-  }
-  return {
-    ok: false,
-    status: r.status,
-    message: msg || `HTTP ${r.status}`,
-    ...(code !== undefined ? { code } : {}),
-    ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}),
-  }
+  return parseRealtimeApiFailure(r)
 }
 
 export async function createElevenLabsConversationToken(
@@ -283,6 +262,19 @@ export async function createElevenLabsConversationToken(
   ) {
     return { ok: true, token: (r.data as { token: string }).token }
   }
+  return parseRealtimeApiFailure(r)
+}
+
+/** Auto-disconnect after this many ms (aligned with backend cost controls). */
+export const REALTIME_SESSION_MAX_MS = 180_000
+
+type RealtimeFetchFailureResponse = {
+  status: number
+  data: unknown
+  headers?: Headers
+}
+
+function parseRealtimeApiFailure(r: RealtimeFetchFailureResponse): RealtimeSdpFailure {
   let msg = ''
   let code: string | undefined
   if (r.data && typeof r.data === 'object' && r.data !== null && 'error' in r.data) {
@@ -306,6 +298,3 @@ export async function createElevenLabsConversationToken(
     ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}),
   }
 }
-
-/** Auto-disconnect after this many ms (aligned with backend cost controls). */
-export const REALTIME_SESSION_MAX_MS = 180_000

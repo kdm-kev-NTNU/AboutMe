@@ -1,5 +1,5 @@
 import { computed, onUnmounted, ref, type ComputedRef } from 'vue'
-import { lookupRealtimeInfo, type SpeechUiLang } from '@/lib/realtime-voice'
+import { lookupRealtimeInfo, type RealtimeLookupResponse, type SpeechUiLang } from '@/lib/realtime-voice'
 import { formatLookupForSpeech } from '@/lib/voice-answer'
 import { synthesizeSpeech } from '@/lib/synthesize-speech'
 import { isTranscriptUncertain, repeatRequestMessage } from '@/lib/transcript-quality'
@@ -8,6 +8,16 @@ import { captureProductAnalyticsEvent } from '@/lib/analytics'
 import { POSTHOG_VOICE_EVENTS } from '@/lib/posthog-sdk'
 
 type StandardVoiceStage = 'idle' | 'recording' | 'transcribing' | 'looking_up' | 'speaking' | 'error'
+
+const STANDARD_RETRY_DELAY_MS = 400
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isRetryableSynthesisFailure(result: { ok: false; status: number }): boolean {
+  return result.status === 0 || result.status >= 500
+}
 
 type UseStandardVoiceOptions = {
   language: ComputedRef<SpeechUiLang>
@@ -77,9 +87,20 @@ export function useStandardVoice(options: UseStandardVoiceOptions) {
     },
   })
 
+  async function synthesizeWithRetry(text: string, signal: AbortSignal) {
+    let result = await synthesizeSpeech(text, options.language.value, signal)
+    if (!result.ok && isRetryableSynthesisFailure(result) && isTurnActive(signal)) {
+      await sleep(STANDARD_RETRY_DELAY_MS)
+      if (isTurnActive(signal)) {
+        result = await synthesizeSpeech(text, options.language.value, signal)
+      }
+    }
+    return result
+  }
+
   async function speakAnswer(text: string, signal: AbortSignal) {
     answerText.value = text
-    const synthesized = await synthesizeSpeech(text, options.language.value, signal)
+    const synthesized = await synthesizeWithRetry(text, signal)
     if (!isTurnActive(signal)) {
       return
     }
@@ -139,14 +160,30 @@ export function useStandardVoice(options: UseStandardVoiceOptions) {
     }
 
     stage.value = 'looking_up'
-    let lookup
+    let lookup: RealtimeLookupResponse = { found: false, snippets: [], confidence: 'none' }
     try {
       lookup = await lookupRealtimeInfo(text, options.language.value, signal)
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') {
         return
       }
-      throw e
+      if (isTurnActive(signal)) {
+        await sleep(STANDARD_RETRY_DELAY_MS)
+        if (isTurnActive(signal)) {
+          try {
+            lookup = await lookupRealtimeInfo(text, options.language.value, signal)
+          } catch (retryError) {
+            if (retryError instanceof DOMException && retryError.name === 'AbortError') {
+              return
+            }
+            throw retryError
+          }
+        } else {
+          throw e
+        }
+      } else {
+        throw e
+      }
     }
     if (!isTurnActive(signal)) {
       return

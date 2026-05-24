@@ -65,6 +65,13 @@ function isLikelyGetUserMediaError(e: unknown): boolean {
 
 /** Wait until ICE candidates are gathered (or timeout) so the SDP posted to the server includes candidates. */
 const ICE_GATHERING_TIMEOUT_MS = 8000
+const LIVE_LOOKUP_TIMEOUT_MS = 8_000
+const MAX_RECONNECT_ATTEMPTS = 2
+const RECONNECT_BASE_DELAY_MS = 1_000
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 function waitForIceGatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<void> {
   if (pc.iceGatheringState === 'complete') {
@@ -185,6 +192,8 @@ export function useRealtimeVoice(
   /** True while user clicked disconnect / timeout / we are tearing down on purpose. */
   let userEndedSession = false
   let midSessionFailureHandled = false
+  let reconnectAttempts = 0
+  let reconnectInFlight = false
 
   function stopSessionTimer() {
     if (sessionTimer !== null) {
@@ -253,6 +262,65 @@ export function useRealtimeVoice(
     })
   }
 
+  async function scheduleReconnect(fallbackMessage: string) {
+    if (userEndedSession || reconnectInFlight) {
+      return
+    }
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      handleMidSessionFailure(fallbackMessage)
+      return
+    }
+    reconnectInFlight = true
+    reconnectAttempts += 1
+    const delayMs = RECONNECT_BASE_DELAY_MS * reconnectAttempts
+    sessionStartedAt = 0
+    stopSessionTimer()
+    cleanupTracks()
+    void teardownElevenLabs()
+    if (dc) {
+      try {
+        dc.close()
+      } catch {
+        /* ignore */
+      }
+      dc = null
+    }
+    if (pc) {
+      try {
+        pc.close()
+      } catch {
+        /* ignore */
+      }
+      pc = null
+    }
+    if (remoteAudio) {
+      remoteAudio.srcObject = null
+      remoteAudio.remove()
+      remoteAudio = null
+    }
+    midSessionFailureHandled = false
+    connectionState.value = 'connecting'
+    errorMessage.value = ''
+    await sleep(delayMs)
+    reconnectInFlight = false
+    if (userEndedSession) {
+      return
+    }
+    if (selectedProvider() === 'ELEVENLABS') {
+      await connectElevenLabs()
+    } else {
+      await connectOpenAi()
+    }
+    const stateAfterReconnect = connectionState.value as RealtimeConnectionState
+    if (stateAfterReconnect === 'connected') {
+      reconnectAttempts = 0
+    } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      handleMidSessionFailure(fallbackMessage)
+    } else if (stateAfterReconnect === 'error') {
+      await scheduleReconnect(fallbackMessage)
+    }
+  }
+
   function sendRealtimeClientEvent(event: unknown) {
     if (!dc || dc.readyState !== 'open') return
     dc.send(JSON.stringify(event))
@@ -280,10 +348,14 @@ export function useRealtimeVoice(
 
     let output: RealtimeLookupResponse = { found: false, snippets: [], confidence: 'none' }
     if (query !== '') {
+      const lookupAbort = new AbortController()
+      const lookupTimeout = setTimeout(() => lookupAbort.abort(), LIVE_LOOKUP_TIMEOUT_MS)
       try {
-        output = await lookupRealtimeInfo(query, language.value)
+        output = await lookupRealtimeInfo(query, language.value, lookupAbort.signal)
       } catch {
         output = { found: false, snippets: [], confidence: 'none' }
+      } finally {
+        clearTimeout(lookupTimeout)
       }
     }
 
@@ -431,7 +503,7 @@ export function useRealtimeVoice(
         if (pc.connectionState === 'failed' && connectionState.value === 'connected') {
           const msg =
             language.value === 'no' ? 'Stemmekoblingen falt ut.' : 'Voice connection failed.'
-          handleMidSessionFailure(msg)
+          void scheduleReconnect(msg)
         }
       }
 
@@ -453,7 +525,7 @@ export function useRealtimeVoice(
         if (connectionState.value === 'connected' && !userEndedSession && !midSessionFailureHandled) {
           const msg =
             language.value === 'no' ? 'Stemmesesjonen ble avbrutt.' : 'Voice session was interrupted.'
-          handleMidSessionFailure(msg)
+          void scheduleReconnect(msg)
         }
       })
 
@@ -473,6 +545,7 @@ export function useRealtimeVoice(
       await pc.setRemoteDescription({ type: 'answer', sdp: result.answerSdp })
 
       connectionState.value = 'connected'
+      reconnectAttempts = 0
       sessionStartedAt = Date.now()
       captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_STARTED, {
         language: language.value,
@@ -532,12 +605,13 @@ export function useRealtimeVoice(
         onConnect: () => {
           if (userEndedSession || midSessionFailureHandled) return
           connectionState.value = 'connected'
+          reconnectAttempts = 0
         },
         onDisconnect: () => {
           if (userEndedSession || midSessionFailureHandled) return
           const msg =
             language.value === 'no' ? 'Stemmesesjonen ble avbrutt.' : 'Voice session was interrupted.'
-          handleMidSessionFailure(msg)
+          void scheduleReconnect(msg)
         },
         onMessage: (message: unknown) => {
           handleElevenLabsMessage(message)
@@ -552,7 +626,6 @@ export function useRealtimeVoice(
         },
       })) as ElevenLabsConversation
 
-      connectionState.value = 'connected'
       sessionStartedAt = Date.now()
       captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.SESSION_STARTED, {
         language: language.value,
@@ -594,6 +667,8 @@ export function useRealtimeVoice(
     isModelSpeaking.value = false
     userEndedSession = false
     midSessionFailureHandled = false
+    reconnectAttempts = 0
+    reconnectInFlight = false
     connectionState.value = 'connecting'
 
     if (selectedProvider() === 'ELEVENLABS') {
