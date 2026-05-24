@@ -68,4 +68,31 @@ class RelevanceGateServiceTest {
     assertThat(service.evaluate("What is the meaning of life and what does Kevin study?"))
         .isEqualTo(RelevanceGateService.Verdict.IN_SCOPE);
   }
+
+  @Test
+  void blankQueryIsInScope() {
+    assertThat(service.evaluate("   ")).isEqualTo(RelevanceGateService.Verdict.IN_SCOPE);
+    assertThat(service.evaluate(null)).isEqualTo(RelevanceGateService.Verdict.IN_SCOPE);
+  }
+
+  @Test
+  void strictModeRejectsLongAmbiguousQueries() {
+    RelevanceGateProperties props = new RelevanceGateProperties();
+    props.setEnabled(true);
+    props.setStrictMode(true);
+    RelevanceGateService strict = new RelevanceGateService(props);
+    String longVague =
+        "Describe the geological formation of mountain ranges across multiple continents in detail";
+    assertThat(strict.evaluate(longVague)).isEqualTo(RelevanceGateService.Verdict.OFF_TOPIC);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "What is the capital of France?",
+      "Hva er hovedstaden i Spania?",
+      "Give me a recipe for chocolate cake"
+  })
+  void rejectsOtherOutOfScopePatterns(String query) {
+    assertThat(service.evaluate(query)).isEqualTo(RelevanceGateService.Verdict.OFF_TOPIC);
+  }
 }
