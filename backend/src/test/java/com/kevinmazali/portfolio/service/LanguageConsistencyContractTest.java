@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
+import com.kevinmazali.portfolio.config.RelevanceGateProperties;
 import com.kevinmazali.portfolio.config.RetrievalProperties;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
@@ -55,6 +56,12 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 class LanguageConsistencyContractTest {
+
+  private static RelevanceGateService disabledRelevanceGate() {
+    RelevanceGateProperties props = new RelevanceGateProperties();
+    props.setEnabled(false);
+    return new RelevanceGateService(props);
+  }
 
   // -----------------------------------------------------------------------
   //  1. RAG prompt templates: structural invariants
@@ -161,6 +168,8 @@ class LanguageConsistencyContractTest {
           aiCircuitBreaker,
           new PassThroughDocumentReranker(),
           new RetrievalProperties(),
+          disabledRelevanceGate(),
+          new OffTopicRedirectMessages(),
           new PostHogTraceContext(),
           null,
           null);

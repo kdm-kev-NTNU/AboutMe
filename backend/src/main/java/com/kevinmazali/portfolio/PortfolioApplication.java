@@ -7,6 +7,7 @@ import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.PostHogProperties;
+import com.kevinmazali.portfolio.config.RelevanceGateProperties;
 import com.kevinmazali.portfolio.config.RetrievalProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -27,7 +28,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     ExperimentRunRateLimitProperties.class,
     DatasetGenerateRateLimitProperties.class,
     PostHogProperties.class,
-    RetrievalProperties.class
+    RetrievalProperties.class,
+    RelevanceGateProperties.class
 })
 public class PortfolioApplication {
 

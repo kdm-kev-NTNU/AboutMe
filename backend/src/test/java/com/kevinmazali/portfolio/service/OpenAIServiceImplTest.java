@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
+import com.kevinmazali.portfolio.config.RelevanceGateProperties;
 import com.kevinmazali.portfolio.config.RetrievalProperties;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
@@ -34,6 +35,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,8 +69,9 @@ class OpenAIServiceImplTest {
 
   @BeforeEach
   void setUp() {
-    when(openAiChatModelProvider.getIfAvailable()).thenReturn(openAiChatModel);
-    when(promptVersionService.loadRagPrompt(anyString()))
+    lenient().when(openAiChatModelProvider.getIfAvailable()).thenReturn(openAiChatModel);
+    lenient()
+        .when(promptVersionService.loadRagPrompt(anyString()))
         .thenReturn("Input: {input}\nDocs:\n{documents}");
     lenient().doNothing().when(aiCircuitBreaker).assertClosed();
     lenient().doNothing().when(aiBudgetService).assertWithinBudget(anyString(), anyBoolean());
@@ -92,9 +95,17 @@ class OpenAIServiceImplTest {
         aiCircuitBreaker,
         new PassThroughDocumentReranker(),
         retrievalProperties,
+        disabledRelevanceGate(),
+        new OffTopicRedirectMessages(),
         new PostHogTraceContext(),
         null,
         null);
+  }
+
+  private static RelevanceGateService disabledRelevanceGate() {
+    RelevanceGateProperties props = new RelevanceGateProperties();
+    props.setEnabled(false);
+    return new RelevanceGateService(props);
   }
 
   @AfterEach
@@ -138,6 +149,8 @@ class OpenAIServiceImplTest {
             aiCircuitBreaker,
             reranker,
             retrievalProperties,
+            disabledRelevanceGate(),
+            new OffTopicRedirectMessages(),
             new PostHogTraceContext(),
             null,
             null);
@@ -163,5 +176,49 @@ class OpenAIServiceImplTest {
     String ragText = promptCaptor.getAllValues().get(1).toString();
     assertTrue(ragText.contains("doc-beta-unique"));
     assertTrue(!ragText.contains("doc-alpha-unique"));
+  }
+
+  @Test
+  void getAnswerReturnsRedirectForOffTopicWithoutCallingLlm() {
+    RelevanceGateProperties gateProps = new RelevanceGateProperties();
+    gateProps.setEnabled(true);
+    OpenAIServiceImpl svc =
+        new OpenAIServiceImpl(
+            openAiChatModelProvider,
+            anthropicChatModelProvider,
+            vectorStore,
+            "gpt-5.4-mini",
+            promptVersionService,
+            new AiLimitsProperties(),
+            new AiBudgetProperties(),
+            aiBudgetService,
+            aiCircuitBreaker,
+            new PassThroughDocumentReranker(),
+            retrievalProperties,
+            new RelevanceGateService(gateProps),
+            new OffTopicRedirectMessages(),
+            new PostHogTraceContext(),
+            null,
+            null);
+
+    Answer answer = svc.getAnswer(new Question("What is the meaning of life?"));
+
+    assertTrue(answer.answer().contains("don't have information"));
+    verify(openAiChatModel, never()).call(any(Prompt.class));
+    verify(vectorStore, never()).similaritySearch(any(SearchRequest.class));
+  }
+
+  @Test
+  void getAnswerReturnsNoContextRedirectWhenRetrievalIsEmpty() {
+    when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of());
+
+    ChatResponse expand = mock(ChatResponse.class, RETURNS_DEEP_STUBS);
+    when(expand.getResult().getOutput().getText()).thenReturn("{\"en\":\"Hello\",\"no\":\"Hei\"}");
+    when(openAiChatModel.call(any(Prompt.class))).thenReturn(expand);
+
+    Answer answer = openAIServiceImpl.getAnswer(new Question("Tell me about Kevin's rare unpublished hobby xyz"));
+
+    assertTrue(answer.answer().contains("doesn't include") || answer.answer().contains("information"));
+    verify(openAiChatModel, times(1)).call(any(Prompt.class));
   }
 }

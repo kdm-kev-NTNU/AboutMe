@@ -133,6 +133,10 @@ portfolio:
     rerank-batch-size: 8
     max-passage-chars: 2000
     max-sequence-length: 256
+    similarity-threshold: 0.35
+  relevance-gate:
+    enabled: true
+    strict-mode: false
   posthog:
     enabled: ${POSTHOG_ENABLED:false}
     api-key: ${POSTHOG_API_KEY:}
