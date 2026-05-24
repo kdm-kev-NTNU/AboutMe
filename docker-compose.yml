@@ -20,6 +20,12 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    develop:
+      watch:
+        - action: rebuild
+          path: ./backend/src
+        - action: rebuild
+          path: ./backend/pom.xml
     container_name: aboutme-backend
     depends_on:
       db:
@@ -43,6 +49,12 @@ services:
     build:
       context: ./frontend/homepage
       dockerfile: Dockerfile
+    develop:
+      watch:
+        - action: rebuild
+          path: ./frontend/homepage/src
+        - action: rebuild
+          path: ./frontend/homepage/package.json
     container_name: aboutme-frontend
     depends_on:
       - backend
