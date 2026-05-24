@@ -24,6 +24,8 @@ public class RealtimeProfileService {
 
   private static final String PROFILE_PATH = "realtime/kevin-profile.json";
   private static final int DEFAULT_MAX_RESULTS = 5;
+  /** Minimum keyword score for a profile fact to be returned as relevant. */
+  static final int MIN_RELEVANCE_SCORE = 4;
 
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final JsonNode root;
@@ -41,13 +43,19 @@ public class RealtimeProfileService {
     return StringUtils.hasText(card) ? card.trim() : "";
   }
 
+  public record ProfileLookupResult(List<RealtimeLookupSnippet> snippets, int bestScore) {}
+
   public List<RealtimeLookupSnippet> lookup(String query, String language) {
-    return lookup(query, language, DEFAULT_MAX_RESULTS);
+    return lookupDetailed(query, language, DEFAULT_MAX_RESULTS).snippets();
   }
 
   public List<RealtimeLookupSnippet> lookup(String query, String language, int maxResults) {
+    return lookupDetailed(query, language, maxResults).snippets();
+  }
+
+  public ProfileLookupResult lookupDetailed(String query, String language, int maxResults) {
     if (!StringUtils.hasText(query) || maxResults <= 0) {
-      return List.of();
+      return new ProfileLookupResult(List.of(), 0);
     }
     String lang = normalizeLang(language);
     String normalizedQuery = normalize(query);
@@ -55,26 +63,29 @@ public class RealtimeProfileService {
     List<ScoredSnippet> scored = new ArrayList<>();
     JsonNode facts = root.path("facts");
     if (!facts.isArray()) {
-      return List.of();
+      return new ProfileLookupResult(List.of(), 0);
     }
     int order = 0;
     for (JsonNode fact : facts) {
       String title = localized(fact.path("title"), lang);
       String text = localized(fact.path("text"), lang);
       List<String> tags = tags(fact.path("tags"));
-      int score = score(normalizedQuery, terms, title, text, tags);
-      if (score > 0) {
+      int factScore = score(normalizedQuery, terms, title, text, tags);
+      if (factScore > 0) {
         scored.add(new ScoredSnippet(
-            new RealtimeLookupSnippet("profile", title, text), score, order));
+            new RealtimeLookupSnippet("profile", title, text), factScore, order));
       }
       order++;
     }
-    return scored.stream()
+    int bestScore = scored.stream().mapToInt(ScoredSnippet::score).max().orElse(0);
+    List<RealtimeLookupSnippet> snippets = scored.stream()
+        .filter(s -> s.score() >= MIN_RELEVANCE_SCORE)
         .sorted(Comparator.comparingInt(ScoredSnippet::score).reversed()
             .thenComparingInt(ScoredSnippet::order))
         .map(ScoredSnippet::snippet)
         .limit(Math.max(1, maxResults))
         .toList();
+    return new ProfileLookupResult(snippets, bestScore);
   }
 
   public static String normalizeLang(String raw) {

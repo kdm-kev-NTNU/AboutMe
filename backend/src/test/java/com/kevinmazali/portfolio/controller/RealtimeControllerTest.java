@@ -261,7 +261,8 @@ class RealtimeControllerTest {
     when(realtimeLookupService.lookup(eq("NTNU"), eq("en")))
         .thenReturn(new RealtimeLookupResponse(
             true,
-            List.of(new RealtimeLookupSnippet("profile", "Data engineering", "Kevin studies at NTNU."))));
+            List.of(new RealtimeLookupSnippet("profile", "Data engineering", "Kevin studies at NTNU.")),
+            "high"));
 
     mockMvc.perform(post("/realtime/lookup")
             .content("{\"query\":\"NTNU\",\"language\":\"en\"}")
@@ -278,7 +279,7 @@ class RealtimeControllerTest {
   void lookupStillWorksWhenRealtimeFlagDisabled() throws Exception {
     realtimeProperties.setEnabled(false);
     when(realtimeLookupService.lookup(eq("NTNU"), eq("en")))
-        .thenReturn(new RealtimeLookupResponse(true, List.of()));
+        .thenReturn(new RealtimeLookupResponse(true, List.of(), "high"));
 
     mockMvc.perform(post("/realtime/lookup")
             .content("{\"query\":\"NTNU\",\"language\":\"en\"}")
