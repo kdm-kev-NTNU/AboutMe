@@ -518,6 +518,116 @@ describe('ChatView', () => {
     expect(opts.some((o) => o.text().includes('Rask'))).toBe(true)
   })
 
+  // --- Language lock tests ---
+
+  it('blocks English question after Norwegian conversation start', async () => {
+    const { wrapper } = await mountChat({})
+    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
+    await flushPromises()
+
+    const input = wrapper.find('input[type="text"]')
+    await input.setValue('Hva studerer Kevin?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(vi.mocked(askQuestion)).toHaveBeenCalled()
+    vi.mocked(askQuestion).mockClear()
+
+    await input.setValue('What does Kevin study?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(vi.mocked(askQuestion)).not.toHaveBeenCalled()
+    expect(wrapper.text()).toMatch(/startet på norsk|tøm chatten/)
+  })
+
+  it('blocks Norwegian question after English conversation start', async () => {
+    const { wrapper } = await mountChat({})
+    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
+    await flushPromises()
+
+    const input = wrapper.find('input[type="text"]')
+    await input.setValue('What does Kevin study?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(vi.mocked(askQuestion)).toHaveBeenCalled()
+    vi.mocked(askQuestion).mockClear()
+
+    await input.setValue('Hva studerer Kevin?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(vi.mocked(askQuestion)).not.toHaveBeenCalled()
+    expect(wrapper.text()).toMatch(/started in English|clear the chat/)
+  })
+
+  it('allows same language questions within a conversation', async () => {
+    const { wrapper } = await mountChat({})
+    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
+    await flushPromises()
+
+    const input = wrapper.find('input[type="text"]')
+    await input.setValue('Hva studerer Kevin?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(vi.mocked(askQuestion)).toHaveBeenCalledTimes(1)
+    vi.mocked(askQuestion).mockClear()
+
+    await input.setValue('Hvilke prosjekter har Kevin?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(vi.mocked(askQuestion)).toHaveBeenCalledTimes(1)
+  })
+
+  it('resets language lock on clear chat', async () => {
+    const { wrapper } = await mountChat({})
+    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
+    await flushPromises()
+
+    const input = wrapper.find('input[type="text"]')
+    await input.setValue('Hva studerer Kevin?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    const clearBtn = wrapper
+      .findAll('button')
+      .find((b) => /clear chat/i.test(b.text()))
+    await clearBtn!.trigger('click')
+    await flushPromises()
+    vi.mocked(askQuestion).mockClear()
+
+    await input.setValue('What does Kevin study?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(vi.mocked(askQuestion)).toHaveBeenCalled()
+  })
+
+  it('clears language warning when user types new input', async () => {
+    const { wrapper } = await mountChat({})
+    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
+    await flushPromises()
+
+    const input = wrapper.find('input[type="text"]')
+    await input.setValue('Hva studerer Kevin?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    await input.setValue('What does Kevin study?')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(wrapper.text()).toMatch(/startet på norsk/)
+
+    await input.setValue('Hvem er Kevin?')
+    await flushPromises()
+
+    expect(wrapper.text()).not.toMatch(/startet på norsk/)
+  })
+
   describe('voice input control', () => {
     const origMediaDevices = globalThis.navigator.mediaDevices
 

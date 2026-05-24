@@ -36,6 +36,7 @@ import {
 import AudioWaveform from '@/components/AudioWaveform.vue'
 import { useSpeechTranscription, MAX_SPEECH_PROMPT_CHARS } from '@/composables/useSpeechTranscription'
 import { apiErrorMessage } from '@/lib/api-error'
+import { detectLanguage, type DetectedLanguage } from '@/utils/detectLanguage'
 import { Loader2, Mic, Square, Headphones } from 'lucide-vue-next'
 
 // RAG chat: sessionStorage transcript, optional ?conversationId= hydrate from server, askQuestion with optional model id; clear stays on chat route.
@@ -56,6 +57,54 @@ const langStore = useLangStore()
 const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
 
+// --- Conversation language lock ---
+const conversationLanguage = ref<DetectedLanguage>('unknown')
+const languageMismatchWarning = ref('')
+
+const CONVERSATION_LANG_KEY = 'chatConversationLanguage'
+
+function saveConversationLanguage(lang: DetectedLanguage) {
+  conversationLanguage.value = lang
+  try { sessionStorage.setItem(CONVERSATION_LANG_KEY, lang) } catch {}
+}
+
+function loadConversationLanguage() {
+  try {
+    const stored = sessionStorage.getItem(CONVERSATION_LANG_KEY) as DetectedLanguage | null
+    if (stored === 'no' || stored === 'en') {
+      conversationLanguage.value = stored
+    }
+  } catch {}
+}
+
+function resetConversationLanguage() {
+  conversationLanguage.value = 'unknown'
+  languageMismatchWarning.value = ''
+  try { sessionStorage.removeItem(CONVERSATION_LANG_KEY) } catch {}
+}
+
+function checkLanguageConsistency(text: string): boolean {
+  const detected = detectLanguage(text)
+  if (detected === 'unknown') return true
+
+  if (conversationLanguage.value === 'unknown') {
+    saveConversationLanguage(detected)
+    return true
+  }
+
+  if (detected !== conversationLanguage.value) {
+    const lockedLang = conversationLanguage.value
+    languageMismatchWarning.value =
+      lockedLang === 'no'
+        ? 'Samtalen ble startet på norsk. Vennligst still spørsmål på norsk, eller tøm chatten for å starte på nytt.'
+        : 'This conversation was started in English. Please ask in English, or clear the chat to start over.'
+    return false
+  }
+
+  languageMismatchWarning.value = ''
+  return true
+}
+
 const speechBlocked = computed(() => isLoading.value)
 
 const {
@@ -75,7 +124,7 @@ const {
   },
 })
 
-const chatBannerError = computed(() => errorText.value || voiceError.value)
+const chatBannerError = computed(() => errorText.value || voiceError.value || languageMismatchWarning.value)
 const canRetryChatError = computed(() => input.value.trim() !== '' && !isLoading.value)
 const aiErrorDialogCopy = computed(() => {
   const en = language.value === 'en'
@@ -180,6 +229,9 @@ const loadMessagesFromStorage = () => {
 
 watch(() => state.messages, saveMessagesToStorage, { deep: true })
 
+watch(input, () => {
+  if (languageMismatchWarning.value) languageMismatchWarning.value = ''
+})
 const GENERIC_ASK_ERROR = 'Noe gikk galt. Prøv igjen.'
 
 // Drops the in-memory transcript and stays on /chat (strip deep-link query params).
@@ -189,7 +241,9 @@ const clearChat = () => {
   state.messages = []
   errorText.value = ''
   voiceError.value = ''
+  languageMismatchWarning.value = ''
   input.value = ''
+  resetConversationLanguage()
   resetChatConversationId()
   void router.replace({ name: 'chat', query: {} })
 }
@@ -230,6 +284,7 @@ async function send(text: string) {
         : `Prompten er for lang (${text.length}/${MAX_PROMPT_CHARS}).`
     return
   }
+  if (!checkLanguageConsistency(text)) return
   errorText.value = ''
   voiceError.value = ''
   state.messages.push({ role: 'user', text })
@@ -359,6 +414,8 @@ onMounted(async () => {
     registerAnalyticsProperties({ conversation_id: conversationId })
   }
 
+  loadConversationLanguage()
+
   const conversationIdParam = route.query.conversationId as string
 
   if (conversationIdParam) {
@@ -370,7 +427,6 @@ onMounted(async () => {
   const q = (route.query.q as string) || ''
   if (q && !conversationIdParam) {
     input.value = q
-    // Home page passes ?q=: auto-send once so the user does not need a second click on /chat.
     send(q)
   }
 })
