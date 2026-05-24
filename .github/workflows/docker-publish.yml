@@ -17,6 +17,11 @@ on:
 permissions:
   contents: read
 
+# One publish at a time per ref — avoids overlapping Docker Build Cloud slots.
+concurrency:
+  group: docker-publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   backend:
     runs-on: ubuntu-24.04
@@ -81,7 +86,10 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
-      - uses: docker/build-push-action@v7
+      - name: Build and push backend image
+        id: backend_push
+        uses: docker/build-push-action@v7
+        continue-on-error: true
         with:
           context: ./backend
           file: ./backend/Dockerfile.publish
@@ -93,8 +101,32 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
           sbom: true
+      - name: Wait before backend image retry
+        if: steps.backend_push.outcome == 'failure'
+        run: sleep 90
+      - name: Build and push backend image (retry)
+        if: steps.backend_push.outcome == 'failure'
+        id: backend_push_retry
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.publish
+          build-contexts: |
+            jar=${{ steps.jarctx.outputs.path }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+      - name: Fail if backend image was not pushed
+        if: steps.backend_push.outcome == 'failure' && steps.backend_push_retry.outcome == 'failure'
+        run: |
+          echo "::error::Backend image push failed after retry."
+          exit 1
 
   frontend:
+    needs: backend
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -149,7 +181,10 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
-      - uses: docker/build-push-action@v7
+      - name: Build and push frontend image
+        id: frontend_push
+        uses: docker/build-push-action@v7
+        continue-on-error: true
         with:
           context: ./frontend/homepage
           file: ./frontend/homepage/Dockerfile
@@ -163,3 +198,28 @@ jobs:
             VITE_POSTHOG_ENABLED=${{ secrets.VITE_POSTHOG_ENABLED }}
           provenance: true
           sbom: true
+      - name: Wait before frontend image retry
+        if: steps.frontend_push.outcome == 'failure'
+        run: sleep 90
+      - name: Build and push frontend image (retry)
+        if: steps.frontend_push.outcome == 'failure'
+        id: frontend_push_retry
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend/homepage
+          file: ./frontend/homepage/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_POSTHOG_KEY=${{ secrets.VITE_POSTHOG_KEY }}
+            VITE_POSTHOG_HOST=${{ secrets.VITE_POSTHOG_HOST }}
+            VITE_POSTHOG_ENABLED=${{ secrets.VITE_POSTHOG_ENABLED }}
+          provenance: true
+          sbom: true
+      - name: Fail if frontend image was not pushed
+        if: steps.frontend_push.outcome == 'failure' && steps.frontend_push_retry.outcome == 'failure'
+        run: |
+          echo "::error::Frontend image push failed after retry."
+          exit 1
