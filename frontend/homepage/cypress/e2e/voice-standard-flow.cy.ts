@@ -1,3 +1,9 @@
+function waitForRecordedAudioChunks() {
+  // Aligns with useSpeechTranscription's 250ms MediaRecorder timeslice; stopping sooner yields an empty blob (no /transcribe).
+  // eslint-disable-next-line cypress/no-unnecessary-waiting
+  cy.wait(800)
+}
+
 function withFakeMicrophone() {
   return {
     onBeforeLoad(win: Cypress.AUTWindow) {
@@ -61,10 +67,11 @@ describe('Standard voice mode', () => {
     cy.wait('@status')
     cy.wait('@models')
     cy.contains('button', 'English').click()
-    cy.contains('button', /start recording/i).click()
-    cy.contains('button', /stop recording/i).should('be.visible')
-    cy.contains('button', /stop recording/i).click()
-    cy.wait('@transcribe')
+    cy.contains('button', /start recording/i).click({ force: true })
+    cy.get('[role="img"][aria-label="Recording..."]', { timeout: 15_000 }).should('be.visible')
+    waitForRecordedAudioChunks()
+    cy.contains('button', /stop recording/i).click({ force: true })
+    cy.wait('@transcribe', { timeout: 15_000 })
     cy.wait('@lookup')
     cy.wait('@synthesize')
   })

@@ -109,4 +109,29 @@ class SpeechSynthesisServiceTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("OpenAI speech API failed");
   }
+
+  @Test
+  void isConfiguredFalseWithoutApiKey() {
+    AiBudgetProperties budgetProperties = new AiBudgetProperties();
+    SpeechSynthesisService unconfigured = new SpeechSynthesisService(
+        aiBudgetService,
+        budgetProperties,
+        aiCircuitBreaker,
+        openAiSpeechHttpInvoker,
+        "",
+        "tts-1",
+        "nova");
+
+    assertThat(unconfigured.isConfigured()).isFalse();
+    assertThatThrownBy(() -> unconfigured.synthesize("hello", "en"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("not configured");
+  }
+
+  @Test
+  void synthesizeRejectsOverlongText() {
+    assertThatThrownBy(() -> service.synthesize("x".repeat(1201), "en"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("at most");
+  }
 }

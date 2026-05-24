@@ -6,7 +6,17 @@ const FAKE_MODELS = [
   { id: 'gpt-5.4-mini', provider: 'OPENAI', label: 'GPT-5.4 mini', tags: ['FAST'] },
 ]
 
-describe('Voice page (realtime disabled)', () => {
+const VOICE_DISABLED_STATUS = {
+  enabled: false,
+  standardEnabled: false,
+  liveEnabled: false,
+  voices: ['marin', 'cedar'],
+  reasoningEfforts: ['low', 'medium', 'high'],
+  defaultVoice: 'marin',
+  defaultReasoningEffort: 'low',
+}
+
+describe('Voice page (voice disabled)', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/chat/models', {
       statusCode: 200,
@@ -14,28 +24,34 @@ describe('Voice page (realtime disabled)', () => {
     }).as('chatModels')
     cy.intercept('GET', '**/api/realtime/status', {
       statusCode: 200,
-      body: { enabled: false },
+      body: VOICE_DISABLED_STATUS,
     }).as('realtimeStatus')
+    cy.intercept('GET', '**/api/realtime/models', {
+      statusCode: 200,
+      body: [],
+    }).as('realtimeModels')
   })
 
-  it('shows unavailable copy when server reports realtime off', () => {
+  it('shows standard-mode unavailable copy when server reports voice off', () => {
     cy.visit('/voice', {
       onBeforeLoad(win) {
         win.localStorage.setItem('lang', 'en')
       },
     })
     cy.wait('@realtimeStatus')
-    cy.contains('Voice chat is not enabled on the server right now.').should('be.visible')
+    cy.wait('@realtimeModels')
+    cy.contains('Standard voice mode is not available right now.').should('be.visible')
   })
 
-  it('shows Norwegian unavailable copy when lang is no', () => {
+  it('shows Norwegian standard-mode unavailable copy when lang is no', () => {
     cy.visit('/voice', {
       onBeforeLoad(win) {
         win.localStorage.setItem('lang', 'no')
       },
     })
     cy.wait('@realtimeStatus')
-    cy.contains('Stemmechat er ikke slått på hos serveren akkurat nå.').should('be.visible')
+    cy.wait('@realtimeModels')
+    cy.contains('Standard stemmemodus er ikke tilgjengelig akkurat nå.').should('be.visible')
   })
 })
 
