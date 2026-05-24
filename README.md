@@ -40,9 +40,10 @@ Seed documents for the vector store go in `backend/data/docs/` (gitignored). The
 
 ### Full Stack in Docker
 
-Copy `.env.example` to `backend/.env`, set at least `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true`, then run:
+Copy `.env.example` to `backend/.env`, set at least `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true`. For Docker Compose database credentials, copy `.env.docker.example` to `.env.docker` at the repo root, then run:
 
 ```bash
+cp .env.docker.example .env.docker   # first time only (Windows: copy .env.docker.example .env.docker)
 docker compose up -d --build
 ```
 
@@ -62,6 +63,7 @@ The backend container mounts `./backend/data` read-only, so `file:./data/docs/` 
 Run only the database in Docker, then start backend and frontend on the host with auto-reload:
 
 ```bash
+cp .env.docker.example .env.docker   # first time only
 docker compose up -d db
 ```
 
@@ -90,6 +92,7 @@ Typical URLs: same as full stack — app [http://localhost:5173](http://localhos
 For auto-reload without a local JDK or Node install:
 
 ```bash
+cp .env.docker.example .env.docker   # first time only
 docker compose -f docker-compose.dev.yml up
 ```
 
@@ -115,7 +118,7 @@ Use this before deploy to confirm the production Dockerfile still builds and run
 
 ## Configuration
 
-Configuration defaults live in `backend/src/main/resources/application.yaml`. Copy `.env.example` to `backend/.env` for local secrets. Frontend build-time `VITE_*` values belong in `frontend/homepage/.env`.
+Configuration defaults live in `backend/src/main/resources/application.yaml`. Copy `.env.example` to `backend/.env` for local secrets. Copy `.env.docker.example` to `.env.docker` for Docker Compose Postgres credentials. Frontend build-time `VITE_*` values belong in `frontend/homepage/.env`. For Cursor ElevenLabs MCP, copy `.cursor/mcp.json.example` to `.cursor/mcp.json` and set your API key locally (rotate the key in ElevenLabs if it was previously committed).
 
 Common backend settings:
 
