@@ -15,8 +15,9 @@ Core stack:
 |------|------|
 | `backend/` | Spring Boot API for chat, Realtime voice, auth, admin tools, RAG, experiments, budgets, and observability |
 | `frontend/homepage/` | Vue SPA. See [frontend/homepage/README.md](frontend/homepage/README.md) for scripts, routes, analytics, and Orval notes |
-| `scripts/dev.ps1` | Windows helper that starts Docker infrastructure and opens backend + Vite terminals |
-| `docker-compose.yml` | PostgreSQL/pgvector, backend, and Nginx-hosted frontend |
+| `scripts/dev.ps1` | Windows helper that starts Docker infrastructure and opens backend + Vite terminals (recommended daily dev) |
+| `docker-compose.yml` | PostgreSQL/pgvector, backend, and Nginx-hosted frontend (prod-like images) |
+| `docker-compose.dev.yml` | Full stack in Docker with Vite HMR and Spring DevTools auto-reload |
 | `.env.example` | Documented runtime configuration for backend secrets and optional integrations |
 | `.github/workflows/` | Maven/frontend tests, GitGuardian secret scanning, Semgrep, and Docker image publishing |
 
@@ -33,13 +34,20 @@ Seed documents for the vector store go in `backend/data/docs/` (gitignored). The
 
 ## Run Locally
 
+**Recommended for daily development:** [Hybrid Dev](#hybrid-dev-recommended) or [Full Stack Dev in Docker](#full-stack-dev-in-docker). Both auto-reload on code changes.
+
+**Prod-like Docker** (`docker compose up -d --build`) does **not** auto-reload — run `--build` again after each code change, or use [Compose Watch](#compose-watch-prod-image-smoke-test) to rebuild images automatically (slower).
+
 ### Full Stack in Docker
 
-Copy `.env.example` to `backend/.env`, set at least `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true`, then run:
+Copy `.env.example` to `backend/.env`, set at least `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true`. For Docker Compose database credentials, copy `.env.docker.example` to `.env.docker` at the repo root, then run:
 
 ```bash
+cp .env.docker.example .env.docker   # first time only (Windows: copy .env.docker.example .env.docker)
 docker compose up -d --build
 ```
+
+This builds frozen images (JAR + Nginx static assets). For day-to-day coding with live reload, use **Hybrid Dev** or **Full Stack Dev in Docker** below instead.
 
 Typical URLs:
 
@@ -50,15 +58,14 @@ Typical URLs:
 
 The backend container mounts `./backend/data` read-only, so `file:./data/docs/` resolves to `backend/data/docs/` inside the container.
 
-### Hybrid Dev
+### Hybrid Dev (recommended)
 
-Run the database in Docker:
+Run only the database in Docker, then start backend and frontend on the host with auto-reload:
 
 ```bash
+cp .env.docker.example .env.docker   # first time only
 docker compose up -d db
 ```
-
-Then start the apps on the host:
 
 ```bash
 cd backend
@@ -71,11 +78,47 @@ npm install
 npm run dev
 ```
 
-On Windows, `.\scripts\dev.ps1` starts the same setup after you copy `.env.example` to `backend/.env`.
+**Auto-reload:**
+
+- **Frontend:** Vite HMR — changes in `.vue`, `.ts`, and CSS appear in the browser almost instantly.
+- **Backend:** `spring-boot-devtools` restarts the app when compiled classes change (~5–15 s). Changes to `pom.xml` or new dependencies still require stopping and re-running Maven.
+
+On Windows, **`.\scripts\dev.ps1`** is the fastest path: it starts Postgres, waits for port `5432`, then opens backend and frontend in separate terminals. Copy `.env.example` to `backend/.env` (or repo-root `.env` as documented in `application.yaml`) first.
+
+Typical URLs: same as full stack — app [http://localhost:5173](http://localhost:5173), API [http://localhost:8080](http://localhost:8080).
+
+### Full Stack Dev in Docker
+
+For auto-reload without a local JDK or Node install:
+
+```bash
+cp .env.docker.example .env.docker   # first time only
+docker compose -f docker-compose.dev.yml up
+```
+
+Copy `.env.example` to `backend/.env` before starting. The dev compose file runs `mvn spring-boot:run` and `npm run dev` inside containers with source mounted from the repo.
+
+**Auto-reload:** same as hybrid — Vite HMR for the frontend, Spring DevTools restart for the backend. ONNX rerank assets from the prod Dockerfile are not bundled; set `PORTFOLIO_RETRIEVAL_RERANK_ENABLED=false` in `backend/.env` if reranking is not needed locally.
+
+### Compose Watch (prod-image smoke test)
+
+To verify prod images while editing code (rebuilds entire images on change — slower than dev mode):
+
+```bash
+docker compose watch
+```
+
+Or start the stack and watch in one step:
+
+```bash
+docker compose up --watch
+```
+
+Use this before deploy to confirm the production Dockerfile still builds and runs; use **Hybrid Dev** or **docker-compose.dev.yml** for everyday iteration.
 
 ## Configuration
 
-Configuration defaults live in `backend/src/main/resources/application.yaml`. Copy `.env.example` to `backend/.env` for local secrets. Frontend build-time `VITE_*` values belong in `frontend/homepage/.env`.
+Configuration defaults live in `backend/src/main/resources/application.yaml`. Copy `.env.example` to `backend/.env` for local secrets. Copy `.env.docker.example` to `.env.docker` for Docker Compose Postgres credentials. Frontend build-time `VITE_*` values belong in `frontend/homepage/.env`. For Cursor ElevenLabs MCP, copy `.cursor/mcp.json.example` to `.cursor/mcp.json` and set your API key locally (rotate the key in ElevenLabs if it was previously committed).
 
 Common backend settings:
 
@@ -138,7 +181,17 @@ Public AI endpoints are rate-limited with Bucket4j. Admin routes are protected b
 
 Treat database backups as sensitive. Conversations, documents, chunks, embeddings, prompts, feedback, and experiment datasets may contain personal or project-specific information.
 
-CI uses GitGuardian as the PR/push secret scanning gate and Semgrep for SAST. Add `GITGUARDIAN_API_KEY` to GitHub Actions secrets before enabling required checks; the GitGuardian workflow fails hard when the token is missing.
+CI uses two GitGuardian surfaces plus Semgrep for SAST:
+
+- **GitGuardian scan** (GitHub Actions, `ggshield` in [`.github/workflows/gitguardian.yml`](.github/workflows/gitguardian.yml)) scans commit ranges on PRs and pushes. It reads [`.gitguardian.yml`](.gitguardian.yml) for local-dev allowlists.
+- **GitGuardian Security Checks** (GitHub App) is a separate required check on the GitGuardian dashboard. Open incidents there must be resolved after rotation or remediation, even when the Actions workflow is green.
+
+Add `GITGUARDIAN_API_KEY` as a repository Actions secret before enabling required checks; the workflow fails hard when the token is missing.
+
+**Local secrets (never commit):**
+
+- Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) to `.cursor/mcp.json` (gitignored) and set `ELEVENLABS_API_KEY` locally.
+- Copy [`.env.docker.example`](.env.docker.example) to `.env.docker` (gitignored) for Docker Compose Postgres credentials (`POSTGRES_PASSWORD`, `SPRING_DATASOURCE_PASSWORD`).
 
 ## Document Pipeline and RAG
 

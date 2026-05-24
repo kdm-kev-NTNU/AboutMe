@@ -4,7 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Button } from '@/components/ui/button'
 import { Info, MessageSquare, ChevronRight, Mic, Headphones } from 'lucide-vue-next'
-import { fetchRealtimeVoiceEnabled } from '@/lib/realtime-voice'
+import { fetchRealtimeVoiceStatus } from '@/lib/realtime-voice'
 
 const router = useRouter()
 
@@ -44,10 +44,11 @@ const futureWorkHomeLink = computed(() => {
 })
 
 /** Null until loaded from GET /realtime/status */
-const voiceFeatureEnabled = ref<boolean | null>(null)
+const standardEnabled = ref<boolean | null>(null)
+const liveEnabled = ref<boolean | null>(null)
 
 const voiceCtaAria = computed(() =>
-  language.value === 'no' ? 'Gå til live stemmechat' : 'Go to live voice chat',
+  language.value === 'no' ? 'Gå til robust stemmemodus' : 'Go to robust voice mode',
 )
 
 function goToVoiceChat() {
@@ -56,18 +57,23 @@ function goToVoiceChat() {
 
 const voiceStatus = computed(() => {
   if (language.value === 'no') {
-    if (voiceFeatureEnabled.value === true) return 'Live stemme er tilgjengelig'
-    if (voiceFeatureEnabled.value === false) return 'Stemme er midlertidig av'
+    if (standardEnabled.value === true && liveEnabled.value === true) return 'Standard og live stemme er tilgjengelig'
+    if (standardEnabled.value === true) return 'Standard stemme er tilgjengelig'
+    if (standardEnabled.value === false && liveEnabled.value === true) return 'Kun live stemme er tilgjengelig'
+    if (standardEnabled.value === false && liveEnabled.value === false) return 'Stemme er midlertidig av'
     return 'Sjekker stemmestatus'
   }
-  if (voiceFeatureEnabled.value === true) return 'Live voice is available'
-  if (voiceFeatureEnabled.value === false) return 'Voice is temporarily off'
+  if (standardEnabled.value === true && liveEnabled.value === true) return 'Standard and live voice are available'
+  if (standardEnabled.value === true) return 'Standard voice is available'
+  if (standardEnabled.value === false && liveEnabled.value === true) return 'Live voice only is available'
+  if (standardEnabled.value === false && liveEnabled.value === false) return 'Voice is temporarily off'
   return 'Checking voice status'
 })
 
 onMounted(() => {
-  void fetchRealtimeVoiceEnabled().then((ok) => {
-    voiceFeatureEnabled.value = ok
+  void fetchRealtimeVoiceStatus().then((status) => {
+    standardEnabled.value = status.standardEnabled
+    liveEnabled.value = status.liveEnabled
   })
 })
 </script>
@@ -99,7 +105,7 @@ onMounted(() => {
           <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-xs font-semibold text-blue-800">
             <span
               class="size-2 rounded-full"
-              :class="voiceFeatureEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
+              :class="standardEnabled === false && liveEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
               aria-hidden="true"
             ></span>
             {{ voiceStatus }}
@@ -113,8 +119,8 @@ onMounted(() => {
           <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
             {{
               language === 'no'
-                ? 'Live stemme er den raskeste veien inn i porteføljen. Spør om studier, prosjekter, erfaring og AI-bygget med en gang.'
-                : 'Live voice is the fastest way into the portfolio. Ask about studies, projects, experience, and the AI build without typing first.'
+                ? 'Standard stemme er anbefalt: tregere, men mer robust. Live-modus finnes fortsatt for raskere samtaler, men er mindre stabil.'
+                : 'Standard voice is recommended: slower, but more robust. Live mode still exists for faster conversations, but is less stable.'
             }}
           </p>
           <div class="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -125,14 +131,18 @@ onMounted(() => {
               @click="goToVoiceChat"
             >
               <Headphones class="me-2 size-5" aria-hidden="true" />
-              {{ language === 'no' ? 'Start stemme' : 'Start voice' }}
+              {{ language === 'no' ? 'Start standard stemme' : 'Start standard voice' }}
             </Button>
             <Button
               as-child
               variant="outline"
               class="h-14 w-full justify-center rounded-2xl border-blue-200 bg-white/85 px-5 text-sm font-semibold text-slate-800 hover:bg-blue-50 sm:w-auto sm:px-7 sm:text-base"
             >
-              <RouterLink to="/chat" class="inline-flex items-center">
+              <RouterLink v-if="liveEnabled === true" to="/voice?mode=live" class="inline-flex items-center">
+                <Headphones class="me-2 size-5" aria-hidden="true" />
+                {{ language === 'no' ? 'Prøv live (ustabil)' : 'Try live (unstable)' }}
+              </RouterLink>
+              <RouterLink v-else to="/chat" class="inline-flex items-center">
                 <MessageSquare class="me-2 size-5" aria-hidden="true" />
                 {{ language === 'no' ? 'Bruk tekstchat' : 'Use text chat' }}
               </RouterLink>
@@ -157,8 +167,8 @@ onMounted(() => {
               <p>
                 {{
                   language === 'no'
-                    ? 'Stemme kan bruke et lite offentlig faktaoppslag. Dypere RAG-svar ligger fortsatt i tekstchat.'
-                    : 'Voice can use a small public fact lookup. Deeper RAG answers still live in text chat.'
+                    ? 'Standard stemmemodus bruker språkvalg på forhånd for bedre kvalitet. Live-modus er raskere, men mer ustabil.'
+                    : 'Standard voice asks for language up front for higher quality. Live mode is faster, but more unstable.'
                 }}
               </p>
             </div>

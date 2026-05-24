@@ -38,6 +38,7 @@ class RealtimeLookupServiceTest {
     RealtimeLookupResponse response = service.lookup("NTNU", "en");
 
     assertThat(response.found()).isTrue();
+    assertThat(response.confidence()).isEqualTo("high");
     assertThat(response.snippets()).hasSizeGreaterThanOrEqualTo(2);
     assertThat(response.snippets()).allMatch(s -> "profile".equals(s.sourceType()));
     verify(vectorStore, never()).similaritySearch(any(SearchRequest.class));
@@ -54,6 +55,7 @@ class RealtimeLookupServiceTest {
     RealtimeLookupResponse response = service.lookup("rare distributed systems topic", "en");
 
     assertThat(response.found()).isTrue();
+    assertThat(response.confidence()).isEqualTo("high");
     assertThat(response.snippets()).anySatisfy(snippet -> {
       assertThat(snippet.sourceType()).isEqualTo("rag");
       assertThat(snippet.title()).isEqualTo("rare.md");
@@ -74,6 +76,7 @@ class RealtimeLookupServiceTest {
     RealtimeLookupResponse response = service.lookup("unmatched zzzzzzz topic", "en");
 
     assertThat(response.found()).isFalse();
+    assertThat(response.confidence()).isEqualTo("none");
     assertThat(response.snippets()).isEmpty();
   }
 
@@ -86,6 +89,26 @@ class RealtimeLookupServiceTest {
     assertThatThrownBy(() -> service.lookup("x".repeat(301), "en"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("300");
+  }
+
+  @Test
+  void computeConfidenceMarksWeakProfileMatchesAsLow() {
+    assertThat(RealtimeLookupService.computeConfidence(
+            List.of(new com.kevinmazali.portfolio.model.RealtimeLookupSnippet(
+                "profile", "Title", "Short")),
+            5,
+            false))
+        .isEqualTo("low");
+  }
+
+  @Test
+  void computeConfidenceMarksStrongProfileMatchesAsHigh() {
+    assertThat(RealtimeLookupService.computeConfidence(
+            List.of(new com.kevinmazali.portfolio.model.RealtimeLookupSnippet(
+                "profile", "Title", "Kevin studies at NTNU.")),
+            8,
+            false))
+        .isEqualTo("high");
   }
 
   @Test

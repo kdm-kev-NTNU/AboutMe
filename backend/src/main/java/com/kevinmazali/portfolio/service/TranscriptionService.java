@@ -119,6 +119,10 @@ public class TranscriptionService {
     return text;
   }
 
+  public boolean isTranscriptionConfigured() {
+    return transcriptionModel.getIfAvailable() != null;
+  }
+
   /**
    * Calls Spring AI with an explicit language hint and returns trimmed text.
    */

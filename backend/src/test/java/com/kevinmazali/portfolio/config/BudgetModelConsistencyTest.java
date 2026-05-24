@@ -26,7 +26,7 @@ class BudgetModelConsistencyTest {
    * Budget YAML entries for non-chat models (e.g. OpenAI Whisper) must not require a {@link SupportedChatModel} enum value.
    */
   private static final Set<String> BUDGET_KEYS_EXEMPT_FROM_CHAT_ENUM =
-      of("whisper-1", "gpt-4o-mini-transcribe", "gpt-4o-transcribe", "gpt-realtime-2");
+      of("whisper-1", "gpt-4o-mini-transcribe", "gpt-4o-transcribe", "tts-1", "gpt-realtime-2");
 
   private static Set<String> budgetModelKeys;
 

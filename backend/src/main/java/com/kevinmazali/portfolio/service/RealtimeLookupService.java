@@ -30,6 +30,10 @@ public class RealtimeLookupService {
   private static final int VECTOR_TOP_K = 5;
   private static final int MAX_SNIPPET_CHARS = 500;
   private static final long CACHE_TTL_NANOS = Duration.ofSeconds(60).toNanos();
+  /** Profile scores at or above this are treated as high-confidence matches. */
+  private static final int HIGH_CONFIDENCE_PROFILE_SCORE = 6;
+  /** Snippets shorter than this with only weak matches are low-confidence. */
+  private static final int SHORT_SNIPPET_CHARS = 20;
 
   private final RealtimeProfileService profileService;
   private final VectorStore vectorStore;
@@ -50,19 +54,41 @@ public class RealtimeLookupService {
       return cached.response();
     }
 
-    List<RealtimeLookupSnippet> snippets = new ArrayList<>();
-    snippets.addAll(profileService.lookup(query, language, MAX_SNIPPETS));
+    RealtimeProfileService.ProfileLookupResult profileLookup =
+        profileService.lookupDetailed(query, language, MAX_SNIPPETS);
+    List<RealtimeLookupSnippet> snippets = new ArrayList<>(profileLookup.snippets());
+    List<RealtimeLookupSnippet> vectorResults = List.of();
     if (snippets.size() < 2) {
-      snippets.addAll(vectorSnippets(query, MAX_SNIPPETS - snippets.size()));
+      vectorResults = vectorSnippets(query, MAX_SNIPPETS - snippets.size());
+      snippets.addAll(vectorResults);
     }
 
     List<RealtimeLookupSnippet> resultSnippets = dedupe(snippets).stream()
         .limit(MAX_SNIPPETS)
         .toList();
+    String confidence = computeConfidence(
+        resultSnippets, profileLookup.bestScore(), !vectorResults.isEmpty());
     RealtimeLookupResponse response =
-        new RealtimeLookupResponse(!resultSnippets.isEmpty(), resultSnippets);
+        new RealtimeLookupResponse(!resultSnippets.isEmpty(), resultSnippets, confidence);
     cache.put(cacheKey, new CacheEntry(now, response));
     return response;
+  }
+
+  static String computeConfidence(
+      List<RealtimeLookupSnippet> snippets, int bestProfileScore, boolean hasVectorResults) {
+    if (snippets.isEmpty()) {
+      return "none";
+    }
+    if (hasVectorResults || bestProfileScore >= HIGH_CONFIDENCE_PROFILE_SCORE) {
+      return "high";
+    }
+    if (snippets.size() == 1 && snippets.get(0).text().length() < SHORT_SNIPPET_CHARS) {
+      return "low";
+    }
+    if (bestProfileScore >= RealtimeProfileService.MIN_RELEVANCE_SCORE) {
+      return "low";
+    }
+    return "low";
   }
 
   private static String validateQuery(String rawQuery) {

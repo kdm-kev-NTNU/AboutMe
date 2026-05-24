@@ -9,9 +9,12 @@ export type RealtimeLookupSnippet = {
   text: string
 }
 
+export type RealtimeLookupConfidence = 'high' | 'low' | 'none'
+
 export type RealtimeLookupResponse = {
   found: boolean
   snippets: RealtimeLookupSnippet[]
+  confidence?: RealtimeLookupConfidence
 }
 
 export type RealtimeVoiceChoice = 'marin' | 'cedar'
@@ -31,6 +34,8 @@ export type RealtimeVoiceModelOption = {
 
 export type RealtimeVoiceStatus = RealtimeVoiceSessionOptions & {
   enabled: boolean
+  standardEnabled: boolean
+  liveEnabled: boolean
   voices: RealtimeVoiceChoice[]
   reasoningEfforts: RealtimeReasoningEffort[]
 }
@@ -87,6 +92,8 @@ function parseRealtimeVoiceStatus(data: unknown): RealtimeVoiceStatus | null {
     reasoningEfforts?: unknown
     defaultVoice?: unknown
     defaultReasoningEffort?: unknown
+    standardEnabled?: unknown
+    liveEnabled?: unknown
   }
   const voices = Array.isArray(d.voices) ? d.voices.filter(isRealtimeVoice) : [...ALLOWED_REALTIME_VOICES]
   const reasoningEfforts = Array.isArray(d.reasoningEfforts)
@@ -102,6 +109,8 @@ function parseRealtimeVoiceStatus(data: unknown): RealtimeVoiceStatus | null {
 
   return {
     enabled: d.enabled === true,
+    standardEnabled: d.standardEnabled === true,
+    liveEnabled: d.liveEnabled === true,
     voices: voices.length > 0 ? voices : [...ALLOWED_REALTIME_VOICES],
     reasoningEfforts: reasoningEfforts.length > 0 ? reasoningEfforts : [...ALLOWED_REALTIME_REASONING_EFFORTS],
     voice: defaultVoice,
@@ -120,6 +129,8 @@ export async function fetchRealtimeVoiceStatus(): Promise<RealtimeVoiceStatus> {
     }
     return parseRealtimeVoiceStatus(r.data) ?? {
       enabled: false,
+      standardEnabled: false,
+      liveEnabled: false,
       voices: [...ALLOWED_REALTIME_VOICES],
       reasoningEfforts: [...ALLOWED_REALTIME_REASONING_EFFORTS],
       voice: DEFAULT_REALTIME_VOICE,
@@ -128,6 +139,8 @@ export async function fetchRealtimeVoiceStatus(): Promise<RealtimeVoiceStatus> {
   } catch {
     return {
       enabled: false,
+      standardEnabled: false,
+      liveEnabled: false,
       voices: [...ALLOWED_REALTIME_VOICES],
       reasoningEfforts: [...ALLOWED_REALTIME_REASONING_EFFORTS],
       voice: DEFAULT_REALTIME_VOICE,
@@ -166,22 +179,35 @@ function isLookupSnippet(value: unknown): value is RealtimeLookupSnippet {
 export async function lookupRealtimeInfo(
   query: string,
   language: SpeechUiLang,
+  signal?: AbortSignal,
 ): Promise<RealtimeLookupResponse> {
   try {
     const r = await customFetch<{ data: unknown; status: number }>('/realtime/lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, language }),
+      signal,
     })
     if (r.status < 200 || r.status >= 300 || r.data === null || typeof r.data !== 'object') {
-      return { found: false, snippets: [] }
+      return { found: false, snippets: [], confidence: 'none' }
     }
-    const data = r.data as { found?: unknown; snippets?: unknown }
+    const data = r.data as { found?: unknown; snippets?: unknown; confidence?: unknown }
     const snippets = Array.isArray(data.snippets) ? data.snippets.filter(isLookupSnippet) : []
-    return { found: data.found === true && snippets.length > 0, snippets }
-  } catch {
-    return { found: false, snippets: [] }
+    const confidence = parseLookupConfidence(data.confidence, data.found === true && snippets.length > 0)
+    return { found: data.found === true && snippets.length > 0, snippets, confidence }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw e
+    }
+    return { found: false, snippets: [], confidence: 'none' }
   }
+}
+
+function parseLookupConfidence(value: unknown, found: boolean): RealtimeLookupConfidence {
+  if (value === 'high' || value === 'low' || value === 'none') {
+    return value
+  }
+  return found ? 'high' : 'none'
 }
 
 /**

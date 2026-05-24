@@ -13,6 +13,8 @@ import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
+import com.kevinmazali.portfolio.service.SpeechSynthesisService;
+import com.kevinmazali.portfolio.service.TranscriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,8 @@ public class RealtimeController {
   private final RealtimeLookupService realtimeLookupService;
   private final RealtimeModelCatalog realtimeModelCatalog;
   private final ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
+  private final TranscriptionService transcriptionService;
+  private final SpeechSynthesisService speechSynthesisService;
   private final RequestLogService requestLogService;
 
   public RealtimeController(
@@ -45,21 +49,28 @@ public class RealtimeController {
       RealtimeLookupService realtimeLookupService,
       RealtimeModelCatalog realtimeModelCatalog,
       ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService,
+      TranscriptionService transcriptionService,
+      SpeechSynthesisService speechSynthesisService,
       RequestLogService requestLogService) {
     this.realtimeProperties = realtimeProperties;
     this.realtimeSessionService = realtimeSessionService;
     this.realtimeLookupService = realtimeLookupService;
     this.realtimeModelCatalog = realtimeModelCatalog;
     this.elevenLabsRealtimeTokenService = elevenLabsRealtimeTokenService;
+    this.transcriptionService = transcriptionService;
+    this.speechSynthesisService = speechSynthesisService;
     this.requestLogService = requestLogService;
   }
 
   @Operation(summary = "Realtime voice available", description = "True when at least one realtime voice provider is configured.")
   @GetMapping("/realtime/status")
   public ResponseEntity<RealtimeStatusResponse> status() {
-    boolean ok = realtimeModelCatalog.hasAvailableModels();
+    boolean liveEnabled = realtimeModelCatalog.hasAvailableModels();
+    boolean standardEnabled = transcriptionService.isTranscriptionConfigured() && speechSynthesisService.isConfigured();
     return ResponseEntity.ok(new RealtimeStatusResponse(
-        ok,
+        standardEnabled || liveEnabled,
+        standardEnabled,
+        liveEnabled,
         RealtimeProperties.ALLOWED_VOICES,
         RealtimeProperties.ALLOWED_REASONING_EFFORTS,
         realtimeProperties.defaultVoice(),
@@ -138,10 +149,6 @@ public class RealtimeController {
       description = "Returns short snippets for the Realtime voice assistant; not a full RAG answer.")
   @PostMapping(value = "/realtime/lookup", consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<?> lookup(@RequestBody(required = false) RealtimeLookupRequest request) {
-    if (!realtimeProperties.isEnabled()) {
-      return ResponseEntity.status(503)
-          .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
-    }
     try {
       String query = request == null ? null : request.query();
       String language = request == null ? null : request.language();

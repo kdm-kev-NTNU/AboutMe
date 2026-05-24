@@ -7,6 +7,8 @@ import java.util.List;
  */
 public record RealtimeStatusResponse(
     boolean enabled,
+    boolean standardEnabled,
+    boolean liveEnabled,
     List<String> voices,
     List<String> reasoningEfforts,
     String defaultVoice,

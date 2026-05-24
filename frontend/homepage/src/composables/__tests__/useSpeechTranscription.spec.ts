@@ -93,7 +93,7 @@ describe('useSpeechTranscription', () => {
     await flushPromises()
 
     expect(onTranscript).toHaveBeenCalledWith('hello from mic')
-    expect(transcribeSpeech).toHaveBeenCalledWith(expect.any(Blob), 'en')
+    expect(transcribeSpeech).toHaveBeenCalledWith(expect.any(Blob), 'en', expect.any(AbortSignal))
     expect(api.isRecording.value).toBe(false)
     expect(api.isTranscribing.value).toBe(false)
 
@@ -251,7 +251,7 @@ describe('useSpeechTranscription', () => {
 
     await recordOnce(api)
 
-    expect(transcribeSpeech).toHaveBeenCalledWith(expect.any(Blob), 'no')
+    expect(transcribeSpeech).toHaveBeenCalledWith(expect.any(Blob), 'no', expect.any(AbortSignal))
     scope.stop()
   })
 

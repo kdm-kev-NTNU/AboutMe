@@ -639,7 +639,11 @@ describe('ChatView', () => {
 
       expect(wrapper.find('input[type="text"]').exists()).toBe(true)
       expect(wrapper.find('[role="img"]').exists()).toBe(false)
-      expect(vi.mocked(transcribeSpeech)).toHaveBeenCalledWith(expect.any(Blob), 'en')
+      expect(vi.mocked(transcribeSpeech)).toHaveBeenCalledWith(
+        expect.any(Blob),
+        'en',
+        expect.any(AbortSignal),
+      )
     })
   })
 })
