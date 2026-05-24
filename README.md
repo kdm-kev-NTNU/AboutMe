@@ -181,7 +181,17 @@ Public AI endpoints are rate-limited with Bucket4j. Admin routes are protected b
 
 Treat database backups as sensitive. Conversations, documents, chunks, embeddings, prompts, feedback, and experiment datasets may contain personal or project-specific information.
 
-CI uses GitGuardian as the PR/push secret scanning gate and Semgrep for SAST. Add `GITGUARDIAN_API_KEY` to GitHub Actions secrets before enabling required checks; the GitGuardian workflow fails hard when the token is missing.
+CI uses two GitGuardian surfaces plus Semgrep for SAST:
+
+- **GitGuardian scan** (GitHub Actions, `ggshield` in [`.github/workflows/gitguardian.yml`](.github/workflows/gitguardian.yml)) scans commit ranges on PRs and pushes. It reads [`.gitguardian.yml`](.gitguardian.yml) for local-dev allowlists.
+- **GitGuardian Security Checks** (GitHub App) is a separate required check on the GitGuardian dashboard. Open incidents there must be resolved after rotation or remediation, even when the Actions workflow is green.
+
+Add `GITGUARDIAN_API_KEY` as a repository Actions secret before enabling required checks; the workflow fails hard when the token is missing.
+
+**Local secrets (never commit):**
+
+- Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) to `.cursor/mcp.json` (gitignored) and set `ELEVENLABS_API_KEY` locally.
+- Copy [`.env.docker.example`](.env.docker.example) to `.env.docker` (gitignored) for Docker Compose Postgres credentials (`POSTGRES_PASSWORD`, `SPRING_DATASOURCE_PASSWORD`).
 
 ## Document Pipeline and RAG
 
