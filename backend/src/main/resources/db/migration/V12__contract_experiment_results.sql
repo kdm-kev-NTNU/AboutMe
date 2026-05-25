@@ -1,4 +1,15 @@
-ALTER TABLE experiment_results RENAME COLUMN documents TO retrieved_context;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'experiment_results'
+          AND column_name = 'documents'
+    ) THEN
+        ALTER TABLE experiment_results RENAME COLUMN documents TO retrieved_context;
+    END IF;
+END $$;
 
 ALTER TABLE experiment_results DROP COLUMN IF EXISTS faithfulness;
 ALTER TABLE experiment_results DROP COLUMN IF EXISTS relevance;
