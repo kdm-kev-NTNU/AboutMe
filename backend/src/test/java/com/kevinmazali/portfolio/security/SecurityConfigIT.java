@@ -41,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.ai.openai.api-key=test-placeholder-key-for-context-tests-only",
         "spring.ai.openai.chat.enabled=true",
-        "spring.ai.anthropic.api-key=sk-ant-api03-test-placeholder-for-spring-context-only",
+        "spring.ai.anthropic.api-key=test-anthropic-api-key-not-real",
         "portfolio.chat.default-model-id=gpt-5.4-mini",
         "portfolio.session.jwt-secret=test-jwt-secret-at-least-32-characters-long",
         "server.port=0",
@@ -81,6 +81,9 @@ class SecurityConfigIT {
     JsonNode paths = MAPPER.readTree(body).get("paths");
     for (String path :
         new String[] {
+          "/auth/login",
+          "/auth/me",
+          "/auth/logout",
           "/realtime/status",
           "/realtime/models",
           "/realtime/session",

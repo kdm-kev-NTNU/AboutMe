@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.ai.openai.api-key=test-placeholder-key-for-context-tests-only",
         "spring.ai.openai.chat.enabled=true",
-        "spring.ai.anthropic.api-key=sk-ant-api03-test-placeholder-for-spring-context-only",
+        "spring.ai.anthropic.api-key=test-anthropic-api-key-not-real",
         "portfolio.chat.default-model-id=gpt-5.4-mini",
         "server.port=0",
     })
