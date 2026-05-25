@@ -139,8 +139,9 @@ Common backend settings:
 - `PORTFOLIO_REALTIME_ENABLED=true` to enable `/voice` and OpenAI Realtime WebRTC sessions.
 - `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` to create the first admin user.
 - `POSTHOG_ENABLED`, `POSTHOG_API_KEY`, `POSTHOG_HOST` for server-side `$ai_generation` capture.
-- `AI_BUDGET_ANON_SALT` for stable anonymous AI budget identities in production.
-- `SPRING_PROFILES_ACTIVE=prod` for production deployments.
+- `AI_BUDGET_ANON_SALT` — required in production (random string; must not be the default `portfolio-ai-budget`).
+- `PORTFOLIO_JWT_SECRET` — required in production (at least 32 characters) for httpOnly admin session cookies.
+- `SPRING_PROFILES_ACTIVE=prod` for production deployments (disables Swagger, reduces logging, enables schema validation).
 
 Managed Postgres providers must allow the pgvector extension:
 
@@ -263,6 +264,21 @@ image: <DOCKER_ACCOUNT>/aboutme-frontend:latest
 ```
 
 Keep backend runtime secrets in repo-root `.env` and frontend build-time values in `frontend/homepage/.env`.
+
+## Security
+
+**Authentication:** Admin tools use an httpOnly session cookie (JWT) set by `POST /auth/login`. The SPA stores only username and role in `sessionStorage` for UI routing—not passwords or Basic auth tokens.
+
+**Public AI endpoints:** `POST /ask`, `/transcribe`, `/synthesize`, and `/realtime/*` are intentionally unauthenticated. Abuse is mitigated with per-IP rate limits (Bucket4j), per-identity AI budgets, and a global kill switch—not with login walls.
+
+**Production checklist:**
+
+- Set `SPRING_PROFILES_ACTIVE=prod`, `PORTFOLIO_JWT_SECRET`, and `AI_BUDGET_ANON_SALT`.
+- Use a strong `SPRING_DATASOURCE_PASSWORD` (not `postgres`).
+- Clear `ADMIN_BOOTSTRAP_PASSWORD` after the first admin user exists.
+- TLS is terminated at the hosting edge (Railway/CDN); nginx adds CSP and related headers on the SPA shell.
+
+**CI:** GitGuardian secret scanning and Semgrep SAST run on pull requests.
 
 ## Feedback
 
