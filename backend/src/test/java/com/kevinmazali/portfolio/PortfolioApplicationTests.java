@@ -1,11 +1,13 @@
 package com.kevinmazali.portfolio;
 
+import com.kevinmazali.portfolio.service.DocumentIngestionService;
 import com.kevinmazali.portfolio.testsupport.VectorStoreTestConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -26,6 +28,9 @@ import org.springframework.test.context.TestPropertySource;
 	}
 )
 class PortfolioApplicationTests {
+
+	@MockitoBean
+	private DocumentIngestionService documentIngestionService;
 
 	@Test
 	void contextLoads() {

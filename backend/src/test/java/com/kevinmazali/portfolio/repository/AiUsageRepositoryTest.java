@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.repository;
 
 import com.kevinmazali.portfolio.model.AiUsageEvent;
 import com.kevinmazali.portfolio.model.AiUsageEvent.IdentityType;
+import com.kevinmazali.portfolio.service.DocumentIngestionService;
 import com.kevinmazali.portfolio.testsupport.VectorStoreTestConfiguration;
 
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -39,6 +41,9 @@ import static org.assertj.core.api.Assertions.assertThat;
         "server.port=0",
     })
 class AiUsageRepositoryTest {
+
+  @MockitoBean
+  private DocumentIngestionService documentIngestionService;
 
   @Autowired
   private AiUsageRepository repository;

@@ -1,6 +1,11 @@
 # IDE
 .idea/
-.cursor/mcp.json
+
+# Cursor: share rules + mcp.json.example; ignore local MCP secrets and other machine state
+.cursor/*
+!.cursor/mcp.json.example
+!.cursor/rules/
+!.cursor/rules/**
 .apt_generated
 .classpath
 .factorypath

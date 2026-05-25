@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.security;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import com.kevinmazali.portfolio.service.DocumentIngestionService;
 import com.kevinmazali.portfolio.testsupport.VectorStoreTestConfiguration;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -49,6 +51,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SecurityConfigIT {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
+
+  @MockitoBean
+  private DocumentIngestionService documentIngestionService;
 
   @Autowired
   private WebApplicationContext webApplicationContext;
