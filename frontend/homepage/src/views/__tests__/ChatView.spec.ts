@@ -144,7 +144,7 @@ describe('ChatView', () => {
   it('defaults to first catalog model when signed in and no REASONING options exist', async () => {
     sessionStorage.setItem(
       'auth',
-      JSON.stringify({ username: 'u', role: 'USER', basicToken: 'dGVzdA==' }),
+      JSON.stringify({ username: 'u', role: 'USER' }),
     )
     vi.mocked(listChatModels).mockResolvedValue({
       status: 200,

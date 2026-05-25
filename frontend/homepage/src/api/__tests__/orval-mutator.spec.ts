@@ -5,12 +5,12 @@ describe('customFetch', () => {
   const originalFetch = globalThis.fetch
 
   beforeEach(() => {
-    sessionStorage.clear()
     vi.restoreAllMocks()
   })
 
   afterEach(() => {
     globalThis.fetch = originalFetch
+    document.cookie = 'XSRF-TOKEN=; Max-Age=0; path=/'
   })
 
   it('prefixes relative paths with the configured API prefix', async () => {
@@ -47,11 +47,8 @@ describe('customFetch', () => {
     )
   })
 
-  it('sets Authorization from session auth basicToken', async () => {
-    sessionStorage.setItem(
-      'auth',
-      JSON.stringify({ username: 'u', role: 'ADMIN', basicToken: 'dGVzdA==' }),
-    )
+  it('sends X-XSRF-TOKEN on POST when cookie is present', async () => {
+    document.cookie = 'XSRF-TOKEN=abc123; path=/'
     const fetchMock = vi.fn().mockResolvedValue(
       new Response('{}', {
         status: 200,
@@ -60,11 +57,29 @@ describe('customFetch', () => {
     )
     globalThis.fetch = fetchMock as typeof fetch
 
-    await customFetch<{ data: unknown; status: number }>('/x')
+    await customFetch<{ data: unknown; status: number }>('/x', { method: 'POST' })
 
     const init = fetchMock.mock.calls[0][1] as RequestInit
     const headers = new Headers(init.headers)
-    expect(headers.get('Authorization')).toBe('Basic dGVzdA==')
+    expect(headers.get('X-XSRF-TOKEN')).toBe('abc123')
+    expect(headers.get('Authorization')).toBeNull()
+  })
+
+  it('does not send CSRF header on GET', async () => {
+    document.cookie = 'XSRF-TOKEN=abc123; path=/'
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('{}', {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    globalThis.fetch = fetchMock as typeof fetch
+
+    await customFetch<{ data: unknown; status: number }>('/x', { method: 'GET' })
+
+    const init = fetchMock.mock.calls[0][1] as RequestInit
+    const headers = new Headers(init.headers)
+    expect(headers.get('X-XSRF-TOKEN')).toBeNull()
   })
 
   it('returns undefined data for 204', async () => {
@@ -123,37 +138,5 @@ describe('customFetch', () => {
     const r = await customFetch<{ data: unknown; status: number }>('/badjson')
     expect(r.data).toBeUndefined()
     expect(r.status).toBe(200)
-  })
-
-  it('does not set Authorization when auth JSON has no basicToken', async () => {
-    sessionStorage.setItem('auth', JSON.stringify({ username: 'u', role: 'ADMIN' }))
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    )
-    globalThis.fetch = fetchMock as typeof fetch
-
-    await customFetch<{ data: unknown; status: number }>('/x')
-    const init = fetchMock.mock.calls[0][1] as RequestInit
-    const headers = new Headers(init.headers)
-    expect(headers.get('Authorization')).toBeNull()
-  })
-
-  it('ignores malformed auth JSON in sessionStorage', async () => {
-    sessionStorage.setItem('auth', 'not-json')
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    )
-    globalThis.fetch = fetchMock as typeof fetch
-
-    await customFetch<{ data: unknown; status: number }>('/x')
-    const init = fetchMock.mock.calls[0][1] as RequestInit
-    const headers = new Headers(init.headers)
-    expect(headers.get('Authorization')).toBeNull()
   })
 })

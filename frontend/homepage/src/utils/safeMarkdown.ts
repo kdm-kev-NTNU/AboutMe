@@ -11,7 +11,10 @@ const md = new MarkdownIt({
 /**
  * Renders markdown to HTML and passes it through DOMPurify (defense in depth vs raw HTML / bad URLs).
  */
+const URI_SAFE =
+  /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i
+
 export function renderSafeMarkdown(source: string): string {
   const raw = md.render(source || '')
-  return DOMPurify.sanitize(raw)
+  return DOMPurify.sanitize(raw, { ALLOWED_URI_REGEXP: URI_SAFE })
 }

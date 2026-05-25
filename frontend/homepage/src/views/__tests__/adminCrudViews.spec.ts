@@ -1324,6 +1324,11 @@ describe('Admin CRUD views (integration-style)', () => {
   })
 
   it('AdminExperimentsView shows documents error when document list fails', async () => {
+    vi.mocked(adminDocumentsList).mockResolvedValue({
+      status: 502,
+      data: { error: 'no docs' },
+      headers: headersJson,
+    } as unknown as adminDocumentsListResponse)
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
@@ -1334,9 +1339,6 @@ describe('Admin CRUD views (integration-style)', () => {
             status: 200,
             headers: headersJson,
           })
-        }
-        if (url.includes('/api/admin/tools/documents')) {
-          return new Response(JSON.stringify({ error: 'no docs' }), { status: 502, headers: headersJson })
         }
         if (url.includes('/api/admin/tools/experiments/datasets') && !url.includes('/generate')) {
           return new Response(JSON.stringify([]), { status: 200, headers: headersJson })

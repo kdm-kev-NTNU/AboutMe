@@ -2,85 +2,38 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { applyCsrfHeader } from '@/utils/csrf'
+import {
+  adminDocumentsList,
+  experimentsConfig,
+  experimentsListDatasets,
+  experimentsGenerateDataset,
+  experimentsDatasetGenerationStatus,
+  experimentsListModels,
+  experimentsStartRun,
+  experimentsListRuns,
+  experimentsGetRun,
+  experimentsRunStatus,
+  experimentsDeleteDataset,
+  type ApiError,
+  type ChatModelOption,
+  type DatasetGenerationStatusResponse,
+  type DocumentListEntry,
+  type EvalDatasetSummary,
+  type ExperimentRunDetailResponse,
+  type ExperimentRunSummaryResponse,
+  type GenerateDatasetRequest,
+} from '@/api/generated/portfolio'
 
 const auth = useAuthStore()
 
-type EvalDatasetSummary = { id: string; name: string; exampleCount: number }
-type ChatModelOption = { id: string; label: string; provider: string }
-type RunSummary = {
-  id: number
-  name: string
-  datasetName: string
-  generatorModel: string
-  evaluatorModel: string
-  status: string
-  totalExamples: number
-  meanFaithfulness: number | null
-  meanRelevance: number | null
-  meanCorrectness: number | null
-  meanConciseness: number | null
-  meanLanguageConsistency: number | null
-  errorMessage: string | null
-  createdAt: string
-  completedAt: string | null
-}
-type ExperimentResultRow = {
-  id: number
-  question: string
-  referenceAnswer: string
-  ragResponse: string
-  documentsPreview: string | null
-  faithfulness: number | null
-  relevance: number | null
-  correctness: number | null
-  conciseness: number | null
-  languageConsistency: number | null
-  faithfulnessExplanation: string | null
-  relevanceExplanation: string | null
-  correctnessExplanation: string | null
-  concisenessExplanation: string | null
-  languageConsistencyExplanation: string | null
-}
-type RunDetail = RunSummary & {
-  evalDatasetId: number | null
-  posthogHost: string
-  results: ExperimentResultRow[]
-}
+type RunSummary = ExperimentRunSummaryResponse & { id: number }
+type RunDetail = ExperimentRunDetailResponse
 
-type DocumentEntry = { documentId: string; filename: string; chunkCount: number; lastIngestedAt: string }
-
-type GenerationStatus = {
-  id: number
-  status: string
-  questionsGenerated: number | null
-  resultDatasetId: string | null
-  errorMessage: string | null
-  createdAt: string | null
-  completedAt: string | null
-}
-
-const API = '/api/admin/tools/experiments'
-const DOC_API = '/api/admin/tools/documents'
-
-function buildHeaders(method: string, extra?: HeadersInit): Headers {
-  const h = new Headers(extra)
-  if (!h.has('Content-Type')) {
-    h.set('Content-Type', 'application/json')
+function apiErrorMessage(data: unknown, fallback: string): string {
+  if (data && typeof data === 'object' && 'error' in data && typeof (data as ApiError).error === 'string') {
+    return (data as ApiError).error
   }
-  applyCsrfHeader(h, method)
-  return h
-}
-
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: T }> {
-  const method = init?.method ?? 'GET'
-  const r = await fetch(url, {
-    ...init,
-    credentials: 'include',
-    headers: buildHeaders(method, init?.headers as HeadersInit | undefined),
-  })
-  const data = (await r.json().catch(() => ({}))) as T
-  return { ok: r.ok, status: r.status, data }
+  return fallback
 }
 
 /** Backend LLM capture to PostHog ($ai_generation); optional. Eval datasets live in PostgreSQL. */
@@ -90,7 +43,7 @@ const datasets = ref<EvalDatasetSummary[]>([])
 const datasetsLoading = ref(false)
 const datasetsError = ref('')
 
-const documents = ref<DocumentEntry[]>([])
+const documents = ref<DocumentListEntry[]>([])
 const documentsLoading = ref(false)
 const documentsError = ref('')
 
@@ -185,7 +138,7 @@ function syncEvaluatorToCrossFamily() {
   const currentOk = list.some((m) => m.id === evaluatorModel.value)
   if (!evaluatorModel.value || !currentOk) {
     const nextId = pickCrossFamilyEvaluatorId(all, generatorModel.value)
-    evaluatorModel.value = nextId ?? list[0].id
+    evaluatorModel.value = (nextId ?? list[0]?.id) ?? ''
   }
 }
 
@@ -203,10 +156,10 @@ function formatScore(v: number | null | undefined) {
 }
 
 async function loadConfig() {
-  const { ok, data } = await fetchJson<{ posthogConfigured: boolean; posthogHost: string }>(`${API}/config`)
-  if (ok && data) {
-    posthogCaptureConfigured.value = !!data.posthogConfigured
-    posthogIngestHost.value = data.posthogHost || ''
+  const res = await experimentsConfig()
+  if (res.status === 200 && res.data) {
+    posthogCaptureConfigured.value = !!res.data.posthogConfigured
+    posthogIngestHost.value = res.data.posthogHost || ''
   }
 }
 
@@ -214,16 +167,13 @@ async function loadDatasets() {
   datasetsLoading.value = true
   datasetsError.value = ''
   try {
-    const { ok, status, data } = await fetchJson<EvalDatasetSummary[] | { error?: string }>(`${API}/datasets`)
-    if (!ok) {
-      datasetsError.value =
-        typeof (data as { error?: string }).error === 'string'
-          ? (data as { error: string }).error
-          : `Kunne ikke hente datasett (${status})`
+    const res = await experimentsListDatasets()
+    if (res.status !== 200 || !Array.isArray(res.data)) {
+      datasetsError.value = apiErrorMessage(res.data, `Kunne ikke hente datasett (${res.status})`)
       datasets.value = []
       return
     }
-    datasets.value = Array.isArray(data) ? data : []
+    datasets.value = res.data
   } finally {
     datasetsLoading.value = false
   }
@@ -232,11 +182,11 @@ async function loadDatasets() {
 async function loadModels() {
   modelsLoading.value = true
   try {
-    const { ok, data } = await fetchJson<ChatModelOption[]>(`${API}/models`)
-    if (ok && Array.isArray(data)) {
-      models.value = data
-      if (!generatorModel.value && data.length) generatorModel.value = data[0].id
-      if (!genModel.value && data.length) genModel.value = data[0].id
+    const res = await experimentsListModels()
+    if (res.status === 200 && Array.isArray(res.data)) {
+      models.value = res.data
+      if (!generatorModel.value && res.data.length) generatorModel.value = res.data[0].id ?? ''
+      if (!genModel.value && res.data.length) genModel.value = res.data[0].id ?? ''
       syncEvaluatorToCrossFamily()
     }
   } finally {
@@ -248,16 +198,13 @@ async function loadDocuments() {
   documentsLoading.value = true
   documentsError.value = ''
   try {
-    const { ok, status, data } = await fetchJson<DocumentEntry[] | { error?: string }>(DOC_API)
-    if (!ok) {
-      documentsError.value =
-        typeof (data as { error?: string }).error === 'string'
-          ? (data as { error: string }).error
-          : `Kunne ikke hente dokumenter (${status})`
+    const res = await adminDocumentsList()
+    if (res.status !== 200 || !Array.isArray(res.data)) {
+      documentsError.value = apiErrorMessage(res.data, `Kunne ikke hente dokumenter (${res.status})`)
       documents.value = []
       return
     }
-    documents.value = Array.isArray(data) ? data : []
+    documents.value = res.data
   } finally {
     documentsLoading.value = false
   }
@@ -271,8 +218,9 @@ function stopGenPoll() {
 function startGenPoll(generationId: number) {
   stopGenPoll()
   genPollTimer.value = setInterval(async () => {
-    const { ok, data } = await fetchJson<GenerationStatus>(`${API}/datasets/generate/${generationId}/status`)
-    if (!ok || !data) return
+    const res = await experimentsDatasetGenerationStatus(generationId)
+    if (res.status !== 200 || !res.data) return
+    const data = res.data as DatasetGenerationStatusResponse
     if (data.questionsGenerated != null) {
       genMessage.value = `Genererer… (${data.questionsGenerated} spørsmål hittil)`
     }
@@ -302,7 +250,7 @@ async function startDatasetGeneration() {
     return
   }
   const qpc = Number.parseInt(String(genQuestionsPerChunk.value).trim(), 10)
-  const body: Record<string, unknown> = {
+  const body: GenerateDatasetRequest = {
     name: genName.value.trim(),
     description: '',
     documentId: genDocumentId.value.trim() || null,
@@ -321,15 +269,16 @@ async function startDatasetGeneration() {
   }
   genBusy.value = true
   try {
-    const { ok, status, data } = await fetchJson<{ generationId?: number; status?: string; error?: string }>(
-      `${API}/datasets/generate`,
-      { method: 'POST', body: JSON.stringify(body) },
-    )
-    if (!ok) {
-      genError.value = (data as { error?: string })?.error || `Start feilet (${status})`
+    const res = await experimentsGenerateDataset(body)
+    if (res.status !== 202 || !res.data) {
+      genError.value = apiErrorMessage(res.data, `Start feilet (${res.status})`)
       return
     }
-    const id = (data as { generationId: number }).generationId
+    const id = res.data.generationId
+    if (typeof id !== 'number') {
+      genError.value = 'Manglende generationId i svar'
+      return
+    }
     genMessage.value = `QRA-generering startet (jobb #${id}). Poller status…`
     startGenPoll(id)
   } catch (e) {
@@ -342,8 +291,10 @@ async function startDatasetGeneration() {
 async function loadRuns() {
   runsLoading.value = true
   try {
-    const { ok, data } = await fetchJson<RunSummary[]>(`${API}/runs`)
-    if (ok && Array.isArray(data)) runs.value = data
+    const res = await experimentsListRuns()
+    if (res.status === 200 && Array.isArray(res.data)) {
+      runs.value = res.data.filter((r): r is RunSummary => typeof r.id === 'number') as RunSummary[]
+    }
   } finally {
     runsLoading.value = false
   }
@@ -352,11 +303,9 @@ async function loadRuns() {
 async function deleteDataset() {
   if (!selectedDatasetId.value) return
   if (!confirm('Slette datasettet permanent fra databasen? Kan ikke angres.')) return
-  const { ok, status, data } = await fetchJson<{ error?: string }>(`${API}/datasets/${encodeURIComponent(selectedDatasetId.value)}`, {
-    method: 'DELETE',
-  })
-  if (!ok) {
-    runError.value = (data as { error?: string })?.error || `Sletting feilet (${status})`
+  const res = await experimentsDeleteDataset(selectedDatasetId.value)
+  if (res.status !== 204) {
+    runError.value = apiErrorMessage(res.data, `Sletting feilet (${res.status})`)
     return
   }
   selectedDatasetId.value = ''
@@ -397,15 +346,16 @@ async function startRun() {
   }
   runBusy.value = true
   try {
-    const { ok, status, data } = await fetchJson<{ runId?: number; error?: string }>(`${API}/run`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    })
-    if (!ok) {
-      runError.value = (data as { error?: string })?.error || `Start feilet (${status})`
+    const res = await experimentsStartRun(body)
+    if (res.status !== 202 || !res.data) {
+      runError.value = apiErrorMessage(res.data, `Start feilet (${res.status})`)
       return
     }
-    const id = (data as { runId: number }).runId
+    const id = res.data.runId
+    if (typeof id !== 'number') {
+      runError.value = 'Manglende runId i svar'
+      return
+    }
     lastRunId.value = id
     runMessage.value = `Kjøring startet (run id ${id}). Poller status…`
     startPoll(id)
@@ -418,8 +368,9 @@ async function startRun() {
 function startPoll(runId: number) {
   if (pollTimer.value) clearInterval(pollTimer.value)
   pollTimer.value = setInterval(async () => {
-    const { ok, data } = await fetchJson<RunSummary>(`${API}/runs/${runId}/status`)
-    if (!ok || !data) return
+    const res = await experimentsRunStatus(runId)
+    if (res.status !== 200 || !res.data) return
+    const data = res.data
     if (data.status === 'COMPLETED' || data.status === 'FAILED') {
       if (pollTimer.value) clearInterval(pollTimer.value)
       pollTimer.value = null
@@ -439,8 +390,8 @@ async function openRunDetail(id: number) {
   detailLoading.value = true
   selectedRunDetail.value = null
   try {
-    const { ok, data } = await fetchJson<RunDetail>(`${API}/runs/${id}`)
-    if (ok) selectedRunDetail.value = data as RunDetail
+    const res = await experimentsGetRun(id)
+    if (res.status === 200 && res.data) selectedRunDetail.value = res.data
   } finally {
     detailLoading.value = false
   }

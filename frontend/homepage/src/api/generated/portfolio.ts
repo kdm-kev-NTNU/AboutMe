@@ -370,7 +370,62 @@ export interface ExperimentRunSummaryResponse {
   completedAt?: string | null;
 }
 
-export interface ExperimentRunDetailResponse { [key: string]: unknown }
+export interface ExperimentResultResponse {
+  id?: number;
+  question?: string;
+  referenceAnswer?: string;
+  ragResponse?: string;
+  documentsPreview?: string;
+  /** @nullable */
+  faithfulness?: number | null;
+  /** @nullable */
+  relevance?: number | null;
+  /** @nullable */
+  correctness?: number | null;
+  /** @nullable */
+  conciseness?: number | null;
+  /** @nullable */
+  languageConsistency?: number | null;
+  /** @nullable */
+  faithfulnessExplanation?: string | null;
+  /** @nullable */
+  relevanceExplanation?: string | null;
+  /** @nullable */
+  correctnessExplanation?: string | null;
+  /** @nullable */
+  concisenessExplanation?: string | null;
+  /** @nullable */
+  languageConsistencyExplanation?: string | null;
+}
+
+export interface ExperimentRunDetailResponse {
+  id?: number;
+  name?: string;
+  datasetName?: string;
+  /** @nullable */
+  evalDatasetId?: number | null;
+  posthogHost?: string;
+  generatorModel?: string;
+  evaluatorModel?: string;
+  status?: string;
+  totalExamples?: number;
+  /** @nullable */
+  meanFaithfulness?: number | null;
+  /** @nullable */
+  meanRelevance?: number | null;
+  /** @nullable */
+  meanCorrectness?: number | null;
+  /** @nullable */
+  meanConciseness?: number | null;
+  /** @nullable */
+  meanLanguageConsistency?: number | null;
+  /** @nullable */
+  errorMessage?: string | null;
+  createdAt?: string;
+  /** @nullable */
+  completedAt?: string | null;
+  results?: ExperimentResultResponse[];
+}
 
 export interface ExperimentsConfigResponse {
   posthogConfigured?: boolean;
@@ -1995,6 +2050,85 @@ export const aiAdminStatus = async ( options?: RequestInit): Promise<aiAdminStat
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type authMeResponse200 = {
+  data: LoginResponse
+  status: 200
+}
+
+export type authMeResponse401 = {
+  data: ApiError
+  status: 401
+}
+
+export type authMeResponseSuccess = (authMeResponse200) & {
+  headers: Headers;
+};
+export type authMeResponseError = (authMeResponse401) & {
+  headers: Headers;
+};
+
+export type authMeResponse = (authMeResponseSuccess | authMeResponseError)
+
+export const getAuthMeUrl = () => {
+
+
+
+
+  return `/auth/me`
+}
+
+/**
+ * @summary Current session
+ */
+export const authMe = async ( options?: RequestInit): Promise<authMeResponse> => {
+
+  return customFetch<authMeResponse>(getAuthMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type authLogoutResponse204 = {
+  data: void
+  status: 204
+}
+
+export type authLogoutResponseSuccess = (authLogoutResponse204) & {
+  headers: Headers;
+};
+;
+
+export type authLogoutResponse = (authLogoutResponseSuccess)
+
+export const getAuthLogoutUrl = () => {
+
+
+
+
+  return `/auth/logout`
+}
+
+/**
+ * @summary Logout
+ */
+export const authLogout = async ( options?: RequestInit): Promise<authLogoutResponse> => {
+
+  return customFetch<authLogoutResponse>(getAuthLogoutUrl(),
+  {
+    ...options,
+    method: 'POST'
 
 
   }
