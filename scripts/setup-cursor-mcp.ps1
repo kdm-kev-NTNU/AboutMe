@@ -1,13 +1,33 @@
-# One-time setup for Cursor MCP: Railway CLI + Docker MCP Toolkit profile "aboutme".
+# One-time setup for Cursor MCP: .cursor/mcp.json template, Railway CLI, Docker MCP Toolkit profile "aboutme".
 # Run from repo root: .\scripts\setup-cursor-mcp.ps1
 
 $ErrorActionPreference = "Stop"
+
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$McpExample = Join-Path $RepoRoot ".cursor\mcp.json.example"
+$McpLocal = Join-Path $RepoRoot ".cursor\mcp.json"
 
 function Require-Command([string]$Name) {
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "Missing required command on PATH: $Name"
     }
 }
+
+if (-not (Test-Path -LiteralPath $McpLocal)) {
+    if (-not (Test-Path -LiteralPath $McpExample)) {
+        throw "Missing $McpExample"
+    }
+    Copy-Item -LiteralPath $McpExample -Destination $McpLocal
+    Write-Host "Created $McpLocal from .cursor/mcp.json.example"
+} else {
+    Write-Host "Keeping existing $McpLocal"
+}
+
+Write-Host ""
+Write-Host "Set API keys in .cursor/mcp.json:"
+Write-Host "  ELEVENLABS_API_KEY  (ElevenLabs MCP)"
+Write-Host "  RAPIDCHART_API_TOKEN (RapidChart MCP, rc_... from https://rapidchart.com/settings)"
+Write-Host ""
 
 Require-Command railway
 Require-Command docker
