@@ -56,8 +56,11 @@ scripts/_*
 # Local dependency tree dumps (ad-hoc mvn dependency:tree output)
 backend/__deptree.txt
 
-# Frontend dependencies and build/test output
-frontend/homepage/node_modules/
+# Node/npm (any package root in the repo)
+**/node_modules/
+**/.pnpm-store/
+
+# Frontend build/test output
 frontend/homepage/dist/
 frontend/homepage/dist-ssr/
 frontend/homepage/coverage/

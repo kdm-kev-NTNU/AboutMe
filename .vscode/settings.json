@@ -1,4 +1,12 @@
 {
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/backend/target": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/backend/target": true
+  },
   "files.watcherExclude": {
     "**/node_modules/**": true,
     "**/backend/target/**": true
