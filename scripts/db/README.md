@@ -12,6 +12,17 @@ psql "$DATABASE_URL" -f scripts/db/audit_pre_migration.sql
 pg_dump "$DATABASE_URL" --schema=public -Fc -f aboutme_backup_$(date +%Y%m%d).dump
 ```
 
+Or use the repo scripts (from repo root):
+
+```bash
+# Bash
+DATABASE_URL=postgresql://... ./scripts/db/backup-railway.sh
+
+# PowerShell
+$env:DATABASE_URL = "postgresql://..."
+.\scripts\db\backup-railway.ps1
+```
+
 ## Backfill (after Flyway V2–V9, idempotent)
 
 ```bash
