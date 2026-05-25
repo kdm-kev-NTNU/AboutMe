@@ -18,8 +18,10 @@ Core stack:
 | `scripts/dev.ps1` | Windows helper that starts Docker infrastructure and opens backend + Vite terminals (recommended daily dev) |
 | `docker-compose.yml` | PostgreSQL/pgvector, backend, and Nginx-hosted frontend (prod-like images) |
 | `docker-compose.dev.yml` | Full stack in Docker with Vite HMR and Spring DevTools auto-reload |
-| `.env.example` | Documented runtime configuration for backend secrets and optional integrations |
+| `.env.example` | Backend secrets template (copy to repo-root `.env`) |
+| `frontend/homepage/.env.example` | Frontend `VITE_*` build-time template |
 | `.github/workflows/` | Maven/frontend tests, Semgrep, and Docker image publishing |
+| `scripts/` | Dev helpers — see [scripts/README.md](scripts/README.md) |
 
 Seed documents for the vector store go in `backend/data/docs/` (gitignored). The backend also ships a classpath seed document for a minimal local knowledge base.
 
@@ -40,7 +42,7 @@ Seed documents for the vector store go in `backend/data/docs/` (gitignored). The
 
 ### Full Stack in Docker
 
-Copy `.env.example` to `backend/.env`, set at least `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true`. For Docker Compose database credentials, copy `.env.docker.example` to `.env.docker` at the repo root, then run:
+Copy `.env.example` to `.env` at the repo root, set at least `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true`. For Docker Compose database credentials, copy `.env.docker.example` to `.env.docker` at the repo root, then run:
 
 ```bash
 cp .env.docker.example .env.docker   # first time only (Windows: copy .env.docker.example .env.docker)
@@ -83,7 +85,7 @@ npm run dev
 - **Frontend:** Vite HMR — changes in `.vue`, `.ts`, and CSS appear in the browser almost instantly.
 - **Backend:** `spring-boot-devtools` restarts the app when compiled classes change (~5–15 s). Changes to `pom.xml` or new dependencies still require stopping and re-running Maven.
 
-On Windows, **`.\scripts\dev.ps1`** is the fastest path: it starts Postgres, waits for port `5432`, then opens backend and frontend in separate terminals. Copy `.env.example` to `backend/.env` (or repo-root `.env` as documented in `application.yaml`) first.
+On Windows, **`.\scripts\dev.ps1`** is the fastest path: it starts Postgres, waits for port `5432`, then opens backend and frontend in separate terminals. Copy `.env.example` to repo-root `.env` first.
 
 Typical URLs: same as full stack — app [http://localhost:5173](http://localhost:5173), API [http://localhost:8080](http://localhost:8080).
 
@@ -96,9 +98,9 @@ cp .env.docker.example .env.docker   # first time only
 docker compose -f docker-compose.dev.yml up
 ```
 
-Copy `.env.example` to `backend/.env` before starting. The dev compose file runs `mvn spring-boot:run` and `npm run dev` inside containers with source mounted from the repo.
+Copy `.env.example` to repo-root `.env` before starting. The dev compose file runs `mvn spring-boot:run` and `npm run dev` inside containers with source mounted from the repo.
 
-**Auto-reload:** same as hybrid — Vite HMR for the frontend, Spring DevTools restart for the backend. ONNX rerank assets from the prod Dockerfile are not bundled; set `PORTFOLIO_RETRIEVAL_RERANK_ENABLED=false` in `backend/.env` if reranking is not needed locally.
+**Auto-reload:** same as hybrid — Vite HMR for the frontend, Spring DevTools restart for the backend. ONNX rerank assets from the prod Dockerfile are not bundled; set `PORTFOLIO_RETRIEVAL_RERANK_ENABLED=false` in repo-root `.env` if reranking is not needed locally.
 
 ### Compose Watch (prod-image smoke test)
 
@@ -118,7 +120,18 @@ Use this before deploy to confirm the production Dockerfile still builds and run
 
 ## Configuration
 
-Configuration defaults live in `backend/src/main/resources/application.yaml`. Copy `.env.example` to `backend/.env` for local secrets. Copy `.env.docker.example` to `.env.docker` for Docker Compose Postgres credentials. Frontend build-time `VITE_*` values belong in `frontend/homepage/.env`. For Cursor ElevenLabs MCP, copy `.cursor/mcp.json.example` to `.cursor/mcp.json` and set your API key locally (rotate the key in ElevenLabs if it was previously committed).
+Configuration defaults live in `backend/src/main/resources/application.yaml`.
+
+| File | Purpose |
+|------|---------|
+| `.env` (repo root) | Backend secrets — copy from `.env.example` |
+| `.env.docker` (repo root) | Docker Compose Postgres credentials — copy from `.env.docker.example` |
+| `frontend/homepage/.env` | Frontend `VITE_*` build-time values — copy from `frontend/homepage/.env.example` |
+| `.cursor/mcp.json` | Cursor MCP keys — copy from `.cursor/mcp.json.example` |
+
+If you still have `backend/.env`, move its contents to repo-root `.env` and delete the old file.
+
+For Cursor MCP setup, run `.\scripts\setup-cursor-mcp.ps1` (see [Scripts](#scripts)).
 
 Common backend settings:
 
@@ -127,8 +140,9 @@ Common backend settings:
 - `PORTFOLIO_REALTIME_ENABLED=true` to enable `/voice` and OpenAI Realtime WebRTC sessions.
 - `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` to create the first admin user.
 - `POSTHOG_ENABLED`, `POSTHOG_API_KEY`, `POSTHOG_HOST` for server-side `$ai_generation` capture.
-- `AI_BUDGET_ANON_SALT` for stable anonymous AI budget identities in production.
-- `SPRING_PROFILES_ACTIVE=prod` for production deployments.
+- `AI_BUDGET_ANON_SALT` — required in production (random string; must not be the default `portfolio-ai-budget`).
+- `PORTFOLIO_JWT_SECRET` — required in production (at least 32 characters) for httpOnly admin session cookies.
+- `SPRING_PROFILES_ACTIVE=prod` for production deployments (disables Swagger, reduces logging, enables schema validation).
 
 Managed Postgres providers must allow the pgvector extension:
 
@@ -142,7 +156,6 @@ Spring AI can initialize the `vector_store` table, but the extension itself must
 
 - Public portfolio pages: home, career, projects, individual project story, project/tech stack, feedback, privacy policy.
 - Text chat: `/chat` sends document-grounded questions through `/ask`, with selectable allow-listed models from `/chat/models`.
-- Chat history: `/chat-history` lists stored conversations and can reopen a conversation in `/chat`.
 - Live voice: `/voice` lists configured voice options from `/realtime/models`. OpenAI Realtime uses `/realtime/session` and `/realtime/lookup`; ElevenLabs Conversational AI uses `/realtime/elevenlabs/token`. To match OpenAI's local `lookup_kevin_info` behavior, configure equivalent knowledge/tools on the ElevenLabs agent.
 - Feedback: `/feedback` posts visitor feedback to the backend with server-side length limits.
 - Admin tools: protected routes for AI status/budget kill switch, document uploads and ingestion, chunk browsing/export, generated question suggestions, prompt versions/diffs, and RAG experiments.
@@ -183,7 +196,7 @@ Treat database backups as sensitive. Conversations, documents, chunks, embedding
 
 **Local secrets (never commit):**
 
-- Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) to `.cursor/mcp.json` (gitignored) and set `ELEVENLABS_API_KEY` locally.
+- Run `.\scripts\setup-cursor-mcp.ps1` once for Cursor MCP (creates `.cursor/mcp.json` from the example, installs Railway + Docker MCP). Then set `ELEVENLABS_API_KEY` and `RAPIDCHART_API_TOKEN` in `.cursor/mcp.json`.
 - Copy [`.env.docker.example`](.env.docker.example) to `.env.docker` (gitignored) for Docker Compose Postgres credentials (`POSTGRES_PASSWORD`, `SPRING_DATASOURCE_PASSWORD`).
 
 ## Document Pipeline and RAG
@@ -197,6 +210,10 @@ The knowledge base is curated through admin tooling:
 5. Tune prompts and active prompt versions through the admin prompt-version UI.
 
 Optional ONNX reranking can be enabled with model/tokenizer paths when local rerank weights are available.
+
+## Scripts
+
+Helper scripts live in [scripts/](scripts/README.md): hybrid dev (`dev.ps1`), Cursor MCP setup, OpenAPI/Orval refresh (`update-openapi.ps1`), local CI parity (`ci-verify.*`), Railway vector sync, and voice smoke tests.
 
 ## Tests
 
@@ -217,6 +234,8 @@ npm run test:unit
 npm run test:unit:coverage
 npm run lint:ci
 ```
+
+Refresh the Orval client after backend API changes: `.\scripts\update-openapi.ps1` (or `node scripts/patch-openapi-extensions.mjs` then `npm run api:generate` in `frontend/homepage`).
 
 ### Realtime Voice Verification
 
@@ -244,7 +263,24 @@ image: <DOCKER_ACCOUNT>/aboutme-backend:latest
 image: <DOCKER_ACCOUNT>/aboutme-frontend:latest
 ```
 
-Keep runtime secrets in `backend/.env` and frontend build-time values in `frontend/homepage/.env`.
+Keep backend runtime secrets in repo-root `.env` and frontend build-time values in `frontend/homepage/.env`.
+
+## Security
+
+**Authentication:** Admin tools use an httpOnly session cookie (JWT) set by `POST /auth/login`. The SPA stores only username and role in `sessionStorage` for UI routing—not passwords or Basic auth tokens.
+
+**Public AI endpoints:** `POST /ask`, `/transcribe`, `/synthesize`, and `/realtime/*` are intentionally unauthenticated. Abuse is mitigated with per-IP rate limits (Bucket4j), per-identity AI budgets, and a global kill switch—not with login walls.
+
+**Production checklist:**
+
+- Set `SPRING_PROFILES_ACTIVE=prod`, `PORTFOLIO_JWT_SECRET`, and `AI_BUDGET_ANON_SALT` (see [`backend/railway.env.example`](backend/railway.env.example)).
+- Use a strong `SPRING_DATASOURCE_PASSWORD` (not `postgres`), or link Railway Postgres (`PGHOST`, etc.).
+- Clear `ADMIN_BOOTSTRAP_PASSWORD` after the first admin user exists.
+- TLS is terminated at the hosting edge (Railway/CDN); nginx adds CSP and related headers on the SPA shell.
+
+**Railway deploy:** Before push, run `.\scripts\railway-prod-deploy.ps1` (backup + staging audit). After deploy, run `.\scripts\railway-post-deploy-verify.ps1` (health, session cookie, CSRF). Database steps: [`scripts/db/README.md`](scripts/db/README.md). Flyway runs V1–V14 on startup; failures after V11+ require restoring the `pg_dump` snapshot.
+
+**CI:** Maven/frontend tests and Semgrep SAST run on pull requests.
 
 ## Feedback
 

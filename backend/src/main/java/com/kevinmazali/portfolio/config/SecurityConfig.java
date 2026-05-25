@@ -1,75 +1,96 @@
 package com.kevinmazali.portfolio.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kevinmazali.portfolio.security.JwtCookieAuthenticationFilter;
 import com.kevinmazali.portfolio.security.JsonAccessDeniedHandler;
 import com.kevinmazali.portfolio.security.JsonAuthenticationEntryPoint;
 import io.micrometer.tracing.Tracer;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * Spring Security: HTTP Basic for authenticated routes, role-based rules for {@code /admin/**},
- * and a CORS allow-list aligned with the Vue SPA and production site origins.
- * <p>Most API routes stay {@code permitAll} (including {@code POST /ask} and {@code POST /transcribe}); admin document and prompt APIs require {@code ROLE_ADMIN}.</p>
+ * Spring Security: httpOnly session cookie JWT for admins, optional HTTP Basic for tooling,
+ * role-based rules for {@code /admin/**}, and a CORS allow-list aligned with the Vue SPA.
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
-    /**
-     * Dedicated mapper so {@link org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest} slices
-     * do not require a Jackson {@link ObjectMapper} bean.
-     */
-    private static ObjectMapper securityErrorObjectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.findAndRegisterModules();
-        return mapper;
+    @Bean
+    AuthenticationEntryPoint jsonAuthenticationEntryPoint(
+            ObjectMapper objectMapper, ObjectProvider<Tracer> tracer) {
+        return new JsonAuthenticationEntryPoint(objectMapper, tracer);
     }
 
     @Bean
-    AuthenticationEntryPoint jsonAuthenticationEntryPoint(ObjectProvider<Tracer> tracer) {
-        return new JsonAuthenticationEntryPoint(securityErrorObjectMapper(), tracer);
+    AccessDeniedHandler jsonAccessDeniedHandler(ObjectMapper objectMapper, ObjectProvider<Tracer> tracer) {
+        return new JsonAccessDeniedHandler(objectMapper, tracer);
     }
 
-    @Bean
-    AccessDeniedHandler jsonAccessDeniedHandler(ObjectProvider<Tracer> tracer) {
-        return new JsonAccessDeniedHandler(securityErrorObjectMapper(), tracer);
-    }
-
-    /**
-     * Disables CSRF (stateless API + SPA), enables HTTP Basic and CORS, and locks {@code /admin/**} to admins.
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             AuthenticationEntryPoint jsonAuthenticationEntryPoint,
-            AccessDeniedHandler jsonAccessDeniedHandler)
+            AccessDeniedHandler jsonAccessDeniedHandler,
+            JwtCookieAuthenticationFilter jwtCookieAuthenticationFilter,
+            @Value("${portfolio.test.disable-csrf:false}") boolean disableCsrfForTests)
             throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())
-            .cors(Customizer.withDefaults())
+
+        if (disableCsrfForTests) {
+            http.csrf(AbstractHttpConfigurer::disable);
+        } else {
+            CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+            csrfTokenRepository.setCookieName("XSRF-TOKEN");
+            csrfTokenRepository.setHeaderName("X-XSRF-TOKEN");
+            http.csrf(
+                csrf ->
+                    csrf.csrfTokenRepository(csrfTokenRepository)
+                        .ignoringRequestMatchers(
+                            "/ask",
+                            "/feedback",
+                            "/transcribe",
+                            "/synthesize",
+                            "/auth/login",
+                            "/realtime/**",
+                            "/health/**",
+                            "/actuator/health",
+                            "/actuator/info",
+                            "/v3/api-docs/**",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html",
+                            "/chat/models"));
+        }
+
+        http.cors(Customizer.withDefaults())
             .exceptionHandling(
                 ex ->
                     ex.authenticationEntryPoint(jsonAuthenticationEntryPoint)
                         .accessDeniedHandler(jsonAccessDeniedHandler))
             .httpBasic(Customizer.withDefaults())
+            .addFilterBefore(jwtCookieAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .headers(headers -> headers
                 .contentTypeOptions(Customizer.withDefaults())
                 .frameOptions(frame -> frame.deny())
@@ -86,13 +107,12 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/actuator/**").hasRole("ADMIN")
                 .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/auth/me").authenticated()
+                .requestMatchers(HttpMethod.POST, "/auth/logout").permitAll()
                 .anyRequest().permitAll());
         return http.build();
     }
 
-    /**
-     * CORS for browser calls from Vite dev servers and the deployed homepage domain.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -115,7 +135,8 @@ public class SecurityConfig {
             "X-Realtime-Model",
             "X-Realtime-Voice",
             "X-Realtime-Reasoning-Effort",
-            "X-Conversation-Id"
+            "X-Conversation-Id",
+            "X-XSRF-TOKEN"
         ));
         configuration.setAllowCredentials(true);
 
@@ -124,17 +145,13 @@ public class SecurityConfig {
         return source;
     }
 
-    /** Password hashing for persisted {@link com.kevinmazali.portfolio.model.User} credentials. */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /** Exposes the default authentication manager used by Spring Security filters. */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 }
-
-

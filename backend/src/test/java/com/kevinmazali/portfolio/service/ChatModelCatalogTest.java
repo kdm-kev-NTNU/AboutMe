@@ -33,7 +33,7 @@ class ChatModelCatalogTest {
     MockEnvironment env = new MockEnvironment()
         .withProperty("spring.ai.openai.api-key", "sk-openai-test")
         .withProperty("spring.ai.openai.chat.enabled", "true")
-        .withProperty("spring.ai.anthropic.api-key", "sk-ant-test");
+        .withProperty("spring.ai.anthropic.api-key", "test-anthropic-api-key");
     ChatModelCatalog catalog = new ChatModelCatalog(env);
 
     assertThat(catalog.listAvailableModels()).hasSize(2);
@@ -44,7 +44,7 @@ class ChatModelCatalogTest {
     MockEnvironment env = new MockEnvironment()
         .withProperty("spring.ai.openai.api-key", "sk-openai-test")
         .withProperty("spring.ai.openai.chat.enabled", "true")
-        .withProperty("spring.ai.anthropic.api-key", "sk-ant-test");
+        .withProperty("spring.ai.anthropic.api-key", "test-anthropic-api-key");
     ChatModelCatalog catalog = new ChatModelCatalog(env);
 
     ChatModelOption mini = catalog.listAvailableModels().stream()
@@ -64,7 +64,7 @@ class ChatModelCatalogTest {
   void listAvailableModels_anthropicOnlyWhenOpenAiKeyMissing() {
     MockEnvironment env = new MockEnvironment()
         .withProperty("spring.ai.openai.api-key", "")
-        .withProperty("spring.ai.anthropic.api-key", "sk-ant-test");
+        .withProperty("spring.ai.anthropic.api-key", "test-anthropic-api-key");
     ChatModelCatalog catalog = new ChatModelCatalog(env);
 
     assertThat(catalog.listAvailableModels())

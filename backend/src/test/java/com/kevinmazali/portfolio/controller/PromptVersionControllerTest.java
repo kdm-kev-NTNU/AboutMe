@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
-import tools.jackson.databind.ObjectMapper;
+
+import com.kevinmazali.portfolio.MvcTestSessionAuthConfig;import tools.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.model.prompt.ActivateRequest;
@@ -32,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = PromptVersionController.class)
-@Import({ SecurityConfig.class, MvcTestUserDetailsConfig.class })
+@Import({ SecurityConfig.class, MvcTestSessionAuthConfig.class, MvcTestUserDetailsConfig.class })
 class PromptVersionControllerTest {
 
 	@Autowired

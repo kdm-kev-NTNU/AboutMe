@@ -20,7 +20,7 @@ describe('isChatProvider', () => {
 function setSessionAuth() {
   sessionStorage.setItem(
     'auth',
-    JSON.stringify({ username: 'u', role: 'USER', basicToken: 'dGVzdA==' }),
+    JSON.stringify({ username: 'u', role: 'USER' }),
   )
 }
 

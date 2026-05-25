@@ -30,10 +30,6 @@ export default mergeConfig(
           '**/types/**',
           'src/api/generated/**',
           'src/router/index.ts',
-          // Vue starter scaffolding not used by the portfolio shell
-          'src/components/TheWelcome.vue',
-          'src/components/WelcomeItem.vue',
-          'src/components/icons/**',
         ],
         // Vitest 4 switched to AST-based v8 analysis; numbers shifted down vs the old v8-to-istanbul pipeline.
         // Branch % stays lowest on template-heavy Vue (many ternaries). If the branch gate fails, add tests

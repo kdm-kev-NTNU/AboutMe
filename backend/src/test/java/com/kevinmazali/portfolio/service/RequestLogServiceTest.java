@@ -79,14 +79,15 @@ class RequestLogServiceTest {
 	}
 
 	@Test
-	void truncatePayloadShortensLongStrings() {
-		String longPayload = "a".repeat(600);
-		requestLogService.save("/ask", "POST", longPayload, null);
+	void savePersistsPathAndMethodWithoutPayloadColumn() {
+		requestLogService.save("/ask", "POST", "payload-body", null);
 
-		verify(requestLogRepository).save(argThat(log -> {
-			String p = log.getPayload();
-			return p != null && p.length() < longPayload.length() && p.endsWith("...[truncated]");
-		}));
+		verify(requestLogRepository)
+				.save(
+						argThat(
+								log ->
+										"/ask".equals(log.getPath())
+												&& "POST".equals(log.getMethod())));
 	}
 
 	@Test

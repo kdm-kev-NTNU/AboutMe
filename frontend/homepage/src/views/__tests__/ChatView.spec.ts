@@ -144,7 +144,7 @@ describe('ChatView', () => {
   it('defaults to first catalog model when signed in and no REASONING options exist', async () => {
     sessionStorage.setItem(
       'auth',
-      JSON.stringify({ username: 'u', role: 'USER', basicToken: 'dGVzdA==' }),
+      JSON.stringify({ username: 'u', role: 'USER' }),
     )
     vi.mocked(listChatModels).mockResolvedValue({
       status: 200,
@@ -278,31 +278,6 @@ describe('ChatView', () => {
     expect(wrapper.find('.stub-messages').text()).toBe('')
     expect(replaceSpy).toHaveBeenCalledWith(expect.objectContaining({ name: 'chat', query: {} }))
     expect(pushSpy).not.toHaveBeenCalledWith({ name: 'home' })
-  })
-
-  it('hydrates messages from conversation API when conversationId is set', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        id: 1,
-        startedAt: '',
-        endedAt: '',
-        messages: [{ id: 1, role: 'user', text: 'From API', createdAt: '' }],
-      }),
-    })
-    vi.stubGlobal('fetch', fetchMock)
-
-    const { wrapper } = await mountChat({ conversationId: '42' })
-    await flushPromises()
-    await vi.waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/conversations/42',
-        expect.objectContaining({ method: 'GET' }),
-      )
-    })
-    expect(wrapper.find('.stub-messages').text()).toContain('From API')
-
-    vi.unstubAllGlobals()
   })
 
   it('shows updated first-time popup and saves versioned dismissal key', async () => {

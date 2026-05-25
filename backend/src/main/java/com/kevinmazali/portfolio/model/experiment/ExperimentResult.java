@@ -16,9 +16,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * One row per dataset example: RAG output and per-metric judge scores.
- */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,7 +23,8 @@ import lombok.Setter;
 @Builder
 @Entity
 @Table(name = "experiment_results", indexes = {
-    @Index(name = "idx_expres_run", columnList = "experiment_run_id")
+    @Index(name = "idx_expres_run", columnList = "experiment_run_id"),
+    @Index(name = "idx_expres_eval_example", columnList = "eval_example_id")
 })
 public class ExperimentResult {
 
@@ -38,6 +36,10 @@ public class ExperimentResult {
   @JoinColumn(name = "experiment_run_id", nullable = false)
   private ExperimentRun experimentRun;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "eval_example_id")
+  private EvalDatasetExampleEntity evalExample;
+
   @Column(nullable = false, columnDefinition = "TEXT")
   private String question;
 
@@ -47,36 +49,6 @@ public class ExperimentResult {
   @Column(nullable = false, columnDefinition = "TEXT")
   private String ragResponse;
 
-  @Column(columnDefinition = "TEXT")
-  private String documents;
-
-  @Column
-  private Double faithfulness;
-
-  @Column
-  private Double relevance;
-
-  @Column
-  private Double correctness;
-
-  @Column
-  private Double conciseness;
-
-  @Column(columnDefinition = "TEXT")
-  private String faithfulnessExplanation;
-
-  @Column(columnDefinition = "TEXT")
-  private String relevanceExplanation;
-
-  @Column(columnDefinition = "TEXT")
-  private String correctnessExplanation;
-
-  @Column(columnDefinition = "TEXT")
-  private String concisenessExplanation;
-
-  @Column
-  private Double languageConsistency;
-
-  @Column(columnDefinition = "TEXT")
-  private String languageConsistencyExplanation;
+  @Column(name = "retrieved_context", columnDefinition = "TEXT")
+  private String retrievedContext;
 }

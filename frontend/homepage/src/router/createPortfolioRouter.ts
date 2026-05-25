@@ -2,7 +2,6 @@ import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router'
 import type { Router } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ChatView from '../views/ChatView.vue'
-import ChatHistory from '../views/ChatHistory.vue'
 import { registerAdminRouteGuard } from './guards'
 
 export type PortfolioRouterOptions = {
@@ -75,11 +74,6 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				path: '/feedback',
 				name: 'feedback',
 				component: () => import('../views/FeedbackView.vue'),
-			},
-			{
-				path: '/chat-history',
-				name: 'chat-history',
-				component: ChatHistory,
 			},
 			{
 				path: '/privacy-policy',

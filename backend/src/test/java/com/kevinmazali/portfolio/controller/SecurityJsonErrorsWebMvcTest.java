@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
-import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
+
+import com.kevinmazali.portfolio.MvcTestSessionAuthConfig;import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.ApiErrorConfiguration;
 import com.kevinmazali.portfolio.config.SecurityConfig;
 import com.kevinmazali.portfolio.config.SyncProperties;
@@ -24,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Ensures admin routes return structured {@code ApiError} JSON for 401/403. */
 @WebMvcTest(controllers = DocumentPipelineController.class)
 @Import({
-  SecurityConfig.class,
+  SecurityConfig.class, MvcTestSessionAuthConfig.class,
   MvcTestUserDetailsConfig.class,
   DocumentPipelineControllerAdvice.class,
   ApiErrorConfiguration.class

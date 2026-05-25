@@ -1,7 +1,23 @@
 # IDE
 .idea/
-/.vscode/
-.cursor/mcp.json
+
+# Cursor: share rules + mcp.json.example; ignore local MCP secrets and other machine state
+.cursor/*
+!.cursor/mcp.json.example
+!.cursor/rules/
+!.cursor/rules/**
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # OS
 .DS_Store
@@ -14,6 +30,7 @@ Thumbs.db
 **/.env.*
 !.env.example
 !.env.docker.example
+!frontend/homepage/.env.example
 .env.docker
 
 # Local credentials / private key material
@@ -43,6 +60,10 @@ scripts/_*
 
 # Local dependency tree dumps (ad-hoc mvn dependency:tree output)
 backend/__deptree.txt
+
+# Node/npm (any package root in the repo)
+**/node_modules/
+**/.pnpm-store/
 
 # Frontend build/test output
 frontend/homepage/dist/

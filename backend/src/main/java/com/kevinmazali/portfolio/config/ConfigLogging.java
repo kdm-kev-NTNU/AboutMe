@@ -29,9 +29,7 @@ public class ConfigLogging implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         log.info("Config: user.dir={} (working directory)", System.getProperty("user.dir"));
         java.io.File envHere = new java.io.File(".env");
-        java.io.File envBackend = new java.io.File("backend/.env");
         log.info("Config: exists ./.env = {}", envHere.exists());
-        log.info("Config: exists backend/.env = {}", envBackend.exists());
         // Report resolved values (mask secrets)
         log.info("Config: server.port={}", environment.getProperty("server.port"));
         log.info("Config: spring.datasource.url={}", environment.getProperty("spring.datasource.url"));

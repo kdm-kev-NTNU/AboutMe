@@ -84,7 +84,7 @@ describe('application router (index)', () => {
 	it('allows admin routes when ADMIN session is restored', async () => {
 		sessionStorage.setItem(
 			'auth',
-			JSON.stringify({ username: 'admin', role: 'ADMIN', basicToken: 'dGVzdDp0ZXN0' }),
+			JSON.stringify({ username: 'admin', role: 'ADMIN' }),
 		)
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 

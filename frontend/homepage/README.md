@@ -1,6 +1,6 @@
 # Homepage (Vue 3)
 
-Vue SPA for the AboutMe portfolio. It includes public portfolio pages, document-grounded chat, live voice, chat history, feedback, privacy copy, and protected admin tools for RAG operations.
+Vue SPA for the AboutMe portfolio. It includes public portfolio pages, document-grounded chat, live voice, feedback, privacy copy, and protected admin tools for RAG operations.
 
 Repo-wide setup and backend configuration live in [../../README.md](../../README.md).
 
@@ -9,7 +9,6 @@ Repo-wide setup and backend configuration live in [../../README.md](../../README
 - `/`: home page with quick chat entry points and live voice CTA.
 - `/chat`: text chat backed by `/ask`, with selectable models from `/chat/models`.
 - `/voice`: OpenAI Realtime WebRTC voice UI when the backend enables Realtime.
-- `/chat-history`: stored conversations that can reopen in `/chat`.
 - `/feedback` and `/privacy-policy`: visitor feedback and privacy information.
 - `/career`, `/projects`, `/projects/heathen-army`, `/project`: portfolio, project story, bachelor/future-work, and tech stack content.
 - `/admin/tools`, `/admin/pipeline`, `/admin/chunks`, `/admin/question-suggestions`, `/admin/prompts`, `/admin/experiments`: admin-only tools for AI status, document ingestion, chunk review, prompt versions, and RAG experiments.

@@ -8,7 +8,7 @@
 
 .EXAMPLE
   $env:OPENAI_API_KEY = "sk-..."
-  $env:ANTHROPIC_API_KEY = "sk-ant-..."
+  $env:ANTHROPIC_API_KEY = "<your-anthropic-api-key>"
   .\scripts\validate-models.ps1
 #>
 param(

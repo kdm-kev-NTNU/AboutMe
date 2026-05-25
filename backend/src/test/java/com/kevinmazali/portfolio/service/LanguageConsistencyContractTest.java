@@ -32,6 +32,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StreamUtils;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
@@ -427,29 +428,40 @@ class LanguageConsistencyContractTest {
   class ExperimentEntityLanguageConsistencyFields {
 
     @Test
-    void experimentResultHasLanguageConsistencyField() {
-      var result = com.kevinmazali.portfolio.model.experiment.ExperimentResult.builder()
-          .question("Hva?")
-          .ragResponse("Svar")
-          .languageConsistency(1.0)
-          .languageConsistencyExplanation("Both Norwegian")
-          .build();
-      assertTrue(result.getLanguageConsistency() == 1.0);
-      assertTrue(result.getLanguageConsistencyExplanation().contains("Norwegian"));
+    void experimentMetricScoreStoresLanguageConsistency() {
+      var score =
+          com.kevinmazali.portfolio.model.experiment.ExperimentMetricScore.builder()
+              .metric("language_consistency")
+              .score(1.0)
+              .explanation("Both Norwegian")
+              .build();
+      assertEquals("language_consistency", score.getMetric());
+      assertTrue(score.getExplanation().contains("Norwegian"));
     }
 
     @Test
-    void experimentRunHasMeanLanguageConsistencyField() {
-      var run = com.kevinmazali.portfolio.model.experiment.ExperimentRun.builder()
-          .id(1L)
-          .name("test")
-          .datasetName("ds")
-          .generatorModel("gpt-5.4-mini")
-          .evaluatorModel("gpt-5.4-mini")
-          .status(com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus.COMPLETED)
-          .meanLanguageConsistency(0.95)
-          .build();
-      assertTrue(run.getMeanLanguageConsistency() == 0.95);
+    void experimentRunDetailResponseIncludesMeanLanguageConsistency() {
+      var resp =
+          new com.kevinmazali.portfolio.model.experiment.ExperimentRunDetailResponse(
+              1L,
+              "test",
+              "ds",
+              9L,
+              "",
+              "gpt-5.4-mini",
+              "gpt-5.4-mini",
+              com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus.COMPLETED,
+              1,
+              null,
+              null,
+              null,
+              null,
+              0.95,
+              null,
+              null,
+              null,
+              List.of());
+      assertEquals(0.95, resp.meanLanguageConsistency());
     }
 
     @Test
@@ -474,15 +486,5 @@ class LanguageConsistencyContractTest {
       assertTrue(resp.meanLanguageConsistency() == 0.95);
     }
 
-    @Test
-    void experimentRunDetailResponseIncludesMeanLanguageConsistency() {
-      var resp = new com.kevinmazali.portfolio.model.experiment.ExperimentRunDetailResponse(
-          1L, "n", "ds", 1L, "ph", "gen", "eval",
-          com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus.COMPLETED,
-          5, 0.9, 0.8, 0.7, 0.6, 0.95,
-          null, null, null, List.of()
-      );
-      assertTrue(resp.meanLanguageConsistency() == 0.95);
-    }
   }
 }

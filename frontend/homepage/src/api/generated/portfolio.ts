@@ -278,6 +278,164 @@ export interface SeedResult {
   total_fallbacks?: number;
 }
 
+export interface SynthesizeRequest {
+  text?: string;
+}
+
+export interface RealtimeStatusResponse {
+  enabled?: boolean;
+  standardEnabled?: boolean;
+  liveEnabled?: boolean;
+  voices?: string[];
+  reasoningEfforts?: string[];
+  defaultVoice?: string;
+  defaultReasoningEffort?: string;
+}
+
+export interface RealtimeModelOption {
+  id?: string;
+  label?: string;
+  provider?: string;
+}
+
+export interface EvalDatasetSummary {
+  id?: string;
+  name?: string;
+  exampleCount?: number;
+}
+
+export interface GenerateDatasetRequest {
+  name?: string;
+  description?: string;
+  /** @nullable */
+  documentId?: string | null;
+  model?: string;
+  questionsPerChunk?: number;
+  maxQuestions?: number;
+  seed?: number;
+}
+
+export interface DatasetGenerationStartResponse {
+  generationId?: number;
+  status?: string;
+}
+
+export interface DatasetGenerationStatusResponse {
+  id?: number;
+  status?: string;
+  /** @nullable */
+  questionsGenerated?: number | null;
+  /** @nullable */
+  resultDatasetId?: string | null;
+  /** @nullable */
+  errorMessage?: string | null;
+  /** @nullable */
+  createdAt?: string | null;
+  /** @nullable */
+  completedAt?: string | null;
+}
+
+export interface RunExperimentRequest {
+  datasetId: string;
+  datasetName?: string;
+  name?: string;
+  generatorModel: string;
+  evaluatorModel: string;
+  /** @nullable */
+  maxExamples?: number | null;
+}
+
+export interface ExperimentRunSummaryResponse {
+  id?: number;
+  name?: string;
+  datasetName?: string;
+  generatorModel?: string;
+  evaluatorModel?: string;
+  status?: string;
+  totalExamples?: number;
+  /** @nullable */
+  meanFaithfulness?: number | null;
+  /** @nullable */
+  meanRelevance?: number | null;
+  /** @nullable */
+  meanCorrectness?: number | null;
+  /** @nullable */
+  meanConciseness?: number | null;
+  /** @nullable */
+  meanLanguageConsistency?: number | null;
+  /** @nullable */
+  errorMessage?: string | null;
+  createdAt?: string;
+  /** @nullable */
+  completedAt?: string | null;
+}
+
+export interface ExperimentResultResponse {
+  id?: number;
+  question?: string;
+  referenceAnswer?: string;
+  ragResponse?: string;
+  documentsPreview?: string;
+  /** @nullable */
+  faithfulness?: number | null;
+  /** @nullable */
+  relevance?: number | null;
+  /** @nullable */
+  correctness?: number | null;
+  /** @nullable */
+  conciseness?: number | null;
+  /** @nullable */
+  languageConsistency?: number | null;
+  /** @nullable */
+  faithfulnessExplanation?: string | null;
+  /** @nullable */
+  relevanceExplanation?: string | null;
+  /** @nullable */
+  correctnessExplanation?: string | null;
+  /** @nullable */
+  concisenessExplanation?: string | null;
+  /** @nullable */
+  languageConsistencyExplanation?: string | null;
+}
+
+export interface ExperimentRunDetailResponse {
+  id?: number;
+  name?: string;
+  datasetName?: string;
+  /** @nullable */
+  evalDatasetId?: number | null;
+  posthogHost?: string;
+  generatorModel?: string;
+  evaluatorModel?: string;
+  status?: string;
+  totalExamples?: number;
+  /** @nullable */
+  meanFaithfulness?: number | null;
+  /** @nullable */
+  meanRelevance?: number | null;
+  /** @nullable */
+  meanCorrectness?: number | null;
+  /** @nullable */
+  meanConciseness?: number | null;
+  /** @nullable */
+  meanLanguageConsistency?: number | null;
+  /** @nullable */
+  errorMessage?: string | null;
+  createdAt?: string;
+  /** @nullable */
+  completedAt?: string | null;
+  results?: ExperimentResultResponse[];
+}
+
+export interface ExperimentsConfigResponse {
+  posthogConfigured?: boolean;
+  posthogHost?: string;
+}
+
+export interface TranscribeResponse {
+  text?: string;
+}
+
 export type AdminDocumentsUploadBody = {
   file: Blob;
   title?: string;
@@ -322,6 +480,16 @@ name: string;
 language?: string;
 provider?: string;
 };
+
+export type TranscribeAudioBody = {
+  file: Blob;
+};
+
+export type ExperimentsStartRun202 = {
+  runId?: number;
+};
+
+export type AiAdminStatus200 = { [key: string]: unknown };
 
 export type authLoginResponse200 = {
   data: LoginResponse
@@ -1333,6 +1501,634 @@ export const promptVersionsDiff = async (params: PromptVersionsDiffParams, optio
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type synthesizeSpeechResponse200 = {
+  data: Blob
+  status: 200
+}
+
+export type synthesizeSpeechResponse400 = {
+  data: ApiError
+  status: 400
+}
+
+export type synthesizeSpeechResponseSuccess = (synthesizeSpeechResponse200) & {
+  headers: Headers;
+};
+export type synthesizeSpeechResponseError = (synthesizeSpeechResponse400) & {
+  headers: Headers;
+};
+
+export type synthesizeSpeechResponse = (synthesizeSpeechResponseSuccess | synthesizeSpeechResponseError)
+
+export const getSynthesizeSpeechUrl = () => {
+
+
+
+
+  return `/synthesize`
+}
+
+/**
+ * @summary Synthesize speech
+ */
+export const synthesizeSpeech = async (synthesizeRequest: SynthesizeRequest, options?: RequestInit): Promise<synthesizeSpeechResponse> => {
+
+  return customFetch<synthesizeSpeechResponse>(getSynthesizeSpeechUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(synthesizeRequest)
+  }
+);}
+
+
+
+export type transcribeAudioResponse200 = {
+  data: TranscribeResponse
+  status: 200
+}
+
+export type transcribeAudioResponseSuccess = (transcribeAudioResponse200) & {
+  headers: Headers;
+};
+;
+
+export type transcribeAudioResponse = (transcribeAudioResponseSuccess)
+
+export const getTranscribeAudioUrl = () => {
+
+
+
+
+  return `/transcribe`
+}
+
+/**
+ * @summary Transcribe audio
+ */
+export const transcribeAudio = async (transcribeAudioBody: TranscribeAudioBody, options?: RequestInit): Promise<transcribeAudioResponse> => {
+    const formData = new FormData();
+formData.append(`file`, transcribeAudioBody.file);
+
+  return customFetch<transcribeAudioResponse>(getTranscribeAudioUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+export type realtimeStatusResponse200 = {
+  data: RealtimeStatusResponse
+  status: 200
+}
+
+export type realtimeStatusResponseSuccess = (realtimeStatusResponse200) & {
+  headers: Headers;
+};
+;
+
+export type realtimeStatusResponse = (realtimeStatusResponseSuccess)
+
+export const getRealtimeStatusUrl = () => {
+
+
+
+
+  return `/realtime/status`
+}
+
+/**
+ * @summary Realtime voice status
+ */
+export const realtimeStatus = async ( options?: RequestInit): Promise<realtimeStatusResponse> => {
+
+  return customFetch<realtimeStatusResponse>(getRealtimeStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type realtimeModelsResponse200 = {
+  data: RealtimeModelOption[]
+  status: 200
+}
+
+export type realtimeModelsResponseSuccess = (realtimeModelsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type realtimeModelsResponse = (realtimeModelsResponseSuccess)
+
+export const getRealtimeModelsUrl = () => {
+
+
+
+
+  return `/realtime/models`
+}
+
+/**
+ * @summary List realtime voice models
+ */
+export const realtimeModels = async ( options?: RequestInit): Promise<realtimeModelsResponse> => {
+
+  return customFetch<realtimeModelsResponse>(getRealtimeModelsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type experimentsConfigResponse200 = {
+  data: ExperimentsConfigResponse
+  status: 200
+}
+
+export type experimentsConfigResponseSuccess = (experimentsConfigResponse200) & {
+  headers: Headers;
+};
+;
+
+export type experimentsConfigResponse = (experimentsConfigResponseSuccess)
+
+export const getExperimentsConfigUrl = () => {
+
+
+
+
+  return `/admin/tools/experiments/config`
+}
+
+/**
+ * @summary Experiments PostHog config
+ */
+export const experimentsConfig = async ( options?: RequestInit): Promise<experimentsConfigResponse> => {
+
+  return customFetch<experimentsConfigResponse>(getExperimentsConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type experimentsListDatasetsResponse200 = {
+  data: EvalDatasetSummary[]
+  status: 200
+}
+
+export type experimentsListDatasetsResponseSuccess = (experimentsListDatasetsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type experimentsListDatasetsResponse = (experimentsListDatasetsResponseSuccess)
+
+export const getExperimentsListDatasetsUrl = () => {
+
+
+
+
+  return `/admin/tools/experiments/datasets`
+}
+
+/**
+ * @summary List eval datasets
+ */
+export const experimentsListDatasets = async ( options?: RequestInit): Promise<experimentsListDatasetsResponse> => {
+
+  return customFetch<experimentsListDatasetsResponse>(getExperimentsListDatasetsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type experimentsGenerateDatasetResponse202 = {
+  data: DatasetGenerationStartResponse
+  status: 202
+}
+
+export type experimentsGenerateDatasetResponseSuccess = (experimentsGenerateDatasetResponse202) & {
+  headers: Headers;
+};
+;
+
+export type experimentsGenerateDatasetResponse = (experimentsGenerateDatasetResponseSuccess)
+
+export const getExperimentsGenerateDatasetUrl = () => {
+
+
+
+
+  return `/admin/tools/experiments/datasets/generate`
+}
+
+/**
+ * @summary Start dataset generation
+ */
+export const experimentsGenerateDataset = async (generateDatasetRequest: GenerateDatasetRequest, options?: RequestInit): Promise<experimentsGenerateDatasetResponse> => {
+
+  return customFetch<experimentsGenerateDatasetResponse>(getExperimentsGenerateDatasetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(generateDatasetRequest)
+  }
+);}
+
+
+
+export type experimentsDatasetGenerationStatusResponse200 = {
+  data: DatasetGenerationStatusResponse
+  status: 200
+}
+
+export type experimentsDatasetGenerationStatusResponseSuccess = (experimentsDatasetGenerationStatusResponse200) & {
+  headers: Headers;
+};
+;
+
+export type experimentsDatasetGenerationStatusResponse = (experimentsDatasetGenerationStatusResponseSuccess)
+
+export const getExperimentsDatasetGenerationStatusUrl = (id: number,) => {
+
+
+
+
+  return `/admin/tools/experiments/datasets/generate/${id}/status`
+}
+
+/**
+ * @summary Dataset generation status
+ */
+export const experimentsDatasetGenerationStatus = async (id: number, options?: RequestInit): Promise<experimentsDatasetGenerationStatusResponse> => {
+
+  return customFetch<experimentsDatasetGenerationStatusResponse>(getExperimentsDatasetGenerationStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type experimentsListModelsResponse200 = {
+  data: ChatModelOption[]
+  status: 200
+}
+
+export type experimentsListModelsResponseSuccess = (experimentsListModelsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type experimentsListModelsResponse = (experimentsListModelsResponseSuccess)
+
+export const getExperimentsListModelsUrl = () => {
+
+
+
+
+  return `/admin/tools/experiments/models`
+}
+
+/**
+ * @summary Models for experiments
+ */
+export const experimentsListModels = async ( options?: RequestInit): Promise<experimentsListModelsResponse> => {
+
+  return customFetch<experimentsListModelsResponse>(getExperimentsListModelsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type experimentsStartRunResponse202 = {
+  data: ExperimentsStartRun202
+  status: 202
+}
+
+export type experimentsStartRunResponseSuccess = (experimentsStartRunResponse202) & {
+  headers: Headers;
+};
+;
+
+export type experimentsStartRunResponse = (experimentsStartRunResponseSuccess)
+
+export const getExperimentsStartRunUrl = () => {
+
+
+
+
+  return `/admin/tools/experiments/run`
+}
+
+/**
+ * @summary Start experiment run
+ */
+export const experimentsStartRun = async (runExperimentRequest: RunExperimentRequest, options?: RequestInit): Promise<experimentsStartRunResponse> => {
+
+  return customFetch<experimentsStartRunResponse>(getExperimentsStartRunUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(runExperimentRequest)
+  }
+);}
+
+
+
+export type experimentsListRunsResponse200 = {
+  data: ExperimentRunSummaryResponse[]
+  status: 200
+}
+
+export type experimentsListRunsResponseSuccess = (experimentsListRunsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type experimentsListRunsResponse = (experimentsListRunsResponseSuccess)
+
+export const getExperimentsListRunsUrl = () => {
+
+
+
+
+  return `/admin/tools/experiments/runs`
+}
+
+/**
+ * @summary List experiment runs
+ */
+export const experimentsListRuns = async ( options?: RequestInit): Promise<experimentsListRunsResponse> => {
+
+  return customFetch<experimentsListRunsResponse>(getExperimentsListRunsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type experimentsGetRunResponse200 = {
+  data: ExperimentRunDetailResponse
+  status: 200
+}
+
+export type experimentsGetRunResponseSuccess = (experimentsGetRunResponse200) & {
+  headers: Headers;
+};
+;
+
+export type experimentsGetRunResponse = (experimentsGetRunResponseSuccess)
+
+export const getExperimentsGetRunUrl = (id: number,) => {
+
+
+
+
+  return `/admin/tools/experiments/runs/${id}`
+}
+
+/**
+ * @summary Experiment run detail
+ */
+export const experimentsGetRun = async (id: number, options?: RequestInit): Promise<experimentsGetRunResponse> => {
+
+  return customFetch<experimentsGetRunResponse>(getExperimentsGetRunUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type experimentsRunStatusResponse200 = {
+  data: ExperimentRunSummaryResponse
+  status: 200
+}
+
+export type experimentsRunStatusResponseSuccess = (experimentsRunStatusResponse200) & {
+  headers: Headers;
+};
+;
+
+export type experimentsRunStatusResponse = (experimentsRunStatusResponseSuccess)
+
+export const getExperimentsRunStatusUrl = (id: number,) => {
+
+
+
+
+  return `/admin/tools/experiments/runs/${id}/status`
+}
+
+/**
+ * @summary Experiment run status
+ */
+export const experimentsRunStatus = async (id: number, options?: RequestInit): Promise<experimentsRunStatusResponse> => {
+
+  return customFetch<experimentsRunStatusResponse>(getExperimentsRunStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type experimentsDeleteDatasetResponse204 = {
+  data: void
+  status: 204
+}
+
+export type experimentsDeleteDatasetResponseSuccess = (experimentsDeleteDatasetResponse204) & {
+  headers: Headers;
+};
+;
+
+export type experimentsDeleteDatasetResponse = (experimentsDeleteDatasetResponseSuccess)
+
+export const getExperimentsDeleteDatasetUrl = (id: string,) => {
+
+
+
+
+  return `/admin/tools/experiments/datasets/${id}`
+}
+
+/**
+ * @summary Delete eval dataset
+ */
+export const experimentsDeleteDataset = async (id: string, options?: RequestInit): Promise<experimentsDeleteDatasetResponse> => {
+
+  return customFetch<experimentsDeleteDatasetResponse>(getExperimentsDeleteDatasetUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type aiAdminStatusResponse200 = {
+  data: AiAdminStatus200
+  status: 200
+}
+
+export type aiAdminStatusResponseSuccess = (aiAdminStatusResponse200) & {
+  headers: Headers;
+};
+;
+
+export type aiAdminStatusResponse = (aiAdminStatusResponseSuccess)
+
+export const getAiAdminStatusUrl = () => {
+
+
+
+
+  return `/admin/tools/ai/status`
+}
+
+/**
+ * @summary AI circuit status
+ */
+export const aiAdminStatus = async ( options?: RequestInit): Promise<aiAdminStatusResponse> => {
+
+  return customFetch<aiAdminStatusResponse>(getAiAdminStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type authMeResponse200 = {
+  data: LoginResponse
+  status: 200
+}
+
+export type authMeResponse401 = {
+  data: ApiError
+  status: 401
+}
+
+export type authMeResponseSuccess = (authMeResponse200) & {
+  headers: Headers;
+};
+export type authMeResponseError = (authMeResponse401) & {
+  headers: Headers;
+};
+
+export type authMeResponse = (authMeResponseSuccess | authMeResponseError)
+
+export const getAuthMeUrl = () => {
+
+
+
+
+  return `/auth/me`
+}
+
+/**
+ * @summary Current session
+ */
+export const authMe = async ( options?: RequestInit): Promise<authMeResponse> => {
+
+  return customFetch<authMeResponse>(getAuthMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type authLogoutResponse204 = {
+  data: void
+  status: 204
+}
+
+export type authLogoutResponseSuccess = (authLogoutResponse204) & {
+  headers: Headers;
+};
+;
+
+export type authLogoutResponse = (authLogoutResponseSuccess)
+
+export const getAuthLogoutUrl = () => {
+
+
+
+
+  return `/auth/logout`
+}
+
+/**
+ * @summary Logout
+ */
+export const authLogout = async ( options?: RequestInit): Promise<authLogoutResponse> => {
+
+  return customFetch<authLogoutResponse>(getAuthLogoutUrl(),
+  {
+    ...options,
+    method: 'POST'
 
 
   }

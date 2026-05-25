@@ -10,6 +10,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -22,9 +24,6 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * One persisted experiment: RAG over an eval dataset with LLM-as-judge scores.
- */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -43,11 +42,9 @@ public class ExperimentRun {
   @Column(nullable = false, length = 256)
   private String name;
 
-  @Column(nullable = false, length = 512)
-  private String datasetName;
-
-  @Column(name = "eval_dataset_id")
-  private Long evalDatasetId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "eval_dataset_id")
+  private EvalDatasetEntity evalDataset;
 
   @Column(nullable = false, length = 128)
   private String generatorModel;
@@ -63,21 +60,6 @@ public class ExperimentRun {
   @Builder.Default
   private Integer totalExamples = 0;
 
-  @Column
-  private Double meanFaithfulness;
-
-  @Column
-  private Double meanRelevance;
-
-  @Column
-  private Double meanCorrectness;
-
-  @Column
-  private Double meanConciseness;
-
-  @Column
-  private Double meanLanguageConsistency;
-
   @Column(columnDefinition = "TEXT")
   private String errorMessage;
 
@@ -91,4 +73,8 @@ public class ExperimentRun {
   @OneToMany(mappedBy = "experimentRun", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   @Builder.Default
   private List<ExperimentResult> results = new ArrayList<>();
+
+  public Long getEvalDatasetId() {
+    return evalDataset != null ? evalDataset.getId() : null;
+  }
 }

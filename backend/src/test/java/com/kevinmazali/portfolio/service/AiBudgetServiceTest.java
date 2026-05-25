@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.service;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.repository.AiUsageRepository;
+import com.kevinmazali.portfolio.repository.UserRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,9 @@ class AiBudgetServiceTest {
   @Mock
   private PostHogLlmService postHogLlmService;
 
+  @Mock
+  private UserRepository userRepository;
+
   private AiBudgetProperties properties;
   private AiBudgetService service;
 
@@ -54,7 +58,9 @@ class AiBudgetServiceTest {
     pricing.setInputPerMillionUsd(new BigDecimal("1"));
     pricing.setOutputPerMillionUsd(new BigDecimal("2"));
     properties.getModels().put("gpt-5.4-mini", pricing);
-    service = new AiBudgetService(properties, usageRepository, new SimpleMeterRegistry(), postHogLlmService);
+    service =
+        new AiBudgetService(
+            properties, usageRepository, userRepository, new SimpleMeterRegistry(), postHogLlmService);
   }
 
   @Test

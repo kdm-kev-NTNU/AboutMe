@@ -2,7 +2,6 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -11,7 +10,6 @@ export default defineConfig({
   plugins: [
     vue(),
     tailwindcss(),
-    vueJsx(),
     // DevTools breaks Vitest server bootstrap (configureServer rpc). Some Vite versions also
     // crash `vite dev` with vue-devtools (rpc undefined). Enable with VUE_DEVTOOLS=1 when it works.
     ...(process.env.VITEST || process.env.VUE_DEVTOOLS !== '1' ? [] : [vueDevTools()]),

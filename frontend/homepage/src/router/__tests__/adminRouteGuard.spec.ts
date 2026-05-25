@@ -36,7 +36,7 @@ describe('registerAdminRouteGuard', () => {
 	it('allows admin to open admin route', async () => {
 		sessionStorage.setItem(
 			'auth',
-			JSON.stringify({ username: 'a', role: 'ADMIN', basicToken: 'dGVzdA==' }),
+			JSON.stringify({ username: 'a', role: 'ADMIN' }),
 		)
 		const router = buildRouter()
 		await router.push('/admin/tools')

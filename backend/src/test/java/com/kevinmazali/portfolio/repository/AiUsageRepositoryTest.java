@@ -1,6 +1,8 @@
 package com.kevinmazali.portfolio.repository;
 
-import com.kevinmazali.portfolio.model.AiUsageRecord;
+import com.kevinmazali.portfolio.model.AiUsageEvent;
+import com.kevinmazali.portfolio.model.AiUsageEvent.IdentityType;
+import com.kevinmazali.portfolio.service.DocumentIngestionService;
 import com.kevinmazali.portfolio.testsupport.VectorStoreTestConfiguration;
 
 import org.junit.jupiter.api.Test;
@@ -9,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -33,11 +36,14 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.ai.openai.api-key=test-placeholder-key-for-context-tests-only",
         "spring.ai.openai.chat.enabled=true",
-        "spring.ai.anthropic.api-key=sk-ant-api03-test-placeholder-for-spring-context-only",
+        "spring.ai.anthropic.api-key=test-anthropic-api-key-not-real",
         "portfolio.chat.default-model-id=gpt-5.4-mini",
         "server.port=0",
     })
 class AiUsageRepositoryTest {
+
+  @MockitoBean
+  private DocumentIngestionService documentIngestionService;
 
   @Autowired
   private AiUsageRepository repository;
@@ -85,9 +91,10 @@ class AiUsageRepositoryTest {
     assertThat(m1Total).isEqualByComparingTo("1.0");
   }
 
-  private static AiUsageRecord row(String user, String model, Instant created, String costUsd) {
-    AiUsageRecord r = new AiUsageRecord();
-    r.setUserIdentifier(user);
+  private static AiUsageEvent row(String user, String model, Instant created, String costUsd) {
+    AiUsageEvent r = new AiUsageEvent();
+    r.setIdentityType(IdentityType.anonymous);
+    r.setIdentityKey(user);
     r.setModel(model);
     r.setPromptTokens(1);
     r.setCompletionTokens(1);

@@ -66,7 +66,7 @@ export const useChatModelStore = defineStore('chatModel', {
     selectFirstForProvider(p: ChatProvider) {
       const list = this.modelsForProvider(p)
       useAuthStore().restore()
-      const authed = Boolean(useAuthStore().basicToken)
+      const authed = useAuthStore().isAuthenticated
       const pick = authed
         ? list.find((m) => m.tags?.includes(ModelTag.REASONING)) ?? list[0]
         : list.find((m) => m.tags?.includes(ModelTag.FAST)) ?? list[0]
@@ -87,7 +87,7 @@ export const useChatModelStore = defineStore('chatModel', {
       }
       if (this.models.length > 0) {
         useAuthStore().restore()
-        const authed = Boolean(useAuthStore().basicToken)
+        const authed = useAuthStore().isAuthenticated
         const first = authed
           ? this.models.find((m) => m.tags?.includes(ModelTag.REASONING)) ?? this.models[0]
           : this.models.find((m) => m.tags?.includes(ModelTag.FAST)) ?? this.models[0]

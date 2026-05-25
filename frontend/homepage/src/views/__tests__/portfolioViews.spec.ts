@@ -4,7 +4,6 @@ import { createPinia, setActivePinia } from 'pinia'
 import { MotionPlugin } from '@vueuse/motion'
 import type { Component } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import AboutView from '../AboutView.vue'
 import PrivacyPolicyView from '../PrivacyPolicyView.vue'
 import { useLangStore } from '@/stores/lang'
 import ProjectsView from '../ProjectsView.vue'
@@ -69,11 +68,6 @@ describe('portfolio views (smoke)', () => {
 			global: { plugins: [pinia, router, MotionPlugin] },
 		})
 	}
-
-	it('renders AboutView', () => {
-		const wrapper = mountView(AboutView)
-		expect(wrapper.text()).toContain('about page')
-	})
 
 	it(
 		'renders ProjectPageView in English with section headers',

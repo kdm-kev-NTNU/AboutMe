@@ -1,32 +1,14 @@
-const AUTH_KEY = 'auth'
-
-function readBasicToken(): string | null {
-  if (typeof sessionStorage === 'undefined') return null
-  try {
-    const raw = sessionStorage.getItem(AUTH_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as { basicToken?: string | null }
-    return parsed.basicToken ?? null
-  } catch {
-    return null
-  }
-}
-
-// Vite dev proxy forwards the configured API prefix to Spring Boot; production uses the same prefix behind the host.
-const API_PREFIX = '/api'
+import { applyCsrfHeader } from '@/utils/csrf'
 
 /**
- * Orval fetch mutator: prefixes relative URLs with the configured API prefix, merges Basic auth from sessionStorage, returns `{ data, status, headers }`.
- * Generated clients in `api/generated/` import this instead of raw `fetch` so admin routes receive Authorization.
+ * Orval fetch mutator: prefixes relative URLs with the configured API prefix, sends cookies and CSRF
+ * for mutating admin requests, returns `{ data, status, headers }`.
  */
 export const customFetch = async <T>(url: string, init?: RequestInit): Promise<T> => {
-  const path = url.startsWith('http') ? url : `${API_PREFIX}${url}`
+  const path = url.startsWith('http') ? url : `/api${url}`
 
   const headers = new Headers(init?.headers)
-  const basic = readBasicToken()
-  if (basic) {
-    headers.set('Authorization', `Basic ${basic}`)
-  }
+  applyCsrfHeader(headers, init?.method)
 
   const res = await fetch(path, {
     ...init,
@@ -44,6 +26,8 @@ export const customFetch = async <T>(url: string, init?: RequestInit): Promise<T
     } catch {
       data = undefined
     }
+  } else if (ct.includes('audio/') || ct.includes('application/octet-stream')) {
+    data = await res.blob()
   } else {
     data = await res.text()
   }

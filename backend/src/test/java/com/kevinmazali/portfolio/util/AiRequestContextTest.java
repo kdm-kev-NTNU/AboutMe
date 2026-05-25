@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.util;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
+import com.kevinmazali.portfolio.util.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -68,12 +69,20 @@ class AiRequestContextTest {
   void budgetUserIdentifier_hashesAnonymousIpFromRequest() {
     MockHttpServletRequest req = new MockHttpServletRequest();
     req.setRemoteAddr("203.0.113.5");
+    req.addHeader("X-Forwarded-For", "198.51.100.7, 203.0.113.5");
     RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(req));
     AiBudgetProperties budget = new AiBudgetProperties();
     budget.setAnonIdentitySalt("salt");
     String id = AiRequestContext.budgetUserIdentifier(budget);
     assertTrue(id.startsWith("anon:"));
     assertEquals(id, AiRequestContext.budgetUserIdentifier(budget));
+
+    MockHttpServletRequest direct = new MockHttpServletRequest();
+    direct.setRemoteAddr("203.0.113.5");
+    RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(direct));
+    String directId = AiRequestContext.budgetUserIdentifier(budget);
+    assertTrue(directId.startsWith("anon:"));
+    assertNotEquals(id, directId);
   }
 
   @Test

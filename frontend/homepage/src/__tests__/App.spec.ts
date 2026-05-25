@@ -40,7 +40,7 @@ describe('App shell', () => {
 	it('hides Navbar when visiting an admin hub route with admin session', async () => {
 		sessionStorage.setItem(
 			'auth',
-			JSON.stringify({ username: 'admin', role: 'ADMIN', basicToken: 'dGVzdA==' }),
+			JSON.stringify({ username: 'admin', role: 'ADMIN' }),
 		)
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		const { wrapper } = mountAppShell(router)

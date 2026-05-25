@@ -4,13 +4,24 @@
 portfolio:
   sync:
     enabled: false
+  session:
+    secure-cookie: true
+    jwt-secret: ${PORTFOLIO_JWT_SECRET:}
+
+server:
+  forward-headers-strategy: framework
 
 spring:
   jpa:
     show-sql: false
+    hibernate:
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
   ai:
     chat:
       observations:
@@ -30,3 +41,12 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  tracing:
+    sampling:
+      probability: 0.1

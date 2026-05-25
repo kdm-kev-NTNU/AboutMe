@@ -12,6 +12,8 @@ spring:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
     show-sql: false
+  flyway:
+    enabled: false
   ai:
     openai:
       api-key: test-placeholder-key-for-context-tests-only
@@ -19,12 +21,14 @@ spring:
         enabled: true
     anthropic:
       # Non-empty placeholder so Anthropic chat autoconfig loads in @SpringBootTest (never called against real API).
-      api-key: sk-ant-api03-test-placeholder-for-spring-context-only
+      api-key: test-anthropic-api-key-not-real
 
 server:
   port: 0
 
 portfolio:
+  session:
+    jwt-secret: test-jwt-secret-at-least-32-characters-long
   ai:
     budget:
       enabled: false

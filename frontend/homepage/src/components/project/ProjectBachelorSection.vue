@@ -8,7 +8,7 @@ import { GraduationCap, Sparkles, Link2 } from 'lucide-vue-next'
 const langStore = useLangStore()
 const isNo = computed(() => langStore.language === 'no')
 
-const YOUTUBE_EMBED_ID = 'YHdEJhM-J2o'
+const YOUTUBE_EMBED_ID = '9ZnpBimfUvU'
 const YOUTUBE_WATCH_URL = `https://www.youtube.com/watch?v=${YOUTUBE_EMBED_ID}`
 
 type NarrativeCard = {
@@ -38,7 +38,7 @@ const videoSection = computed(() =>
 		? {
 				heading: 'Hva vi har jobbet med',
 				description:
-					'I videoen under forklarer jeg og samarbeidspartneren min kort hva vi har jobbet med de siste månedene i forbindelse med bacheloroppgaven og det tilhørende prosjektet. Videoen er satt sammen med Claude Design og ElevenLabs for tale.',
+					'I videoen under forklarer jeg og samarbeidspartneren min kort hva vi har jobbet med de siste månedene i forbindelse med bacheloroppgaven og det tilhørende prosjektet. Videoen er satt sammen med Claude Design og ElevenLabs for tale. Dette er videoen fra presentasjonen vi fremviste for veiledere både internt og eksternt. Vi jobber med en mer raffinert video snart.',
 				badge: 'Demo',
         iframeTitle: 'YouTube-video om bachelorprosjektet',
 				watchLabel: 'Åpne på YouTube (ny fane)',
@@ -46,7 +46,7 @@ const videoSection = computed(() =>
 		: {
 				heading: 'What we have been working on',
 				description:
-					'In the video below, my collaboration partner and I explain what we have been working on over the past few months as part of the bachelor thesis and related project. The visuals were put together with Claude Design, and the voice is from ElevenLabs.',
+					'In the video below, my collaboration partner and I explain what we have been working on over the past few months as part of the bachelor thesis and related project. The visuals were put together with Claude Design, and the voice is from ElevenLabs. This is the recording from the presentation we gave to supervisors internally and externally. We are working on a more refined version soon.',
 				badge: 'Demo',
         iframeTitle: "YouTube video about the bachelor's thesis project",
 				watchLabel: 'Watch on YouTube (opens in a new tab)',

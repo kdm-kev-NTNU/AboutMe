@@ -97,6 +97,7 @@ class EvalDatasetServiceTest {
   @Test
   void getExamplesMapsNullReferenceToEmptyString() {
     EvalDatasetExampleEntity row = new EvalDatasetExampleEntity();
+    row.setId(99L);
     row.setQuestion("q1");
     row.setReferenceText(null);
     when(exampleRepository.findByDataset_IdOrderByIdAsc(3L)).thenReturn(List.of(row));

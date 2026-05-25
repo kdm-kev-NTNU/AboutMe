@@ -39,7 +39,7 @@ import { apiErrorMessage } from '@/lib/api-error'
 import { detectLanguage, type DetectedLanguage } from '@/utils/detectLanguage'
 import { Loader2, Mic, Square, Headphones } from 'lucide-vue-next'
 
-// RAG chat: sessionStorage transcript, optional ?conversationId= hydrate from server, askQuestion with optional model id; clear stays on chat route.
+// RAG chat: sessionStorage transcript, askQuestion with optional model id; clear stays on chat route.
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
 // --- Route + local UI state ---
@@ -380,29 +380,6 @@ async function send(text: string) {
   }
 }
 
-/** When deep-linking with ?conversationId=, hydrate the thread from the API instead of sessionStorage. */
-const loadConversation = async (conversationId: string) => {
-  try {
-    const res = await fetch(`/api/conversations/${conversationId}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    })
-
-    if (res.ok) {
-      const conversation: { id: number, startedAt: string, endedAt: string, messages: Array<{ id: number, role: string, text: string, createdAt: string }> } = await res.json()
-
-      // Convert backend messages to frontend format
-      state.messages = conversation.messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        text: msg.text,
-        isNew: false
-      }))
-    }
-  } catch (error) {
-    console.warn('Failed to load conversation:', error)
-  }
-}
-
 onMounted(async () => {
   await chatModelStore.ensureModelsLoaded()
   if (shouldShowInfoPopup()) {
@@ -416,16 +393,10 @@ onMounted(async () => {
 
   loadConversationLanguage()
 
-  const conversationIdParam = route.query.conversationId as string
-
-  if (conversationIdParam) {
-    loadConversation(conversationIdParam)
-  } else {
-    loadMessagesFromStorage()
-  }
+  loadMessagesFromStorage()
 
   const q = (route.query.q as string) || ''
-  if (q && !conversationIdParam) {
+  if (q) {
     input.value = q
     send(q)
   }

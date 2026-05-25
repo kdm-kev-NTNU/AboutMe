@@ -1,23 +1,13 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/frontend/homepage"
+  - package-ecosystem: maven
+    directory: /backend
     schedule:
-      interval: "weekly"
-    ignore:
-      # uuid is a transitive dev dep via @cypress/request (^8.3.2).
-      # Overridden to ^14.0.0 in package.json so lockfile resolves >=14.0.0
-      # (patched for GHSA-w5hq-g745-h8pq per uuidjs/uuid v14.0.0 release).
-      # Ignored here so Dependabot does not try to bump the declared range
-      # while Cypress still lists uuid@^8; npm overrides apply at install time.
-      - dependency-name: "uuid"
+      interval: weekly
+    open-pull-requests-limit: 5
 
-  - package-ecosystem: "maven"
-    directory: "/backend"
+  - package-ecosystem: npm
+    directory: /frontend/homepage
     schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
+      interval: weekly
+    open-pull-requests-limit: 5

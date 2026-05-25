@@ -27,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,6 +50,7 @@ import java.util.Set;
  */
 @RestController
 @RequestMapping("/admin/tools/documents")
+@PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 @Tag(name = "Admin documents", description = "Ingest and manage indexed documents (ADMIN + HTTP Basic)")
 @SecurityRequirement(name = OpenApiConfig.BASIC_AUTH_SCHEME)
@@ -246,7 +248,7 @@ public class DocumentPipelineController {
   ) {
     if (!syncProperties.isEnabled()) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-          "Vector store sync is disabled. Set SYNC_ENABLED=true and remote JDBC env vars in backend/.env for local use.");
+          "Vector store sync is disabled. Set SYNC_ENABLED=true and remote JDBC env vars in repo-root .env for local use.");
     }
     String url = syncProperties.getSourceUrl() == null ? "" : syncProperties.getSourceUrl().trim();
     if (url.isBlank()) {

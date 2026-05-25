@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
-import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
+
+import com.kevinmazali.portfolio.MvcTestSessionAuthConfig;import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
@@ -59,7 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
   "portfolio.ask-rate-limit.enabled=false",
   "portfolio.realtime-rate-limit.enabled=false"
 })
-@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
+@Import({ WebConfig.class, SecurityConfig.class, MvcTestSessionAuthConfig.class, MvcTestUserDetailsConfig.class })
 class RealtimeControllerTest {
 
   @Autowired
@@ -321,7 +322,7 @@ class RealtimeControllerTest {
     "portfolio.ask-rate-limit.enabled=false",
     "portfolio.realtime-rate-limit.enabled=false"
 })
-@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
+@Import({ WebConfig.class, SecurityConfig.class, MvcTestSessionAuthConfig.class, MvcTestUserDetailsConfig.class })
 class RealtimeControllerMissingOpenAiKeyMvcTest {
 
   @Autowired
