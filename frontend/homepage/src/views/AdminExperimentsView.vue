@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { applyCsrfHeader } from '@/utils/csrf'
 
 const auth = useAuthStore()
 
@@ -62,14 +63,22 @@ type GenerationStatus = {
 const API = '/api/admin/tools/experiments'
 const DOC_API = '/api/admin/tools/documents'
 
-function authHeaders(): HeadersInit {
-  const h: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (auth.basicToken) h.Authorization = `Basic ${auth.basicToken}`
+function buildHeaders(method: string, extra?: HeadersInit): Headers {
+  const h = new Headers(extra)
+  if (!h.has('Content-Type')) {
+    h.set('Content-Type', 'application/json')
+  }
+  applyCsrfHeader(h, method)
   return h
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: T }> {
-  const r = await fetch(url, { ...init, headers: { ...authHeaders(), ...(init?.headers as Record<string, string>) } })
+  const method = init?.method ?? 'GET'
+  const r = await fetch(url, {
+    ...init,
+    credentials: 'include',
+    headers: buildHeaders(method, init?.headers as HeadersInit | undefined),
+  })
   const data = (await r.json().catch(() => ({}))) as T
   return { ok: r.ok, status: r.status, data }
 }

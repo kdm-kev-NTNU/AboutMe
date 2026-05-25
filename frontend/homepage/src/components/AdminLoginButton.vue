@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-// Floating login + ADMIN tools link; credentials stored for Orval Basic auth on /admin/** APIs.
+// Floating login + ADMIN tools link; session cookie authenticates /admin/** APIs.
 const auth = useAuthStore()
 const showForm = ref(false)
 const username = ref('')
@@ -28,8 +28,8 @@ async function submit() {
   }
 }
 
-function logout() {
-  auth.logout()
+async function logout() {
+  await auth.logout()
 }
 </script>
 
