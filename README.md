@@ -20,7 +20,7 @@ Core stack:
 | `docker-compose.dev.yml` | Full stack in Docker with Vite HMR and Spring DevTools auto-reload |
 | `.env.example` | Backend secrets template (copy to repo-root `.env`) |
 | `frontend/homepage/.env.example` | Frontend `VITE_*` build-time template |
-| `.github/workflows/` | Maven/frontend tests, GitGuardian secret scanning, Semgrep, and Docker image publishing |
+| `.github/workflows/` | Maven/frontend tests, Semgrep, and Docker image publishing |
 | `scripts/` | Dev helpers — see [scripts/README.md](scripts/README.md) |
 
 Seed documents for the vector store go in `backend/data/docs/` (gitignored). The backend also ships a classpath seed document for a minimal local knowledge base.
@@ -194,13 +194,6 @@ Public AI endpoints are rate-limited with Bucket4j. Admin routes are protected b
 
 Treat database backups as sensitive. Conversations, documents, chunks, embeddings, prompts, feedback, and experiment datasets may contain personal or project-specific information.
 
-CI uses two GitGuardian surfaces plus Semgrep for SAST:
-
-- **GitGuardian scan** (GitHub Actions, `ggshield` in [`.github/workflows/gitguardian.yml`](.github/workflows/gitguardian.yml)) scans commit ranges on PRs and pushes. It reads [`.gitguardian.yml`](.gitguardian.yml) for local-dev allowlists.
-- **GitGuardian Security Checks** (GitHub App) is a separate required check on the GitGuardian dashboard. Open incidents there must be resolved after rotation or remediation, even when the Actions workflow is green.
-
-Add `GITGUARDIAN_API_KEY` as a repository Actions secret before enabling required checks; the workflow fails hard when the token is missing.
-
 **Local secrets (never commit):**
 
 - Run `.\scripts\setup-cursor-mcp.ps1` once for Cursor MCP (creates `.cursor/mcp.json` from the example, installs Railway + Docker MCP). Then set `ELEVENLABS_API_KEY` and `RAPIDCHART_API_TOKEN` in `.cursor/mcp.json`.
@@ -261,7 +254,7 @@ Release notes should say "Live OpenAI Realtime E2E passed" only after the full l
 CI can build multi-platform backend and frontend images and publish them to Docker Hub when the required repository variables and secrets are configured:
 
 - Variables: `DOCKER_ACCOUNT`, `CLOUD_BUILDER_NAME`
-- Secrets: `GITGUARDIAN_API_KEY` for PR/push secret scanning, `DOCKER_ACCESS_TOKEN` for image publishing, plus optional frontend `VITE_POSTHOG_*` build values
+- Secrets: `DOCKER_ACCESS_TOKEN` for image publishing, plus optional frontend `VITE_POSTHOG_*` build values
 
 Use prebuilt images by replacing the `build:` blocks in `docker-compose.yml` with:
 
@@ -287,7 +280,7 @@ Keep backend runtime secrets in repo-root `.env` and frontend build-time values 
 
 **Railway deploy:** Before push, run `.\scripts\railway-prod-deploy.ps1` (backup + staging audit). After deploy, run `.\scripts\railway-post-deploy-verify.ps1` (health, session cookie, CSRF). Database steps: [`scripts/db/README.md`](scripts/db/README.md). Flyway runs V1–V14 on startup; failures after V11+ require restoring the `pg_dump` snapshot.
 
-**CI:** GitGuardian secret scanning and Semgrep SAST run on pull requests.
+**CI:** Maven/frontend tests and Semgrep SAST run on pull requests.
 
 ## Feedback
 
