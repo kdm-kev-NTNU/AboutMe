@@ -1,6 +1,5 @@
 package com.kevinmazali.portfolio.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.security.JwtCookieAuthenticationFilter;
 import com.kevinmazali.portfolio.security.JsonAccessDeniedHandler;
 import com.kevinmazali.portfolio.security.JsonAuthenticationEntryPoint;
@@ -8,6 +7,7 @@ import io.micrometer.tracing.Tracer;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -39,20 +39,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private static ObjectMapper securityErrorObjectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.findAndRegisterModules();
-        return mapper;
+    @Bean
+    AuthenticationEntryPoint jsonAuthenticationEntryPoint(
+            ObjectMapper objectMapper, ObjectProvider<Tracer> tracer) {
+        return new JsonAuthenticationEntryPoint(objectMapper, tracer);
     }
 
     @Bean
-    AuthenticationEntryPoint jsonAuthenticationEntryPoint(ObjectProvider<Tracer> tracer) {
-        return new JsonAuthenticationEntryPoint(securityErrorObjectMapper(), tracer);
-    }
-
-    @Bean
-    AccessDeniedHandler jsonAccessDeniedHandler(ObjectProvider<Tracer> tracer) {
-        return new JsonAccessDeniedHandler(securityErrorObjectMapper(), tracer);
+    AccessDeniedHandler jsonAccessDeniedHandler(ObjectMapper objectMapper, ObjectProvider<Tracer> tracer) {
+        return new JsonAccessDeniedHandler(objectMapper, tracer);
     }
 
     @Bean
