@@ -12,11 +12,11 @@
     },
     {
       "id": "portfolio-project-2025",
-      "projectName": "Porteføljeprosjekt (RAG & AI)",
-      "projectDescription": "En fullstack personlig nettside som fungerer som digital CV og live AI-demo. Besøkende kan snakke med en AI gjennom sanntidsstemme (OpenAI Realtime API over WebRTC) eller stille dypere spørsmål i en RAG-drevet tekstchat basert på dokumenter om meg. Backend-en bruker Spring AI med flermodellstøtte (OpenAI + Anthropic), PGVector for vektorsøk, og en lokal ONNX cross-encoder for reranking. Prosjektet inkluderer et LLM-as-judge evalueringsrammeverk, promptversjonering, et adminpanel og en komplett CI/CD-pipeline med automatiserte tester, dekningsgrenser og multi-arch Docker-images.",
+      "projectName": "AboutMe — portefølje og AI",
+      "projectDescription": "Personlig nettside og digital CV med innebygd AI-demo: tekstchat og live stemme, med svar basert på dokumenter om meg. Bygget med Vue og Spring Boot på PostgreSQL; utvikles fortløpende i parallell med bacheloroppgaven (2026).",
       "startDate": "2025-09-01",
       "endDate": null,
-      "technologies": ["Vue.js", "TypeScript", "Tailwind CSS", "Spring Boot", "Spring AI", "RAG", "PGVector", "OpenAI API", "Anthropic API", "WebRTC", "Docker", "GitHub Actions"],
+      "technologies": ["Vue", "TypeScript", "Spring Boot", "PostgreSQL", "OpenAI", "Docker"],
       "status": "ongoing",
       "githubUrl": "https://github.com/kdm-kev-NTNU/AboutMe",
       "liveUrl": "https://kevindmazali.me"
