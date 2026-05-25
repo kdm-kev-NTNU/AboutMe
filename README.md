@@ -19,7 +19,7 @@ Core stack:
 | `docker-compose.yml` | PostgreSQL/pgvector, backend, and Nginx-hosted frontend (prod-like images) |
 | `docker-compose.dev.yml` | Full stack in Docker with Vite HMR and Spring DevTools auto-reload |
 | `.env.example` | Documented runtime configuration for backend secrets and optional integrations |
-| `.github/workflows/` | Maven/frontend tests, GitGuardian secret scanning, Semgrep, and Docker image publishing |
+| `.github/workflows/` | Maven/frontend tests, Semgrep, and Docker image publishing |
 
 Seed documents for the vector store go in `backend/data/docs/` (gitignored). The backend also ships a classpath seed document for a minimal local knowledge base.
 
@@ -181,13 +181,6 @@ Public AI endpoints are rate-limited with Bucket4j. Admin routes are protected b
 
 Treat database backups as sensitive. Conversations, documents, chunks, embeddings, prompts, feedback, and experiment datasets may contain personal or project-specific information.
 
-CI uses two GitGuardian surfaces plus Semgrep for SAST:
-
-- **GitGuardian scan** (GitHub Actions, `ggshield` in [`.github/workflows/gitguardian.yml`](.github/workflows/gitguardian.yml)) scans commit ranges on PRs and pushes. It reads [`.gitguardian.yml`](.gitguardian.yml) for local-dev allowlists.
-- **GitGuardian Security Checks** (GitHub App) is a separate required check on the GitGuardian dashboard. Open incidents there must be resolved after rotation or remediation, even when the Actions workflow is green.
-
-Add `GITGUARDIAN_API_KEY` as a repository Actions secret before enabling required checks; the workflow fails hard when the token is missing.
-
 **Local secrets (never commit):**
 
 - Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) to `.cursor/mcp.json` (gitignored) and set `ELEVENLABS_API_KEY` locally.
@@ -242,7 +235,7 @@ Release notes should say "Live OpenAI Realtime E2E passed" only after the full l
 CI can build multi-platform backend and frontend images and publish them to Docker Hub when the required repository variables and secrets are configured:
 
 - Variables: `DOCKER_ACCOUNT`, `CLOUD_BUILDER_NAME`
-- Secrets: `GITGUARDIAN_API_KEY` for PR/push secret scanning, `DOCKER_ACCESS_TOKEN` for image publishing, plus optional frontend `VITE_POSTHOG_*` build values
+- Secrets: `DOCKER_ACCESS_TOKEN` for image publishing, plus optional frontend `VITE_POSTHOG_*` build values
 
 Use prebuilt images by replacing the `build:` blocks in `docker-compose.yml` with:
 
