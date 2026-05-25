@@ -280,10 +280,12 @@ Keep backend runtime secrets in repo-root `.env` and frontend build-time values 
 
 **Production checklist:**
 
-- Set `SPRING_PROFILES_ACTIVE=prod`, `PORTFOLIO_JWT_SECRET`, and `AI_BUDGET_ANON_SALT`.
-- Use a strong `SPRING_DATASOURCE_PASSWORD` (not `postgres`).
+- Set `SPRING_PROFILES_ACTIVE=prod`, `PORTFOLIO_JWT_SECRET`, and `AI_BUDGET_ANON_SALT` (see [`backend/railway.env.example`](backend/railway.env.example)).
+- Use a strong `SPRING_DATASOURCE_PASSWORD` (not `postgres`), or link Railway Postgres (`PGHOST`, etc.).
 - Clear `ADMIN_BOOTSTRAP_PASSWORD` after the first admin user exists.
 - TLS is terminated at the hosting edge (Railway/CDN); nginx adds CSP and related headers on the SPA shell.
+
+**Railway deploy:** Before push, run `.\scripts\railway-prod-deploy.ps1` (backup + staging audit). After deploy, run `.\scripts\railway-post-deploy-verify.ps1` (health, session cookie, CSRF). Database steps: [`scripts/db/README.md`](scripts/db/README.md). Flyway runs V1–V14 on startup; failures after V11+ require restoring the `pg_dump` snapshot.
 
 **CI:** GitGuardian secret scanning and Semgrep SAST run on pull requests.
 
