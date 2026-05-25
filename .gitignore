@@ -1,7 +1,18 @@
 # IDE
 .idea/
-/.vscode/
 .cursor/mcp.json
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # OS
 .DS_Store
@@ -45,7 +56,8 @@ scripts/_*
 # Local dependency tree dumps (ad-hoc mvn dependency:tree output)
 backend/__deptree.txt
 
-# Frontend build/test output
+# Frontend dependencies and build/test output
+frontend/homepage/node_modules/
 frontend/homepage/dist/
 frontend/homepage/dist-ssr/
 frontend/homepage/coverage/
