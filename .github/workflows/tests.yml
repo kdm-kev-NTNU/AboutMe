@@ -40,6 +40,8 @@ jobs:
           java -version
       - name: Maven verify (tests + JaCoCo)
         run: ./mvnw -B verify
+      - name: OpenAPI contract (required Springdoc paths)
+        run: ./mvnw -B test -Dtest=SecurityConfigIT#openApiSnapshotIncludesEndpointsAndOptionalExport
       - name: List test and coverage report paths
         if: always()
         run: |
