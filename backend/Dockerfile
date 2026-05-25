@@ -52,19 +52,8 @@ COPY src ./src
 RUN --mount=type=cache,id=s/e6f61e16-913e-443d-8379-19475d5675a7-/root/.m2/repository,target=/root/.m2/repository,sharing=locked \
     mvn -B --no-transfer-progress clean package -DskipTests -Dmaven.test.skip=true -Dmaven.compiler.fork=true -Dmaven.compiler.maxmem=512m
 
-# Production runtime (docker compose default)
-FROM eclipse-temurin:21-jre AS runtime
-WORKDIR /app
-RUN mkdir -p data/docs
-COPY --from=build /app/target/*.jar app.jar
-COPY --from=rerank-model /export/out /app/rerank
-ENV PORTFOLIO_RETRIEVAL_RERANK_ENABLED=true \
-    PORTFOLIO_RETRIEVAL_ONNX_MODEL_PATH=/app/rerank/model.onnx \
-    PORTFOLIO_RETRIEVAL_TOKENIZER_PATH=/app/rerank
-EXPOSE 8080
-ENTRYPOINT ["java", "-Djava.net.preferIPv6Addresses=true", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
-
-# CI publish: pre-built JAR via BuildKit context "jar" (see .github/workflows/docker-publish.yml)
+# CI publish: pre-built JAR via BuildKit context "jar" (see .github/workflows/docker-publish.yml).
+# Not the default image target — Railway/local compose build the final "runtime" stage below.
 FROM eclipse-temurin:21-jre AS publish
 WORKDIR /app
 RUN mkdir -p data/docs
@@ -74,6 +63,18 @@ RUN set -eux; \
     test -n "$j"; \
     cp "$j" /app/app.jar; \
     rm -rf /tmp/jars
+COPY --from=rerank-model /export/out /app/rerank
+ENV PORTFOLIO_RETRIEVAL_RERANK_ENABLED=true \
+    PORTFOLIO_RETRIEVAL_ONNX_MODEL_PATH=/app/rerank/model.onnx \
+    PORTFOLIO_RETRIEVAL_TOKENIZER_PATH=/app/rerank
+EXPOSE 8080
+ENTRYPOINT ["java", "-Djava.net.preferIPv6Addresses=true", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+
+# Production runtime (docker compose + Railway default final stage)
+FROM eclipse-temurin:21-jre AS runtime
+WORKDIR /app
+RUN mkdir -p data/docs
+COPY --from=build /app/target/*.jar app.jar
 COPY --from=rerank-model /export/out /app/rerank
 ENV PORTFOLIO_RETRIEVAL_RERANK_ENABLED=true \
     PORTFOLIO_RETRIEVAL_ONNX_MODEL_PATH=/app/rerank/model.onnx \
