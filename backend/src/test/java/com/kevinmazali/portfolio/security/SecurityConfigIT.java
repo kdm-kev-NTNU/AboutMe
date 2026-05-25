@@ -1,6 +1,11 @@
 package com.kevinmazali.portfolio.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.testsupport.VectorStoreTestConfiguration;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +23,7 @@ import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfig
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,6 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     })
 class SecurityConfigIT {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
   @Autowired
   private WebApplicationContext webApplicationContext;
 
@@ -56,6 +64,43 @@ class SecurityConfigIT {
   @Test
   void openapiDocsPermitAll() throws Exception {
     mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
+  }
+
+  /** Run with {@code -Dopenapi.export=true} to refresh {@code frontend/homepage/openapi/openapi.json}. */
+  @Test
+  void openApiSnapshotIncludesEndpointsAndOptionalExport() throws Exception {
+    String body =
+        mockMvc
+            .perform(get("/v3/api-docs"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString(StandardCharsets.UTF_8);
+
+    JsonNode paths = MAPPER.readTree(body).get("paths");
+    for (String path :
+        new String[] {
+          "/realtime/status",
+          "/realtime/models",
+          "/realtime/session",
+          "/realtime/elevenlabs/token",
+          "/realtime/lookup",
+          "/synthesize",
+          "/transcribe",
+          "/admin/tools/experiments/config",
+          "/admin/tools/experiments/datasets",
+          "/admin/tools/experiments/runs",
+          "/admin/tools/ai/status",
+        }) {
+      assertTrue(paths != null && paths.has(path), "Missing OpenAPI path: " + path);
+    }
+
+    if ("true".equals(System.getProperty("openapi.export"))) {
+      Path out =
+          Path.of("..", "frontend", "homepage", "openapi", "openapi.json").normalize().toAbsolutePath();
+      Files.createDirectories(out.getParent());
+      Files.writeString(out, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(MAPPER.readTree(body)));
+    }
   }
 
   @Test

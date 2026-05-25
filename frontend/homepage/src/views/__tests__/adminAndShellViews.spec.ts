@@ -3,7 +3,6 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import HomeView from '../HomeView.vue'
-import ChatHistory from '../ChatHistory.vue'
 import AdminToolsView from '../AdminToolsView.vue'
 import AdminChunksView from '../AdminChunksView.vue'
 import AdminPipelineView from '../AdminPipelineView.vue'
@@ -58,26 +57,12 @@ function setupPortfolioMocks() {
   vi.mocked(promptVersionsNames).mockResolvedValue({ status: 200, data: [], headers: headersJson })
 }
 
-function setupFetchForExperimentsAndHistory() {
+function setupFetchForExperiments() {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
       const url =
         typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
-      if (url === '/api/conversations' || url.startsWith('/api/conversations')) {
-        if (url === '/api/conversations') {
-          return new Response(JSON.stringify([]), { status: 200, headers: headersJson })
-        }
-        return new Response(
-          JSON.stringify({
-            id: 1,
-            startedAt: '',
-            endedAt: '',
-            messages: [],
-          }),
-          { status: 200, headers: headersJson },
-        )
-      }
       if (url.includes('/api/admin/tools/experiments/config')) {
         return new Response(JSON.stringify({ posthogConfigured: false, posthogHost: '' }), {
           status: 200,
@@ -107,7 +92,7 @@ function setupFetchForExperimentsAndHistory() {
   )
 }
 
-describe('HomeView, ChatHistory, admin views (smoke)', () => {
+describe('HomeView, admin views (smoke)', () => {
   let pinia: ReturnType<typeof createPinia>
 
   beforeEach(() => {
@@ -117,7 +102,7 @@ describe('HomeView, ChatHistory, admin views (smoke)', () => {
     useLangStore().setLanguage('en')
     vi.clearAllMocks()
     setupPortfolioMocks()
-    setupFetchForExperimentsAndHistory()
+    setupFetchForExperiments()
   })
 
   afterEach(() => {
@@ -130,7 +115,6 @@ describe('HomeView, ChatHistory, admin views (smoke)', () => {
       routes: [
         { path: '/', name: 'home', component: { template: '<div />' } },
         { path: '/chat', name: 'chat', component: { template: '<div />' } },
-        { path: '/chat-history', name: 'chat-history', component: { template: '<div />' } },
       ],
     })
     return mount(component, {
@@ -154,14 +138,6 @@ describe('HomeView, ChatHistory, admin views (smoke)', () => {
     const wrapper = mountView(HomeView)
     await flushPromises()
     expect(wrapper.text()).toMatch(/Talk with Kevin's AI first/i)
-  })
-
-  it('renders ChatHistory empty state in English', async () => {
-    const wrapper = mountView(ChatHistory)
-    await flushPromises()
-    await vi.waitFor(() => {
-      expect(wrapper.text()).toContain('No chat history yet')
-    })
   })
 
   it('renders AdminToolsView hub', async () => {

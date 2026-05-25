@@ -1,28 +1,12 @@
-services:
-  db:
-    image: pgvector/pgvector:pg17
-    container_name: aboutme-postgres
-    env_file:
-      - path: .env.docker
-        required: false
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: aboutme
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d aboutme"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
+include:
+  - docker-compose.base.yml
 
+services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: runtime
     develop:
       watch:
         - action: rebuild
@@ -33,18 +17,21 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Secrets live in backend/.env (same keys as .env.example). Do not set empty OPENAI_API_KEY here (overrides file).
+    # Secrets live in repo-root .env (same keys as .env.example). Do not set empty OPENAI_API_KEY here (overrides file).
     env_file:
       - path: .env.docker
         required: false
-      - path: backend/.env
+      - path: .env
         required: false
     environment:
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/aboutme
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       PORT: "8080"
       SANITIZER_ENABLED: "true"
+      PORTFOLIO_JWT_SECRET: ${PORTFOLIO_JWT_SECRET}
+      AI_BUDGET_ANON_SALT: ${AI_BUDGET_ANON_SALT}
     ports:
       - "8080:8080"
     volumes:
@@ -64,7 +51,6 @@ services:
     depends_on:
       - backend
     # VITE_* for the static build must live in frontend/homepage/.env (build context); COPY picks it up at build time.
-    # env_file also loads the same file at container runtime for any non-Vite vars you add later.
     env_file:
       - path: frontend/homepage/.env
         required: false
@@ -72,6 +58,3 @@ services:
       BACKEND_URL: http://backend:8080
     ports:
       - "5173:80"
-
-volumes:
-  postgres_data:

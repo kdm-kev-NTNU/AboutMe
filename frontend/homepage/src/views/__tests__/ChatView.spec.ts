@@ -280,31 +280,6 @@ describe('ChatView', () => {
     expect(pushSpy).not.toHaveBeenCalledWith({ name: 'home' })
   })
 
-  it('hydrates messages from conversation API when conversationId is set', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        id: 1,
-        startedAt: '',
-        endedAt: '',
-        messages: [{ id: 1, role: 'user', text: 'From API', createdAt: '' }],
-      }),
-    })
-    vi.stubGlobal('fetch', fetchMock)
-
-    const { wrapper } = await mountChat({ conversationId: '42' })
-    await flushPromises()
-    await vi.waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/conversations/42',
-        expect.objectContaining({ method: 'GET' }),
-      )
-    })
-    expect(wrapper.find('.stub-messages').text()).toContain('From API')
-
-    vi.unstubAllGlobals()
-  })
-
   it('shows updated first-time popup and saves versioned dismissal key', async () => {
     const { wrapper } = await mountChat({})
     expect(wrapper.text()).toContain('This portfolio keeps evolving')

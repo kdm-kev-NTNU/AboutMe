@@ -12,6 +12,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import com.kevinmazali.portfolio.util.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -83,7 +84,7 @@ public class WebConfig {
 
     private String askKey(HttpServletRequest req) {
         String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : null;
-        String ip = req.getRemoteAddr();
+        String ip = ClientIpResolver.resolve(req);
         return "ask:" + (user != null ? "u:" + user : "ip:" + ip);
     }
 
@@ -96,7 +97,7 @@ public class WebConfig {
     }
 
     private String loginKey(HttpServletRequest req) {
-        return "login:ip:" + req.getRemoteAddr();
+        return "login:ip:" + ClientIpResolver.resolve(req);
     }
 
     private Bucket newFeedbackBucket() {
@@ -108,7 +109,7 @@ public class WebConfig {
     }
 
     private String feedbackKey(HttpServletRequest req) {
-        return "feedback:ip:" + req.getRemoteAddr();
+        return "feedback:ip:" + ClientIpResolver.resolve(req);
     }
 
     private Bucket newExperimentRunBucket() {
@@ -149,7 +150,7 @@ public class WebConfig {
     }
 
     private String realtimeSessionKey(HttpServletRequest req) {
-        return "realtime:ip:" + req.getRemoteAddr();
+        return "realtime:ip:" + ClientIpResolver.resolve(req);
     }
 
     private Bucket newRealtimeLookupBucket() {
@@ -162,7 +163,7 @@ public class WebConfig {
     }
 
     private String realtimeLookupKey(HttpServletRequest req) {
-        return "realtime-lookup:ip:" + req.getRemoteAddr();
+        return "realtime-lookup:ip:" + ClientIpResolver.resolve(req);
     }
 
     private static void write429(HttpServletResponse response, ConsumptionProbe probe, String message) throws IOException {

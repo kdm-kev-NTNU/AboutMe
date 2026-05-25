@@ -40,7 +40,7 @@ public final class AiRequestContext {
     ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
     if (attrs != null) {
       HttpServletRequest req = attrs.getRequest();
-      String ip = req.getRemoteAddr() != null ? req.getRemoteAddr() : "unknown";
+      String ip = ClientIpResolver.resolve(req);
       return "anon:" + sha256Hex(ip + ":" + budgetProperties.getAnonIdentitySalt());
     }
     return "anon:unknown";

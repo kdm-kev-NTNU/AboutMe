@@ -18,7 +18,8 @@ Core stack:
 | `scripts/dev.ps1` | Windows helper that starts Docker infrastructure and opens backend + Vite terminals (recommended daily dev) |
 | `docker-compose.yml` | PostgreSQL/pgvector, backend, and Nginx-hosted frontend (prod-like images) |
 | `docker-compose.dev.yml` | Full stack in Docker with Vite HMR and Spring DevTools auto-reload |
-| `.env.example` | Documented runtime configuration for backend secrets and optional integrations |
+| `.env.example` | Backend secrets template (copy to repo-root `.env`) |
+| `frontend/homepage/.env.example` | Frontend `VITE_*` build-time template |
 | `.github/workflows/` | Maven/frontend tests, GitGuardian secret scanning, Semgrep, and Docker image publishing |
 
 Seed documents for the vector store go in `backend/data/docs/` (gitignored). The backend also ships a classpath seed document for a minimal local knowledge base.
@@ -40,7 +41,7 @@ Seed documents for the vector store go in `backend/data/docs/` (gitignored). The
 
 ### Full Stack in Docker
 
-Copy `.env.example` to `backend/.env`, set at least `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true`. For Docker Compose database credentials, copy `.env.docker.example` to `.env.docker` at the repo root, then run:
+Copy `.env.example` to `.env` at the repo root, set at least `OPENAI_API_KEY` and `OPENAI_CHAT_ENABLED=true`. For Docker Compose database credentials, copy `.env.docker.example` to `.env.docker` at the repo root, then run:
 
 ```bash
 cp .env.docker.example .env.docker   # first time only (Windows: copy .env.docker.example .env.docker)
@@ -83,7 +84,7 @@ npm run dev
 - **Frontend:** Vite HMR — changes in `.vue`, `.ts`, and CSS appear in the browser almost instantly.
 - **Backend:** `spring-boot-devtools` restarts the app when compiled classes change (~5–15 s). Changes to `pom.xml` or new dependencies still require stopping and re-running Maven.
 
-On Windows, **`.\scripts\dev.ps1`** is the fastest path: it starts Postgres, waits for port `5432`, then opens backend and frontend in separate terminals. Copy `.env.example` to `backend/.env` (or repo-root `.env` as documented in `application.yaml`) first.
+On Windows, **`.\scripts\dev.ps1`** is the fastest path: it starts Postgres, waits for port `5432`, then opens backend and frontend in separate terminals. Copy `.env.example` to repo-root `.env` first.
 
 Typical URLs: same as full stack — app [http://localhost:5173](http://localhost:5173), API [http://localhost:8080](http://localhost:8080).
 
@@ -96,9 +97,9 @@ cp .env.docker.example .env.docker   # first time only
 docker compose -f docker-compose.dev.yml up
 ```
 
-Copy `.env.example` to `backend/.env` before starting. The dev compose file runs `mvn spring-boot:run` and `npm run dev` inside containers with source mounted from the repo.
+Copy `.env.example` to repo-root `.env` before starting. The dev compose file runs `mvn spring-boot:run` and `npm run dev` inside containers with source mounted from the repo.
 
-**Auto-reload:** same as hybrid — Vite HMR for the frontend, Spring DevTools restart for the backend. ONNX rerank assets from the prod Dockerfile are not bundled; set `PORTFOLIO_RETRIEVAL_RERANK_ENABLED=false` in `backend/.env` if reranking is not needed locally.
+**Auto-reload:** same as hybrid — Vite HMR for the frontend, Spring DevTools restart for the backend. ONNX rerank assets from the prod Dockerfile are not bundled; set `PORTFOLIO_RETRIEVAL_RERANK_ENABLED=false` in repo-root `.env` if reranking is not needed locally.
 
 ### Compose Watch (prod-image smoke test)
 
@@ -118,7 +119,18 @@ Use this before deploy to confirm the production Dockerfile still builds and run
 
 ## Configuration
 
-Configuration defaults live in `backend/src/main/resources/application.yaml`. Copy `.env.example` to `backend/.env` for local secrets. Copy `.env.docker.example` to `.env.docker` for Docker Compose Postgres credentials. Frontend build-time `VITE_*` values belong in `frontend/homepage/.env`. For Cursor ElevenLabs MCP, copy `.cursor/mcp.json.example` to `.cursor/mcp.json` and set your API key locally (rotate the key in ElevenLabs if it was previously committed).
+Configuration defaults live in `backend/src/main/resources/application.yaml`.
+
+| File | Purpose |
+|------|---------|
+| `.env` (repo root) | Backend secrets — copy from `.env.example` |
+| `.env.docker` (repo root) | Docker Compose Postgres credentials — copy from `.env.docker.example` |
+| `frontend/homepage/.env` | Frontend `VITE_*` build-time values — copy from `frontend/homepage/.env.example` |
+| `.cursor/mcp.json` | Cursor MCP keys — copy from `.cursor/mcp.json.example` |
+
+If you still have `backend/.env`, move its contents to repo-root `.env` and delete the old file.
+
+For Cursor MCP setup, run `.\scripts\setup-cursor-mcp.ps1` (see [Scripts](#scripts)).
 
 Common backend settings:
 
@@ -142,7 +154,6 @@ Spring AI can initialize the `vector_store` table, but the extension itself must
 
 - Public portfolio pages: home, career, projects, individual project story, project/tech stack, feedback, privacy policy.
 - Text chat: `/chat` sends document-grounded questions through `/ask`, with selectable allow-listed models from `/chat/models`.
-- Chat history: `/chat-history` lists stored conversations and can reopen a conversation in `/chat`.
 - Live voice: `/voice` lists configured voice options from `/realtime/models`. OpenAI Realtime uses `/realtime/session` and `/realtime/lookup`; ElevenLabs Conversational AI uses `/realtime/elevenlabs/token`. To match OpenAI's local `lookup_kevin_info` behavior, configure equivalent knowledge/tools on the ElevenLabs agent.
 - Feedback: `/feedback` posts visitor feedback to the backend with server-side length limits.
 - Admin tools: protected routes for AI status/budget kill switch, document uploads and ingestion, chunk browsing/export, generated question suggestions, prompt versions/diffs, and RAG experiments.
@@ -190,7 +201,7 @@ Add `GITGUARDIAN_API_KEY` as a repository Actions secret before enabling require
 
 **Local secrets (never commit):**
 
-- Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) to `.cursor/mcp.json` (gitignored) and set `ELEVENLABS_API_KEY` locally.
+- Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) to `.cursor/mcp.json` (gitignored). Set `ELEVENLABS_API_KEY` for voice MCP tools and `RAPIDCHART_API_TOKEN` (`rc_…` from [RapidChart API Tokens](https://rapidchart.com/settings)) for diagram generation in Cursor. RapidChart uses `python -m rapidchart_mcp` because `rapidchart-mcp` 0.1.0 ships a broken console script (`main` coroutine never awaited).
 - Copy [`.env.docker.example`](.env.docker.example) to `.env.docker` (gitignored) for Docker Compose Postgres credentials (`POSTGRES_PASSWORD`, `SPRING_DATASOURCE_PASSWORD`).
 
 ## Document Pipeline and RAG
@@ -251,7 +262,7 @@ image: <DOCKER_ACCOUNT>/aboutme-backend:latest
 image: <DOCKER_ACCOUNT>/aboutme-frontend:latest
 ```
 
-Keep runtime secrets in `backend/.env` and frontend build-time values in `frontend/homepage/.env`.
+Keep backend runtime secrets in repo-root `.env` and frontend build-time values in `frontend/homepage/.env`.
 
 ## Feedback
 

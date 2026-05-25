@@ -69,7 +69,7 @@ async function syncFromRailway() {
   if (
     !confirm(
       syncClean.value
-        ? 'Tømme lokal vector_store og kopiere alle rader fra Railway (SYNC_* i backend/.env)?'
+        ? 'Tømme lokal vector_store og kopiere alle rader fra Railway (SYNC_* i repo-root .env)?'
         : 'Kopiere/oppdatere rader fra Railway inn i lokal vector_store uten å tømme tabellen først?',
     )
   ) {
@@ -306,7 +306,7 @@ onMounted(() => {
         chunks og metadata, gå til
         <RouterLink to="/admin/chunks" class="text-blue-600 hover:underline">Chunk viewer</RouterLink>.
         Synk fra Railway krever <code class="font-mono text-[11px] bg-gray-100 px-1 rounded">SYNC_ENABLED=true</code> og
-        JDBC-variabler i <code class="font-mono text-[11px] bg-gray-100 px-1 rounded">backend/.env</code> (se
+        JDBC-variabler i <code class="font-mono text-[11px] bg-gray-100 px-1 rounded">.env</code> (repo root, se
         <code class="font-mono text-[11px]">.env.example</code>).
       </p>
 

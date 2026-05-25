@@ -12,6 +12,8 @@ spring:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
     show-sql: false
+  flyway:
+    enabled: false
   ai:
     openai:
       api-key: test-placeholder-key-for-context-tests-only
@@ -25,6 +27,8 @@ server:
   port: 0
 
 portfolio:
+  session:
+    jwt-secret: test-jwt-secret-at-least-32-characters-long
   ai:
     budget:
       enabled: false

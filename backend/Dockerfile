@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Enable BuildKit
+# Targets: runtime (default for docker compose), publish (CI with build-context jar)
 
 # --- ONNX cross-encoder for RAG reranking (bundled under /app/rerank; no HF token needed at runtime) ---
 FROM python:3.12-slim-bookworm AS rerank-model
@@ -41,36 +41,42 @@ RUN set -eux; \
     fi; \
     test -f /export/out/tokenizer.json
 
-# Build stage
+# Build stage (local full image)
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
-# Survive transient Maven Central 429s during concurrent multi-platform (amd64 + arm64)
-# Buildx runs by retrying transfers and reusing the HTTP connection pool.
 ENV MAVEN_OPTS="-Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.retryHandler.requestSentEnabled=true -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 -Daether.connector.http.retryHandler.count=5"
 COPY pom.xml .
-# Cache /root/.m2/repository across builds and share it across concurrent multi-arch
-# builds (sharing=locked) so we don't re-download every dependency per platform and
-# stampede Maven Central into rate limiting.
 RUN --mount=type=cache,id=s/e6f61e16-913e-443d-8379-19475d5675a7-/root/.m2/repository,target=/root/.m2/repository,sharing=locked \
     mvn -B --no-transfer-progress dependency:go-offline
 COPY src ./src
 RUN --mount=type=cache,id=s/e6f61e16-913e-443d-8379-19475d5675a7-/root/.m2/repository,target=/root/.m2/repository,sharing=locked \
     mvn -B --no-transfer-progress clean package -DskipTests -Dmaven.test.skip=true -Dmaven.compiler.fork=true -Dmaven.compiler.maxmem=512m
 
-# Production stage
-FROM eclipse-temurin:21-jre
+# Production runtime (docker compose default)
+FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
-
 RUN mkdir -p data/docs
-
 COPY --from=build /app/target/*.jar app.jar
 COPY --from=rerank-model /export/out /app/rerank
-
-# Defaults for containers (Railway, docker run). Override or set PORTFOLIO_RETRIEVAL_RERANK_ENABLED=false to disable.
 ENV PORTFOLIO_RETRIEVAL_RERANK_ENABLED=true \
     PORTFOLIO_RETRIEVAL_ONNX_MODEL_PATH=/app/rerank/model.onnx \
     PORTFOLIO_RETRIEVAL_TOKENIZER_PATH=/app/rerank
-
 EXPOSE 8080
-# Prefer IPv6 for DNS (Railway private networking over *.railway.internal).
+ENTRYPOINT ["java", "-Djava.net.preferIPv6Addresses=true", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+
+# CI publish: pre-built JAR via BuildKit context "jar" (see .github/workflows/docker-publish.yml)
+FROM eclipse-temurin:21-jre AS publish
+WORKDIR /app
+RUN mkdir -p data/docs
+COPY --from=jar *.jar /tmp/jars/
+RUN set -eux; \
+    j="$(find /tmp/jars -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n1)"; \
+    test -n "$j"; \
+    cp "$j" /app/app.jar; \
+    rm -rf /tmp/jars
+COPY --from=rerank-model /export/out /app/rerank
+ENV PORTFOLIO_RETRIEVAL_RERANK_ENABLED=true \
+    PORTFOLIO_RETRIEVAL_ONNX_MODEL_PATH=/app/rerank/model.onnx \
+    PORTFOLIO_RETRIEVAL_TOKENIZER_PATH=/app/rerank
+EXPOSE 8080
 ENTRYPOINT ["java", "-Djava.net.preferIPv6Addresses=true", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

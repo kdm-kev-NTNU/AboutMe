@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.service;
 
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
+import com.kevinmazali.portfolio.config.DocumentIngestProperties;
 import com.kevinmazali.portfolio.config.SanitizerProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
 import com.kevinmazali.portfolio.model.ChunkExportResponse;
@@ -50,6 +51,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -75,6 +82,8 @@ public class DocumentIngestionService implements ApplicationRunner {
   private final NoiseCleaner noiseCleaner;
   private final PiiSanitizerService piiSanitizerService;
   private final boolean sanitizerEnabled;
+  private final DocumentIngestProperties documentIngestProperties;
+  private final ExecutorService parseExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
   public DocumentIngestionService(
       @Lazy VectorStore vectorStore,
@@ -84,7 +93,8 @@ public class DocumentIngestionService implements ApplicationRunner {
       VectorStoreProperties vectorStoreProperties,
       NoiseCleaner noiseCleaner,
       ObjectProvider<PiiSanitizerService> piiSanitizerProvider,
-      SanitizerProperties sanitizerProperties) {
+      SanitizerProperties sanitizerProperties,
+      DocumentIngestProperties documentIngestProperties) {
     this.vectorStore = vectorStore;
     this.jdbcTemplate = jdbcTemplate;
     this.objectMapper = objectMapper;
@@ -93,6 +103,7 @@ public class DocumentIngestionService implements ApplicationRunner {
     this.noiseCleaner = noiseCleaner;
     this.piiSanitizerService = piiSanitizerProvider.getIfAvailable();
     this.sanitizerEnabled = sanitizerProperties.isEnabled();
+    this.documentIngestProperties = documentIngestProperties;
   }
 
   private String qualifiedVectorTable() {
@@ -325,7 +336,10 @@ public class DocumentIngestionService implements ApplicationRunner {
   public IngestionResult ingestFromResource(Resource resource, boolean force) throws IOException {
     byte[] bytes;
     try (var in = resource.getInputStream()) {
-      bytes = in.readAllBytes();
+      bytes = in.readNBytes(Math.toIntExact(documentIngestProperties.getMaxParseBytes()) + 1);
+    }
+    if (bytes.length > documentIngestProperties.getMaxParseBytes()) {
+      throw new IOException("File exceeds maximum parse size of " + documentIngestProperties.getMaxParseBytes() + " bytes");
     }
     String contentHash = sha256Hex(bytes);
     String name = Optional.ofNullable(resource.getFilename()).orElse("resource");
@@ -345,7 +359,7 @@ public class DocumentIngestionService implements ApplicationRunner {
     }
 
     TikaDocumentReader reader = new TikaDocumentReader(resource);
-    List<Document> docs = reader.get();
+    List<Document> docs = parseDocumentsWithTimeout(reader);
     if (docs == null || docs.isEmpty()) {
       return new IngestionResult(contentHash, displayFilename, 0, false, "No text extracted from file");
     }
@@ -644,6 +658,28 @@ public class DocumentIngestionService implements ApplicationRunner {
       }
     }
     return processedDocs;
+  }
+
+  private List<Document> parseDocumentsWithTimeout(TikaDocumentReader reader) throws IOException {
+    Callable<List<Document>> task = reader::get;
+    try {
+      List<Document> docs = parseExecutor
+          .submit(task)
+          .get(documentIngestProperties.getParseTimeoutSeconds(), TimeUnit.SECONDS);
+      return docs == null ? List.of() : docs;
+    } catch (TimeoutException e) {
+      throw new IOException("Document parsing timed out after "
+          + documentIngestProperties.getParseTimeoutSeconds() + " seconds");
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause() != null ? e.getCause() : e;
+      if (cause instanceof IOException io) {
+        throw io;
+      }
+      throw new IOException("Document parsing failed: " + cause.getMessage(), cause);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Document parsing interrupted", e);
+    }
   }
 
   private static String sha256Hex(byte[] data) {

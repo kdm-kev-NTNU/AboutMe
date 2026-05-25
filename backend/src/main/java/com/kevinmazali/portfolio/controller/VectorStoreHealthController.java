@@ -14,13 +14,15 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Unauthenticated health check for the pgvector {@code vector_store} table (ops / load balancers).
- * {@code GET /health/chroma} is kept as a stable alias for existing monitors and frontends.
+ * Row counts and table names are only returned to authenticated admins.
  */
 @Slf4j
 @RestController
@@ -29,7 +31,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Health", description = "Operational health endpoints")
 public class VectorStoreHealthController {
 
-  /** Public response when the vector table is unreachable (no internals in body). */
   static final String PUBLIC_VECTOR_STORE_DOWN = "Vector store is currently unavailable.";
 
   private final JdbcTemplate jdbcTemplate;
@@ -47,7 +48,7 @@ public class VectorStoreHealthController {
     return vectorStoreHealth();
   }
 
-  @Operation(summary = "Vector store health", description = "Returns whether the configured pgvector table is reachable and row count.")
+  @Operation(summary = "Vector store health", description = "Returns reachability; detailed table stats require admin session.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Vector store reachable",
           content = @Content(schema = @Schema(implementation = VectorStoreHealthResponse.class))),
@@ -57,17 +58,29 @@ public class VectorStoreHealthController {
   @GetMapping("/vectorstore")
   public ResponseEntity<VectorStoreHealthResponse> vectorStoreHealth() {
     String tableLabel = pgVectorStoreProperties.getTableName();
+    boolean adminViewer = isAdminViewer();
     try {
-      Long count = jdbcTemplate.queryForObject(
-          "SELECT COUNT(*) FROM " + qualifiedTable(),
-          Long.class);
-      long safe = count == null ? 0L : count;
-      return ResponseEntity.ok(new VectorStoreHealthResponse(true, tableLabel, safe, null));
+      if (adminViewer) {
+        Long count = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM " + qualifiedTable(),
+            Long.class);
+        long safe = count == null ? 0L : count;
+        return ResponseEntity.ok(new VectorStoreHealthResponse(true, tableLabel, safe, null));
+      }
+      jdbcTemplate.queryForObject("SELECT 1 FROM " + qualifiedTable() + " LIMIT 1", Integer.class);
+      return ResponseEntity.ok(new VectorStoreHealthResponse(true, null, null, null));
     } catch (DataAccessException e) {
       log.warn("Vector store health check failed: {}", e.getMessage());
       return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-          .body(new VectorStoreHealthResponse(false, tableLabel, null, PUBLIC_VECTOR_STORE_DOWN));
+          .body(new VectorStoreHealthResponse(false, adminViewer ? tableLabel : null, null, PUBLIC_VECTOR_STORE_DOWN));
     }
+  }
+
+  private boolean isAdminViewer() {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    return auth != null
+        && auth.isAuthenticated()
+        && auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
   }
 
   private String qualifiedTable() {

@@ -1,7 +1,7 @@
 spring:
   config:
     # Load optional .env as properties (repo root or backend/)
-    import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:backend/.env[.properties]
+    import: optional:file:./.env[.properties],optional:file:.env[.properties]
   application:
     name: aboutme-backend
   servlet:
@@ -69,9 +69,21 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 server:
   port: ${PORT:8080}
 portfolio:
+  session:
+    cookie-name: PORTFOLIO_SESSION
+    jwt-secret: ${PORTFOLIO_JWT_SECRET:dev-only-change-me-use-32-chars-minimum!!}
+    ttl-seconds: 28800
+    secure-cookie: false
+    same-site: Lax
+  document-ingest:
+    max-parse-bytes: 52428800
+    parse-timeout-seconds: 120
   ai:
     limits:
       chat-max-completion-tokens: 400
