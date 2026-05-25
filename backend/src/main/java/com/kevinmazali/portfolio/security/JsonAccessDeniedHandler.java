@@ -1,6 +1,6 @@
 package com.kevinmazali.portfolio.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.model.ApiError;
 import io.micrometer.tracing.Tracer;
 import jakarta.servlet.http.HttpServletRequest;
