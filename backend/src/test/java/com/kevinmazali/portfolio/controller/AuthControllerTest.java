@@ -1,12 +1,10 @@
 package com.kevinmazali.portfolio.controller;
 
 
-import com.kevinmazali.portfolio.MvcTestSessionAuthConfig;import org.junit.jupiter.api.Test;
+import com.kevinmazali.portfolio.MvcTestSecurityImports;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
-import com.kevinmazali.portfolio.config.SecurityConfig;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = AuthController.class)
-@Import({SecurityConfig.class, MvcTestSessionAuthConfig.class, MvcTestUserDetailsConfig.class})
+@MvcTestSecurityImports
 class AuthControllerTest {
 
 	@Autowired
