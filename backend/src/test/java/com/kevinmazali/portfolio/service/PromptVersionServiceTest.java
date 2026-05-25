@@ -1,14 +1,16 @@
 package com.kevinmazali.portfolio.service;
 
+import com.kevinmazali.portfolio.model.PromptTemplate;
 import com.kevinmazali.portfolio.model.PromptVersion;
 import com.kevinmazali.portfolio.model.prompt.PromptDiffResponse;
 import com.kevinmazali.portfolio.model.prompt.PromptNameEntry;
 import com.kevinmazali.portfolio.model.prompt.PromptVersionResponse;
+import com.kevinmazali.portfolio.repository.PromptTemplateRepository;
 import com.kevinmazali.portfolio.repository.PromptVersionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -30,8 +32,15 @@ class PromptVersionServiceTest {
 	@Mock
 	private PromptVersionRepository repo;
 
-	@InjectMocks
+	@Mock
+	private PromptTemplateRepository templateRepository;
+
 	private PromptVersionService service;
+
+	@BeforeEach
+	void setUp() {
+		service = new PromptVersionService(repo, templateRepository);
+	}
 
 	@Test
 	void loadPromptContentUsesDbAndCachesSecondLookup() {
@@ -99,6 +108,8 @@ class PromptVersionServiceTest {
 
 	@Test
 	void createVersionSavesNextVersion() {
+		PromptTemplate template = PromptTemplate.builder().id(9L).name("p").provider("openai").build();
+		when(templateRepository.findVariant("p", null, "openai")).thenReturn(Optional.of(template));
 		when(repo.findMaxVersion("p", null, "openai")).thenReturn(Optional.of(3));
 		when(repo.save(any(PromptVersion.class))).thenAnswer(invocation -> {
 			PromptVersion pv = invocation.getArgument(0);

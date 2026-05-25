@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
 import tools.jackson.databind.ObjectMapper;
+import com.kevinmazali.portfolio.config.DocumentIngestProperties;
 import com.kevinmazali.portfolio.config.SanitizerProperties;
 import com.kevinmazali.portfolio.config.VectorStoreProperties;
 import com.kevinmazali.portfolio.model.VectorStoreInfoResponse;
@@ -32,6 +33,10 @@ class DocumentIngestionServiceJdbcMockTest {
   private VectorStoreProperties vectorStoreProperties;
   @Mock
   private org.springframework.beans.factory.ObjectProvider<PiiSanitizerService> piiSanitizerProvider;
+  @Mock
+  private DocumentIngestProperties documentIngestProperties;
+  @Mock
+  private DocumentRegistryService documentRegistryService;
 
   private DocumentIngestionService service;
   private final PgVectorStoreProperties pgVectorStoreProperties = new PgVectorStoreProperties();
@@ -50,7 +55,9 @@ class DocumentIngestionServiceJdbcMockTest {
         vectorStoreProperties,
         new NoiseCleaner(),
         piiSanitizerProvider,
-        sanitizerProperties);
+        sanitizerProperties,
+        documentIngestProperties,
+        documentRegistryService);
   }
 
   @Test

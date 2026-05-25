@@ -76,6 +76,13 @@ class AiRequestContextTest {
     String id = AiRequestContext.budgetUserIdentifier(budget);
     assertTrue(id.startsWith("anon:"));
     assertEquals(id, AiRequestContext.budgetUserIdentifier(budget));
+
+    MockHttpServletRequest direct = new MockHttpServletRequest();
+    direct.setRemoteAddr("203.0.113.5");
+    RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(direct));
+    String directId = AiRequestContext.budgetUserIdentifier(budget);
+    assertTrue(directId.startsWith("anon:"));
+    assertNotEquals(id, directId);
   }
 
   @Test

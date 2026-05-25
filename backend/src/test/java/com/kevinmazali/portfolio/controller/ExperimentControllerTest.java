@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
-import tools.jackson.databind.ObjectMapper;
+
+import com.kevinmazali.portfolio.MvcTestSessionAuthConfig;import tools.jackson.databind.ObjectMapper;
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
@@ -56,7 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
   DatasetGenerateRateLimitProperties.class,
   RealtimeRateLimitProperties.class
 })
-@Import({WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class})
+@Import({WebConfig.class, SecurityConfig.class, MvcTestSessionAuthConfig.class, MvcTestUserDetailsConfig.class})
 class ExperimentControllerTest {
 
   @Autowired

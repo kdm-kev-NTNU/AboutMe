@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.repository;
 
-import com.kevinmazali.portfolio.model.AiUsageRecord;
+import com.kevinmazali.portfolio.model.AiUsageEvent;
+import com.kevinmazali.portfolio.model.AiUsageEvent.IdentityType;
 import com.kevinmazali.portfolio.testsupport.VectorStoreTestConfiguration;
 
 import org.junit.jupiter.api.Test;
@@ -85,9 +86,10 @@ class AiUsageRepositoryTest {
     assertThat(m1Total).isEqualByComparingTo("1.0");
   }
 
-  private static AiUsageRecord row(String user, String model, Instant created, String costUsd) {
-    AiUsageRecord r = new AiUsageRecord();
-    r.setUserIdentifier(user);
+  private static AiUsageEvent row(String user, String model, Instant created, String costUsd) {
+    AiUsageEvent r = new AiUsageEvent();
+    r.setIdentityType(IdentityType.anonymous);
+    r.setIdentityKey(user);
     r.setModel(model);
     r.setPromptTokens(1);
     r.setCompletionTokens(1);

@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
-import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
+
+import com.kevinmazali.portfolio.MvcTestSessionAuthConfig;import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
@@ -34,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     RealtimeRateLimitProperties.class,
     AiLimitsProperties.class
 })
-@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class })
+@Import({ WebConfig.class, SecurityConfig.class, MvcTestSessionAuthConfig.class, MvcTestUserDetailsConfig.class })
 class FeedbackControllerTest {
 
     @Autowired

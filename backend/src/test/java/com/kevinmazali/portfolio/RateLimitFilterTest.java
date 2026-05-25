@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio;
 
-import com.kevinmazali.portfolio.config.AskRateLimitProperties;
+
+import com.kevinmazali.portfolio.MvcTestSessionAuthConfig;import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.RealtimeRateLimitProperties;
@@ -33,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
   DatasetGenerateRateLimitProperties.class,
   RealtimeRateLimitProperties.class
 })
-@Import({ WebConfig.class, SecurityConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class })
+@Import({ WebConfig.class, SecurityConfig.class, MvcTestSessionAuthConfig.class, MvcTestUserDetailsConfig.class, MockConfig.class })
 class RateLimitFilterTest {
 
     @Autowired

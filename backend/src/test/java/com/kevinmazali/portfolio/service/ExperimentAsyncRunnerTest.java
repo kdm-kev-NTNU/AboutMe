@@ -2,14 +2,17 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.RagAnswer;
+import com.kevinmazali.portfolio.model.experiment.EvalDatasetEntity;
 import com.kevinmazali.portfolio.model.experiment.EvalDatasetExampleRow;
 import com.kevinmazali.portfolio.model.experiment.EvaluationScore;
 import com.kevinmazali.portfolio.model.experiment.ExperimentResult;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRun;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus;
+import com.kevinmazali.portfolio.repository.EvalDatasetExampleRepository;
 import com.kevinmazali.portfolio.repository.ExperimentResultRepository;
 import com.kevinmazali.portfolio.repository.ExperimentRunRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,17 +23,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * {@link ExperimentAsyncRunner#executeExperimentRun} is {@code @Async} on the Spring proxy only;
- * calling the runner directly runs synchronously and is suitable for unit tests.
- */
 @ExtendWith(MockitoExtension.class)
 class ExperimentAsyncRunnerTest {
 
@@ -41,7 +40,13 @@ class ExperimentAsyncRunnerTest {
   private ExperimentResultRepository experimentResultRepository;
 
   @Mock
+  private EvalDatasetExampleRepository evalDatasetExampleRepository;
+
+  @Mock
   private EvalDatasetService evalDatasetService;
+
+  @Mock
+  private ExperimentMetricsService experimentMetricsService;
 
   @Mock
   private OpenAIService openAIService;
@@ -53,12 +58,15 @@ class ExperimentAsyncRunnerTest {
 
   @BeforeEach
   void setUp() {
-    runner = new ExperimentAsyncRunner(
-        experimentRunRepository,
-        experimentResultRepository,
-        evalDatasetService,
-        openAIService,
-        evaluatorService);
+    runner =
+        new ExperimentAsyncRunner(
+            experimentRunRepository,
+            experimentResultRepository,
+            evalDatasetExampleRepository,
+            evalDatasetService,
+            experimentMetricsService,
+            openAIService,
+            evaluatorService);
   }
 
   @Test
@@ -76,8 +84,8 @@ class ExperimentAsyncRunnerTest {
   void invalidDatasetQuestionMarksRunFailed() {
     ExperimentRun run = baseRun();
     when(experimentRunRepository.findById(1L)).thenReturn(Optional.of(run));
-    when(evalDatasetService.getExamples("1")).thenReturn(List.of(
-        new EvalDatasetExampleRow("<script>x</script>", "ref")));
+    when(evalDatasetService.getExamples("1"))
+        .thenReturn(List.of(new EvalDatasetExampleRow(1L, "<script>x</script>", "ref")));
 
     runner.executeExperimentRun(1L);
 
@@ -94,9 +102,11 @@ class ExperimentAsyncRunnerTest {
     ExperimentRun run = baseRun();
     run.setTotalExamples(1);
     when(experimentRunRepository.findById(1L)).thenReturn(Optional.of(run));
-    when(evalDatasetService.getExamples("1")).thenReturn(List.of(
-        new EvalDatasetExampleRow("What is two plus two?", "four"),
-        new EvalDatasetExampleRow("Other?", "x")));
+    when(evalDatasetService.getExamples("1"))
+        .thenReturn(
+            List.of(
+                new EvalDatasetExampleRow(10L, "What is two plus two?", "four"),
+                new EvalDatasetExampleRow(11L, "Other?", "x")));
 
     when(openAIService.getAnswerWithDocuments(any(Question.class)))
         .thenReturn(new RagAnswer("4", List.of("chunk-a")));
@@ -110,28 +120,27 @@ class ExperimentAsyncRunnerTest {
         .thenReturn(EvaluationScore.failed("skip"));
     when(evaluatorService.evaluateLanguageConsistency(any(), any(), any()))
         .thenReturn(new EvaluationScore(1.0, "consistent", "same lang"));
+    when(experimentResultRepository.save(any(ExperimentResult.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
 
     runner.executeExperimentRun(1L);
 
     verify(experimentResultRepository).save(any(ExperimentResult.class));
+    verify(experimentMetricsService).saveScores(any(ExperimentResult.class), any(Map.class));
     ArgumentCaptor<ExperimentRun> runCap = ArgumentCaptor.forClass(ExperimentRun.class);
     verify(experimentRunRepository).save(runCap.capture());
     ExperimentRun saved = runCap.getValue();
     assertEquals(ExperimentRunStatus.COMPLETED, saved.getStatus());
     assertNotNull(saved.getCompletedAt());
-    assertEquals(0.8, saved.getMeanFaithfulness(), 0.001);
-    assertEquals(0.7, saved.getMeanRelevance(), 0.001);
-    assertEquals(0.9, saved.getMeanCorrectness(), 0.001);
-    assertNull(saved.getMeanConciseness());
-    assertEquals(1.0, saved.getMeanLanguageConsistency(), 0.001);
   }
 
   private static ExperimentRun baseRun() {
+    EvalDatasetEntity dataset = new EvalDatasetEntity();
+    dataset.setId(1L);
     return ExperimentRun.builder()
         .id(1L)
         .name("n")
-        .datasetName("d")
-        .evalDatasetId(1L)
+        .evalDataset(dataset)
         .generatorModel("gpt-test")
         .evaluatorModel("gpt-judge")
         .status(ExperimentRunStatus.RUNNING)

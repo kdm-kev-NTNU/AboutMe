@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.controller;
 
-import com.kevinmazali.portfolio.MockConfig;
+
+import com.kevinmazali.portfolio.MvcTestSessionAuthConfig;import com.kevinmazali.portfolio.MockConfig;
 import com.kevinmazali.portfolio.MvcTestUserDetailsConfig;
 import com.kevinmazali.portfolio.config.ApiErrorConfiguration;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
@@ -38,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @Import({
     WebConfig.class,
-    SecurityConfig.class,
+    SecurityConfig.class, MvcTestSessionAuthConfig.class,
     MvcTestUserDetailsConfig.class,
     MockConfig.class,
     GlobalApiExceptionHandler.class,
