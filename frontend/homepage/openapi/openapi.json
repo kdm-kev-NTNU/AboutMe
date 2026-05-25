@@ -814,8 +814,19 @@
       },
       "RunExperimentRequest": {
         "type": "object",
+        "required": [
+          "datasetId",
+          "generatorModel",
+          "evaluatorModel"
+        ],
         "properties": {
-          "evalDatasetId": {
+          "datasetId": {
+            "type": "string"
+          },
+          "datasetName": {
+            "type": "string"
+          },
+          "name": {
             "type": "string"
           },
           "generatorModel": {

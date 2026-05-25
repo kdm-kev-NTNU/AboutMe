@@ -26,6 +26,8 @@ export const customFetch = async <T>(url: string, init?: RequestInit): Promise<T
     } catch {
       data = undefined
     }
+  } else if (ct.includes('audio/') || ct.includes('application/octet-stream')) {
+    data = await res.blob()
   } else {
     data = await res.text()
   }

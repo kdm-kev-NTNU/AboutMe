@@ -336,9 +336,11 @@ export interface DatasetGenerationStatusResponse {
 }
 
 export interface RunExperimentRequest {
-  evalDatasetId?: string;
-  generatorModel?: string;
-  evaluatorModel?: string;
+  datasetId: string;
+  datasetName?: string;
+  name?: string;
+  generatorModel: string;
+  evaluatorModel: string;
   /** @nullable */
   maxExamples?: number | null;
 }

@@ -86,8 +86,11 @@ Object.assign(doc.components.schemas, {
   },
   RunExperimentRequest: {
     type: 'object',
+    required: ['datasetId', 'generatorModel', 'evaluatorModel'],
     properties: {
-      evalDatasetId: { type: 'string' },
+      datasetId: { type: 'string' },
+      datasetName: { type: 'string' },
+      name: { type: 'string' },
       generatorModel: { type: 'string' },
       evaluatorModel: { type: 'string' },
       maxExamples: { type: 'integer', nullable: true },

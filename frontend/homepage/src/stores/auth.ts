@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { authLogin, authLogout } from '@/api/generated/portfolio'
+import { authLogin, authLogout, authMe } from '@/api/generated/portfolio'
 
 // Session: POST /auth/login sets an httpOnly cookie; we keep username/role in sessionStorage for UI only.
 interface AuthState {
@@ -26,6 +26,11 @@ export const useAuthStore = defineStore('auth', {
       this.username = data.username
       this.role = data.role as 'USER' | 'ADMIN'
       sessionStorage.setItem('auth', JSON.stringify({ username: this.username, role: this.role }))
+      try {
+        await authMe()
+      } catch {
+        // Session cookie is set; CSRF priming is best-effort
+      }
     },
     async logout() {
       try {

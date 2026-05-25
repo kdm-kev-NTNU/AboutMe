@@ -43,6 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.ai.openai.chat.enabled=true",
         "spring.ai.anthropic.api-key=sk-ant-api03-test-placeholder-for-spring-context-only",
         "portfolio.chat.default-model-id=gpt-5.4-mini",
+        "portfolio.session.jwt-secret=test-jwt-secret-at-least-32-characters-long",
         "server.port=0",
     })
 class SecurityConfigIT {
