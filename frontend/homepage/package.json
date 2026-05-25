@@ -35,7 +35,7 @@
     "clsx": "^2.1.1",
     "dompurify": "^3.4.2",
     "lucide-vue-next": "^1.0.0",
-    "markdown-it": "^14.1.0",
+    "markdown-it": "^14.2.0",
     "pinia": "^3.0.3",
     "posthog-js": "^1.369.3",
     "reka-ui": "^2.5.0",
