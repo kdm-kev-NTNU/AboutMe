@@ -21,6 +21,7 @@ Core stack:
 | `.env.example` | Backend secrets template (copy to repo-root `.env`) |
 | `frontend/homepage/.env.example` | Frontend `VITE_*` build-time template |
 | `.github/workflows/` | Maven/frontend tests, GitGuardian secret scanning, Semgrep, and Docker image publishing |
+| `scripts/` | Dev helpers — see [scripts/README.md](scripts/README.md) |
 
 Seed documents for the vector store go in `backend/data/docs/` (gitignored). The backend also ships a classpath seed document for a minimal local knowledge base.
 
@@ -202,7 +203,7 @@ Add `GITGUARDIAN_API_KEY` as a repository Actions secret before enabling require
 
 **Local secrets (never commit):**
 
-- Copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) to `.cursor/mcp.json` (gitignored). Set `ELEVENLABS_API_KEY` for voice MCP tools and `RAPIDCHART_API_TOKEN` (`rc_…` from [RapidChart API Tokens](https://rapidchart.com/settings)) for diagram generation in Cursor. RapidChart uses `python -m rapidchart_mcp` because `rapidchart-mcp` 0.1.0 ships a broken console script (`main` coroutine never awaited).
+- Run `.\scripts\setup-cursor-mcp.ps1` once for Cursor MCP (creates `.cursor/mcp.json` from the example, installs Railway + Docker MCP). Then set `ELEVENLABS_API_KEY` and `RAPIDCHART_API_TOKEN` in `.cursor/mcp.json`.
 - Copy [`.env.docker.example`](.env.docker.example) to `.env.docker` (gitignored) for Docker Compose Postgres credentials (`POSTGRES_PASSWORD`, `SPRING_DATASOURCE_PASSWORD`).
 
 ## Document Pipeline and RAG
@@ -216,6 +217,10 @@ The knowledge base is curated through admin tooling:
 5. Tune prompts and active prompt versions through the admin prompt-version UI.
 
 Optional ONNX reranking can be enabled with model/tokenizer paths when local rerank weights are available.
+
+## Scripts
+
+Helper scripts live in [scripts/](scripts/README.md): hybrid dev (`dev.ps1`), Cursor MCP setup, OpenAPI/Orval refresh (`update-openapi.ps1`), local CI parity (`ci-verify.*`), Railway vector sync, and voice smoke tests.
 
 ## Tests
 
@@ -236,6 +241,8 @@ npm run test:unit
 npm run test:unit:coverage
 npm run lint:ci
 ```
+
+Refresh the Orval client after backend API changes: `.\scripts\update-openapi.ps1` (or `node scripts/patch-openapi-extensions.mjs` then `npm run api:generate` in `frontend/homepage`).
 
 ### Realtime Voice Verification
 
