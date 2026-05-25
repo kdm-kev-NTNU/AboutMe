@@ -2,44 +2,50 @@ package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.RagAnswer;
+import com.kevinmazali.portfolio.model.experiment.EvalDatasetExampleEntity;
 import com.kevinmazali.portfolio.model.experiment.EvalDatasetExampleRow;
 import com.kevinmazali.portfolio.model.experiment.EvaluationScore;
 import com.kevinmazali.portfolio.model.experiment.ExperimentResult;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRun;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus;
+import com.kevinmazali.portfolio.repository.EvalDatasetExampleRepository;
 import com.kevinmazali.portfolio.repository.ExperimentResultRepository;
 import com.kevinmazali.portfolio.repository.ExperimentRunRepository;
 import com.kevinmazali.portfolio.util.InputValidator;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-/**
- * Runs {@link ExperimentRun} work off the HTTP thread (LLM + RAG per example).
- */
 @Slf4j
 @Component
 public class ExperimentAsyncRunner {
 
   private final ExperimentRunRepository experimentRunRepository;
   private final ExperimentResultRepository experimentResultRepository;
+  private final EvalDatasetExampleRepository evalDatasetExampleRepository;
   private final EvalDatasetService evalDatasetService;
+  private final ExperimentMetricsService experimentMetricsService;
   private final OpenAIService openAIService;
   private final EvaluatorService evaluatorService;
 
   public ExperimentAsyncRunner(
       ExperimentRunRepository experimentRunRepository,
       ExperimentResultRepository experimentResultRepository,
+      EvalDatasetExampleRepository evalDatasetExampleRepository,
       EvalDatasetService evalDatasetService,
+      ExperimentMetricsService experimentMetricsService,
       OpenAIService openAIService,
       EvaluatorService evaluatorService) {
     this.experimentRunRepository = experimentRunRepository;
     this.experimentResultRepository = experimentResultRepository;
+    this.evalDatasetExampleRepository = evalDatasetExampleRepository;
     this.evalDatasetService = evalDatasetService;
+    this.experimentMetricsService = experimentMetricsService;
     this.openAIService = openAIService;
     this.evaluatorService = evaluatorService;
   }
@@ -60,8 +66,8 @@ public class ExperimentAsyncRunner {
   }
 
   private void runInternal(Long runId) {
-    ExperimentRun run = experimentRunRepository.findById(runId)
-        .orElseThrow(() -> new IllegalStateException("Run not found: " + runId));
+    ExperimentRun run =
+        experimentRunRepository.findById(runId).orElseThrow(() -> new IllegalStateException("Run not found: " + runId));
 
     if (run.getEvalDatasetId() == null) {
       throw new IllegalStateException("Run has no eval dataset id");
@@ -73,12 +79,6 @@ public class ExperimentAsyncRunner {
       limit = examples.size();
     }
     List<EvalDatasetExampleRow> slice = examples.subList(0, Math.min(limit, examples.size()));
-
-    List<Double> faith = new ArrayList<>();
-    List<Double> rel = new ArrayList<>();
-    List<Double> corr = new ArrayList<>();
-    List<Double> conc = new ArrayList<>();
-    List<Double> langCons = new ArrayList<>();
 
     String gen = run.getGeneratorModel();
     String judge = run.getEvaluatorModel();
@@ -92,9 +92,8 @@ public class ExperimentAsyncRunner {
 
       RagAnswer rag = openAIService.getAnswerWithDocuments(new Question(q, gen));
       String answer = rag.answer() != null ? rag.answer() : "";
-      String docsJoined = rag.documentTexts().stream()
-          .map(s -> s == null ? "" : s)
-          .collect(Collectors.joining("\n---\n"));
+      String docsJoined =
+          rag.documentTexts().stream().map(s -> s == null ? "" : s).collect(Collectors.joining("\n---\n"));
 
       EvaluationScore f = evaluatorService.evaluateFaithfulness(judge, q, answer, rag.documentTexts());
       EvaluationScore r = evaluatorService.evaluateRelevance(judge, q, answer);
@@ -102,57 +101,36 @@ public class ExperimentAsyncRunner {
       EvaluationScore co = evaluatorService.evaluateConciseness(judge, q, answer);
       EvaluationScore lc = evaluatorService.evaluateLanguageConsistency(judge, q, answer);
 
-      if (!Double.isNaN(f.score())) {
-        faith.add(f.score());
-      }
-      if (!Double.isNaN(r.score())) {
-        rel.add(r.score());
-      }
-      if (!Double.isNaN(c.score())) {
-        corr.add(c.score());
-      }
-      if (!Double.isNaN(co.score())) {
-        conc.add(co.score());
-      }
-      if (!Double.isNaN(lc.score())) {
-        langCons.add(lc.score());
-      }
+      ExperimentResult row =
+          ExperimentResult.builder()
+              .experimentRun(run)
+              .evalExample(resolveExample(ex.id()))
+              .question(q)
+              .referenceAnswer(ex.referenceText() != null ? ex.referenceText() : "")
+              .ragResponse(answer)
+              .retrievedContext(docsJoined)
+              .build();
+      row = experimentResultRepository.save(row);
 
-      ExperimentResult row = ExperimentResult.builder()
-          .experimentRun(run)
-          .question(q)
-          .referenceAnswer(ex.referenceText() != null ? ex.referenceText() : "")
-          .ragResponse(answer)
-          .documents(docsJoined)
-          .faithfulness(Double.isNaN(f.score()) ? null : f.score())
-          .relevance(Double.isNaN(r.score()) ? null : r.score())
-          .correctness(Double.isNaN(c.score()) ? null : c.score())
-          .conciseness(Double.isNaN(co.score()) ? null : co.score())
-          .languageConsistency(Double.isNaN(lc.score()) ? null : lc.score())
-          .faithfulnessExplanation(f.explanation())
-          .relevanceExplanation(r.explanation())
-          .correctnessExplanation(c.explanation())
-          .concisenessExplanation(co.explanation())
-          .languageConsistencyExplanation(lc.explanation())
-          .build();
-      experimentResultRepository.save(row);
+      Map<String, EvaluationScore> scores = new LinkedHashMap<>();
+      scores.put("faithfulness", f);
+      scores.put("relevance", r);
+      scores.put("correctness", c);
+      scores.put("conciseness", co);
+      scores.put("language_consistency", lc);
+      experimentMetricsService.saveScores(row, scores);
     }
 
-    run.setMeanFaithfulness(mean(faith));
-    run.setMeanRelevance(mean(rel));
-    run.setMeanCorrectness(mean(corr));
-    run.setMeanConciseness(mean(conc));
-    run.setMeanLanguageConsistency(mean(langCons));
     run.setStatus(ExperimentRunStatus.COMPLETED);
     run.setCompletedAt(OffsetDateTime.now());
     experimentRunRepository.save(run);
   }
 
-  private static Double mean(List<Double> vals) {
-    if (vals.isEmpty()) {
+  private EvalDatasetExampleEntity resolveExample(Long exampleId) {
+    if (exampleId == null) {
       return null;
     }
-    return vals.stream().mapToDouble(Double::doubleValue).average().orElse(Double.NaN);
+    return evalDatasetExampleRepository.findById(exampleId).orElse(null);
   }
 
   private static String truncate(String s, int max) {

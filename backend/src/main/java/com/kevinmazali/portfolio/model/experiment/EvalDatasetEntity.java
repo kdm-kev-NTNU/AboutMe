@@ -38,6 +38,10 @@ public class EvalDatasetEntity {
   @Column(columnDefinition = "TEXT")
   private String description;
 
+  @Column(nullable = false, length = 32)
+  @Builder.Default
+  private String source = "manual";
+
   @Column(name = "created_at", nullable = false)
   @Builder.Default
   private OffsetDateTime createdAt = OffsetDateTime.now();

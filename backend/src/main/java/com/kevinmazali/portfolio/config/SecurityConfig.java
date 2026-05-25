@@ -7,6 +7,7 @@ import com.kevinmazali.portfolio.security.JsonAuthenticationEntryPoint;
 import io.micrometer.tracing.Tracer;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,6 +17,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -58,30 +60,36 @@ public class SecurityConfig {
             HttpSecurity http,
             AuthenticationEntryPoint jsonAuthenticationEntryPoint,
             AccessDeniedHandler jsonAccessDeniedHandler,
-            JwtCookieAuthenticationFilter jwtCookieAuthenticationFilter)
+            JwtCookieAuthenticationFilter jwtCookieAuthenticationFilter,
+            @Value("${portfolio.test.disable-csrf:false}") boolean disableCsrfForTests)
             throws Exception {
-        CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        csrfTokenRepository.setCookieName("XSRF-TOKEN");
-        csrfTokenRepository.setHeaderName("X-XSRF-TOKEN");
 
-        http
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(csrfTokenRepository)
-                .ignoringRequestMatchers(
-                    "/ask",
-                    "/feedback",
-                    "/transcribe",
-                    "/synthesize",
-                    "/auth/login",
-                    "/realtime/**",
-                    "/health/**",
-                    "/actuator/health",
-                    "/actuator/info",
-                    "/v3/api-docs/**",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/chat/models"))
-            .cors(Customizer.withDefaults())
+        if (disableCsrfForTests) {
+            http.csrf(AbstractHttpConfigurer::disable);
+        } else {
+            CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+            csrfTokenRepository.setCookieName("XSRF-TOKEN");
+            csrfTokenRepository.setHeaderName("X-XSRF-TOKEN");
+            http.csrf(
+                csrf ->
+                    csrf.csrfTokenRepository(csrfTokenRepository)
+                        .ignoringRequestMatchers(
+                            "/ask",
+                            "/feedback",
+                            "/transcribe",
+                            "/synthesize",
+                            "/auth/login",
+                            "/realtime/**",
+                            "/health/**",
+                            "/actuator/health",
+                            "/actuator/info",
+                            "/v3/api-docs/**",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html",
+                            "/chat/models"));
+        }
+
+        http.cors(Customizer.withDefaults())
             .exceptionHandling(
                 ex ->
                     ex.authenticationEntryPoint(jsonAuthenticationEntryPoint)

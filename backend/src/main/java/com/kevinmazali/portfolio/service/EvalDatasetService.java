@@ -44,7 +44,12 @@ public class EvalDatasetService {
   public List<EvalDatasetExampleRow> getExamples(String datasetId) {
     long id = parseId(datasetId);
     return exampleRepository.findByDataset_IdOrderByIdAsc(id).stream()
-        .map(e -> new EvalDatasetExampleRow(e.getQuestion(), e.getReferenceText() != null ? e.getReferenceText() : ""))
+        .map(
+            e ->
+                new EvalDatasetExampleRow(
+                    e.getId(),
+                    e.getQuestion(),
+                    e.getReferenceText() != null ? e.getReferenceText() : ""))
         .toList();
   }
 

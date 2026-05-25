@@ -83,6 +83,7 @@ public class DocumentIngestionService implements ApplicationRunner {
   private final PiiSanitizerService piiSanitizerService;
   private final boolean sanitizerEnabled;
   private final DocumentIngestProperties documentIngestProperties;
+  private final DocumentRegistryService documentRegistryService;
   private final ExecutorService parseExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
   public DocumentIngestionService(
@@ -94,7 +95,8 @@ public class DocumentIngestionService implements ApplicationRunner {
       NoiseCleaner noiseCleaner,
       ObjectProvider<PiiSanitizerService> piiSanitizerProvider,
       SanitizerProperties sanitizerProperties,
-      DocumentIngestProperties documentIngestProperties) {
+      DocumentIngestProperties documentIngestProperties,
+      DocumentRegistryService documentRegistryService) {
     this.vectorStore = vectorStore;
     this.jdbcTemplate = jdbcTemplate;
     this.objectMapper = objectMapper;
@@ -104,6 +106,7 @@ public class DocumentIngestionService implements ApplicationRunner {
     this.piiSanitizerService = piiSanitizerProvider.getIfAvailable();
     this.sanitizerEnabled = sanitizerProperties.isEnabled();
     this.documentIngestProperties = documentIngestProperties;
+    this.documentRegistryService = documentRegistryService;
   }
 
   private String qualifiedVectorTable() {
@@ -356,6 +359,7 @@ public class DocumentIngestionService implements ApplicationRunner {
     }
     if (force && documentChunksExist(contentHash)) {
       deleteByDocumentId(contentHash);
+      documentRegistryService.markReplaced(contentHash, Instant.now());
     }
 
     TikaDocumentReader reader = new TikaDocumentReader(resource);
@@ -395,6 +399,8 @@ public class DocumentIngestionService implements ApplicationRunner {
     }
 
     vectorStore.add(toAdd);
+    documentRegistryService.upsertFromIngest(
+        contentHash, displayFilename, safeName(resource), Instant.parse(ingestedAt));
     log.info("Ingested {} chunks for document_id={} ({})", toAdd.size(), contentHash, displayFilename);
     return new IngestionResult(contentHash, displayFilename, toAdd.size(), false, "OK");
   }
@@ -434,6 +440,19 @@ public class DocumentIngestionService implements ApplicationRunner {
 
   public List<DocumentListEntry> listDocuments() {
     ensureVectorTableAccessible();
+    List<DocumentListEntry> fromRegistry =
+        documentRegistryService.listEntries().stream()
+            .map(
+                d ->
+                    new DocumentListEntry(
+                        d.id(),
+                        d.filename(),
+                        chunkCountForDocument(d.id()),
+                        d.ingestedAt() != null ? d.ingestedAt().toString() : ""))
+            .toList();
+    if (!fromRegistry.isEmpty()) {
+      return fromRegistry;
+    }
     String sql = """
         SELECT metadata->>'document_id' AS doc_id,
                MAX(metadata->>'filename') AS filename,
@@ -449,6 +468,15 @@ public class DocumentIngestionService implements ApplicationRunner {
         Optional.ofNullable(rs.getString("filename")).filter(s -> !s.isBlank()).orElse("(unknown)"),
         rs.getInt("cnt"),
         Optional.ofNullable(rs.getString("last_ingested")).orElse("")));
+  }
+
+  private int chunkCountForDocument(String documentId) {
+    Long matching =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM " + qualifiedVectorTable() + " WHERE metadata->>'document_id' = ?",
+            Long.class,
+            documentId);
+    return matching == null ? 0 : matching.intValue();
   }
 
   private static final int CHUNK_LIST_MAX_LIMIT = 200;

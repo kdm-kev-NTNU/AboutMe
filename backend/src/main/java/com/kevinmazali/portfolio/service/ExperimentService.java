@@ -3,8 +3,10 @@ package com.kevinmazali.portfolio.service;
 import com.kevinmazali.portfolio.config.PostHogProperties;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
 import com.kevinmazali.portfolio.model.experiment.CreateEvalDatasetRequest;
+import com.kevinmazali.portfolio.model.experiment.EvalDatasetEntity;
 import com.kevinmazali.portfolio.model.experiment.EvalDatasetExampleRow;
 import com.kevinmazali.portfolio.model.experiment.EvalDatasetSummary;
+import com.kevinmazali.portfolio.model.experiment.ExperimentMetricScore;
 import com.kevinmazali.portfolio.model.experiment.ExperimentResult;
 import com.kevinmazali.portfolio.model.experiment.ExperimentResultResponse;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRun;
@@ -12,10 +14,12 @@ import com.kevinmazali.portfolio.model.experiment.ExperimentRunDetailResponse;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunStatus;
 import com.kevinmazali.portfolio.model.experiment.ExperimentRunSummaryResponse;
 import com.kevinmazali.portfolio.model.experiment.RunExperimentRequest;
+import com.kevinmazali.portfolio.repository.EvalDatasetRepository;
 import com.kevinmazali.portfolio.repository.ExperimentResultRepository;
 import com.kevinmazali.portfolio.repository.ExperimentRunRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -25,7 +29,9 @@ public class ExperimentService {
 
   private final ExperimentRunRepository experimentRunRepository;
   private final ExperimentResultRepository experimentResultRepository;
+  private final EvalDatasetRepository evalDatasetRepository;
   private final EvalDatasetService evalDatasetService;
+  private final ExperimentMetricsService experimentMetricsService;
   private final PostHogProperties postHogProperties;
   private final ChatModelCatalog chatModelCatalog;
   private final ExperimentAsyncRunner experimentAsyncRunner;
@@ -33,13 +39,17 @@ public class ExperimentService {
   public ExperimentService(
       ExperimentRunRepository experimentRunRepository,
       ExperimentResultRepository experimentResultRepository,
+      EvalDatasetRepository evalDatasetRepository,
       EvalDatasetService evalDatasetService,
+      ExperimentMetricsService experimentMetricsService,
       PostHogProperties postHogProperties,
       ChatModelCatalog chatModelCatalog,
       ExperimentAsyncRunner experimentAsyncRunner) {
     this.experimentRunRepository = experimentRunRepository;
     this.experimentResultRepository = experimentResultRepository;
+    this.evalDatasetRepository = evalDatasetRepository;
     this.evalDatasetService = evalDatasetService;
+    this.experimentMetricsService = experimentMetricsService;
     this.postHogProperties = postHogProperties;
     this.chatModelCatalog = chatModelCatalog;
     this.experimentAsyncRunner = experimentAsyncRunner;
@@ -77,6 +87,10 @@ public class ExperimentService {
     }
 
     long evalDatasetId = parseDatasetId(request.datasetId().trim());
+    EvalDatasetEntity evalDataset =
+        evalDatasetRepository
+            .findById(evalDatasetId)
+            .orElseThrow(() -> new IllegalArgumentException("Dataset not found: " + evalDatasetId));
     List<EvalDatasetExampleRow> examples = evalDatasetService.getExamples(Long.toString(evalDatasetId));
     if (examples.isEmpty()) {
       throw new IllegalArgumentException("Dataset has no examples.");
@@ -86,22 +100,19 @@ public class ExperimentService {
       n = Math.min(n, request.maxExamples());
     }
 
-    String dsName = StringUtils.hasText(request.datasetName())
-        ? request.datasetName().trim()
-        : request.datasetId();
     String runName = StringUtils.hasText(request.name())
         ? request.name().trim()
         : "Experiment " + OffsetDateTime.now();
 
-    ExperimentRun run = ExperimentRun.builder()
-        .name(runName)
-        .datasetName(dsName)
-        .evalDatasetId(evalDatasetId)
-        .generatorModel(gen.modelId())
-        .evaluatorModel(ev.modelId())
-        .status(ExperimentRunStatus.RUNNING)
-        .totalExamples(n)
-        .build();
+    ExperimentRun run =
+        ExperimentRun.builder()
+            .name(runName)
+            .evalDataset(evalDataset)
+            .generatorModel(gen.modelId())
+            .evaluatorModel(ev.modelId())
+            .status(ExperimentRunStatus.RUNNING)
+            .totalExamples(n)
+            .build();
     run = experimentRunRepository.save(run);
     experimentAsyncRunner.executeExperimentRun(run.getId());
     return run.getId();
@@ -130,19 +141,20 @@ public class ExperimentService {
   }
 
   private ExperimentRunSummaryResponse toSummary(ExperimentRun r) {
+    Map<String, Double> means = experimentMetricsService.meanScoresForRun(r.getId());
     return new ExperimentRunSummaryResponse(
         r.getId(),
         r.getName(),
-        r.getDatasetName(),
+        datasetName(r),
         r.getGeneratorModel(),
         r.getEvaluatorModel(),
         r.getStatus(),
         r.getTotalExamples() != null ? r.getTotalExamples() : 0,
-        r.getMeanFaithfulness(),
-        r.getMeanRelevance(),
-        r.getMeanCorrectness(),
-        r.getMeanConciseness(),
-        r.getMeanLanguageConsistency(),
+        means.get("faithfulness"),
+        means.get("relevance"),
+        means.get("correctness"),
+        means.get("conciseness"),
+        means.get("language_consistency"),
         r.getErrorMessage(),
         r.getCreatedAt(),
         r.getCompletedAt());
@@ -151,48 +163,74 @@ public class ExperimentService {
   private ExperimentRunDetailResponse toDetail(ExperimentRun r) {
     List<ExperimentResult> rows = experimentResultRepository.findByExperimentRunIdOrderByIdAsc(r.getId());
     List<ExperimentResultResponse> res = rows.stream().map(this::toResultResponse).toList();
+    Map<String, Double> means = experimentMetricsService.meanScoresForRun(r.getId());
     String ph = postHogProperties.getHost() != null ? postHogProperties.getHost().trim() : "";
     return new ExperimentRunDetailResponse(
         r.getId(),
         r.getName(),
-        r.getDatasetName(),
+        datasetName(r),
         r.getEvalDatasetId(),
         ph,
         r.getGeneratorModel(),
         r.getEvaluatorModel(),
         r.getStatus(),
         r.getTotalExamples() != null ? r.getTotalExamples() : 0,
-        r.getMeanFaithfulness(),
-        r.getMeanRelevance(),
-        r.getMeanCorrectness(),
-        r.getMeanConciseness(),
-        r.getMeanLanguageConsistency(),
+        means.get("faithfulness"),
+        means.get("relevance"),
+        means.get("correctness"),
+        means.get("conciseness"),
+        means.get("language_consistency"),
         r.getErrorMessage(),
         r.getCreatedAt(),
         r.getCompletedAt(),
         res);
   }
 
+  private String datasetName(ExperimentRun r) {
+    if (r.getEvalDataset() != null && r.getEvalDataset().getName() != null) {
+      return r.getEvalDataset().getName();
+    }
+    if (r.getEvalDatasetId() != null) {
+      return evalDatasetRepository.findById(r.getEvalDatasetId()).map(EvalDatasetEntity::getName).orElse("");
+    }
+    return "";
+  }
+
   private ExperimentResultResponse toResultResponse(ExperimentResult row) {
-    String preview = row.getDocuments();
+    String preview = row.getRetrievedContext();
     if (preview != null && preview.length() > 500) {
       preview = preview.substring(0, 500) + "...";
     }
+    Map<String, ExperimentMetricScore> byMetric =
+        experimentMetricsService.scoresForResult(row.getId()).stream()
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    ExperimentMetricScore::getMetric, s -> s, (a, b) -> a));
     return new ExperimentResultResponse(
         row.getId(),
         row.getQuestion(),
         row.getReferenceAnswer(),
         row.getRagResponse(),
         preview,
-        row.getFaithfulness(),
-        row.getRelevance(),
-        row.getCorrectness(),
-        row.getConciseness(),
-        row.getLanguageConsistency(),
-        row.getFaithfulnessExplanation(),
-        row.getRelevanceExplanation(),
-        row.getCorrectnessExplanation(),
-        row.getConcisenessExplanation(),
-        row.getLanguageConsistencyExplanation());
+        score(byMetric, "faithfulness"),
+        score(byMetric, "relevance"),
+        score(byMetric, "correctness"),
+        score(byMetric, "conciseness"),
+        score(byMetric, "language_consistency"),
+        explanation(byMetric, "faithfulness"),
+        explanation(byMetric, "relevance"),
+        explanation(byMetric, "correctness"),
+        explanation(byMetric, "conciseness"),
+        explanation(byMetric, "language_consistency"));
+  }
+
+  private static Double score(Map<String, ExperimentMetricScore> byMetric, String metric) {
+    ExperimentMetricScore s = byMetric.get(metric);
+    return s != null ? s.getScore() : null;
+  }
+
+  private static String explanation(Map<String, ExperimentMetricScore> byMetric, String metric) {
+    ExperimentMetricScore s = byMetric.get(metric);
+    return s != null ? s.getExplanation() : null;
   }
 }

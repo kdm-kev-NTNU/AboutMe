@@ -3,8 +3,10 @@ package com.kevinmazali.portfolio.service;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.model.analytics.AiGenerationAnalytics;
-import com.kevinmazali.portfolio.model.AiUsageRecord;
+import com.kevinmazali.portfolio.model.AiUsageEvent;
 import com.kevinmazali.portfolio.repository.AiUsageRepository;
+import com.kevinmazali.portfolio.repository.UserRepository;
+import com.kevinmazali.portfolio.util.AiUsageIdentity;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
@@ -34,6 +36,7 @@ public class AiBudgetService {
 
   private final AiBudgetProperties properties;
   private final AiUsageRepository usageRepository;
+  private final UserRepository userRepository;
   private final MeterRegistry meterRegistry;
   @Nullable
   private final PostHogLlmService postHogLlmService;
@@ -41,10 +44,12 @@ public class AiBudgetService {
   public AiBudgetService(
       AiBudgetProperties properties,
       AiUsageRepository usageRepository,
+      UserRepository userRepository,
       MeterRegistry meterRegistry,
       @Autowired(required = false) @Nullable PostHogLlmService postHogLlmService) {
     this.properties = properties;
     this.usageRepository = usageRepository;
+    this.userRepository = userRepository;
     this.meterRegistry = meterRegistry;
     this.postHogLlmService = postHogLlmService;
   }
@@ -139,8 +144,13 @@ public class AiBudgetService {
       @Nullable String generationSpanName,
       @Nullable AiGenerationAnalytics analytics) {
     BigDecimal cost = estimateCostUsd(modelId, promptTokens, completionTokens);
-    AiUsageRecord row = new AiUsageRecord();
-    row.setUserIdentifier(userIdentifier != null ? userIdentifier : "unknown");
+    String budgetKey = userIdentifier != null ? userIdentifier : "unknown";
+    Long userId = resolveUserId(budgetKey);
+    AiUsageIdentity identity = AiUsageIdentity.fromBudgetUserId(budgetKey, userId);
+    AiUsageEvent row = new AiUsageEvent();
+    row.setUserId(userId);
+    row.setIdentityType(identity.identityType());
+    row.setIdentityKey(identity.identityKey());
     row.setModel(modelId);
     row.setPromptTokens(Math.max(0, promptTokens));
     row.setCompletionTokens(Math.max(0, completionTokens));
@@ -222,6 +232,14 @@ public class AiBudgetService {
   /** Identifier used for LLM-as-judge traffic (tracked globally, no per-user budget). */
   public static String systemEvaluatorUserId() {
     return SYSTEM_EVALUATOR;
+  }
+
+  private Long resolveUserId(String budgetKey) {
+    if (!budgetKey.startsWith("user:")) {
+      return null;
+    }
+    String username = budgetKey.substring(5);
+    return userRepository.findByUsername(username).map(u -> u.getId()).orElse(null);
   }
 
   private void detectSpendSpike(String userIdentifier, boolean anonymous) {

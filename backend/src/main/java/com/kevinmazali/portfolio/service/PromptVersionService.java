@@ -1,9 +1,11 @@
 package com.kevinmazali.portfolio.service;
 
+import com.kevinmazali.portfolio.model.PromptTemplate;
 import com.kevinmazali.portfolio.model.PromptVersion;
 import com.kevinmazali.portfolio.model.prompt.PromptDiffResponse;
 import com.kevinmazali.portfolio.model.prompt.PromptNameEntry;
 import com.kevinmazali.portfolio.model.prompt.PromptVersionResponse;
+import com.kevinmazali.portfolio.repository.PromptTemplateRepository;
 import com.kevinmazali.portfolio.repository.PromptVersionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +44,7 @@ public class PromptVersionService {
     );
 
     private final PromptVersionRepository repo;
+    private final PromptTemplateRepository templateRepository;
 
     private final ConcurrentHashMap<VariantKey, String> cache = new ConcurrentHashMap<>();
 
@@ -121,7 +124,9 @@ public class PromptVersionService {
         String prov = blankToNull(provider);
         int nextVersion = repo.findMaxVersion(name, lang, prov).orElse(0) + 1;
 
+        PromptTemplate template = ensureTemplate(name, lang, prov);
         PromptVersion row = PromptVersion.builder()
+            .template(template)
             .name(name)
             .version(nextVersion)
             .language(lang)
@@ -186,7 +191,9 @@ public class PromptVersionService {
                 continue;
             }
 
+            PromptTemplate template = ensureTemplate(key.name, key.language, key.provider);
             PromptVersion row = PromptVersion.builder()
+                .template(template)
                 .name(key.name)
                 .version(1)
                 .language(key.language)
@@ -240,6 +247,15 @@ public class PromptVersionService {
 
     private static String blankToNull(String s) {
         return (s == null || s.isBlank()) ? null : s.trim();
+    }
+
+    private PromptTemplate ensureTemplate(String name, String language, String provider) {
+        return templateRepository
+            .findVariant(name, language, provider)
+            .orElseGet(
+                () ->
+                    templateRepository.save(
+                        PromptTemplate.builder().name(name).language(language).provider(provider).build()));
     }
 
     private static String sha256(String content) {

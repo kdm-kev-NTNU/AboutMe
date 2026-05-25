@@ -38,7 +38,7 @@ public class RequestLogService {
         RequestLog log = new RequestLog();
         log.setPath(path);
         log.setMethod(method);
-        log.setPayload(truncatePayload(payload));
+        // Legacy payload column removed; callers may still pass payload for future structured fields.
         // Prefer explicit requester id from the API; fall back to username or a generic end-user label.
         String computedRequester;
         if (requesterId != null) {
