@@ -9,7 +9,7 @@ Core stack:
 
 - **Frontend:** Vue 3, TypeScript, Vite 8, Pinia, Vue Router, Tailwind 4, Reka UI, Orval, Cypress, Vitest.
 - **Backend:** Java 21, Spring Boot 4, Spring AI 2 BOM, Spring Security, Spring Data JPA, SpringDoc OpenAPI.
-- **AI/RAG:** OpenAI and optional Anthropic chat models, OpenAI embeddings, OpenAI Realtime WebRTC voice, optional ElevenLabs Conversational AI voice agents, optional ONNX cross-encoder reranking, OpenNLP-backed sanitization.
+- **AI/RAG:** OpenAI and optional Anthropic chat models, OpenAI embeddings, OpenAI Realtime WebRTC voice (marin/cedar voices, reasoning effort), optional ONNX cross-encoder reranking, OpenNLP-backed sanitization.
 - **Data/ops:** PostgreSQL 17 with pgvector for relational data and embeddings, Docker Compose, Nginx, Actuator, Prometheus, optional PostHog frontend and server-side LLM analytics.
 
 ## Tech Stack Details
@@ -29,8 +29,7 @@ Architecture is split into three practical tracks: AI/RAG, backend services, and
 | `backend/` | Spring Boot API for chat, Realtime voice, auth, admin tools, RAG, experiments, budgets, and observability |
 | `frontend/homepage/` | Vue SPA. See [frontend/homepage/README.md](frontend/homepage/README.md) for scripts, routes, analytics, and Orval notes |
 | `scripts/dev.ps1` | Windows helper that starts Docker infrastructure and opens backend + Vite terminals (recommended daily dev) |
-| `docker-compose.yml` | PostgreSQL/pgvector, backend, and Nginx-hosted frontend (prod-like images) |
-| `docker-compose.dev.yml` | Full stack in Docker with Vite HMR and Spring DevTools auto-reload |
+| `docker-compose.yml` | PostgreSQL/pgvector (always) plus optional `--profile dev` or `--profile prod` app stacks |
 | `.env.example` | Backend secrets template (copy to repo-root `.env`) |
 | `frontend/homepage/.env.example` | Frontend `VITE_*` build-time template |
 | `.github/workflows/` | Maven/frontend tests, Semgrep, and Docker image publishing |
@@ -51,7 +50,7 @@ Seed documents for the vector store go in `backend/data/docs/` (gitignored). The
 
 **Recommended for daily development:** [Hybrid Dev](#hybrid-dev-recommended) or [Full Stack Dev in Docker](#full-stack-dev-in-docker). Both auto-reload on code changes.
 
-**Prod-like Docker** (`docker compose up -d --build`) does **not** auto-reload — run `--build` again after each code change, or use [Compose Watch](#compose-watch-prod-image-smoke-test) to rebuild images automatically (slower).
+**Prod-like Docker** (`docker compose --profile prod up -d --build`) does **not** auto-reload — run `--build` again after each code change, or use [Compose Watch](#compose-watch-prod-image-smoke-test) to rebuild images automatically (slower).
 
 ### Full Stack in Docker
 
@@ -59,7 +58,7 @@ Copy `.env.example` to `.env` at the repo root, set at least `OPENAI_API_KEY` an
 
 ```bash
 cp .env.docker.example .env.docker   # first time only (Windows: copy .env.docker.example .env.docker)
-docker compose up -d --build
+docker compose --profile prod up -d --build
 ```
 
 This builds frozen images (JAR + Nginx static assets). For day-to-day coding with live reload, use **Hybrid Dev** or **Full Stack Dev in Docker** below instead.
@@ -108,10 +107,10 @@ For auto-reload without a local JDK or Node install:
 
 ```bash
 cp .env.docker.example .env.docker   # first time only
-docker compose -f docker-compose.dev.yml up
+docker compose --profile dev up
 ```
 
-Copy `.env.example` to repo-root `.env` before starting. The dev compose file runs `mvn spring-boot:run` and `npm run dev` inside containers with source mounted from the repo.
+Copy `.env.example` to repo-root `.env` before starting. The `dev` profile runs `mvn spring-boot:run` and `npm run dev` inside containers with source mounted from the repo.
 
 **Auto-reload:** same as hybrid — Vite HMR for the frontend, Spring DevTools restart for the backend. ONNX rerank assets from the prod Dockerfile are not bundled; set `PORTFOLIO_RETRIEVAL_RERANK_ENABLED=false` in repo-root `.env` if reranking is not needed locally.
 
@@ -120,16 +119,16 @@ Copy `.env.example` to repo-root `.env` before starting. The dev compose file ru
 To verify prod images while editing code (rebuilds entire images on change — slower than dev mode):
 
 ```bash
-docker compose watch
+docker compose --profile prod watch
 ```
 
 Or start the stack and watch in one step:
 
 ```bash
-docker compose up --watch
+docker compose --profile prod up --watch
 ```
 
-Use this before deploy to confirm the production Dockerfile still builds and runs; use **Hybrid Dev** or **docker-compose.dev.yml** for everyday iteration.
+Use this before deploy to confirm the production Dockerfile still builds and runs; use **Hybrid Dev** or **`docker compose --profile dev up`** for everyday iteration.
 
 ## Configuration
 
@@ -169,7 +168,7 @@ Spring AI can initialize the `vector_store` table, but the extension itself must
 
 - Public portfolio pages: home, career, projects, individual project story, project/tech stack, feedback, privacy policy.
 - Text chat: `/chat` sends document-grounded questions through `/ask`, with selectable allow-listed models from `/chat/models`.
-- Live voice: `/voice` lists configured voice options from `/realtime/models`. OpenAI Realtime uses `/realtime/session` and `/realtime/lookup`; ElevenLabs Conversational AI uses `/realtime/elevenlabs/token`. To match OpenAI's local `lookup_kevin_info` behavior, configure equivalent knowledge/tools on the ElevenLabs agent.
+- Live voice: `/voice` uses OpenAI Realtime WebRTC via `/realtime/session` (SDP exchange) and `/realtime/lookup` for the `lookup_kevin_info` tool loop. Visitors can pick marin/cedar voices and reasoning effort when enabled.
 - Feedback: `/feedback` posts visitor feedback to the backend with server-side length limits.
 - Admin tools: protected routes for AI status/budget kill switch, document uploads and ingestion, chunk browsing/export, generated question suggestions, prompt versions/diffs, and RAG experiments.
 - Observability: Actuator health/metrics/Prometheus, optional PostHog frontend analytics after consent, and optional PostHog server-side LLM events.
@@ -185,7 +184,6 @@ Public endpoints:
 - `GET /realtime/status`: whether Realtime voice is enabled for the current deployment.
 - `GET /realtime/models`: configured voice provider/model options exposed to visitors.
 - `POST /realtime/session`: WebRTC SDP exchange with OpenAI Realtime.
-- `POST /realtime/elevenlabs/token`: browser-safe ElevenLabs WebRTC conversation token for a configured agent.
 - `POST /realtime/lookup`: RAG lookup tool used by the Realtime session.
 - `GET /health/vectorstore` and `GET /health/chroma`: vector store health. `chroma` is a compatibility alias.
 
@@ -209,7 +207,7 @@ Treat database backups as sensitive. Conversations, documents, chunks, embedding
 
 **Local secrets (never commit):**
 
-- Run `.\scripts\setup-cursor-mcp.ps1` once for Cursor MCP (creates `.cursor/mcp.json` from the example, installs Railway + Docker MCP). Then set `ELEVENLABS_API_KEY` and `RAPIDCHART_API_TOKEN` in `.cursor/mcp.json`.
+- Run `.\scripts\setup-cursor-mcp.ps1` once for Cursor MCP (creates `.cursor/mcp.json` from the example, installs Railway + Docker MCP). Then set `RAPIDCHART_API_TOKEN` in `.cursor/mcp.json` if you use RapidChart.
 - Copy [`.env.docker.example`](.env.docker.example) to `.env.docker` (gitignored) for Docker Compose Postgres credentials (`POSTGRES_PASSWORD`, `SPRING_DATASOURCE_PASSWORD`).
 
 ## Document Pipeline and RAG
@@ -304,7 +302,7 @@ Keep backend runtime secrets in repo-root `.env` and frontend build-time values 
 
 **Authentication:** Admin tools use an httpOnly session cookie (JWT) set by `POST /auth/login`. The SPA stores only username and role in `sessionStorage` for UI routing—not passwords or Basic auth tokens.
 
-**Public AI endpoints:** `POST /ask`, `/transcribe`, `/synthesize`, and `/realtime/*` are intentionally unauthenticated. Abuse is mitigated with per-IP rate limits (Bucket4j), per-identity AI budgets, and a global kill switch—not with login walls.
+**Public AI endpoints:** `POST /ask`, `/transcribe`, and `/realtime/*` are intentionally unauthenticated. Abuse is mitigated with per-IP rate limits (Bucket4j), per-identity AI budgets, and a global kill switch—not with login walls.
 
 **Production checklist:**
 

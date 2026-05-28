@@ -30,25 +30,11 @@ const feedbackInvite = computed(() => {
   }
 })
 
-const futureWorkHomeLink = computed(() => {
-  if (language.value === 'no') {
-    return {
-      label: 'Videre arbeid og forbedringer',
-      ariaLabel: 'Gå til siden om planlagt utvikling av porteføljen',
-    }
-  }
-  return {
-    label: 'Future work and improvements',
-    ariaLabel: 'Go to how and future work',
-  }
-})
-
 /** Null until loaded from GET /realtime/status */
-const standardEnabled = ref<boolean | null>(null)
-const liveEnabled = ref<boolean | null>(null)
+const voiceEnabled = ref<boolean | null>(null)
 
 const voiceCtaAria = computed(() =>
-  language.value === 'no' ? 'Gå til robust stemmemodus' : 'Go to robust voice mode',
+  language.value === 'no' ? 'Gå til stemmemodus' : 'Go to voice mode',
 )
 
 function goToVoiceChat() {
@@ -57,23 +43,18 @@ function goToVoiceChat() {
 
 const voiceStatus = computed(() => {
   if (language.value === 'no') {
-    if (standardEnabled.value === true && liveEnabled.value === true) return 'Standard og live stemme er tilgjengelig'
-    if (standardEnabled.value === true) return 'Standard stemme er tilgjengelig'
-    if (standardEnabled.value === false && liveEnabled.value === true) return 'Kun live stemme er tilgjengelig'
-    if (standardEnabled.value === false && liveEnabled.value === false) return 'Stemme er midlertidig av'
+    if (voiceEnabled.value === true) return 'Stemme er tilgjengelig'
+    if (voiceEnabled.value === false) return 'Stemme er midlertidig av'
     return 'Sjekker stemmestatus'
   }
-  if (standardEnabled.value === true && liveEnabled.value === true) return 'Standard and live voice are available'
-  if (standardEnabled.value === true) return 'Standard voice is available'
-  if (standardEnabled.value === false && liveEnabled.value === true) return 'Live voice only is available'
-  if (standardEnabled.value === false && liveEnabled.value === false) return 'Voice is temporarily off'
+  if (voiceEnabled.value === true) return 'Voice is available'
+  if (voiceEnabled.value === false) return 'Voice is temporarily off'
   return 'Checking voice status'
 })
 
 onMounted(() => {
   void fetchRealtimeVoiceStatus().then((status) => {
-    standardEnabled.value = status.standardEnabled
-    liveEnabled.value = status.liveEnabled
+    voiceEnabled.value = status.liveEnabled
   })
 })
 </script>
@@ -105,7 +86,7 @@ onMounted(() => {
           <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-xs font-semibold text-blue-800">
             <span
               class="size-2 rounded-full"
-              :class="standardEnabled === false && liveEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
+              :class="voiceEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
               aria-hidden="true"
             ></span>
             {{ voiceStatus }}
@@ -119,8 +100,8 @@ onMounted(() => {
           <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
             {{
               language === 'no'
-                ? 'Standard stemme er anbefalt: tregere, men mer robust. Live-modus finnes fortsatt for raskere samtaler, men er mindre stabil.'
-                : 'Standard voice is recommended: slower, but more robust. Live mode still exists for faster conversations, but is less stable.'
+                ? 'Snakk med en AI som kjenner porteføljen min og kan svare på spørsmål om prosjekter, erfaring og teknologi.'
+                : 'Talk with an AI that knows my portfolio and can answer questions about projects, experience, and tech.'
             }}
           </p>
           <div class="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -131,18 +112,14 @@ onMounted(() => {
               @click="goToVoiceChat"
             >
               <Headphones class="me-2 size-5" aria-hidden="true" />
-              {{ language === 'no' ? 'Start standard stemme' : 'Start standard voice' }}
+              {{ language === 'no' ? 'Start stemmechat' : 'Start voice chat' }}
             </Button>
             <Button
               as-child
               variant="outline"
               class="h-14 w-full justify-center rounded-2xl border-blue-200 bg-white/85 px-5 text-sm font-semibold text-slate-800 hover:bg-blue-50 sm:w-auto sm:px-7 sm:text-base"
             >
-              <RouterLink v-if="liveEnabled === true" to="/voice?mode=live" class="inline-flex items-center">
-                <Headphones class="me-2 size-5" aria-hidden="true" />
-                {{ language === 'no' ? 'Prøv live (ustabil)' : 'Try live (unstable)' }}
-              </RouterLink>
-              <RouterLink v-else to="/chat" class="inline-flex items-center">
+              <RouterLink to="/chat" class="inline-flex items-center">
                 <MessageSquare class="me-2 size-5" aria-hidden="true" />
                 {{ language === 'no' ? 'Bruk tekstchat' : 'Use text chat' }}
               </RouterLink>
@@ -167,8 +144,8 @@ onMounted(() => {
               <p>
                 {{
                   language === 'no'
-                    ? 'Standard stemmemodus bruker språkvalg på forhånd for bedre kvalitet. Live-modus er raskere, men mer ustabil.'
-                    : 'Standard voice asks for language up front for higher quality. Live mode is faster, but more unstable.'
+                    ? 'Live stemmechat er raskere, men kan være ustabil. Økter kan falle ut og avsluttes etter ca. 3 minutter.'
+                    : 'Live voice chat is faster, but can be unstable. Sessions may drop and end after about 3 minutes.'
                 }}
               </p>
             </div>
@@ -201,18 +178,6 @@ onMounted(() => {
             </div>
           </div>
         </section>
-
-        <RouterLink
-          to="/how#future-work"
-          class="group flex w-full max-w-2xl items-center justify-center gap-1 rounded-xl border border-blue-200/80 bg-white/90 px-4 py-3 text-center text-sm font-medium text-blue-800 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-blue-300 hover:bg-white hover:shadow-md hover:shadow-blue-500/10"
-          :aria-label="futureWorkHomeLink.ariaLabel"
-        >
-          {{ futureWorkHomeLink.label }}
-          <ChevronRight
-            class="size-4 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </RouterLink>
       </div>
     </div>
 

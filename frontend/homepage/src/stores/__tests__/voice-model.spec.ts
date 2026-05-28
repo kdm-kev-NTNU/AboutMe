@@ -29,33 +29,31 @@ describe('useVoiceModelStore', () => {
     expect(store.hasModels).toBe(true)
   })
 
-  it('loads models and prefers the OpenAI default', async () => {
+  it('loads models and selects the OpenAI default', async () => {
     vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
-      { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: true },
       { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
     ])
     const store = useVoiceModelStore()
 
     await store.ensureModelsLoaded()
 
-    expect(store.models).toHaveLength(2)
+    expect(store.models).toHaveLength(1)
     expect(store.selectedModelId).toBe('OPENAI:gpt-realtime-2')
     expect(store.selectedProvider).toBe('OPENAI')
     expect(localStorage.getItem('voiceSelectedModel')).toBe('OPENAI:gpt-realtime-2')
   })
 
   it('restores a stored configured model', async () => {
-    localStorage.setItem('voiceSelectedModel', 'ELEVENLABS:agent_1')
+    localStorage.setItem('voiceSelectedModel', 'OPENAI:gpt-realtime-2')
     vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
       { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
-      { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: false },
     ])
     const store = useVoiceModelStore()
 
     await store.ensureModelsLoaded()
 
-    expect(store.selectedModelId).toBe('ELEVENLABS:agent_1')
-    expect(store.selectedProvider).toBe('ELEVENLABS')
+    expect(store.selectedModelId).toBe('OPENAI:gpt-realtime-2')
+    expect(store.selectedProvider).toBe('OPENAI')
   })
 
   it('ignores selection ids outside the loaded catalog', async () => {
@@ -116,15 +114,14 @@ describe('useVoiceModelStore', () => {
     expect(store.models).toHaveLength(1)
   })
 
-  it('falls back to the first model when no OpenAI default exists', async () => {
-    vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([
-      { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: false },
-    ])
+  it('leaves selection empty when the catalog is empty', async () => {
+    vi.mocked(fetchRealtimeVoiceModels).mockResolvedValue([])
     const store = useVoiceModelStore()
 
     await store.ensureModelsLoaded()
 
-    expect(store.selectedModelId).toBe('ELEVENLABS:agent_1')
+    expect(store.selectedModelId).toBe('')
+    expect(store.hasModels).toBe(false)
   })
 
   it('skips persisting when no model is selected', () => {

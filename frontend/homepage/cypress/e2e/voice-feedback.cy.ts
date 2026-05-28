@@ -8,7 +8,6 @@ const FAKE_MODELS = [
 
 const VOICE_DISABLED_STATUS = {
   enabled: false,
-  standardEnabled: false,
   liveEnabled: false,
   voices: ['marin', 'cedar'],
   reasoningEfforts: ['low', 'medium', 'high'],
@@ -32,7 +31,7 @@ describe('Voice page (voice disabled)', () => {
     }).as('realtimeModels')
   })
 
-  it('shows standard-mode unavailable copy when server reports voice off', () => {
+  it('shows live voice unavailable copy when server reports voice off', () => {
     cy.visit('/voice', {
       onBeforeLoad(win) {
         win.localStorage.setItem('lang', 'en')
@@ -40,10 +39,10 @@ describe('Voice page (voice disabled)', () => {
     })
     cy.wait('@realtimeStatus')
     cy.wait('@realtimeModels')
-    cy.contains('Standard voice mode is not available right now.').should('be.visible')
+    cy.contains('Live voice is not enabled on the server right now.').should('be.visible')
   })
 
-  it('shows Norwegian standard-mode unavailable copy when lang is no', () => {
+  it('shows Norwegian live voice unavailable copy when lang is no', () => {
     cy.visit('/voice', {
       onBeforeLoad(win) {
         win.localStorage.setItem('lang', 'no')
@@ -51,7 +50,7 @@ describe('Voice page (voice disabled)', () => {
     })
     cy.wait('@realtimeStatus')
     cy.wait('@realtimeModels')
-    cy.contains('Standard stemmemodus er ikke tilgjengelig akkurat nå.').should('be.visible')
+    cy.contains('Live stemmechat er ikke slått på hos serveren akkurat nå.').should('be.visible')
   })
 })
 

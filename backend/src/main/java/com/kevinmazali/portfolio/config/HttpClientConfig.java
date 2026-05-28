@@ -1,8 +1,6 @@
 package com.kevinmazali.portfolio.config;
 
 import com.kevinmazali.portfolio.service.OpenAiRealtimeHttpInvoker;
-import com.kevinmazali.portfolio.service.OpenAiSpeechHttpInvoker;
-import com.kevinmazali.portfolio.service.ElevenLabsRealtimeHttpInvoker;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -25,22 +23,6 @@ public class HttpClientConfig {
 
     @Bean
     OpenAiRealtimeHttpInvoker openAiRealtimeHttpInvoker() {
-        HttpClient client =
-            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
-        return (request) ->
-            client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-    }
-
-    @Bean
-    OpenAiSpeechHttpInvoker openAiSpeechHttpInvoker() {
-        HttpClient client =
-            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
-        return (request) ->
-            client.send(request, HttpResponse.BodyHandlers.ofByteArray());
-    }
-
-    @Bean
-    ElevenLabsRealtimeHttpInvoker elevenLabsRealtimeHttpInvoker() {
         HttpClient client =
             HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
         return (request) ->

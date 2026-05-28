@@ -3,18 +3,13 @@ package com.kevinmazali.portfolio.controller;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.model.ApiError;
-import com.kevinmazali.portfolio.model.ElevenLabsTokenRequest;
-import com.kevinmazali.portfolio.model.ElevenLabsTokenResponse;
 import com.kevinmazali.portfolio.model.RealtimeLookupRequest;
 import com.kevinmazali.portfolio.model.RealtimeModelOption;
 import com.kevinmazali.portfolio.model.RealtimeStatusResponse;
-import com.kevinmazali.portfolio.service.ElevenLabsRealtimeTokenService;
 import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
-import com.kevinmazali.portfolio.service.SpeechSynthesisService;
-import com.kevinmazali.portfolio.service.TranscriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -38,9 +33,6 @@ public class RealtimeController {
   private final RealtimeSessionService realtimeSessionService;
   private final RealtimeLookupService realtimeLookupService;
   private final RealtimeModelCatalog realtimeModelCatalog;
-  private final ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
-  private final TranscriptionService transcriptionService;
-  private final SpeechSynthesisService speechSynthesisService;
   private final RequestLogService requestLogService;
 
   public RealtimeController(
@@ -48,17 +40,11 @@ public class RealtimeController {
       RealtimeSessionService realtimeSessionService,
       RealtimeLookupService realtimeLookupService,
       RealtimeModelCatalog realtimeModelCatalog,
-      ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService,
-      TranscriptionService transcriptionService,
-      SpeechSynthesisService speechSynthesisService,
       RequestLogService requestLogService) {
     this.realtimeProperties = realtimeProperties;
     this.realtimeSessionService = realtimeSessionService;
     this.realtimeLookupService = realtimeLookupService;
     this.realtimeModelCatalog = realtimeModelCatalog;
-    this.elevenLabsRealtimeTokenService = elevenLabsRealtimeTokenService;
-    this.transcriptionService = transcriptionService;
-    this.speechSynthesisService = speechSynthesisService;
     this.requestLogService = requestLogService;
   }
 
@@ -66,10 +52,8 @@ public class RealtimeController {
   @GetMapping("/realtime/status")
   public ResponseEntity<RealtimeStatusResponse> status() {
     boolean liveEnabled = realtimeModelCatalog.hasAvailableModels();
-    boolean standardEnabled = transcriptionService.isTranscriptionConfigured() && speechSynthesisService.isConfigured();
     return ResponseEntity.ok(new RealtimeStatusResponse(
-        standardEnabled || liveEnabled,
-        standardEnabled,
+        liveEnabled,
         liveEnabled,
         RealtimeProperties.ALLOWED_VOICES,
         RealtimeProperties.ALLOWED_REASONING_EFFORTS,
@@ -119,28 +103,6 @@ public class RealtimeController {
     } catch (IllegalStateException e) {
       log.warn("realtime session (legacy): {}", e.getMessage());
       return ResponseEntity.status(503).body(new ApiError(e.getMessage()));
-    }
-  }
-
-  @Operation(summary = "Create ElevenLabs WebRTC token", description = "Returns a browser-safe token for a configured ElevenLabs agent.")
-  @PostMapping(value = "/realtime/elevenlabs/token", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<?> createElevenLabsToken(@RequestBody(required = false) ElevenLabsTokenRequest request) {
-    if (!realtimeProperties.isEnabled()) {
-      return ResponseEntity.status(503)
-          .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
-    }
-    requestLogService.save("/realtime/elevenlabs/token", "POST", "token", null);
-    try {
-      String token = elevenLabsRealtimeTokenService.createConversationToken(request == null ? null : request.modelId());
-      return ResponseEntity.ok(new ElevenLabsTokenResponse(token));
-    } catch (RealtimeSessionException e) {
-      log.warn(
-          "elevenlabs realtime token: code={} status={} message={}",
-          e.getErrorCode(),
-          e.getHttpStatus().value(),
-          e.getMessage());
-      return ResponseEntity.status(e.getHttpStatus())
-          .body(new ApiError(e.getMessage(), e.getErrorCode().name()));
     }
   }
 

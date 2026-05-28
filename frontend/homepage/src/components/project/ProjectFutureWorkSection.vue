@@ -23,42 +23,12 @@ const sectionsEn: SectionCopy[] = [
 		intro:
 			"A planned feature where the AI chatbot uses a cloned version of Kevin\u2019s actual voice, so visitors hear Kevin\u2019s tone and cadence when using voice mode \u2014 not a generic TTS voice. The current OpenAI Realtime voice mode stays, but the synthetic voice will be replaced with a personal clone trained on Kevin\u2019s speech.",
 		points: [
-			"Voice cloning: train a high-fidelity voice model on recordings of Kevin\u2019s speech using ElevenLabs or a comparable provider, capturing natural intonation and rhythm.",
+			"Voice cloning: train a high-fidelity voice model on recordings of Kevin\u2019s speech using a suitable TTS provider, capturing natural intonation and rhythm.",
 			'Integration: swap the default TTS output in the existing Realtime voice pipeline with the custom clone, keeping the same conversational AI backend.',
 			'Quality control: validate that the clone sounds natural across different answer lengths, languages, and emotional tones before going live.',
 			"Consent and transparency: clearly disclose to visitors that the voice is AI-generated from Kevin\u2019s recordings, not a live human conversation.",
 		],
 		refs: [],
-	},
-	{
-		category: 'Personal',
-		title: 'ElevenLabs voice agent: collect, then I process',
-		intro:
-			'Optional ElevenLabs capture adds spoken detail beyond polished pages alone. Raw exports or transcripts stay private and off the vector store by default. I turn them into notes or .txt drafts, upload through the document pipeline, then re-ingest and check retrieval before live chat. The arXiv links below are about RAG indexing, retrieval, and evaluation, not about picking a voice vendor (that is a product choice). Purpose, consent, and data minimisation follow privacy law, not those papers.',
-		points: [
-			'Collect with clear purpose, consent, and boundaries on what is stored.',
-			'Personally process raw material before anything is ingestible or visitor-facing.',
-			'Upload curated files through the admin document pipeline.',
-			'Re-ingest and verify retrieval on new chunks before they power Kevin\u2019s AI in live chat.',
-		],
-		refs: [
-			{
-				label: 'Wang et al.: Searching for Best Practices in Retrieval-Augmented Generation (arXiv:2407.01219, EMNLP 2024)',
-				href: 'https://arxiv.org/abs/2407.01219',
-			},
-			{
-				label: 'Gao et al.: Retrieval-Augmented Generation for Large Language Models: A Survey (arXiv:2312.10997, Dec 2023 preprint; often cited as \u201c2024\u201d elsewhere)',
-				href: 'https://arxiv.org/abs/2312.10997',
-			},
-			{
-				label: 'Abbasiantaeb et al.: Conversational Gold: evaluating with human gold nuggets (arXiv:2503.09902)',
-				href: 'https://arxiv.org/abs/2503.09902',
-			},
-			{
-				label: 'Retrieval Augmented Generation Evaluation in the Era of Large Language Models: A Comprehensive Survey (arXiv:2504.14891)',
-				href: 'https://arxiv.org/abs/2504.14891',
-			},
-		],
 	},
 	{
 		category: 'Generation',
@@ -106,42 +76,12 @@ const sectionsNo: SectionCopy[] = [
 		intro:
 			'Planlagt funksjon der AI-chatboten bruker en klonet versjon av Kevins faktiske stemme, slik at bes\u00f8kende h\u00f8rer Kevins tone og rytme i stemmemodus \u2014 ikke en generisk TTS-stemme. Den eksisterende OpenAI Realtime-stemmemodusen beholdes, men den syntetiske stemmen byttes ut med en personlig klone trent p\u00e5 Kevins tale.',
 		points: [
-			'Stemmekloning: trene en h\u00f8ykvalitets stemmemodell p\u00e5 opptak av Kevins tale via ElevenLabs eller tilsvarende leverand\u00f8r, med naturlig intonasjon og rytme.',
+			'Stemmekloning: trene en h\u00f8ykvalitets stemmemodell p\u00e5 opptak av Kevins tale via en egnet TTS-leverand\u00f8r, med naturlig intonasjon og rytme.',
 			'Integrasjon: bytte standard TTS-utdata i den eksisterende Realtime-stemmepipelinen med den egne klonen, med samme samtale-AI-backend.',
 			'Kvalitetskontroll: validere at klonen l\u00e5ter naturlig p\u00e5 tvers av ulike svarlengder, spr\u00e5k og emosjonelle toner f\u00f8r lansering.',
 			'Samtykke og \u00e5penhet: tydelig opplyse bes\u00f8kende om at stemmen er AI-generert fra Kevins opptak, ikke en live samtale med et menneske.',
 		],
 		refs: [],
-	},
-	{
-		category: 'Personlig',
-		title: 'ElevenLabs stemmeagent: f\u00f8rst inn, s\u00e5 rydder jeg',
-		intro:
-			'Valgfri samtale via ElevenLabs gir mer muntlig detalj enn bare ferdig skrevne sider. R\u00e5 filer eller transkripsjoner er ikke offentlige eller i vektorlageret som standard. Jeg strukturerer, korter ned, redakterer og lager notater eller .txt-utkast, laster opp via dokumentpipelinen, og kj\u00f8rer re-ingest og sjekk av henting f\u00f8r produksjonschat. arXiv-referansene under handler om indeksering, henting og evaluering i RAG, ikke om hvilken stemmeleverand\u00f8r jeg velger (det er et produktvalg). Form\u00e5l, samtykke og dataminimering f\u00f8lger personvernregelverket, ikke artiklene.',
-		points: [
-			'Samle inn med tydelig form\u00e5l, samtykke og grenser for hva som lagres.',
-			'Prosesser r\u00e5materiale selv f\u00f8r noe kan ingestes eller vises for bes\u00f8kende.',
-			'Last opp kuraterte filer via admin og dokumentpipelinen.',
-			'Re-ingest og verifiser retrieval p\u00e5 nye chunks f\u00f8r de driver Kevin sin AI i live chat.',
-		],
-		refs: [
-			{
-				label: 'Wang m.fl.: Searching for Best Practices in Retrieval-Augmented Generation (arXiv:2407.01219, EMNLP 2024)',
-				href: 'https://arxiv.org/abs/2407.01219',
-			},
-			{
-				label: 'Gao m.fl.: Retrieval-Augmented Generation for Large Language Models: A Survey (arXiv:2312.10997, des. 2023; ofte sitert som \u00ab2024\u00bb andre steder)',
-				href: 'https://arxiv.org/abs/2312.10997',
-			},
-			{
-				label: 'Abbasiantaeb m.fl.: Conversational Gold: evaluering med menneskelige gull-nugger (arXiv:2503.09902)',
-				href: 'https://arxiv.org/abs/2503.09902',
-			},
-			{
-				label: 'Retrieval Augmented Generation Evaluation in the Era of Large Language Models: A Comprehensive Survey (arXiv:2504.14891)',
-				href: 'https://arxiv.org/abs/2504.14891',
-			},
-		],
 	},
 	{
 		category: 'Generering',

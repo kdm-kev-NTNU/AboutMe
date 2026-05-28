@@ -1,7 +1,7 @@
 spring:
   config:
-    # Load optional .env as properties (repo root or backend/)
-    import: optional:file:./.env[.properties],optional:file:.env[.properties]
+    # Repo-root .env first; backend/.env wins (avoids blank OPENAI_API_KEY= in root .env blocking secrets).
+    import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:./backend/.env[.properties]
   application:
     name: aboutme-backend
   servlet:
@@ -162,16 +162,6 @@ portfolio:
           - id: ${PORTFOLIO_REALTIME_MODEL:gpt-realtime-2}
             label: OpenAI GPT-Realtime-2
             default-model: true
-      elevenlabs:
-        enabled: ${PORTFOLIO_REALTIME_ELEVENLABS_ENABLED:false}
-        api-key: ${ELEVENLABS_API_KEY:}
-        default-agent-id: ${ELEVENLABS_AGENT_ID:}
-        agents:
-          - agent-id: ${ELEVENLABS_AGENT_ID:}
-            label: ${ELEVENLABS_AGENT_LABEL:ElevenLabs Agent}
-            default-agent: true
-            environment: ${ELEVENLABS_AGENT_ENVIRONMENT:}
-            branch-id: ${ELEVENLABS_AGENT_BRANCH_ID:}
   realtime-rate-limit:
     enabled: true
     capacity: 3
