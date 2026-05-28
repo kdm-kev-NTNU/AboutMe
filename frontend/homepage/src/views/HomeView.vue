@@ -144,8 +144,8 @@ onMounted(() => {
               <p>
                 {{
                   language === 'no'
-                    ? 'Standard stemmemodus bruker språkvalg på forhånd for bedre kvalitet. Live-modus er raskere, men mer ustabil.'
-                    : 'Standard voice asks for language up front for higher quality. Live mode is faster, but more unstable.'
+                    ? 'Live stemmechat er raskere, men kan være ustabil. Økter kan falle ut og avsluttes etter ca. 3 minutter.'
+                    : 'Live voice chat is faster, but can be unstable. Sessions may drop and end after about 3 minutes.'
                 }}
               </p>
             </div>
