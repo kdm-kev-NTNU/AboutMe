@@ -1,7 +1,7 @@
 spring:
   config:
-    # Load optional .env as properties (repo root or backend/)
-    import: optional:file:./.env[.properties],optional:file:.env[.properties]
+    # Repo-root .env first; backend/.env wins (avoids blank OPENAI_API_KEY= in root .env blocking secrets).
+    import: optional:file:./.env[.properties],optional:file:.env[.properties],optional:file:./backend/.env[.properties]
   application:
     name: aboutme-backend
   servlet:
