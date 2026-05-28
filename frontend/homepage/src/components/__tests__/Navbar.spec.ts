@@ -15,10 +15,8 @@ describe('Navbar', () => {
 			history: createMemoryHistory(),
 			routes: [
 				{ path: '/', name: 'home', component: { template: '<div />' } },
-				{ path: '/voice', name: 'voice', component: { template: '<div />' } },
-				{ path: '/projects', name: 'projects', component: { template: '<div />' } },
-				{ path: '/career', name: 'career', component: { template: '<div />' } },
-				{ path: '/project', name: 'project', component: { template: '<div />' } },
+				{ path: '/reason', name: 'reason', component: { template: '<div />' } },
+				{ path: '/how', name: 'how', component: { template: '<div />' } },
 			],
 		})
 	}
@@ -35,10 +33,8 @@ describe('Navbar', () => {
 		})
 		await flushPromises()
 		expect(wrapper.text()).toContain('Home')
-		expect(wrapper.text()).toContain('Voice')
-		expect(wrapper.text()).toContain('Projects')
-		expect(wrapper.text()).toContain('Career')
-		expect(wrapper.text()).toContain('The project')
+		expect(wrapper.text()).toContain('Experience and education')
+		expect(wrapper.text()).toContain('How')
 	})
 
 	it('shows Norwegian labels when language is no', async () => {
@@ -58,15 +54,13 @@ describe('Navbar', () => {
 		})
 		await flushPromises()
 		expect(wrapper.text()).toContain('Hjem')
-		expect(wrapper.text()).toContain('Stemme')
-		expect(wrapper.text()).toContain('Prosjekter')
-		expect(wrapper.text()).toContain('Karriere')
-		expect(wrapper.text()).toContain('Prosjektet')
+		expect(wrapper.text()).toContain('Erfaring og utdanning')
+		expect(wrapper.text()).toContain('Hvordan')
 	})
 
 	it('marks active route with stronger button styling', async () => {
 		const router = makeRouter()
-		await router.push('/career')
+		await router.push('/reason')
 		await router.isReady()
 		const wrapper = mount(Navbar, {
 			global: {
@@ -76,8 +70,8 @@ describe('Navbar', () => {
 		})
 		await flushPromises()
 		const links = wrapper.findAll('a')
-		const careerLink = links.find((a) => a.text().includes('Career'))
-		expect(careerLink?.classes().join(' ')).toContain('font-semibold')
+		const experienceLink = links.find((a) => a.text().includes('Experience and education'))
+		expect(experienceLink?.classes().join(' ')).toContain('font-semibold')
 	})
 
 	it('opens mobile drawer from hamburger and lists all nav links', async () => {
@@ -100,9 +94,9 @@ describe('Navbar', () => {
 
 		const drawer = wrapper.find('#mobile-nav-drawer')
 		expect(drawer.exists()).toBe(true)
-		expect(drawer.findAll('a').length).toBe(5)
+		expect(drawer.findAll('a').length).toBe(3)
 		expect(drawer.text()).toContain('Home')
-		expect(drawer.text()).toContain('Voice')
-		expect(drawer.text()).toContain('Projects')
+		expect(drawer.text()).toContain('Experience and education')
+		expect(drawer.text()).toContain('How')
 	})
 })

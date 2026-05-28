@@ -9,6 +9,9 @@ import { useLangStore } from '@/stores/lang'
 import ProjectsView from '../ProjectsView.vue'
 import CareerView from '../CareerView.vue'
 import ProjectPageView from '../ProjectPageView.vue'
+import HowView from '../HowView.vue'
+import ReasonView from '../ReasonView.vue'
+import HeathenArmyView from '../HeathenArmyView.vue'
 
 describe('portfolio views (smoke)', () => {
 	function mountView(component: Component) {
@@ -66,6 +69,42 @@ describe('portfolio views (smoke)', () => {
 		})
 		return mount(ProjectsView, {
 			global: { plugins: [pinia, router, MotionPlugin] },
+		})
+	}
+
+	async function mountHowViewWithRoute(hash = '') {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('en')
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: '/how', name: 'how', component: HowView }],
+		})
+		await router.push(`/how${hash}`)
+		await router.isReady()
+		return mount(HowView, {
+			global: {
+				plugins: [pinia, router, MotionPlugin],
+				stubs: { RouterLink: routerLinkStub },
+			},
+		})
+	}
+
+	function mountHeathenArmyView() {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('en')
+		return mount(HeathenArmyView, {
+			global: {
+				plugins: [pinia, MotionPlugin],
+				stubs: {
+					RouterLink: routerLinkStub,
+					Dialog: { template: '<div><slot /></div>' },
+					DialogContent: { template: '<div><slot /></div>' },
+					DialogHeader: { template: '<div><slot /></div>' },
+					DialogTitle: { template: '<h3><slot /></h3>' },
+				},
+			},
 		})
 	}
 
@@ -142,14 +181,13 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapper.find('h1').exists()).toBe(true)
 	})
 
-	it('renders CareerView with work, education, and courses', async () => {
+	it('renders CareerView with work and education', async () => {
 		const wrapper = mountView(CareerView)
 		await flushPromises()
 		expect(wrapper.text()).toContain('Experience & education')
 		expect(wrapper.text()).toContain('Work Experience')
 		expect(wrapper.text()).toMatch(/NTNU|Oslo Municipality/i)
 		expect(wrapper.text()).toContain('Education')
-		expect(wrapper.text()).toMatch(/Courses|Emner/)
 	})
 
 	it('renders CareerView in Norwegian with translated section labels', async () => {
@@ -161,7 +199,6 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapper.text()).toContain('Erfaring og utdanning')
 		expect(wrapper.text()).toContain('Arbeidserfaring')
 		expect(wrapper.text()).toContain('Utdanning')
-		expect(wrapper.text()).toContain('Emner')
 		expect(wrapper.text()).toMatch(/studiepoeng|Karakter/)
 	})
 
@@ -193,4 +230,59 @@ describe('portfolio views (smoke)', () => {
 		},
 		25_000,
 	)
+
+	it('renders ReasonView in English and Norwegian', async () => {
+		const wrapperEn = mountView(ReasonView)
+		await flushPromises()
+		expect(wrapperEn.text()).toContain('Experience and education')
+		expect(wrapperEn.text()).toContain('Work Experience')
+		expect(wrapperEn.text()).toContain('Education')
+		expect(wrapperEn.text()).toContain('Projects')
+		expect(wrapperEn.text()).toContain('AboutMe')
+		expect(wrapperEn.text()).toContain('IMAT3011')
+		expect(wrapperEn.text()).toContain('TDT4172')
+		expect(wrapperEn.text()).toContain('Will assist with teaching and exercises')
+
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('no')
+		const wrapperNo = mount(ReasonView, { global: { plugins: [pinia, MotionPlugin] } })
+		await flushPromises()
+		expect(wrapperNo.text()).toContain('Erfaring og utdanning')
+		expect(wrapperNo.text()).toContain('Arbeidserfaring')
+		expect(wrapperNo.text()).toContain('Utdanning')
+		expect(wrapperNo.text()).toContain('Prosjekter')
+		expect(wrapperNo.text()).toContain('AboutMe')
+		expect(wrapperNo.text()).toContain('IMAT3011')
+		expect(wrapperNo.text()).toContain('TDT4172')
+		expect(wrapperNo.text()).toContain('Kommer til å bistå med undervisning og øvinger')
+	})
+
+	it('opens HowView accordions from route hash and toggles sections', async () => {
+		const wrapper = await mountHowViewWithRoute('#future-work')
+		await flushPromises()
+		expect(wrapper.text()).toContain('How')
+		expect(wrapper.text()).toContain('Future work')
+		expect(wrapper.text()).not.toContain('Heathen Army (Vikings blog)')
+		expect(wrapper.text()).toContain('References (arXiv)')
+
+		const toggles = wrapper.findAll('button')
+		await toggles[0].trigger('click')
+		await flushPromises()
+		expect(wrapper.text()).toContain("Bachelor's thesis")
+	})
+
+	it('renders HeathenArmyView and opens gallery details', async () => {
+		const wrapper = mountHeathenArmyView()
+		await flushPromises()
+		expect(wrapper.text()).toContain('Heathen Army')
+		expect(wrapper.text()).toContain('Signals from the era')
+		expect(wrapper.text()).toContain('Screenshots')
+
+		const galleryButtons = wrapper.findAll('figure button')
+		expect(galleryButtons.length).toBeGreaterThan(0)
+		await galleryButtons[0].trigger('click')
+		await flushPromises()
+		expect(wrapper.text()).toContain('Open image')
+	})
 })
