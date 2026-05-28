@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   backend:
@@ -138,3 +139,34 @@ jobs:
             frontend/homepage/cypress/videos
             frontend/homepage/cypress/screenshots
           if-no-files-found: ignore
+
+  coverage-report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: [backend, frontend]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout coverage script
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            scripts/ci/build-coverage-comment.py
+          sparse-checkout-cone-mode: false
+      - name: Download backend reports
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-test-reports
+          path: artifacts/backend
+      - name: Download frontend reports
+        uses: actions/download-artifact@v7
+        with:
+          name: frontend-test-reports
+          path: artifacts/frontend
+      - name: Build coverage summary markdown
+        id: coverage_summary
+        run: python scripts/ci/build-coverage-comment.py
+      - name: Sticky PR coverage comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-summary
+          path: coverage-comment.md

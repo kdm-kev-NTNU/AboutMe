@@ -1,5 +1,8 @@
 # AboutMe
 
+[![Tests](https://github.com/kevinmazali/AboutMe/actions/workflows/tests.yml/badge.svg)](https://github.com/kevinmazali/AboutMe/actions/workflows/tests.yml)
+[![Coverage](https://github.com/kevinmazali/AboutMe/actions/workflows/coverage.yml/badge.svg)](https://github.com/kevinmazali/AboutMe/actions/workflows/coverage.yml)
+
 Portfolio web app with a document-grounded AI chat, live voice, and admin tooling for keeping the knowledge base current. The UI supports Norwegian and English.
 
 Core stack:
@@ -8,6 +11,16 @@ Core stack:
 - **Backend:** Java 21, Spring Boot 4, Spring AI 2 BOM, Spring Security, Spring Data JPA, SpringDoc OpenAPI.
 - **AI/RAG:** OpenAI and optional Anthropic chat models, OpenAI embeddings, OpenAI Realtime WebRTC voice, optional ElevenLabs Conversational AI voice agents, optional ONNX cross-encoder reranking, OpenNLP-backed sanitization.
 - **Data/ops:** PostgreSQL 17 with pgvector for relational data and embeddings, Docker Compose, Nginx, Actuator, Prometheus, optional PostHog frontend and server-side LLM analytics.
+
+## Tech Stack Details
+
+Architecture is split into three practical tracks: AI/RAG, backend services, and frontend/runtime.
+
+- **AI and RAG:** Spring AI 2 connects OpenAI (and optional Anthropic) chat models, stores embeddings and chunks in PostgreSQL/pgvector, and supports optional ONNX reranking.
+- **Voice:** OpenAI Realtime voice runs over WebRTC with server-side session and RAG lookup support. Whisper-based transcription is used where needed.
+- **Backend services:** Spring Boot 4 on Java 21 with Spring Security, JPA, and Bucket4j. Admin tooling supports document ingestion, prompt versioning, and RAG experiments.
+- **Frontend runtime:** Vue 3 + TypeScript + Vite 8 with Pinia, Tailwind 4, Reka UI, and Orval-generated API client.
+- **Observability and delivery:** Actuator, Micrometer, Prometheus metrics, OpenTelemetry tracing, GitHub Actions CI, and Railway deployment with Docker images.
 
 ## Repository Layout
 
@@ -234,6 +247,28 @@ npm run test:unit
 npm run test:unit:coverage
 npm run lint:ci
 ```
+
+Coverage parity (local, same gates as CI):
+
+```powershell
+.\scripts\coverage-check.ps1
+```
+
+## Git Hooks (Lefthook)
+
+For continuous local git-change validation before push:
+
+1. Install Lefthook: https://github.com/evilmartians/lefthook
+2. From repo root, run:
+
+```bash
+lefthook install
+```
+
+Configured hooks:
+
+- `pre-commit`: frontend lint + type-check, backend compile
+- `pre-push`: frontend unit coverage and backend `verify`
 
 Refresh the Orval client after backend API changes: `.\scripts\update-openapi.ps1` (or `node scripts/patch-openapi-extensions.mjs` then `npm run api:generate` in `frontend/homepage`).
 

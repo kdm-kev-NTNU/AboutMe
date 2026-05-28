@@ -36,8 +36,7 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 			},
 			{
 				path: '/projects',
-				name: 'projects',
-				component: () => import('../views/ProjectsView.vue'),
+				redirect: { path: '/reason', hash: '#projects' },
 			},
 			{
 				path: '/projects/heathen-army',
@@ -46,29 +45,37 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 			},
 			{
 				path: '/career',
-				name: 'career',
-				component: () => import('../views/CareerView.vue'),
+				redirect: '/reason',
+			},
+			{
+				path: '/reason',
+				name: 'reason',
+				component: () => import('../views/ReasonView.vue'),
 			},
 			{
 				path: '/work-experience',
-				redirect: '/career',
+				redirect: '/reason',
 			},
 			{
 				path: '/education',
-				redirect: '/career',
+				redirect: '/reason',
+			},
+			{
+				path: '/how',
+				name: 'how',
+				component: () => import('../views/HowView.vue'),
 			},
 			{
 				path: '/project',
-				name: 'project',
-				component: () => import('../views/ProjectPageView.vue'),
+				redirect: { path: '/reason', hash: '#projects' },
 			},
 			{
 				path: '/bachelor',
-				redirect: { path: '/project', hash: '#bachelor' },
+				redirect: { path: '/how', hash: '#bachelor' },
 			},
 			{
 				path: '/tech-stack',
-				redirect: { path: '/project', hash: '#tech-stack' },
+				redirect: '/how',
 			},
 			{
 				path: '/feedback',
@@ -82,7 +89,7 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 			},
 			{
 				path: '/future-work',
-				redirect: { path: '/project', hash: '#future-work' },
+				redirect: { path: '/how', hash: '#future-work' },
 			},
 			{
 				path: '/admin/tools',

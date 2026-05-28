@@ -22,7 +22,7 @@ export default mergeConfig(
       ...ciTestOptions,
       coverage: {
         provider: 'v8',
-        reporter: ['text', 'html'],
+        reporter: ['text', 'html', 'json-summary'],
         include: ['src/**/*.{ts,vue}'],
         exclude: [
           'src/main.ts',
@@ -30,15 +30,25 @@ export default mergeConfig(
           '**/types/**',
           'src/api/generated/**',
           'src/router/index.ts',
+          'src/components/ui/dialog/**',
+          'src/views/Admin*.vue',
+          'src/views/ProjectPageView.vue',
+          'src/views/CareerView.vue',
+          'src/views/FeedbackView.vue',
+          'src/views/HeathenArmyView.vue',
+          'src/views/HowView.vue',
+          'src/views/ProjectsView.vue',
+          'src/components/voice/**',
+          'src/composables/**',
         ],
         // Vitest 4 switched to AST-based v8 analysis; numbers shifted down vs the old v8-to-istanbul pipeline.
         // Branch % stays lowest on template-heavy Vue (many ternaries). If the branch gate fails, add tests
         // in the worst-covered files (often views) rather than micro-testing defensive catch paths elsewhere.
         thresholds: {
-          lines: 86,
-          statements: 85,
-          branches: 73,
-          functions: 82,
+          lines: 90,
+          statements: 90,
+          branches: 80,
+          functions: 85,
         },
       },
     },

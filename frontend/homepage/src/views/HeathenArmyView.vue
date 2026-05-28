@@ -217,7 +217,7 @@ function captionFor(item: GalleryItem) {
 		<div class="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
 			<div class="mb-8">
 				<Button variant="outline" size="sm" as-child class="gap-2 border-slate-300 bg-white/80">
-					<RouterLink to="/projects">
+					<RouterLink to="/reason#projects">
 						<ArrowLeft class="h-4 w-4" aria-hidden="true" />
 						{{ copy.back }}
 					</RouterLink>

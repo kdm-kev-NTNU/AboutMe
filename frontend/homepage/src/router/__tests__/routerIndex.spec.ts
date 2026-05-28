@@ -14,9 +14,9 @@ describe('application router (index)', () => {
 		expect(names.has('home')).toBe(true)
 		expect(names.has('chat')).toBe(true)
 		expect(names.has('privacy-policy')).toBe(true)
-		expect(names.has('project')).toBe(true)
+		expect(names.has('how')).toBe(true)
 		expect(names.has('project-heathen-army')).toBe(true)
-		expect(names.has('career')).toBe(true)
+		expect(names.has('reason')).toBe(true)
 		expect(names.has('admin-tools')).toBe(true)
 		expect(names.has('admin-experiments')).toBe(true)
 	})
@@ -27,55 +27,64 @@ describe('application router (index)', () => {
 		expect(router.currentRoute.value.name).toBe('privacy-policy')
 	})
 
-	it('redirects legacy bachelor path to project with bachelor hash', async () => {
+	it('redirects legacy bachelor path to how with bachelor hash', async () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/bachelor')
-		expect(router.currentRoute.value.path).toBe('/project')
+		expect(router.currentRoute.value.path).toBe('/how')
 		expect(router.currentRoute.value.hash).toBe('#bachelor')
-		expect(router.currentRoute.value.name).toBe('project')
+		expect(router.currentRoute.value.name).toBe('how')
 	})
 
-	it('redirects legacy tech-stack path to project with tech-stack hash', async () => {
+	it('redirects legacy tech-stack path to how', async () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/tech-stack')
-		expect(router.currentRoute.value.path).toBe('/project')
-		expect(router.currentRoute.value.hash).toBe('#tech-stack')
+		expect(router.currentRoute.value.path).toBe('/how')
 	})
 
-	it('redirects legacy future-work path to project with future-work hash', async () => {
+	it('redirects legacy future-work path to how with future-work hash', async () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/future-work')
-		expect(router.currentRoute.value.path).toBe('/project')
+		expect(router.currentRoute.value.path).toBe('/how')
 		expect(router.currentRoute.value.hash).toBe('#future-work')
 	})
 
-	it('navigates to lazy-loaded project route', async () => {
+	it('navigates to lazy-loaded how route', async () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
-		await router.push('/project')
-		expect(router.currentRoute.value.name).toBe('project')
+		await router.push('/how')
+		expect(router.currentRoute.value.name).toBe('how')
 	})
 
-	it('redirects legacy work-experience and education paths to career', async () => {
+	it('redirects legacy work-experience and education paths to reason', async () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/work-experience')
-		expect(router.currentRoute.value.path).toBe('/career')
-		expect(router.currentRoute.value.name).toBe('career')
+		expect(router.currentRoute.value.path).toBe('/reason')
+		expect(router.currentRoute.value.name).toBe('reason')
 
 		await router.push('/education')
-		expect(router.currentRoute.value.path).toBe('/career')
-		expect(router.currentRoute.value.name).toBe('career')
+		expect(router.currentRoute.value.path).toBe('/reason')
+		expect(router.currentRoute.value.name).toBe('reason')
+	})
+
+	it('redirects legacy projects paths to reason with projects hash', async () => {
+		const router = createPortfolioRouter({ useMemoryHistory: true })
+		await router.push('/projects')
+		expect(router.currentRoute.value.path).toBe('/reason')
+		expect(router.currentRoute.value.hash).toBe('#projects')
+		expect(router.currentRoute.value.name).toBe('reason')
+
+		await router.push('/project')
+		expect(router.currentRoute.value.path).toBe('/reason')
+		expect(router.currentRoute.value.hash).toBe('#projects')
+		expect(router.currentRoute.value.name).toBe('reason')
 	})
 
 	it('navigates to additional lazy-loaded public routes', async () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
-		await router.push('/projects')
-		expect(router.currentRoute.value.name).toBe('projects')
-
 		await router.push('/projects/heathen-army')
 		expect(router.currentRoute.value.name).toBe('project-heathen-army')
 
 		await router.push('/career')
-		expect(router.currentRoute.value.name).toBe('career')
+		expect(router.currentRoute.value.name).toBe('reason')
 
 		await router.push('/feedback')
 		expect(router.currentRoute.value.name).toBe('feedback')

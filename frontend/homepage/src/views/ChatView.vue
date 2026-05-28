@@ -426,7 +426,7 @@ onMounted(async () => {
         </p>
         <DialogFooter class="flex-col gap-2 sm:flex-row sm:justify-end">
           <Button as-child variant="outline">
-            <RouterLink :to="{ name: 'project', hash: '#bachelor' }">{{ popupCopy.bachelorCta }}</RouterLink>
+            <RouterLink :to="{ name: 'how', hash: '#bachelor' }">{{ popupCopy.bachelorCta }}</RouterLink>
           </Button>
           <Button type="button" @click="dismissInfoPopup">{{ popupCopy.dismiss }}</Button>
         </DialogFooter>
