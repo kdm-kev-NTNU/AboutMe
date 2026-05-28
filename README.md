@@ -29,8 +29,7 @@ Architecture is split into three practical tracks: AI/RAG, backend services, and
 | `backend/` | Spring Boot API for chat, Realtime voice, auth, admin tools, RAG, experiments, budgets, and observability |
 | `frontend/homepage/` | Vue SPA. See [frontend/homepage/README.md](frontend/homepage/README.md) for scripts, routes, analytics, and Orval notes |
 | `scripts/dev.ps1` | Windows helper that starts Docker infrastructure and opens backend + Vite terminals (recommended daily dev) |
-| `docker-compose.yml` | PostgreSQL/pgvector, backend, and Nginx-hosted frontend (prod-like images) |
-| `docker-compose.dev.yml` | Full stack in Docker with Vite HMR and Spring DevTools auto-reload |
+| `docker-compose.yml` | PostgreSQL/pgvector (always) plus optional `--profile dev` or `--profile prod` app stacks |
 | `.env.example` | Backend secrets template (copy to repo-root `.env`) |
 | `frontend/homepage/.env.example` | Frontend `VITE_*` build-time template |
 | `.github/workflows/` | Maven/frontend tests, Semgrep, and Docker image publishing |
@@ -51,7 +50,7 @@ Seed documents for the vector store go in `backend/data/docs/` (gitignored). The
 
 **Recommended for daily development:** [Hybrid Dev](#hybrid-dev-recommended) or [Full Stack Dev in Docker](#full-stack-dev-in-docker). Both auto-reload on code changes.
 
-**Prod-like Docker** (`docker compose up -d --build`) does **not** auto-reload — run `--build` again after each code change, or use [Compose Watch](#compose-watch-prod-image-smoke-test) to rebuild images automatically (slower).
+**Prod-like Docker** (`docker compose --profile prod up -d --build`) does **not** auto-reload — run `--build` again after each code change, or use [Compose Watch](#compose-watch-prod-image-smoke-test) to rebuild images automatically (slower).
 
 ### Full Stack in Docker
 
@@ -59,7 +58,7 @@ Copy `.env.example` to `.env` at the repo root, set at least `OPENAI_API_KEY` an
 
 ```bash
 cp .env.docker.example .env.docker   # first time only (Windows: copy .env.docker.example .env.docker)
-docker compose up -d --build
+docker compose --profile prod up -d --build
 ```
 
 This builds frozen images (JAR + Nginx static assets). For day-to-day coding with live reload, use **Hybrid Dev** or **Full Stack Dev in Docker** below instead.
@@ -108,10 +107,10 @@ For auto-reload without a local JDK or Node install:
 
 ```bash
 cp .env.docker.example .env.docker   # first time only
-docker compose -f docker-compose.dev.yml up
+docker compose --profile dev up
 ```
 
-Copy `.env.example` to repo-root `.env` before starting. The dev compose file runs `mvn spring-boot:run` and `npm run dev` inside containers with source mounted from the repo.
+Copy `.env.example` to repo-root `.env` before starting. The `dev` profile runs `mvn spring-boot:run` and `npm run dev` inside containers with source mounted from the repo.
 
 **Auto-reload:** same as hybrid — Vite HMR for the frontend, Spring DevTools restart for the backend. ONNX rerank assets from the prod Dockerfile are not bundled; set `PORTFOLIO_RETRIEVAL_RERANK_ENABLED=false` in repo-root `.env` if reranking is not needed locally.
 
@@ -120,16 +119,16 @@ Copy `.env.example` to repo-root `.env` before starting. The dev compose file ru
 To verify prod images while editing code (rebuilds entire images on change — slower than dev mode):
 
 ```bash
-docker compose watch
+docker compose --profile prod watch
 ```
 
 Or start the stack and watch in one step:
 
 ```bash
-docker compose up --watch
+docker compose --profile prod up --watch
 ```
 
-Use this before deploy to confirm the production Dockerfile still builds and runs; use **Hybrid Dev** or **docker-compose.dev.yml** for everyday iteration.
+Use this before deploy to confirm the production Dockerfile still builds and runs; use **Hybrid Dev** or **`docker compose --profile dev up`** for everyday iteration.
 
 ## Configuration
 
