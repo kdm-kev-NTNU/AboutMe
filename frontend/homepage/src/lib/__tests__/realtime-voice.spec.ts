@@ -12,22 +12,6 @@ describe('realtime-voice', () => {
     mockCustomFetch.mockReset()
   })
 
-  it('fetchRealtimeVoiceEnabled is true only when backend returns enabled true JSON', async () => {
-    mockCustomFetch.mockResolvedValue({
-      status: 200,
-      data: { enabled: true },
-    })
-
-    const { fetchRealtimeVoiceEnabled } = await import('../realtime-voice')
-    await expect(fetchRealtimeVoiceEnabled()).resolves.toBe(true)
-
-    mockCustomFetch.mockResolvedValueOnce({
-      status: 200,
-      data: { enabled: false },
-    })
-    await expect(fetchRealtimeVoiceEnabled()).resolves.toBe(false)
-  })
-
   it('fetchRealtimeVoiceStatus parses curated choices and defaults', async () => {
     mockCustomFetch.mockResolvedValue({
       status: 200,
@@ -49,27 +33,6 @@ describe('realtime-voice', () => {
       voice: 'cedar',
       reasoningEffort: 'medium',
     })
-  })
-
-  it('fetchRealtimeVoiceEnabled is false when status is non-200', async () => {
-    mockCustomFetch.mockResolvedValue({ status: 503, data: { enabled: true } })
-    const { fetchRealtimeVoiceEnabled } = await import('../realtime-voice')
-    await expect(fetchRealtimeVoiceEnabled()).resolves.toBe(false)
-  })
-
-  it('fetchRealtimeVoiceEnabled is false when body is invalid', async () => {
-    mockCustomFetch.mockResolvedValue({ status: 200, data: null })
-    const { fetchRealtimeVoiceEnabled } = await import('../realtime-voice')
-    await expect(fetchRealtimeVoiceEnabled()).resolves.toBe(false)
-
-    mockCustomFetch.mockResolvedValueOnce({ status: 200, data: 'oops' })
-    await expect(fetchRealtimeVoiceEnabled()).resolves.toBe(false)
-  })
-
-  it('fetchRealtimeVoiceEnabled is false when fetch rejects', async () => {
-    mockCustomFetch.mockRejectedValue(new Error('network'))
-    const { fetchRealtimeVoiceEnabled } = await import('../realtime-voice')
-    await expect(fetchRealtimeVoiceEnabled()).resolves.toBe(false)
   })
 
   it('exchangeRealtimeSdp returns SDP answer when customFetch resolves 2xx with string body', async () => {

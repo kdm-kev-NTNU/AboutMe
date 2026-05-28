@@ -1,13 +1,13 @@
 /**
- * Merges missing API paths into frontend/homepage/openapi/openapi.json for Orval.
- * Run: node scripts/patch-openapi-extensions.mjs
+ * Merges missing API paths into openapi/openapi.json for Orval.
+ * Run from frontend/homepage: node scripts/patch-openapi-extensions.mjs
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const openapiPath = join(root, 'frontend', 'homepage', 'openapi', 'openapi.json')
+const homepageRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+const openapiPath = join(homepageRoot, 'openapi', 'openapi.json')
 const doc = JSON.parse(readFileSync(openapiPath, 'utf8'))
 
 const tagNames = [

@@ -1,11 +1,21 @@
 # IDE
 .idea/
+.vscode/
 
-# Cursor: share rules + mcp.json.example; ignore local MCP secrets and other machine state
+# Cursor (local MCP secrets and machine state)
 .cursor/*
-!.cursor/mcp.json.example
 !.cursor/rules/
 !.cursor/rules/**
+.cursorignore
+
+# Internal docs (local only)
+docs/
+frontend/homepage/docs/
+
+# Git hooks (local setup)
+lefthook.yml
+
+# OS / Java IDE artifacts
 .apt_generated
 .classpath
 .factorypath
@@ -25,17 +35,15 @@ Thumbs.db
 Desktop.ini
 ehthumbs.db
 
-# Local environment (secrets / machine-specific)
+# Local environment (secrets)
 .env
 .env.*
 **/.env
 **/.env.*
 !.env.example
-!.env.docker.example
-!frontend/homepage/.env.example
 .env.docker
 
-# Local credentials / private key material
+# Credentials / keys
 **/credentials.json
 **/secrets.json
 **/*.key
@@ -45,31 +53,24 @@ ehthumbs.db
 **/id_rsa
 **/id_ed25519
 
-# Local vector store exports (not used by runtime)
+# Vector store exports
 backend/vectordatabase/
 
-# Source documents for Chroma ingestion (personal data)
+# RAG source documents (personal data)
 backend/data/*
 !backend/data/docs/
 backend/data/docs/*
 !backend/data/docs/.gitkeep
 
-# Maven build output
+# Maven
 backend/target/
-
-# Java class files (safety net outside target/)
 *.class
-
-# Maven wrapper JAR (auto-generated)
 backend/.mvn/wrapper/maven-wrapper.jar
 
-# Local scratch payloads / agent artifacts (never commit)
-scripts/_*
-
-# Local dependency tree dumps (ad-hoc mvn dependency:tree output)
+# Scratch
 backend/__deptree.txt
 
-# Node/npm (any package root in the repo)
+# Node
 **/node_modules/
 **/.pnpm-store/
 
@@ -83,7 +84,7 @@ frontend/homepage/cypress/videos/
 frontend/homepage/cypress/screenshots/
 frontend/homepage/*.tsbuildinfo
 
-# Docker local data volumes
+# Docker local volumes
 docker-data/
 
 # Logs
@@ -94,7 +95,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Local runtime/db/temp (DB patterns scoped to backend/ so committed test fixtures stay visible)
+# Local runtime/db/temp
 *.local
 *.tmp
 *.pid

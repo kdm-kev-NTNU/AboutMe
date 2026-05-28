@@ -20,7 +20,6 @@
     "test:e2e:voice-live:openai": "cypress run --e2e --spec cypress/e2e/voice-live-smoke.cy.ts --env VOICE_LIVE=true,VOICE_LIVE_EXPECT_REALTIME_ENABLED=true,VOICE_LIVE_RUN_OPENAI=true",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "api:pull": "node scripts/fetch-openapi.mjs",
     "api:generate": "npx --no-install orval --config orval.config.ts",
     "lint": "eslint . --fix",
     "lint:ci": "eslint . --max-warnings 0",

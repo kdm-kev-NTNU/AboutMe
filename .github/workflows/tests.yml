@@ -150,7 +150,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           sparse-checkout: |
-            scripts/ci/build-coverage-comment.py
+            .github/scripts/build-coverage-comment.py
           sparse-checkout-cone-mode: false
       - name: Download backend reports
         uses: actions/download-artifact@v7
@@ -164,7 +164,7 @@ jobs:
           path: artifacts/frontend
       - name: Build coverage summary markdown
         id: coverage_summary
-        run: python scripts/ci/build-coverage-comment.py
+        run: python .github/scripts/build-coverage-comment.py
       - name: Sticky PR coverage comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
