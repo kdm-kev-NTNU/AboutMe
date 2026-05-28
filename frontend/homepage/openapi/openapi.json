@@ -673,21 +673,10 @@
           }
         }
       },
-      "SynthesizeRequest": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string"
-          }
-        }
-      },
       "RealtimeStatusResponse": {
         "type": "object",
         "properties": {
           "enabled": {
-            "type": "boolean"
-          },
-          "standardEnabled": {
             "type": "boolean"
           },
           "liveEnabled": {
@@ -2064,48 +2053,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PromptDiffResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/synthesize": {
-      "post": {
-        "tags": [
-          "Chat"
-        ],
-        "summary": "Synthesize speech",
-        "operationId": "synthesizeSpeech",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SynthesizeRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "MP3 audio",
-            "content": {
-              "audio/mpeg": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }

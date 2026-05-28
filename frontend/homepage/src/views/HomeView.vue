@@ -44,11 +44,10 @@ const futureWorkHomeLink = computed(() => {
 })
 
 /** Null until loaded from GET /realtime/status */
-const standardEnabled = ref<boolean | null>(null)
 const liveEnabled = ref<boolean | null>(null)
 
 const voiceCtaAria = computed(() =>
-  language.value === 'no' ? 'Gå til robust stemmemodus' : 'Go to robust voice mode',
+  language.value === 'no' ? 'Gå til live stemmechat' : 'Go to live voice chat',
 )
 
 function goToVoiceChat() {
@@ -57,22 +56,17 @@ function goToVoiceChat() {
 
 const voiceStatus = computed(() => {
   if (language.value === 'no') {
-    if (standardEnabled.value === true && liveEnabled.value === true) return 'Standard og live stemme er tilgjengelig'
-    if (standardEnabled.value === true) return 'Standard stemme er tilgjengelig'
-    if (standardEnabled.value === false && liveEnabled.value === true) return 'Kun live stemme er tilgjengelig'
-    if (standardEnabled.value === false && liveEnabled.value === false) return 'Stemme er midlertidig av'
+    if (liveEnabled.value === true) return 'Live stemme er tilgjengelig'
+    if (liveEnabled.value === false) return 'Stemme er midlertidig av'
     return 'Sjekker stemmestatus'
   }
-  if (standardEnabled.value === true && liveEnabled.value === true) return 'Standard and live voice are available'
-  if (standardEnabled.value === true) return 'Standard voice is available'
-  if (standardEnabled.value === false && liveEnabled.value === true) return 'Live voice only is available'
-  if (standardEnabled.value === false && liveEnabled.value === false) return 'Voice is temporarily off'
+  if (liveEnabled.value === true) return 'Live voice is available'
+  if (liveEnabled.value === false) return 'Voice is temporarily off'
   return 'Checking voice status'
 })
 
 onMounted(() => {
   void fetchRealtimeVoiceStatus().then((status) => {
-    standardEnabled.value = status.standardEnabled
     liveEnabled.value = status.liveEnabled
   })
 })
@@ -105,7 +99,7 @@ onMounted(() => {
           <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-xs font-semibold text-blue-800">
             <span
               class="size-2 rounded-full"
-              :class="standardEnabled === false && liveEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
+              :class="liveEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
               aria-hidden="true"
             ></span>
             {{ voiceStatus }}
@@ -119,8 +113,8 @@ onMounted(() => {
           <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
             {{
               language === 'no'
-                ? 'Standard stemme er anbefalt: tregere, men mer robust. Live-modus finnes fortsatt for raskere samtaler, men er mindre stabil.'
-                : 'Standard voice is recommended: slower, but more robust. Live mode still exists for faster conversations, but is less stable.'
+                ? 'Live WebRTC-stemme kobler deg til Kevin sin AI i sanntid. Økter kan være ustabile og avsluttes etter ca. 3 minutter.'
+                : 'Live WebRTC voice connects you to Kevin\'s AI in real time. Sessions can be unstable and end after about 3 minutes.'
             }}
           </p>
           <div class="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -131,18 +125,14 @@ onMounted(() => {
               @click="goToVoiceChat"
             >
               <Headphones class="me-2 size-5" aria-hidden="true" />
-              {{ language === 'no' ? 'Start standard stemme' : 'Start standard voice' }}
+              {{ language === 'no' ? 'Start live stemme' : 'Start live voice' }}
             </Button>
             <Button
               as-child
               variant="outline"
               class="h-14 w-full justify-center rounded-2xl border-blue-200 bg-white/85 px-5 text-sm font-semibold text-slate-800 hover:bg-blue-50 sm:w-auto sm:px-7 sm:text-base"
             >
-              <RouterLink v-if="liveEnabled === true" to="/voice?mode=live" class="inline-flex items-center">
-                <Headphones class="me-2 size-5" aria-hidden="true" />
-                {{ language === 'no' ? 'Prøv live (ustabil)' : 'Try live (unstable)' }}
-              </RouterLink>
-              <RouterLink v-else to="/chat" class="inline-flex items-center">
+              <RouterLink to="/chat" class="inline-flex items-center">
                 <MessageSquare class="me-2 size-5" aria-hidden="true" />
                 {{ language === 'no' ? 'Bruk tekstchat' : 'Use text chat' }}
               </RouterLink>
@@ -167,8 +157,8 @@ onMounted(() => {
               <p>
                 {{
                   language === 'no'
-                    ? 'Standard stemmemodus bruker språkvalg på forhånd for bedre kvalitet. Live-modus er raskere, men mer ustabil.'
-                    : 'Standard voice asks for language up front for higher quality. Live mode is faster, but more unstable.'
+                    ? 'Live WebRTC-stemme er raskere enn tekstchat, men kan være ustabil. Bruk tekstchat hvis live ikke fungerer.'
+                    : 'Live WebRTC voice is faster than text chat, but can be unstable. Use text chat if live does not work.'
                 }}
               </p>
             </div>

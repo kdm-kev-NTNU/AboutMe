@@ -1,50 +1,32 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { MessageSquare } from 'lucide-vue-next'
 import { useLangStore } from '@/stores/lang'
 import { useVoiceModelStore } from '@/stores/voice-model'
-import { useVoiceModeStore, type VoiceMode } from '@/stores/voice-mode'
-import { captureProductAnalyticsEvent } from '@/lib/analytics'
-import { POSTHOG_VOICE_EVENTS } from '@/lib/posthog-sdk'
 import {
   fetchRealtimeVoiceStatus,
   type RealtimeReasoningEffort,
   type RealtimeVoiceChoice,
 } from '@/lib/realtime-voice'
-import VoiceModeSwitcher from '@/components/voice/VoiceModeSwitcher.vue'
-import StandardVoicePanel from '@/components/voice/StandardVoicePanel.vue'
 import RealtimeVoicePanel from '@/components/voice/RealtimeVoicePanel.vue'
 
 const langStore = useLangStore()
 const voiceModelStore = useVoiceModelStore()
-const voiceModeStore = useVoiceModeStore()
 const language = computed(() => langStore.language)
-const route = useRoute()
-const router = useRouter()
 
 const liveAvailable = ref<boolean | null>(null)
-const standardAvailable = ref<boolean | null>(null)
 const voiceOptions = ref<RealtimeVoiceChoice[]>(['marin', 'cedar'])
 const reasoningOptions = ref<RealtimeReasoningEffort[]>(['low', 'medium', 'high'])
 const defaultVoice = ref<RealtimeVoiceChoice>('marin')
 const defaultReasoningEffort = ref<RealtimeReasoningEffort>('low')
-const selectedMode = computed<VoiceMode>({
-  get: () => voiceModeStore.mode,
-  set: (value) => voiceModeStore.setMode(value),
-})
 
 onMounted(async () => {
-  voiceModeStore.load()
-  if (route.query.mode === 'live') {
-    voiceModeStore.setMode('live')
-  }
   const [status] = await Promise.all([
     fetchRealtimeVoiceStatus(),
     voiceModelStore.ensureModelsLoaded(),
   ])
   liveAvailable.value = status.liveEnabled && voiceModelStore.hasModels
-  standardAvailable.value = status.standardEnabled
   voiceOptions.value = status.voices
   reasoningOptions.value = status.reasoningEfforts
   defaultVoice.value = status.voice
@@ -57,21 +39,10 @@ const copy = computed(() => {
     title: en ? "Talk with Kevin's AI" : 'Snakk med Kevin sin AI',
     chatAlt: en ? 'Use text chat instead' : 'Bruk tekstchat',
     modeHint: en
-      ? 'Choose between robust standard voice and experimental live mode.'
-      : 'Velg mellom robust standard stemme og eksperimentell live-modus.',
+      ? 'Live WebRTC voice connects you in real time. Sessions can drop and end after about 3 minutes.'
+      : 'Live WebRTC-stemme kobler deg til i sanntid. Økter kan falle ut og avsluttes etter ca. 3 minutter.',
   }
 })
-
-watch(
-  () => selectedMode.value,
-  (mode) => {
-    captureProductAnalyticsEvent(POSTHOG_VOICE_EVENTS.MODE_SELECTED, { mode })
-    const nextQuery = { ...route.query }
-    if (mode === 'live') nextQuery.mode = 'live'
-    else delete nextQuery.mode
-    void router.replace({ query: nextQuery })
-  }
-)
 </script>
 
 <template>
@@ -102,15 +73,8 @@ watch(
         </RouterLink>
       </div>
       <p class="mb-4 text-sm text-slate-600">{{ copy.modeHint }}</p>
-      <VoiceModeSwitcher v-model="selectedMode" :language="language" />
 
-      <StandardVoicePanel
-        v-if="selectedMode === 'standard'"
-        :language="language"
-        :available="standardAvailable"
-      />
       <RealtimeVoicePanel
-        v-else
         :language="language"
         :available="liveAvailable"
         :voice-options="voiceOptions"

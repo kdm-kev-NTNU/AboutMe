@@ -19,17 +19,8 @@ vi.mock('@/lib/realtime-voice', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/analytics', () => ({
-  captureProductAnalyticsEvent: vi.fn(),
-}))
-
 describe('VoiceView.vue', () => {
-  async function factory(opts: {
-    lang: 'en' | 'no'
-    route?: string
-    standardEnabled: boolean
-    liveEnabled: boolean
-  }) {
+  async function factory(opts: { lang: 'en' | 'no'; liveEnabled: boolean }) {
     vi.clearAllMocks()
     fetchRealtimeVoiceStatusMock.mockReset()
     fetchRealtimeVoiceModelsMock.mockReset()
@@ -38,8 +29,7 @@ describe('VoiceView.vue', () => {
       { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: false },
     ])
     fetchRealtimeVoiceStatusMock.mockResolvedValue({
-      enabled: opts.standardEnabled || opts.liveEnabled,
-      standardEnabled: opts.standardEnabled,
+      enabled: opts.liveEnabled,
       liveEnabled: opts.liveEnabled,
       voices: ['marin', 'cedar'],
       reasoningEfforts: ['low', 'medium', 'high'],
@@ -65,7 +55,7 @@ describe('VoiceView.vue', () => {
       ],
     })
 
-    await router.push(opts.route ?? '/voice')
+    await router.push('/voice')
     await router.isReady()
 
     const stubs = {
@@ -81,12 +71,6 @@ describe('VoiceView.vue', () => {
       AlertTitle: { template: '<div><slot /></div>' },
       AlertDescription: { template: '<div><slot /></div>' },
       MessageSquare: true,
-      VoiceModeSwitcher: {
-        props: ['modelValue'],
-        emits: ['update:modelValue'],
-        template: '<div><button data-testid="switch-standard" @click="$emit(\'update:modelValue\', \'standard\')">standard</button><button data-testid="switch-live" @click="$emit(\'update:modelValue\', \'live\')">live</button><span data-testid="mode">{{ modelValue }}</span></div>',
-      },
-      StandardVoicePanel: { template: '<div data-testid="standard-panel">standard panel</div>' },
       RealtimeVoicePanel: { template: '<div data-testid="live-panel">live panel</div>' },
     }
 
@@ -98,49 +82,29 @@ describe('VoiceView.vue', () => {
       },
     })
 
-    return {
-      wrapper,
-      router,
-    }
+    return { wrapper }
   }
 
   beforeEach(async () => {
     document.body.innerHTML = ''
-    sessionStorage.clear()
     vi.clearAllMocks()
   })
 
-  it('defaults to standard mode and renders standard panel', async () => {
+  it('renders live voice panel only', async () => {
     const { wrapper } = await factory({
       lang: 'en',
-      standardEnabled: true,
       liveEnabled: true,
     })
 
     await flushPromises()
     expect(fetchRealtimeVoiceStatusMock).toHaveBeenCalledTimes(1)
-    expect(wrapper.find('[data-testid="standard-panel"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="live-panel"]').exists()).toBe(false)
-    wrapper.unmount()
-  })
-
-  it('uses live mode when route query asks for it', async () => {
-    const { wrapper } = await factory({
-      lang: 'en',
-      route: '/voice?mode=live',
-      standardEnabled: true,
-      liveEnabled: true,
-    })
-    await flushPromises()
     expect(wrapper.find('[data-testid="live-panel"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="standard-panel"]').exists()).toBe(false)
     wrapper.unmount()
   })
 
   it('renders Norwegian copy', async () => {
     const { wrapper } = await factory({
       lang: 'no',
-      standardEnabled: true,
       liveEnabled: false,
     })
     await flushPromises()
@@ -149,32 +113,13 @@ describe('VoiceView.vue', () => {
     wrapper.unmount()
   })
 
-  it('updates route query when switching to live mode', async () => {
-    const { wrapper, router } = await factory({
+  it('mentions live WebRTC in the mode hint', async () => {
+    const { wrapper } = await factory({
       lang: 'en',
-      standardEnabled: true,
       liveEnabled: true,
     })
     await flushPromises()
-    await wrapper.find('[data-testid="switch-live"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.query.mode).toBe('live')
-    expect(wrapper.find('[data-testid="live-panel"]').exists()).toBe(true)
-    wrapper.unmount()
-  })
-
-  it('clears route query when switching back to standard mode', async () => {
-    const { wrapper, router } = await factory({
-      lang: 'en',
-      route: '/voice?mode=live',
-      standardEnabled: true,
-      liveEnabled: true,
-    })
-    await flushPromises()
-    await wrapper.find('[data-testid="switch-standard"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.query.mode).toBeUndefined()
-    expect(wrapper.find('[data-testid="standard-panel"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Live WebRTC voice')
     wrapper.unmount()
   })
 })

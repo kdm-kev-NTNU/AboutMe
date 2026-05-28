@@ -34,7 +34,6 @@ export type RealtimeVoiceModelOption = {
 
 export type RealtimeVoiceStatus = RealtimeVoiceSessionOptions & {
   enabled: boolean
-  standardEnabled: boolean
   liveEnabled: boolean
   voices: RealtimeVoiceChoice[]
   reasoningEfforts: RealtimeReasoningEffort[]
@@ -92,7 +91,6 @@ function parseRealtimeVoiceStatus(data: unknown): RealtimeVoiceStatus | null {
     reasoningEfforts?: unknown
     defaultVoice?: unknown
     defaultReasoningEffort?: unknown
-    standardEnabled?: unknown
     liveEnabled?: unknown
   }
   const voices = Array.isArray(d.voices) ? d.voices.filter(isRealtimeVoice) : [...ALLOWED_REALTIME_VOICES]
@@ -109,7 +107,6 @@ function parseRealtimeVoiceStatus(data: unknown): RealtimeVoiceStatus | null {
 
   return {
     enabled: d.enabled === true,
-    standardEnabled: d.standardEnabled === true,
     liveEnabled: d.liveEnabled === true,
     voices: voices.length > 0 ? voices : [...ALLOWED_REALTIME_VOICES],
     reasoningEfforts: reasoningEfforts.length > 0 ? reasoningEfforts : [...ALLOWED_REALTIME_REASONING_EFFORTS],
@@ -129,7 +126,6 @@ export async function fetchRealtimeVoiceStatus(): Promise<RealtimeVoiceStatus> {
     }
     return parseRealtimeVoiceStatus(r.data) ?? {
       enabled: false,
-      standardEnabled: false,
       liveEnabled: false,
       voices: [...ALLOWED_REALTIME_VOICES],
       reasoningEfforts: [...ALLOWED_REALTIME_REASONING_EFFORTS],
@@ -139,7 +135,6 @@ export async function fetchRealtimeVoiceStatus(): Promise<RealtimeVoiceStatus> {
   } catch {
     return {
       enabled: false,
-      standardEnabled: false,
       liveEnabled: false,
       voices: [...ALLOWED_REALTIME_VOICES],
       reasoningEfforts: [...ALLOWED_REALTIME_REASONING_EFFORTS],

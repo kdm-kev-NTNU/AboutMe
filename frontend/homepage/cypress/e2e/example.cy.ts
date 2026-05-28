@@ -11,7 +11,7 @@ describe('Core frontend flows', () => {
   it('loads the home page and shows hero content', () => {
     cy.visit('/')
     cy.get('h1').should('contain.text', 'Kevin')
-    cy.contains(/Use text chat|Bruk tekstchat|Start standard voice|Start standard stemme/i).should(
+    cy.contains(/Use text chat|Bruk tekstchat|Start live voice|Start live stemme/i).should(
       'be.visible',
     )
   })

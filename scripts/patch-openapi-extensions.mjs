@@ -21,15 +21,10 @@ for (const name of tagNames) {
 }
 
 Object.assign(doc.components.schemas, {
-  SynthesizeRequest: {
-    type: 'object',
-    properties: { text: { type: 'string' } },
-  },
   RealtimeStatusResponse: {
     type: 'object',
     properties: {
       enabled: { type: 'boolean' },
-      standardEnabled: { type: 'boolean' },
       liveEnabled: { type: 'boolean' },
       voices: { type: 'array', items: { type: 'string' } },
       reasoningEfforts: { type: 'array', items: { type: 'string' } },
@@ -178,23 +173,6 @@ Object.assign(doc.components.schemas, {
 const basicSecurity = [{ basicAuth: [] }]
 
 Object.assign(doc.paths, {
-  '/synthesize': {
-    post: {
-      tags: ['Chat'],
-      summary: 'Synthesize speech',
-      operationId: 'synthesizeSpeech',
-      requestBody: {
-        required: true,
-        content: {
-          'application/json': { schema: { $ref: '#/components/schemas/SynthesizeRequest' } },
-        },
-      },
-      responses: {
-        '200': { description: 'MP3 audio', content: { 'audio/mpeg': { schema: { type: 'string', format: 'binary' } } } },
-        '400': { description: 'Bad Request', content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiError' } } } },
-      },
-    },
-  },
   '/transcribe': {
     post: {
       tags: ['Chat'],
