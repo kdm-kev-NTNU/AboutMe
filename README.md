@@ -1,7 +1,5 @@
 # AboutMe
 
-[![Tests](https://github.com/kevinmazali/AboutMe/actions/workflows/tests.yml/badge.svg)](https://github.com/kevinmazali/AboutMe/actions/workflows/tests.yml)
-
 Personal portfolio (NO/EN) with document-grounded AI chat, OpenAI Realtime voice, and admin RAG tooling.
 
 **Stack:** Vue 3 + Vite · Spring Boot 4 + Spring AI · PostgreSQL/pgvector · Docker
