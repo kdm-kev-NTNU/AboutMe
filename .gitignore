@@ -68,7 +68,6 @@ backend/target/
 backend/.mvn/wrapper/maven-wrapper.jar
 
 # Scratch
-scripts/_*
 backend/__deptree.txt
 
 # Node

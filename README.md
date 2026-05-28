@@ -19,8 +19,6 @@ cd frontend/homepage && npm install && npm run dev
 - App: http://localhost:5173 (API proxied to :8080)
 - Swagger: http://localhost:8080/swagger-ui/index.html
 
-**Windows:** `.\scripts\dev.ps1` starts Postgres and opens backend + frontend terminals.
-
 ## Docker (full stack)
 
 ```bash
@@ -38,11 +36,15 @@ cd frontend/homepage && npm ci && npm run test:unit && npm run lint:ci
 
 All variables: [`.env.example`](.env.example). Defaults live in `backend/src/main/resources/application.yaml`.
 
-RAG documents go in `backend/data/docs/` (gitignored). Regenerate the API client after backend changes:
+RAG documents go in `backend/data/docs/` (gitignored). After backend API changes:
 
-```powershell
-.\scripts\update-openapi.ps1
+```bash
+cd frontend/homepage && node scripts/patch-openapi-extensions.mjs
+cd backend && ./mvnw test -Dtest=SecurityConfigIT#openApiSnapshotIncludesEndpointsAndOptionalExport -Dopenapi.export=true
+cd frontend/homepage && npm run api:generate
 ```
+
+Commit `openapi/openapi.json` and `src/api/generated/portfolio.ts` if they changed.
 
 ## Deploy
 
