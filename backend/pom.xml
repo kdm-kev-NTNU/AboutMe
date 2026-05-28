@@ -338,13 +338,12 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.82</minimum>
+											<minimum>0.85</minimum>
 										</limit>
 										<limit>
 											<counter>BRANCH</counter>
 											<value>COVEREDRATIO</value>
-											<!-- Bundle hovers ~62% after experiment metrics split; 0.63 was flaky on CI. -->
-											<minimum>0.62</minimum>
+											<minimum>0.70</minimum>
 										</limit>
 									</limits>
 								</rule>
