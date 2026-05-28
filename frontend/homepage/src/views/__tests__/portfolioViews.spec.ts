@@ -90,6 +90,25 @@ describe('portfolio views (smoke)', () => {
 		})
 	}
 
+	function mountReasonView(lang: 'en' | 'no' = 'en') {
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage(lang)
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: '/reason', name: 'reason', component: ReasonView },
+				{ path: '/projects/heathen-army', component: { template: '<div />' } },
+			],
+		})
+		return mount(ReasonView, {
+			global: {
+				plugins: [pinia, router, MotionPlugin],
+				stubs: { RouterLink: routerLinkStub },
+			},
+		})
+	}
+
 	function mountHeathenArmyView() {
 		const pinia = createPinia()
 		setActivePinia(pinia)
@@ -232,7 +251,7 @@ describe('portfolio views (smoke)', () => {
 	)
 
 	it('renders ReasonView in English and Norwegian', async () => {
-		const wrapperEn = mountView(ReasonView)
+		const wrapperEn = mountReasonView('en')
 		await flushPromises()
 		expect(wrapperEn.text()).toContain('Experience and education')
 		expect(wrapperEn.text()).toContain('Work Experience')
@@ -243,10 +262,7 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapperEn.text()).toContain('TDT4172')
 		expect(wrapperEn.text()).toContain('Will assist with teaching and exercises')
 
-		const pinia = createPinia()
-		setActivePinia(pinia)
-		useLangStore().setLanguage('no')
-		const wrapperNo = mount(ReasonView, { global: { plugins: [pinia, MotionPlugin] } })
+		const wrapperNo = mountReasonView('no')
 		await flushPromises()
 		expect(wrapperNo.text()).toContain('Erfaring og utdanning')
 		expect(wrapperNo.text()).toContain('Arbeidserfaring')
