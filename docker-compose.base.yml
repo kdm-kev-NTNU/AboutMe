@@ -8,10 +8,12 @@ services:
         required: false
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Compose interpolates from repo-root .env only; default matches .env.docker.example for local dev.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: aboutme
     ports:
-      - "127.0.0.1:5432:5432"
+      # Default 5433 avoids Windows reserved/blocked 5432; override with POSTGRES_HOST_PORT=5432 if free.
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

@@ -56,7 +56,7 @@ Typical URLs:
 - App: [http://localhost:5173](http://localhost:5173), with `/api` proxied to the backend
 - API: [http://localhost:8080](http://localhost:8080)
 - Swagger UI: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-- PostgreSQL: host `5432`, DB `aboutme`, user/password `postgres`/`postgres`
+- PostgreSQL: host port `5433` by default (`POSTGRES_HOST_PORT` in Compose; set `PGPORT=5433` in repo-root `.env` for hybrid dev on the host). DB `aboutme`, user/password `postgres`/`postgres`
 
 The backend container mounts `./backend/data` read-only, so `file:./data/docs/` resolves to `backend/data/docs/` inside the container.
 
@@ -85,7 +85,7 @@ npm run dev
 - **Frontend:** Vite HMR — changes in `.vue`, `.ts`, and CSS appear in the browser almost instantly.
 - **Backend:** `spring-boot-devtools` restarts the app when compiled classes change (~5–15 s). Changes to `pom.xml` or new dependencies still require stopping and re-running Maven.
 
-On Windows, **`.\scripts\dev.ps1`** is the fastest path: it starts Postgres, waits for port `5432`, then opens backend and frontend in separate terminals. Copy `.env.example` to repo-root `.env` first.
+On Windows, **`.\scripts\dev.ps1`** is the fastest path: it starts Postgres, waits for port `5433` (or `POSTGRES_HOST_PORT`), then opens backend and frontend in separate terminals. Copy `.env.example` to repo-root `.env` first and set `PGPORT=5433` when using Docker for the database.
 
 Typical URLs: same as full stack — app [http://localhost:5173](http://localhost:5173), API [http://localhost:8080](http://localhost:8080).
 

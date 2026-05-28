@@ -52,12 +52,13 @@ finally {
     Pop-Location
 }
 
-Write-Info "Waiting for Postgres on port 5432..."
+$pgHostPort = if ($env:POSTGRES_HOST_PORT) { $env:POSTGRES_HOST_PORT } else { '5433' }
+Write-Info "Waiting for Postgres on port $pgHostPort..."
 $deadline = (Get-Date).AddSeconds(90)
 $ready = $false
 while ((Get-Date) -lt $deadline) {
     try {
-        $tcp = Test-NetConnection -ComputerName 'localhost' -Port 5432 -WarningAction SilentlyContinue
+        $tcp = Test-NetConnection -ComputerName 'localhost' -Port $pgHostPort -WarningAction SilentlyContinue
         if ($tcp.TcpTestSucceeded) {
             $ready = $true
             break
@@ -70,7 +71,7 @@ while ((Get-Date) -lt $deadline) {
 }
 
 if (-not $ready) {
-    Write-Warn "Postgres did not become reachable on localhost:5432 within 90s. You can still try starting the backend manually."
+    Write-Warn "Postgres did not become reachable on localhost:$pgHostPort within 90s. Set PGPORT=$pgHostPort in repo-root .env for hybrid dev. You can still try starting the backend manually."
 }
 
 $repoRootEscaped = $RepoRoot.Replace("'", "''")
