@@ -26,7 +26,6 @@ describe('VoiceView.vue', () => {
     fetchRealtimeVoiceModelsMock.mockReset()
     fetchRealtimeVoiceModelsMock.mockResolvedValue([
       { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
-      { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: false },
     ])
     fetchRealtimeVoiceStatusMock.mockResolvedValue({
       enabled: opts.liveEnabled,

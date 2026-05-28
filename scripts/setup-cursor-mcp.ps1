@@ -25,7 +25,6 @@ if (-not (Test-Path -LiteralPath $McpLocal)) {
 
 Write-Host ""
 Write-Host "Set API keys in .cursor/mcp.json:"
-Write-Host "  ELEVENLABS_API_KEY  (ElevenLabs MCP)"
 Write-Host "  RAPIDCHART_API_TOKEN (RapidChart MCP, rc_... from https://rapidchart.com/settings)"
 Write-Host ""
 

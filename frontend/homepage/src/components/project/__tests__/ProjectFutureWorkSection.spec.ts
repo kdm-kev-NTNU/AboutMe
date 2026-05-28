@@ -18,7 +18,7 @@ describe('ProjectFutureWorkSection', () => {
     expect(wrapper.text()).toContain('Query analysis and corpus maintenance')
     expect(wrapper.text()).not.toContain('Retrieval pipeline improvements')
     expect(wrapper.text()).not.toContain('Continuous model lifecycle')
-    expect(wrapper.text()).toMatch(/ElevenLabs|retrieval/i)
+    expect(wrapper.text()).toMatch(/voice clone|retrieval/i)
   })
 
   it('renders Norwegian roadmap title', async () => {

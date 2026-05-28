@@ -26,7 +26,6 @@ const selectedRealtimeOptions = computed(() => ({
   reasoningEffort: selectedReasoningEffort.value,
 }))
 const selectedVoiceModel = computed(() => voiceModelStore.selectedModel)
-const selectedVoiceProvider = computed(() => selectedVoiceModel.value?.provider ?? 'OPENAI')
 
 const {
   connectionState,
@@ -153,7 +152,7 @@ function setVoiceModelFromEvent(event: Event) {
         </select>
       </label>
 
-      <div v-if="selectedVoiceProvider === 'OPENAI'" class="grid w-full max-w-md grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="grid w-full max-w-md grid-cols-1 gap-3 sm:grid-cols-2">
         <label class="text-left text-xs font-semibold uppercase text-slate-600">
           {{ copy.voiceLabel }}
           <select
@@ -187,7 +186,7 @@ function setVoiceModelFromEvent(event: Event) {
           {{ copy.connecting }}
         </Button>
         <Button
-          v-if="connectionState === 'connected' && isModelSpeaking && selectedVoiceProvider === 'OPENAI'"
+          v-if="connectionState === 'connected' && isModelSpeaking"
           type="button"
           variant="secondary"
           class="rounded-2xl"

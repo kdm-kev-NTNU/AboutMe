@@ -1,7 +1,7 @@
 import { customFetch } from '@/api/orval-mutator'
 
 export type SpeechUiLang = 'en' | 'no'
-export type RealtimeVoiceProvider = 'OPENAI' | 'ELEVENLABS'
+export type RealtimeVoiceProvider = 'OPENAI'
 
 export type RealtimeLookupSnippet = {
   sourceType: 'profile' | 'rag'
@@ -54,8 +54,6 @@ export type RealtimeSdpFailure = {
   retryAfterSeconds?: number
 }
 
-export type RealtimeTokenFailure = RealtimeSdpFailure
-
 function isRealtimeVoice(value: unknown): value is RealtimeVoiceChoice {
   return typeof value === 'string' && ALLOWED_REALTIME_VOICES.includes(value as RealtimeVoiceChoice)
 }
@@ -68,7 +66,7 @@ function isRealtimeReasoningEffort(value: unknown): value is RealtimeReasoningEf
 }
 
 function isRealtimeVoiceProvider(value: unknown): value is RealtimeVoiceProvider {
-  return value === 'OPENAI' || value === 'ELEVENLABS'
+  return value === 'OPENAI'
 }
 
 function isRealtimeVoiceModelOption(value: unknown): value is RealtimeVoiceModelOption {
@@ -232,30 +230,6 @@ export async function exchangeRealtimeSdp(
   })
   if (r.status >= 200 && r.status < 300 && typeof r.data === 'string') {
     return { ok: true, answerSdp: r.data }
-  }
-  return parseRealtimeApiFailure(r)
-}
-
-export async function createElevenLabsConversationToken(
-  modelId: string,
-): Promise<{ ok: true; token: string } | RealtimeTokenFailure> {
-  const r = await customFetch<{ data: unknown; status: number; headers?: Headers }>(
-    '/realtime/elevenlabs/token',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ modelId }),
-    },
-  )
-  if (
-    r.status >= 200 &&
-    r.status < 300 &&
-    r.data !== null &&
-    typeof r.data === 'object' &&
-    typeof (r.data as { token?: unknown }).token === 'string' &&
-    (r.data as { token: string }).token.trim() !== ''
-  ) {
-    return { ok: true, token: (r.data as { token: string }).token }
   }
   return parseRealtimeApiFailure(r)
 }

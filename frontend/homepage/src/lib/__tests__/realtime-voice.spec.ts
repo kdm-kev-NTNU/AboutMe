@@ -116,7 +116,6 @@ describe('realtime-voice', () => {
       status: 200,
       data: [
         { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
-        { provider: 'ELEVENLABS', id: 'agent_123', label: 'ElevenLabs Agent', defaultOption: false },
         { provider: 'BAD', id: 'ignored', label: 'Ignored', defaultOption: false },
       ],
     })
@@ -124,44 +123,7 @@ describe('realtime-voice', () => {
 
     await expect(fetchRealtimeVoiceModels()).resolves.toEqual([
       { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
-      { provider: 'ELEVENLABS', id: 'agent_123', label: 'ElevenLabs Agent', defaultOption: false },
     ])
-  })
-
-  it('createElevenLabsConversationToken posts selected agent id and parses token', async () => {
-    mockCustomFetch.mockResolvedValue({
-      status: 200,
-      data: { token: 'conversation-token' },
-    })
-    const { createElevenLabsConversationToken } = await import('../realtime-voice')
-
-    await expect(createElevenLabsConversationToken('agent_123')).resolves.toEqual({
-      ok: true,
-      token: 'conversation-token',
-    })
-
-    expect(mockCustomFetch).toHaveBeenCalledWith('/realtime/elevenlabs/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ modelId: 'agent_123' }),
-    })
-  })
-
-  it('createElevenLabsConversationToken returns ApiError failures', async () => {
-    mockCustomFetch.mockResolvedValue({
-      status: 502,
-      data: { error: 'upstream', code: 'ELEVENLABS_REJECTED' },
-      headers: new Headers({ 'Retry-After': '9' }),
-    })
-    const { createElevenLabsConversationToken } = await import('../realtime-voice')
-
-    await expect(createElevenLabsConversationToken('agent_123')).resolves.toEqual({
-      ok: false,
-      status: 502,
-      message: 'upstream',
-      code: 'ELEVENLABS_REJECTED',
-      retryAfterSeconds: 9,
-    })
   })
 
   it('lookupRealtimeInfo returns validated snippets from backend', async () => {

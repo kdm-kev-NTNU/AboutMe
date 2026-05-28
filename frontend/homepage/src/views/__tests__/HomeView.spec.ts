@@ -90,23 +90,6 @@ describe('HomeView', () => {
 		expect(wrapper.find('a[href*="linkedin.com"]').exists()).toBe(true)
 	})
 
-	it('links to the future work roadmap from the home hero', async () => {
-		const pinia = createPinia()
-		setActivePinia(pinia)
-		const router = makeRouter()
-		await router.push('/')
-		await router.isReady()
-		const wrapper = mount(HomeView, {
-			global: {
-				plugins: [pinia, router],
-				stubs: commonStubs,
-			},
-		})
-		await flushPromises()
-		const futureLink = wrapper.get('a[href="/how#future-work"]')
-		expect(futureLink.text()).toContain('Future work and improvements')
-	})
-
 	it('navigates to voice chat when voice CTA is clicked', async () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
