@@ -54,29 +54,29 @@ describe('Public pages and redirects', () => {
 
   it('redirects /work-experience to /career', () => {
     cy.visit('/work-experience')
-    cy.location('pathname').should('eq', '/career')
+    cy.location('pathname').should('eq', '/reason')
   })
 
   it('redirects /education to /career', () => {
     cy.visit('/education')
-    cy.location('pathname').should('eq', '/career')
+    cy.location('pathname').should('eq', '/reason')
   })
 
   it('redirects /bachelor to /project#bachelor', () => {
     cy.visit('/bachelor')
-    cy.location('pathname').should('eq', '/project')
+    cy.location('pathname').should('eq', '/how')
     cy.location('hash').should('eq', '#bachelor')
   })
 
   it('redirects /tech-stack to /project#tech-stack', () => {
     cy.visit('/tech-stack')
-    cy.location('pathname').should('eq', '/project')
-    cy.location('hash').should('eq', '#tech-stack')
+    cy.location('pathname').should('eq', '/how')
+    cy.location('hash').should('eq', '')
   })
 
   it('redirects /future-work to /project#future-work', () => {
     cy.visit('/future-work')
-    cy.location('pathname').should('eq', '/project')
+    cy.location('pathname').should('eq', '/how')
     cy.location('hash').should('eq', '#future-work')
   })
 

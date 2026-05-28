@@ -146,6 +146,12 @@ jobs:
     needs: [backend, frontend]
     if: github.event_name == 'pull_request'
     steps:
+      - name: Checkout coverage script
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            scripts/ci/build-coverage-comment.py
+          sparse-checkout-cone-mode: false
       - name: Download backend reports
         uses: actions/download-artifact@v7
         with:
