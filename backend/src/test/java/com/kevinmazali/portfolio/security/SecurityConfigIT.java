@@ -94,7 +94,6 @@ class SecurityConfigIT {
           "/realtime/session",
           "/realtime/elevenlabs/token",
           "/realtime/lookup",
-          "/synthesize",
           "/transcribe",
           "/admin/tools/experiments/config",
           "/admin/tools/experiments/datasets",

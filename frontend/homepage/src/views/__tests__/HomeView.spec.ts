@@ -8,7 +8,6 @@ import { useLangStore } from '@/stores/lang'
 vi.mock('@/lib/realtime-voice', () => ({
 	fetchRealtimeVoiceStatus: vi.fn().mockResolvedValue({
 		enabled: false,
-		standardEnabled: false,
 		liveEnabled: false,
 		voices: ['marin', 'cedar'],
 		reasoningEfforts: ['low', 'medium', 'high'],
@@ -123,7 +122,7 @@ describe('HomeView', () => {
 		})
 		await flushPromises()
 
-		await wrapper.find('[aria-label="Go to robust voice mode"]').trigger('click')
+		await wrapper.find('[aria-label="Go to voice mode"]').trigger('click')
 		expect(pushSpy).toHaveBeenCalledWith({ name: 'voice' })
 	})
 
@@ -142,7 +141,7 @@ describe('HomeView', () => {
 		})
 		await flushPromises()
 
-		await wrapper.find('[aria-label="Gå til robust stemmemodus"]').trigger('click')
+		await wrapper.find('[aria-label="Gå til stemmemodus"]').trigger('click')
 		expect(pushSpy).toHaveBeenCalledWith({ name: 'voice' })
 	})
 })

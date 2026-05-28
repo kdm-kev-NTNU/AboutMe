@@ -13,8 +13,6 @@ import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
-import com.kevinmazali.portfolio.service.SpeechSynthesisService;
-import com.kevinmazali.portfolio.service.TranscriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -39,8 +37,6 @@ public class RealtimeController {
   private final RealtimeLookupService realtimeLookupService;
   private final RealtimeModelCatalog realtimeModelCatalog;
   private final ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
-  private final TranscriptionService transcriptionService;
-  private final SpeechSynthesisService speechSynthesisService;
   private final RequestLogService requestLogService;
 
   public RealtimeController(
@@ -49,16 +45,12 @@ public class RealtimeController {
       RealtimeLookupService realtimeLookupService,
       RealtimeModelCatalog realtimeModelCatalog,
       ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService,
-      TranscriptionService transcriptionService,
-      SpeechSynthesisService speechSynthesisService,
       RequestLogService requestLogService) {
     this.realtimeProperties = realtimeProperties;
     this.realtimeSessionService = realtimeSessionService;
     this.realtimeLookupService = realtimeLookupService;
     this.realtimeModelCatalog = realtimeModelCatalog;
     this.elevenLabsRealtimeTokenService = elevenLabsRealtimeTokenService;
-    this.transcriptionService = transcriptionService;
-    this.speechSynthesisService = speechSynthesisService;
     this.requestLogService = requestLogService;
   }
 
@@ -66,10 +58,8 @@ public class RealtimeController {
   @GetMapping("/realtime/status")
   public ResponseEntity<RealtimeStatusResponse> status() {
     boolean liveEnabled = realtimeModelCatalog.hasAvailableModels();
-    boolean standardEnabled = transcriptionService.isTranscriptionConfigured() && speechSynthesisService.isConfigured();
     return ResponseEntity.ok(new RealtimeStatusResponse(
-        standardEnabled || liveEnabled,
-        standardEnabled,
+        liveEnabled,
         liveEnabled,
         RealtimeProperties.ALLOWED_VOICES,
         RealtimeProperties.ALLOWED_REASONING_EFFORTS,

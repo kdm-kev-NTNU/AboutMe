@@ -72,7 +72,6 @@ public class SecurityConfig {
                             "/ask",
                             "/feedback",
                             "/transcribe",
-                            "/synthesize",
                             "/auth/login",
                             "/realtime/**",
                             "/health/**",

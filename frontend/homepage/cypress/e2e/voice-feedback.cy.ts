@@ -8,7 +8,6 @@ const FAKE_MODELS = [
 
 const VOICE_DISABLED_STATUS = {
   enabled: false,
-  standardEnabled: false,
   liveEnabled: false,
   voices: ['marin', 'cedar'],
   reasoningEfforts: ['low', 'medium', 'high'],

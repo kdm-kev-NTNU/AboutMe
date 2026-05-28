@@ -304,7 +304,7 @@ Keep backend runtime secrets in repo-root `.env` and frontend build-time values 
 
 **Authentication:** Admin tools use an httpOnly session cookie (JWT) set by `POST /auth/login`. The SPA stores only username and role in `sessionStorage` for UI routing—not passwords or Basic auth tokens.
 
-**Public AI endpoints:** `POST /ask`, `/transcribe`, `/synthesize`, and `/realtime/*` are intentionally unauthenticated. Abuse is mitigated with per-IP rate limits (Bucket4j), per-identity AI budgets, and a global kill switch—not with login walls.
+**Public AI endpoints:** `POST /ask`, `/transcribe`, and `/realtime/*` are intentionally unauthenticated. Abuse is mitigated with per-IP rate limits (Bucket4j), per-identity AI budgets, and a global kill switch—not with login walls.
 
 **Production checklist:**
 

@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.lang.NonNull;
 
 /**
- * Registers servlet filters that rate-limit {@code POST /ask}, {@code POST /transcribe}, {@code POST /synthesize}, {@code POST /realtime/session},
+ * Registers servlet filters that rate-limit {@code POST /ask}, {@code POST /transcribe}, {@code POST /realtime/session},
  * {@code POST /realtime/elevenlabs/token}, {@code POST /realtime/lookup}, {@code POST /auth/login},
  * {@code POST /feedback}, {@code POST /admin/tools/experiments/run}, and
  * {@code POST /admin/tools/experiments/datasets/generate} (token buckets per client key or IP).
@@ -198,7 +198,7 @@ public class WebConfig {
                 }
             }
         });
-        registration.addUrlPatterns("/ask", "/transcribe", "/synthesize");
+        registration.addUrlPatterns("/ask", "/transcribe");
         registration.setName("askRateLimitFilter");
         registration.setOrder(1);
         return registration;

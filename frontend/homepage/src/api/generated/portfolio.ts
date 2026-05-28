@@ -278,13 +278,8 @@ export interface SeedResult {
   total_fallbacks?: number;
 }
 
-export interface SynthesizeRequest {
-  text?: string;
-}
-
 export interface RealtimeStatusResponse {
   enabled?: boolean;
-  standardEnabled?: boolean;
   liveEnabled?: boolean;
   voices?: string[];
   reasoningEfforts?: string[];
@@ -1503,49 +1498,6 @@ export const promptVersionsDiff = async (params: PromptVersionsDiffParams, optio
     method: 'GET'
 
 
-  }
-);}
-
-
-
-export type synthesizeSpeechResponse200 = {
-  data: Blob
-  status: 200
-}
-
-export type synthesizeSpeechResponse400 = {
-  data: ApiError
-  status: 400
-}
-
-export type synthesizeSpeechResponseSuccess = (synthesizeSpeechResponse200) & {
-  headers: Headers;
-};
-export type synthesizeSpeechResponseError = (synthesizeSpeechResponse400) & {
-  headers: Headers;
-};
-
-export type synthesizeSpeechResponse = (synthesizeSpeechResponseSuccess | synthesizeSpeechResponseError)
-
-export const getSynthesizeSpeechUrl = () => {
-
-
-
-
-  return `/synthesize`
-}
-
-/**
- * @summary Synthesize speech
- */
-export const synthesizeSpeech = async (synthesizeRequest: SynthesizeRequest, options?: RequestInit): Promise<synthesizeSpeechResponse> => {
-
-  return customFetch<synthesizeSpeechResponse>(getSynthesizeSpeechUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(synthesizeRequest)
   }
 );}
 
