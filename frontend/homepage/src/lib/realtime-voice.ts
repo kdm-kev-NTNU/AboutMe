@@ -142,10 +142,6 @@ export async function fetchRealtimeVoiceStatus(): Promise<RealtimeVoiceStatus> {
   }
 }
 
-export async function fetchRealtimeVoiceEnabled(): Promise<boolean> {
-  return (await fetchRealtimeVoiceStatus()).enabled
-}
-
 export async function fetchRealtimeVoiceModels(): Promise<RealtimeVoiceModelOption[]> {
   try {
     const r = await customFetch<{ data: unknown; status: number }>('/realtime/models', { method: 'GET' })
