@@ -8,8 +8,8 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-BACKEND_JACOCO = Path("artifacts/backend/backend/target/site/jacoco/jacoco.xml")
-FRONTEND_SUMMARY = Path("artifacts/frontend/frontend/homepage/coverage/coverage-summary.json")
+BACKEND_JACOCO = Path("artifacts/backend/site/jacoco/jacoco.xml")
+FRONTEND_SUMMARY = Path("artifacts/frontend/coverage/coverage-summary.json")
 OUTPUT = Path("coverage-comment.md")
 
 
