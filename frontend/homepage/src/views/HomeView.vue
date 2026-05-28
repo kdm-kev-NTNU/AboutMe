@@ -3,7 +3,7 @@ import { useRouter, RouterLink } from 'vue-router'
 import { ref, computed, onMounted } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Button } from '@/components/ui/button'
-import { Info, MessageSquare, ChevronRight, Mic, Headphones } from 'lucide-vue-next'
+import { MessageSquare, ChevronRight, Mic, Headphones } from 'lucide-vue-next'
 import { fetchRealtimeVoiceStatus } from '@/lib/realtime-voice'
 
 const router = useRouter()
@@ -138,18 +138,6 @@ onMounted(() => {
             <span class="absolute inset-8 rounded-full border border-white/30" aria-hidden="true"></span>
             <Mic class="size-20 transition group-hover:scale-105" stroke-width="1.8" aria-hidden="true" />
           </button>
-          <div class="relative z-10 mt-[-2rem] w-full max-w-[calc(100vw-4rem)] rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 text-sm text-slate-600 shadow-lg shadow-blue-950/10 backdrop-blur-md sm:absolute sm:bottom-2 sm:left-1/2 sm:mt-0 sm:w-[min(22rem,90vw)] sm:-translate-x-1/2">
-            <div class="flex items-start gap-3">
-              <Info class="mt-0.5 size-4 shrink-0 text-blue-600" aria-hidden="true" />
-              <p>
-                {{
-                  language === 'no'
-                    ? 'Live stemmechat er raskere, men kan være ustabil. Økter kan falle ut og avsluttes etter ca. 3 minutter.'
-                    : 'Live voice chat is faster, but can be unstable. Sessions may drop and end after about 3 minutes.'
-                }}
-              </p>
-            </div>
-          </div>
         </div>
       </section>
 
