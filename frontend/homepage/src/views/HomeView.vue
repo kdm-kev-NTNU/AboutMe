@@ -60,7 +60,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 pt-20">
+  <main id="main-content" class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 pt-20">
     <!-- Gradient Background Overlay -->
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 50%);"></div>

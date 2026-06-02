@@ -131,7 +131,7 @@ const education = computed(() => {
 </script>
 
 <template>
-  <main class="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-slate-100 relative">
+  <main id="main-content" class="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-slate-100 relative">
     <div class="absolute inset-0 pointer-events-none">
       <div
         class="absolute top-0 left-0 w-full h-full"

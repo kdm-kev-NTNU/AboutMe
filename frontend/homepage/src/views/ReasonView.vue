@@ -121,7 +121,7 @@ const getStatusText = (status: string) => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pt-20 pb-12">
+  <main id="main-content" class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pt-20 pb-12">
     <div class="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 class="text-3xl font-bold mb-12 text-center bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent">
         {{ pageTitle }}

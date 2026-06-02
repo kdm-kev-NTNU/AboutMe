@@ -200,6 +200,7 @@ function captionFor(item: GalleryItem) {
 
 <template>
 	<main
+		id="main-content"
 		class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-20 pt-20"
 		aria-labelledby="heathen-army-title"
 	>

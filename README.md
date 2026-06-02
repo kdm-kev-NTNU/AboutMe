@@ -15,6 +15,15 @@ cd frontend/homepage && npm install && npm run dev
 ```
 
 - App: http://localhost:5173 (API proxied to :8080)
+
+Docker dev profile (one command; **use port 5174**, not 5173):
+
+```powershell
+.\scripts\dev-up.ps1
+```
+
+- App: http://127.0.0.1:5174 (API proxied to :8080)
+- If http://localhost:5173 shows another project, that is expected — AboutMe is on **5174**
 - Swagger: http://localhost:8080/swagger-ui/index.html
 
 ## Docker (full stack)

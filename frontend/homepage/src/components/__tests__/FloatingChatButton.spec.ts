@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { createPinia, setActivePinia } from 'pinia'
 import FloatingChatButton from '../FloatingChatButton.vue'
+import { useLangStore } from '@/stores/lang'
 
 describe('FloatingChatButton', () => {
 	beforeEach(() => {
 		sessionStorage.clear()
 		vi.restoreAllMocks()
+		setActivePinia(createPinia())
 	})
 
 	function makeRouter() {
@@ -76,6 +79,22 @@ describe('FloatingChatButton', () => {
 		})
 		await flushPromises()
 		expect(wrapper.find('button').exists()).toBe(false)
+	})
+
+	it('uses accessible aria-label in English', async () => {
+		sessionStorage.setItem('chatMessages', JSON.stringify([{ role: 'user', text: 'hi' }]))
+		useLangStore().setLanguage('en')
+		const router = makeRouter()
+		await router.push('/')
+		await router.isReady()
+		const wrapper = mount(FloatingChatButton, {
+			global: {
+				plugins: [router],
+				stubs: { MessageCircle: { template: '<span class="icon" />' } },
+			},
+		})
+		await flushPromises()
+		expect(wrapper.find('button').attributes('aria-label')).toContain("Kevin's AI")
 	})
 
 	it('navigates to chat when clicked', async () => {

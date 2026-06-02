@@ -57,7 +57,7 @@ watch(
 </script>
 
 <template>
-  <main class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 relative pb-20 pt-20">
+  <main id="main-content" class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 relative pb-20 pt-20">
     <div class="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div class="mb-10 text-center">
         <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/25 mb-5">
@@ -75,14 +75,22 @@ watch(
         <section id="accordion-bachelor" class="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg shadow-slate-900/5 overflow-hidden">
           <button
             type="button"
-            class="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-50/80"
+            class="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600"
             :aria-expanded="bachelorOpen"
+            aria-controls="panel-bachelor"
+            id="section-bachelor"
             @click="bachelorOpen = !bachelorOpen"
           >
             <span class="text-lg font-semibold text-slate-900">{{ labels.bachelor }}</span>
-            <ChevronDown class="h-5 w-5 shrink-0 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': bachelorOpen }" />
+            <ChevronDown class="h-5 w-5 shrink-0 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': bachelorOpen }" aria-hidden="true" />
           </button>
-          <div v-show="bachelorOpen" class="border-t border-slate-200/80">
+          <div
+            v-show="bachelorOpen"
+            id="panel-bachelor"
+            role="region"
+            aria-labelledby="section-bachelor"
+            class="border-t border-slate-200/80"
+          >
             <ProjectBachelorSection />
           </div>
         </section>
@@ -90,14 +98,22 @@ watch(
         <section id="accordion-future-work" class="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg shadow-slate-900/5 overflow-hidden">
           <button
             type="button"
-            class="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-50/80"
+            class="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600"
             :aria-expanded="futureOpen"
+            aria-controls="panel-future-work"
+            id="section-future-work"
             @click="futureOpen = !futureOpen"
           >
             <span class="text-lg font-semibold text-slate-900">{{ labels.future }}</span>
-            <ChevronDown class="h-5 w-5 shrink-0 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': futureOpen }" />
+            <ChevronDown class="h-5 w-5 shrink-0 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': futureOpen }" aria-hidden="true" />
           </button>
-          <div v-show="futureOpen" class="border-t border-slate-200/80">
+          <div
+            v-show="futureOpen"
+            id="panel-future-work"
+            role="region"
+            aria-labelledby="section-future-work"
+            class="border-t border-slate-200/80"
+          >
             <ProjectFutureWorkSection />
           </div>
         </section>

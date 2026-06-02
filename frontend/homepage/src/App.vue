@@ -24,10 +24,22 @@ const showPublicPageHeader = computed(() => !adminRouteNames.has(String(route.na
 
 const privacyLabel = computed(() => (langStore.language === 'no' ? 'Personvernerklæring' : 'Privacy Policy'))
 const cookieSettingsLabel = computed(() => (langStore.language === 'no' ? 'Informasjonskapsler' : 'Cookie Settings'))
+const accessibilityLabel = computed(() =>
+  langStore.language === 'no' ? 'Tilgjengelighet' : 'Accessibility',
+)
+const skipLinkLabel = computed(() =>
+  langStore.language === 'no' ? 'Hopp til innhold' : 'Skip to content',
+)
 </script>
 
 <template>
   <div class="flex min-h-dvh flex-col bg-gray-50">
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-blue-700 focus:shadow-lg focus:ring-2 focus:ring-blue-600"
+    >
+      {{ skipLinkLabel }}
+    </a>
     <Navbar v-if="showPublicPageHeader" />
     <AdminLoginButton />
     <div class="flex min-h-0 w-full flex-1 flex-col">
@@ -48,6 +60,13 @@ const cookieSettingsLabel = computed(() => (langStore.language === 'no' ? 'Infor
       >
         {{ cookieSettingsLabel }}
       </button>
+      <span class="text-gray-300" aria-hidden="true">|</span>
+      <RouterLink
+        to="/accessibility"
+        class="inline-block px-2 hover:text-gray-600 transition-colors"
+      >
+        {{ accessibilityLabel }}
+      </RouterLink>
     </footer>
     <CookieConsentSettingsModal />
     <CookieConsentBanner />

@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import MessagesArea from '../MessagesArea.vue'
 
 describe('MessagesArea', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   const globalStubs = {
     TypewriterAnimation: {
       props: ['text'],
@@ -29,8 +34,22 @@ describe('MessagesArea', () => {
       global: { stubs: globalStubs },
     })
     expect(wrapper.text()).toContain('Hello user')
-    expect(wrapper.text()).toContain('Kevin\'s AI')
+    expect(wrapper.text()).toContain("Kevin's AI (generated)")
     expect(wrapper.text()).toContain('You')
+  })
+
+  it('exposes live region attributes on message log', () => {
+    const wrapper = mount(MessagesArea, {
+      props: {
+        messages: [{ role: 'user', text: 'Hi' }],
+        isLoading: true,
+      },
+      global: { stubs: globalStubs },
+    })
+    const log = wrapper.find('[role="log"]')
+    expect(log.exists()).toBe(true)
+    expect(log.attributes('aria-live')).toBe('polite')
+    expect(log.attributes('aria-busy')).toBe('true')
   })
 
   it('shows optional header when showHeader is true', () => {

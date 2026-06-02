@@ -28,7 +28,7 @@ const E2E_MINIMAL_CONSENT = {
   sessionRecording: false,
   errorTracking: false,
   featureFlags: false,
-  policyVersion: '2026-05-08',
+  policyVersion: '2026-06-02',
   updatedAt: new Date().toISOString(),
   source: 'banner_necessary_only',
 } as const
