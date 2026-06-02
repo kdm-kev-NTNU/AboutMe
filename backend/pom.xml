@@ -161,6 +161,7 @@
 			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Testcontainers 2.x: use testcontainers-* module artifacts (not junit-jupiter/postgresql). -->
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers</artifactId>
