@@ -14,7 +14,7 @@ services:
         required: false
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: aboutme
     ports:
       - "127.0.0.1:5433:5432"
@@ -57,8 +57,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-postgres}
       PORT: "8080"
       SANITIZER_ENABLED: "true"
-      PORTFOLIO_JWT_SECRET: ${PORTFOLIO_JWT_SECRET}
-      AI_BUDGET_ANON_SALT: ${AI_BUDGET_ANON_SALT}
+      PORTFOLIO_JWT_SECRET: ${PORTFOLIO_JWT_SECRET:-dev-only-change-me-use-32-chars-minimum!!}
+      AI_BUDGET_ANON_SALT: ${AI_BUDGET_ANON_SALT:-portfolio-ai-budget-local-dev}
     ports:
       - "8080:8080"
     volumes:
@@ -108,9 +108,10 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/aboutme
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-postgres}
       PORT: "8080"
       SANITIZER_ENABLED: "true"
+      # Loaded from env_file; do not set empty OPENAI_API_KEY here (would override backend/.env).
     ports:
       - "8080:8080"
     depends_on:
@@ -128,8 +129,12 @@ services:
     command: sh -c "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
     environment:
       VITE_API_PROXY_TARGET: http://backend-dev:8080
+    env_file:
+      - path: frontend/homepage/.env
+        required: false
     ports:
-      - "5173:5173"
+      # 5174 avoids clash with other local Vite apps on 5173 (e.g. other repos).
+      - "5174:5173"
     depends_on:
       - backend-dev
 
