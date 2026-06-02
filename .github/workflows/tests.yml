@@ -153,12 +153,12 @@ jobs:
             .github/scripts/build-coverage-comment.py
           sparse-checkout-cone-mode: false
       - name: Download backend reports
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: backend-test-reports
           path: artifacts/backend
       - name: Download frontend reports
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: frontend-test-reports
           path: artifacts/frontend
