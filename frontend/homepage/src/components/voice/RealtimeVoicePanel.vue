@@ -4,6 +4,7 @@ import { Mic, MicOff, Loader2, TriangleAlert, Square } from 'lucide-vue-next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import AiStatusDialog from '@/components/AiStatusDialog.vue'
+import AiTransparencyNotice from '@/components/AiTransparencyNotice.vue'
 import { useVoiceModelStore } from '@/stores/voice-model'
 import { useRealtimeVoice } from '@/composables/useRealtimeVoice'
 import type { RealtimeReasoningEffort, RealtimeVoiceChoice } from '@/lib/realtime-voice'
@@ -55,7 +56,7 @@ const copy = computed(() => {
     voiceLabel: en ? 'Voice' : 'Stemme',
     reasoningLabel: en ? 'Reasoning' : 'Resonnering',
     you: en ? 'You (transcript)' : 'Du (transkripsjon)',
-    assistant: en ? 'Assistant (transcript)' : 'Assistent (transkripsjon)',
+    assistant: en ? 'AI assistant (transcript)' : 'AI-assistent (transkripsjon)',
     warningTitle: en ? 'Experimental mode' : 'Eksperimentell modus',
     warningBody: en
       ? 'Live WebRTC voice is faster, but can be unstable. Sessions can drop and each session ends after ~3 minutes.'
@@ -106,11 +107,14 @@ function setVoiceModelFromEvent(event: Event) {
     @retry="connect"
   />
 
-  <Alert class="mb-4 border-amber-300 bg-amber-50/90 text-amber-900">
-    <TriangleAlert class="size-4" aria-hidden="true" />
-    <AlertTitle>{{ copy.warningTitle }}</AlertTitle>
-    <AlertDescription>{{ copy.warningBody }}</AlertDescription>
-  </Alert>
+  <div class="mb-4 space-y-4">
+    <AiTransparencyNotice />
+    <Alert class="border-amber-300 bg-amber-50/90 text-amber-900">
+      <TriangleAlert class="size-4" aria-hidden="true" />
+      <AlertTitle>{{ copy.warningTitle }}</AlertTitle>
+      <AlertDescription>{{ copy.warningBody }}</AlertDescription>
+    </Alert>
+  </div>
 
   <div
     v-if="available === false"

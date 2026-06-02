@@ -39,6 +39,7 @@ describe('RealtimeVoicePanel', () => {
           AlertTitle: { template: '<div><slot /></div>' },
           AlertDescription: { template: '<div><slot /></div>' },
           AiStatusDialog: true,
+          AiTransparencyNotice: { template: '<div data-testid="ai-transparency" />' },
           Mic: true,
           MicOff: true,
           Loader2: true,

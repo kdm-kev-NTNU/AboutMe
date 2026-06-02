@@ -32,6 +32,7 @@ describe('ChatView', () => {
 
   /** Matches VoiceView.spec AiStatusDialog stub; keeps ChatView tests stable alongside Dialog stubs. */
   const chatViewTestStubs = {
+    AiTransparencyNotice: { template: '<div data-testid="ai-transparency-notice" />' },
     AiStatusDialog: {
       props: [
         'open',

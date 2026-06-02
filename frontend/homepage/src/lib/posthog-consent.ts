@@ -1,7 +1,7 @@
 import posthog from 'posthog-js'
 import { initializePosthogSdk, isPosthogSdkInitialized } from './posthog-sdk'
 
-export const PRIVACY_POLICY_VERSION = '2026-05-08'
+export const PRIVACY_POLICY_VERSION = '2026-06-02'
 
 /** Legacy key (v1: single `analytics` boolean). Still read for migration. */
 export const CONSENT_RECORD_KEY_V1 = 'aboutme_cookie_consent_v1'

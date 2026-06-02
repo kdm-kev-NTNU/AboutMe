@@ -6,6 +6,7 @@ import { useChatModelStore } from '../stores/model'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import AiStatusDialog from '@/components/AiStatusDialog.vue'
+import AiTransparencyNotice from '@/components/AiTransparencyNotice.vue'
 import {
   Dialog,
   DialogContent,
@@ -188,6 +189,8 @@ const popupCopy = computed(() =>
     ? {
         title: 'Porteføljen oppdateres fortløpende',
         body: 'Chatten og kunnskapsgrunnlaget endrer seg etter hvert som jeg lærer mer i bacheloroppgaven. Svarene blir gjerne mer treffsikre over tid.',
+        aiNote:
+          'Du snakker med en AI-assistent — ikke meg direkte. Svarene kan være unøyaktige.',
         recommendation: 'Lurer du på hva som skjer akkurat nå? Ta en titt på prosjektsiden.',
         bachelorCta: 'Åpne prosjektsiden',
         dismiss: 'Forstått',
@@ -195,10 +198,16 @@ const popupCopy = computed(() =>
     : {
         title: 'This portfolio keeps evolving',
         body: "I'm updating this chat and its knowledge base as I learn more in my bachelor's thesis. Answers should get sharper over time.",
+        aiNote:
+          'You are chatting with an AI assistant — not me directly. Replies may be inaccurate.',
         recommendation: 'Curious what I am working on? Check the project page.',
         bachelorCta: 'Open the project page',
         dismiss: 'Got it',
       },
+)
+
+const chatInputLabel = computed(() =>
+  language.value === 'no' ? 'Skriv melding til Kevin sin AI' : "Message Kevin's AI",
 )
 
 // --- Ephemeral transcript (same-tab only; not a substitute for server-side conversation storage) ---
@@ -404,7 +413,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 pt-20">
+  <main id="main-content" class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 pt-20">
     <AiStatusDialog
       v-model:open="aiErrorDialogOpen"
       :title="aiErrorDialogCopy.title"
@@ -421,6 +430,9 @@ onMounted(async () => {
           <DialogTitle>{{ popupCopy.title }}</DialogTitle>
           <DialogDescription>{{ popupCopy.body }}</DialogDescription>
         </DialogHeader>
+        <p class="text-sm text-slate-700">
+          {{ popupCopy.aiNote }}
+        </p>
         <p class="text-sm text-slate-700">
           {{ popupCopy.recommendation }}
         </p>
@@ -467,6 +479,10 @@ onMounted(async () => {
           </div>
         </div>
       </section>
+
+      <div class="mb-4 flex-shrink-0">
+        <AiTransparencyNotice />
+      </div>
 
       <!-- Messages Area -->
       <div class="flex-1 mb-6 min-h-0">
@@ -574,14 +590,17 @@ onMounted(async () => {
             :stream="recordingMediaStream"
             :aria-label="language === 'en' ? 'Audio level while recording' : 'Lydnivå under opptak'"
           />
-          <Input
-            v-else
-            v-model="input"
-            :disabled="isLoading || isTranscribing"
-            type="text"
-            class="flex-1 rounded-2xl border border-blue-100/70 bg-white/85 text-slate-700 transition-all duration-300 placeholder:font-medium placeholder:text-slate-400 focus:border-blue-300/70 focus:bg-white focus:shadow-sm focus:shadow-blue-500/15 focus:outline-none"
-            :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'"
-          />
+          <template v-else>
+            <label for="chat-message-input" class="sr-only">{{ chatInputLabel }}</label>
+            <Input
+              id="chat-message-input"
+              v-model="input"
+              :disabled="isLoading || isTranscribing"
+              type="text"
+              class="flex-1 rounded-2xl border border-blue-100/70 bg-white/85 text-slate-700 transition-all duration-300 placeholder:font-medium placeholder:text-slate-400 focus:border-blue-300/70 focus:bg-white focus:shadow-sm focus:shadow-blue-500/15 focus:outline-none"
+              :placeholder="language === 'en' ? 'Ask Kevin\'s AI anything...' : 'Spør Kevin\'s AI om noe...'"
+            />
+          </template>
           <Button
             type="submit"
             :disabled="isLoading || isTranscribing || isRecording || !input.trim()"
