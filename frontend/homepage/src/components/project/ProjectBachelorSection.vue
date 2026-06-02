@@ -8,7 +8,7 @@ import { GraduationCap, Sparkles, Link2 } from 'lucide-vue-next'
 const langStore = useLangStore()
 const isNo = computed(() => langStore.language === 'no')
 
-const YOUTUBE_EMBED_ID = '9ZnpBimfUvU'
+const YOUTUBE_EMBED_ID = 'GBre4cWKhto'
 const YOUTUBE_WATCH_URL = `https://www.youtube.com/watch?v=${YOUTUBE_EMBED_ID}`
 
 type NarrativeCard = {
