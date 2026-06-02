@@ -88,6 +88,11 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				component: () => import('../views/PrivacyPolicyView.vue'),
 			},
 			{
+				path: '/accessibility',
+				name: 'accessibility',
+				component: () => import('../views/AccessibilityView.vue'),
+			},
+			{
 				path: '/future-work',
 				redirect: { path: '/how', hash: '#future-work' },
 			},

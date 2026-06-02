@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import { Brain, UserRound, MessageSquare } from 'lucide-vue-next'
 import TypewriterAnimation from '@/components/TypewriterAnimation.vue'
 import SafeMarkdown from '@/components/SafeMarkdown.vue'
+import { useLangStore } from '@/stores/lang'
 
 type Message = { role: 'user' | 'assistant'; text: string; isNew?: boolean }
 
@@ -21,7 +22,16 @@ const props = withDefaults(defineProps<Props>(), {
   headerText: 'Chat Messages'
 })
 
+const langStore = useLangStore()
 const scrollableContainer = ref<HTMLElement>()
+
+const userLabel = computed(() => (langStore.language === 'no' ? 'Du' : 'You'))
+const assistantLabel = computed(() =>
+  langStore.language === 'no' ? "Kevin sin AI (generert)" : "Kevin's AI (generated)",
+)
+const emptyLabel = computed(() =>
+  langStore.language === 'no' ? 'Ingen meldinger ennå' : 'No messages yet',
+)
 
 // Scroll to bottom function
 const scrollToBottom = () => {
@@ -53,7 +63,11 @@ watch(() => props.messages, () => {
     <!-- Scrollable Container -->
     <div ref="scrollableContainer" class="flex-1 overflow-y-auto">
       <!-- Messages Area -->
-      <div 
+      <div
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        :aria-busy="isLoading"
         class="space-y-5 rounded-3xl border border-blue-100/70 bg-white/85 p-5 shadow-lg shadow-blue-900/10 backdrop-blur-xl transition-all duration-300 sm:p-6"
         :class="{ 'border-gray-200/50 bg-white/90': isReadOnly }"
       >
@@ -69,6 +83,7 @@ watch(() => props.messages, () => {
                   ? 'border-blue-600/60 bg-blue-600 text-white'
                   : 'border-blue-100/80 bg-blue-50 text-blue-700'
               "
+              aria-hidden="true"
             >
               <UserRound v-if="m.role === 'user'" class="w-4 h-4" />
               <Brain v-else class="w-4 h-4" />
@@ -77,7 +92,7 @@ watch(() => props.messages, () => {
             <!-- Message Bubble -->
             <div class="flex-1">
               <div class="mb-1 text-xs font-medium text-slate-500" :class="m.role === 'user' ? 'text-right' : 'text-left'">
-                {{ m.role === 'user' ? 'You' : 'Kevin\'s AI' }}
+                {{ m.role === 'user' ? userLabel : assistantLabel }}
               </div>
               <div class="relative rounded-2xl px-4 py-3.5 transition-all duration-300"
                    :class="m.role === 'user'
@@ -93,14 +108,14 @@ watch(() => props.messages, () => {
       </div>
 
       <!-- Loading Indicator -->
-      <div v-if="isLoading" class="flex justify-start">
+      <div v-if="isLoading" class="flex justify-start" aria-hidden="true">
         <div class="max-w-[85%] sm:max-w-[78%]">
           <div class="flex items-start gap-3">
             <div class="flex h-9 w-9 items-center justify-center rounded-full border border-blue-100/80 bg-blue-50 text-blue-700">
               <Brain class="w-4 h-4" />
             </div>
             <div class="flex-1">
-              <div class="mb-1 text-xs font-medium text-blue-700">Kevin's AI</div>
+              <div class="mb-1 text-xs font-medium text-blue-700">{{ assistantLabel }}</div>
               <div class="rounded-2xl border border-blue-100/80 bg-white/95 px-4 py-3.5 shadow-sm">
                 <div class="flex items-center gap-1">
                   <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
@@ -116,8 +131,8 @@ watch(() => props.messages, () => {
       <!-- Empty State -->
       <div v-if="messages.length === 0 && !isLoading" class="flex h-32 items-center justify-center text-slate-500">
         <div class="text-center">
-          <MessageSquare class="mx-auto mb-2 h-8 w-8 opacity-50" />
-          <p class="text-sm">No messages yet</p>
+          <MessageSquare class="mx-auto mb-2 h-8 w-8 opacity-50" aria-hidden="true" />
+          <p class="text-sm">{{ emptyLabel }}</p>
         </div>
       </div>
     </div>

@@ -219,7 +219,7 @@ onMounted(() => {
       <strong class="text-gray-900">Prompt versions</strong>
     </nav>
 
-    <main class="mx-auto max-w-5xl px-4 pt-8">
+    <main id="main-content" class="mx-auto max-w-5xl px-4 pt-8">
       <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Prompt versions</h1>
       <p class="text-sm text-gray-600 mb-6 leading-relaxed">
         Versjoner, redigering og aktivering av prompt-maler. Speilet fra Piscadas prompt_versions-arkitektur,

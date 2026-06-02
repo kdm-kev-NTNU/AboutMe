@@ -424,7 +424,7 @@ onUnmounted(() => {
       <strong class="text-gray-900">Experiments</strong>
     </nav>
 
-    <main class="mx-auto max-w-5xl px-4 pt-8 space-y-8">
+    <main id="main-content" class="mx-auto max-w-5xl px-4 pt-8 space-y-8">
       <div>
         <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">RAG-experiments (datasett + dommer)</h1>
         <p class="text-sm text-gray-600 leading-relaxed max-w-3xl">

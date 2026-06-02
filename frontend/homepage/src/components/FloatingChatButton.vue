@@ -2,10 +2,18 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { MessageCircle } from 'lucide-vue-next'
+import { useLangStore } from '@/stores/lang'
 
 // Shortcut back to /chat when the tab still has a non-empty transcript in sessionStorage.
 const router = useRouter()
 const route = useRoute()
+const langStore = useLangStore()
+
+const ariaLabel = computed(() =>
+  langStore.language === 'no'
+    ? 'Fortsett chatten med Kevin sin AI'
+    : "Continue your chat with Kevin's AI",
+)
 
 const isVisible = ref(false)
 const hasActiveChat = ref(false)
@@ -71,12 +79,12 @@ onMounted(() => {
       v-if="isVisible"
       @click="goToChat"
       class="fixed bottom-6 right-6 z-50 bg-blue-500 hover:bg-gray-800 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-300"
-      :title="'Continue your chat with Kevin\'s AI'"
+      :aria-label="ariaLabel"
     >
       <MessageCircle class="w-6 h-6" />
 
       <!-- Notification dot -->
-      <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+      <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" aria-hidden="true"></div>
     </button>
   </Transition>
 </template>

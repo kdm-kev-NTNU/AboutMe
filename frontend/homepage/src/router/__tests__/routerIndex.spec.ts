@@ -14,6 +14,7 @@ describe('application router (index)', () => {
 		expect(names.has('home')).toBe(true)
 		expect(names.has('chat')).toBe(true)
 		expect(names.has('privacy-policy')).toBe(true)
+		expect(names.has('accessibility')).toBe(true)
 		expect(names.has('how')).toBe(true)
 		expect(names.has('project-heathen-army')).toBe(true)
 		expect(names.has('reason')).toBe(true)
@@ -25,6 +26,12 @@ describe('application router (index)', () => {
 		const router = createPortfolioRouter({ useMemoryHistory: true })
 		await router.push('/privacy-policy')
 		expect(router.currentRoute.value.name).toBe('privacy-policy')
+	})
+
+	it('navigates to accessibility route', async () => {
+		const router = createPortfolioRouter({ useMemoryHistory: true })
+		await router.push('/accessibility')
+		expect(router.currentRoute.value.name).toBe('accessibility')
 	})
 
 	it('redirects legacy bachelor path to how with bachelor hash', async () => {

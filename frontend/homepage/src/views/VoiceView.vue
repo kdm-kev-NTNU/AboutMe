@@ -44,6 +44,7 @@ const copy = computed(() => {
 
 <template>
   <main
+    id="main-content"
     class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 pt-20"
   >
     <div class="absolute inset-0 pointer-events-none">

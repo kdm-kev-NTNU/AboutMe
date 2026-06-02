@@ -90,7 +90,7 @@ const projects = computed(() => {
 </script>
 
 <template>
-  <main class="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-slate-100 relative">
+  <main id="main-content" class="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-slate-100 relative">
     <!-- Background overlay -->
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);"></div>

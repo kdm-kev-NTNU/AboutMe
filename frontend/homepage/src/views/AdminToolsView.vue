@@ -37,7 +37,7 @@ onMounted(() => {
       <strong class="text-gray-900">Internal tools</strong>
     </nav>
 
-    <main class="mx-auto max-w-3xl px-4 pt-8">
+    <main id="main-content" class="mx-auto max-w-3xl px-4 pt-8">
       <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Internal tools</h1>
       <p class="text-sm text-gray-600 mb-8 leading-relaxed">
         Verktøy for dokumentpipeline og pgvector. Krever admin-innlogging. Velg en side under. Samme idé som

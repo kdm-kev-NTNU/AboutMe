@@ -13,6 +13,7 @@ import { setupPosthogAppHooks } from './lib/posthog-app-hooks'
 
 import App from './App.vue'
 import router from './router'
+import { setupDocumentLang } from './composables/useDocumentLang'
 
 // Pinia must be registered before the router so route guards and components can inject stores synchronously.
 const app = createApp(App)
@@ -20,6 +21,7 @@ const app = createApp(App)
 const posthogEnabled = isPosthogEnabled()
 
 app.use(createPinia())
+setupDocumentLang()
 app.use(router)
 app.use(MotionPlugin)
 
