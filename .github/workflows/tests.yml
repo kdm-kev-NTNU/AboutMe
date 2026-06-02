@@ -166,7 +166,7 @@ jobs:
         id: coverage_summary
         run: python .github/scripts/build-coverage-comment.py
       - name: Sticky PR coverage comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: coverage-summary
           path: coverage-comment.md
