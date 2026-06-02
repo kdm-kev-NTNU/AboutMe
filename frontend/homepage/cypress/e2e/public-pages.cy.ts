@@ -30,7 +30,7 @@ describe('Public pages and redirects', () => {
       },
     })
     cy.contains('h1', 'Privacy Policy').should('be.visible')
-    cy.contains('Last updated: May 2026').should('be.visible')
+    cy.contains('Last updated: June 2026').should('be.visible')
   })
 
   it('shows Personvernerklæring in Norwegian', () => {
@@ -40,7 +40,7 @@ describe('Public pages and redirects', () => {
       },
     })
     cy.contains('h1', 'Personvernerklæring').should('be.visible')
-    cy.contains('Sist oppdatert: mai 2026').should('be.visible')
+    cy.contains('Sist oppdatert: juni 2026').should('be.visible')
   })
 
   it('loads Heathen Army project case study', () => {
