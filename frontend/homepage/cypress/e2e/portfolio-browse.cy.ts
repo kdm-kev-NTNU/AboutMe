@@ -16,12 +16,16 @@ describe('Portfolio browsing', () => {
     cy.contains("Kevin's").should('be.visible')
 
     visitEn('/projects')
+    cy.url().should('include', '/reason')
+    cy.url().should('include', '#projects')
     cy.contains('Projects', { timeout: 30000 }).should('be.visible')
+    cy.contains('AboutMe').should('be.visible')
 
     visitEn('/project')
-    cy.contains(/Tech stack|Teknologistakk/).should('be.visible')
+    cy.url().should('include', '/reason')
+    cy.contains('Projects', { timeout: 30000 }).should('be.visible')
 
     visitEn('/career')
-    cy.contains(/Experience & education|Erfaring og utdanning/).should('be.visible')
+    cy.contains(/Experience and education|Erfaring og utdanning/).should('be.visible')
   })
 })

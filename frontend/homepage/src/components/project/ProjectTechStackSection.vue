@@ -122,7 +122,7 @@ const pillarCards = computed(() =>
           ctaClass: 'text-blue-700',
         },
         {
-          to: '/projects' as const,
+          to: '/reason#projects' as const,
           title: 'Backend',
           body: 'Spring Boot 4 med sikkerhet, SpringDoc-skjema for klientgenerering, AI-budsjett, Realtime og adminflate.',
           cta: 'Se prosjekter',
@@ -157,7 +157,7 @@ const pillarCards = computed(() =>
           ctaClass: 'text-blue-700',
         },
         {
-          to: '/projects' as const,
+          to: '/reason#projects' as const,
           title: 'Backend',
           body: 'Spring Boot 4 with security, SpringDoc-backed schema for codegen, AI budgets, Realtime, and admin surfaces.',
           cta: 'View projects',

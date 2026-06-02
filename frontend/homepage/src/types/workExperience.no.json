@@ -1,6 +1,26 @@
 {
   "experiences": [
     {
+      "id": "ntnu-imat3011-studass-2026",
+      "startDate": "2026-08-01",
+      "endDate": "2026-12-31",
+      "company": "NTNU",
+      "position": "Studentassistent for Matematikk for ingeniørfag 3 A (IMAT3011)",
+      "description": "Kommer til å bistå med undervisning og øvinger i et 7,5 studiepoengs høstemne om numeriske metoder, numerisk lineær algebra (blant annet QR-faktorisering og SVD) og optimering (lineær programmering, minste kvadraters metode og Lagrange-multiplikatorer). Rollen vektlegger praktisk problemløsning med Python og ukentlige øvinger. August–desember 2026.",
+      "location": "Trondheim, Norge",
+      "type": "part-time"
+    },
+    {
+      "id": "ntnu-tdt4172-studass-2026",
+      "startDate": "2026-08-01",
+      "endDate": "2026-12-31",
+      "company": "NTNU",
+      "position": "Studentassistent for Introduksjon til maskinlæring (TDT4172)",
+      "description": "Kommer til å bistå med undervisning og øvinger i et 7,5 studiepoengs høstemne om dataanalyse og grunnleggende maskinlæring, inkludert veiledet og uveiledet læring, trening og evaluering av modeller, og Python med standard maskinlæringsbiblioteker. Emnet er prosjektstyrt med fokus på praktiske anvendelser. August–desember 2026.",
+      "location": "Trondheim, Norge",
+      "type": "part-time"
+    },
+    {
       "id": "sparebank1-utvikling-internship-2026",
       "startDate": "2026-06-15",
       "endDate": "2026-08-15",
@@ -28,56 +48,6 @@
       "position": "Studentassistent for innholdsproduksjon",
       "description": "Engage Resource Hub er en del av Engage-senteret for entreprenørskap ved NTNU, etablert under Institutt for industriell økonomi og teknologiledelse. Den samarbeider med ulike studieprogrammer for å tilby undervisere ressurser som kan brukes i egen undervisning. Min rolle innebærer å administrere og publisere læringsinnhold på plattformen, støtte utvikling av nye funksjoner, samt bidra med tekniske og designmessige forbedringer. Jeg ble ferdig med stillingen i desember 2025.",
       "location": "Trondheim, Norge",
-      "type": "part-time"
-    },
-    {
-      "id": "oslo-teaching-2025",
-      "startDate": "2025-06-01",
-      "endDate": "2025-08-31",
-      "company": "Oslo Kommune",
-      "position": "Lærerassistent",
-      "description": "Sommerjobb: Bidra med sosiale aktiviteter og drift av sommerskolekurs",
-      "location": "Oslo, Norge",
-      "type": "summer-job"
-    },
-    {
-      "id": "oslo-teaching-2024",
-      "startDate": "2024-06-01",
-      "endDate": "2024-08-31",
-      "company": "Oslo Kommune",
-      "position": "Lærerassistent",
-      "description": "Sommerjobb: Bidra med sosiale aktiviteter og drift av sommerskolekurs",
-      "location": "Oslo, Norge",
-      "type": "summer-job"
-    },
-    {
-      "id": "deichman-librarian-2022",
-      "startDate": "2022-04-01",
-      "endDate": "2022-12-31",
-      "company": "Deichman",
-      "position": "Ungdomsbibliotekar",
-      "description": "Bibliotekdrift med fokus på kundeservice, boklogistikk og rigging av arrangementer",
-      "location": "Oslo, Norge",
-      "type": "part-time"
-    },
-    {
-      "id": "oslo-teaching-2022",
-      "startDate": "2022-06-01",
-      "endDate": "2022-08-31",
-      "company": "Oslo Kommune",
-      "position": "Lærerassistent",
-      "description": "Sommerjobb: Bidra med sosiale aktiviteter og drift av sommerskolekurs",
-      "location": "Oslo, Norge",
-      "type": "summer-job"
-    },
-    {
-      "id": "yummy-heaven-2020",
-      "startDate": "2020-10-01",
-      "endDate": "2023-01-31",
-      "company": "Yummy Heaven",
-      "position": "Butikkmedarbeider",
-      "description": "Renhold, varepåfyll og kassearbeid",
-      "location": "Oslo, Norge",
       "type": "part-time"
     }
   ]

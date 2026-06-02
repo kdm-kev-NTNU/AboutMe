@@ -30,10 +30,8 @@ const isActive = (routeName: string) => route.name === routeName
 const getButtonText = (key: string) => {
   const texts: Record<string, { en: string; no: string }> = {
     home: { en: 'Home', no: 'Hjem' },
-    voice: { en: 'Voice', no: 'Stemme' },
-    projects: { en: 'Projects', no: 'Prosjekter' },
-    career: { en: 'Career', no: 'Karriere' },
-    project: { en: 'The project', no: 'Prosjektet' },
+    reason: { en: 'Experience and education', no: 'Erfaring og utdanning' },
+    how: { en: 'How', no: 'Hvordan' },
   }
   return texts[key][langStore.language]
 }
@@ -42,10 +40,8 @@ const getButtonWidth = () => {
   // Calculate the width needed for the longest button text
   const buttonTexts = [
     getButtonText('home'),
-    getButtonText('voice'),
-    getButtonText('projects'),
-    getButtonText('career'),
-    getButtonText('project'),
+    getButtonText('reason'),
+    getButtonText('how'),
   ]
 
   // Estimate width based on character count (roughly 8px per character for this font size)
@@ -57,10 +53,8 @@ const getIndicatorPosition = () => {
   const buttonWidth = getButtonWidth()
 
   if (isActive('home')) return { transform: 'translateX(0px)', opacity: '1' }
-  if (isActive('voice')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
-  if (isActive('projects')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
-  if (isActive('career')) return { transform: `translateX(${buttonWidth * 3}px)`, opacity: '1' }
-  if (isActive('project')) return { transform: `translateX(${buttonWidth * 4}px)`, opacity: '1' }
+  if (isActive('reason')) return { transform: `translateX(${buttonWidth}px)`, opacity: '1' }
+  if (isActive('how')) return { transform: `translateX(${buttonWidth * 2}px)`, opacity: '1' }
   return { transform: 'translateX(0px)', opacity: '0' }
 }
 
@@ -137,36 +131,20 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
             {{ getButtonText('home') }}
           </RouterLink>
           <RouterLink
-            to="/voice"
+            to="/reason"
             role="menuitem"
-            :class="[mobileLinkBase, isActive('voice') ? mobileLinkActive : mobileLinkInactive]"
+            :class="[mobileLinkBase, isActive('reason') ? mobileLinkActive : mobileLinkInactive]"
             @click="closeMenu"
           >
-            {{ getButtonText('voice') }}
+            {{ getButtonText('reason') }}
           </RouterLink>
           <RouterLink
-            to="/projects"
+            to="/how"
             role="menuitem"
-            :class="[mobileLinkBase, isActive('projects') ? mobileLinkActive : mobileLinkInactive]"
+            :class="[mobileLinkBase, isActive('how') ? mobileLinkActive : mobileLinkInactive]"
             @click="closeMenu"
           >
-            {{ getButtonText('projects') }}
-          </RouterLink>
-          <RouterLink
-            to="/career"
-            role="menuitem"
-            :class="[mobileLinkBase, isActive('career') ? mobileLinkActive : mobileLinkInactive]"
-            @click="closeMenu"
-          >
-            {{ getButtonText('career') }}
-          </RouterLink>
-          <RouterLink
-            to="/project"
-            role="menuitem"
-            :class="[mobileLinkBase, isActive('project') ? mobileLinkActive : mobileLinkInactive]"
-            @click="closeMenu"
-          >
-            {{ getButtonText('project') }}
+            {{ getButtonText('how') }}
           </RouterLink>
         </div>
       </Transition>
@@ -186,32 +164,18 @@ const mobileLinkInactive = 'text-gray-700 hover:bg-slate-50 hover:text-gray-900'
           {{ getButtonText('home') }}
         </RouterLink>
         <RouterLink
-          to="/voice"
-          :class="getButtonClasses('voice')"
+          to="/reason"
+          :class="getButtonClasses('reason')"
           :style="{ width: getButtonWidth() + 'px' }"
         >
-          {{ getButtonText('voice') }}
+          {{ getButtonText('reason') }}
         </RouterLink>
         <RouterLink
-          to="/projects"
-          :class="getButtonClasses('projects')"
+          to="/how"
+          :class="getButtonClasses('how')"
           :style="{ width: getButtonWidth() + 'px' }"
         >
-          {{ getButtonText('projects') }}
-        </RouterLink>
-        <RouterLink
-          to="/career"
-          :class="getButtonClasses('career')"
-          :style="{ width: getButtonWidth() + 'px' }"
-        >
-          {{ getButtonText('career') }}
-        </RouterLink>
-        <RouterLink
-          to="/project"
-          :class="getButtonClasses('project')"
-          :style="{ width: getButtonWidth() + 'px' }"
-        >
-          {{ getButtonText('project') }}
+          {{ getButtonText('how') }}
         </RouterLink>
       </div>
     </div>

@@ -31,7 +31,7 @@ describe('Voice page (voice disabled)', () => {
     }).as('realtimeModels')
   })
 
-  it('shows live-mode unavailable copy when server reports voice off', () => {
+  it('shows live voice unavailable copy when server reports voice off', () => {
     cy.visit('/voice', {
       onBeforeLoad(win) {
         win.localStorage.setItem('lang', 'en')
@@ -42,7 +42,7 @@ describe('Voice page (voice disabled)', () => {
     cy.contains('Live voice is not enabled on the server right now.').should('be.visible')
   })
 
-  it('shows Norwegian live-mode unavailable copy when lang is no', () => {
+  it('shows Norwegian live voice unavailable copy when lang is no', () => {
     cy.visit('/voice', {
       onBeforeLoad(win) {
         win.localStorage.setItem('lang', 'no')

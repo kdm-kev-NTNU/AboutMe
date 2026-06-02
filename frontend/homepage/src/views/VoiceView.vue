@@ -38,9 +38,6 @@ const copy = computed(() => {
   return {
     title: en ? "Talk with Kevin's AI" : 'Snakk med Kevin sin AI',
     chatAlt: en ? 'Use text chat instead' : 'Bruk tekstchat',
-    modeHint: en
-      ? 'Live WebRTC voice connects you in real time. Sessions can drop and end after about 3 minutes.'
-      : 'Live WebRTC-stemme kobler deg til i sanntid. Økter kan falle ut og avsluttes etter ca. 3 minutter.',
   }
 })
 </script>
@@ -72,7 +69,6 @@ const copy = computed(() => {
           {{ copy.chatAlt }}
         </RouterLink>
       </div>
-      <p class="mb-4 text-sm text-slate-600">{{ copy.modeHint }}</p>
 
       <RealtimeVoicePanel
         :language="language"

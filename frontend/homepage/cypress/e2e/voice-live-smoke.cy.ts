@@ -70,10 +70,10 @@ describe('Voice live smoke', () => {
     cy.wait('@realtimeStatus').its('response.statusCode').should('eq', 200)
 
     if (expectRealtimeEnabled) {
-      cy.contains('button', 'Start voice', { timeout: 15_000 }).should('be.visible')
-      cy.contains('Voice chat is not enabled on the server right now.').should('not.exist')
+      cy.contains('button', 'Start live voice', { timeout: 15_000 }).should('be.visible')
+      cy.contains('Live voice is not enabled on the server right now.').should('not.exist')
     } else {
-      cy.contains('Voice chat is not enabled on the server right now.', { timeout: 15_000 }).should(
+      cy.contains('Live voice is not enabled on the server right now.', { timeout: 15_000 }).should(
         'be.visible',
       )
     }
@@ -90,7 +90,7 @@ describe('Voice live smoke', () => {
     cy.visit('/voice', withSyntheticMicrophone())
     cy.wait('@realtimeStatus').its('response.body').should('deep.include', { enabled: true })
 
-    cy.contains('button', 'Start voice', { timeout: 15_000 }).click()
+    cy.contains('button', 'Start live voice', { timeout: 15_000 }).click()
 
     cy.wait('@realtimeSession', { timeout: 30_000 }).then((interception) => {
       expect(interception.request.headers).to.have.property('x-chat-language', 'en')

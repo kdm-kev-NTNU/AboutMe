@@ -26,7 +26,6 @@ describe('VoiceView.vue', () => {
     fetchRealtimeVoiceModelsMock.mockReset()
     fetchRealtimeVoiceModelsMock.mockResolvedValue([
       { provider: 'OPENAI', id: 'gpt-realtime-2', label: 'OpenAI GPT-Realtime-2', defaultOption: true },
-      { provider: 'ELEVENLABS', id: 'agent_1', label: 'ElevenLabs Agent', defaultOption: false },
     ])
     fetchRealtimeVoiceStatusMock.mockResolvedValue({
       enabled: opts.liveEnabled,
@@ -90,11 +89,8 @@ describe('VoiceView.vue', () => {
     vi.clearAllMocks()
   })
 
-  it('renders live voice panel only', async () => {
-    const { wrapper } = await factory({
-      lang: 'en',
-      liveEnabled: true,
-    })
+  it('renders the live voice panel', async () => {
+    const { wrapper } = await factory({ lang: 'en', liveEnabled: true })
 
     await flushPromises()
     expect(fetchRealtimeVoiceStatusMock).toHaveBeenCalledTimes(1)
@@ -103,23 +99,11 @@ describe('VoiceView.vue', () => {
   })
 
   it('renders Norwegian copy', async () => {
-    const { wrapper } = await factory({
-      lang: 'no',
-      liveEnabled: false,
-    })
+    const { wrapper } = await factory({ lang: 'no', liveEnabled: false })
+
     await flushPromises()
     expect(wrapper.text()).toContain('Snakk med Kevin sin AI')
     expect(wrapper.text()).toContain('Bruk tekstchat')
-    wrapper.unmount()
-  })
-
-  it('mentions live WebRTC in the mode hint', async () => {
-    const { wrapper } = await factory({
-      lang: 'en',
-      liveEnabled: true,
-    })
-    await flushPromises()
-    expect(wrapper.text()).toContain('Live WebRTC voice')
     wrapper.unmount()
   })
 })

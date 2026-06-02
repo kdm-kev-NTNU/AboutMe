@@ -9,13 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
- * Exposes configured voice provider/model options to the SPA.
+ * Exposes configured OpenAI Realtime voice model options to the SPA.
  */
 @Service
 public class RealtimeModelCatalog {
 
   private static final String OPENAI = "OPENAI";
-  private static final String ELEVENLABS = "ELEVENLABS";
 
   private final RealtimeProperties realtimeProperties;
   private final String openAiApiKey;
@@ -34,7 +33,6 @@ public class RealtimeModelCatalog {
 
     List<RealtimeModelOption> options = new ArrayList<>();
     addOpenAiOptions(options);
-    addElevenLabsOptions(options);
 
     if (options.stream().noneMatch(RealtimeModelOption::defaultOption) && !options.isEmpty()) {
       RealtimeModelOption first = options.get(0);
@@ -47,22 +45,11 @@ public class RealtimeModelCatalog {
     if (!realtimeProperties.isEnabled()) {
       return false;
     }
-    if (hasOpenAiModels()) {
-      return true;
-    }
-    return hasElevenLabsModels();
+    return hasOpenAiModels();
   }
 
   private boolean hasOpenAiModels() {
     return realtimeProperties.getProviders().getOpenai().isEnabled() && StringUtils.hasText(openAiApiKey);
-  }
-
-  private boolean hasElevenLabsModels() {
-    var elevenlabs = realtimeProperties.getProviders().getElevenlabs();
-    if (!elevenlabs.isEnabled() || !StringUtils.hasText(elevenlabs.getApiKey())) {
-      return false;
-    }
-    return elevenlabs.getAgents().stream().anyMatch(a -> StringUtils.hasText(a.getAgentId()));
   }
 
   public boolean isOpenAiModelConfigured(String modelId) {
@@ -72,19 +59,6 @@ public class RealtimeModelCatalog {
       return false;
     }
     return listOpenAiModels().stream().anyMatch(m -> m.id().equals(resolveOpenAiModelId(modelId)));
-  }
-
-  public RealtimeProperties.ElevenLabsAgent findElevenLabsAgent(String modelId) {
-    if (!realtimeProperties.isEnabled()
-        || !realtimeProperties.getProviders().getElevenlabs().isEnabled()) {
-      return null;
-    }
-    String id = resolveElevenLabsAgentId(modelId);
-    return realtimeProperties.getProviders().getElevenlabs().getAgents().stream()
-        .filter(a -> StringUtils.hasText(a.getAgentId()))
-        .filter(a -> a.getAgentId().trim().equals(id))
-        .findFirst()
-        .orElse(null);
   }
 
   public String resolveOpenAiModelId(String requested) {
@@ -123,47 +97,6 @@ public class RealtimeModelCatalog {
     }
     String fallbackModel = realtimeProperties.getModel();
     return List.of(new OpenAiCatalogModel(fallbackModel, "OpenAI " + fallbackModel, true));
-  }
-
-  private void addElevenLabsOptions(List<RealtimeModelOption> options) {
-    var elevenlabs = realtimeProperties.getProviders().getElevenlabs();
-    if (!elevenlabs.isEnabled() || !StringUtils.hasText(elevenlabs.getApiKey())) {
-      return;
-    }
-    String configuredDefault = StringUtils.hasText(elevenlabs.getDefaultAgentId())
-        ? elevenlabs.getDefaultAgentId().trim()
-        : "";
-    for (var agent : elevenlabs.getAgents()) {
-      if (!StringUtils.hasText(agent.getAgentId())) {
-        continue;
-      }
-      String id = agent.getAgentId().trim();
-      String label = StringUtils.hasText(agent.getLabel()) ? agent.getLabel().trim() : "ElevenLabs Agent";
-      boolean defaultOption = agent.isDefaultAgent() || id.equals(configuredDefault);
-      options.add(new RealtimeModelOption(ELEVENLABS, id, label, defaultOption));
-    }
-  }
-
-  private String resolveElevenLabsAgentId(String requested) {
-    if (StringUtils.hasText(requested)) {
-      return requested.trim();
-    }
-    var elevenlabs = realtimeProperties.getProviders().getElevenlabs();
-    if (StringUtils.hasText(elevenlabs.getDefaultAgentId())) {
-      return elevenlabs.getDefaultAgentId().trim();
-    }
-    return elevenlabs.getAgents().stream()
-        .filter(RealtimeProperties.ElevenLabsAgent::isDefaultAgent)
-        .map(RealtimeProperties.ElevenLabsAgent::getAgentId)
-        .filter(StringUtils::hasText)
-        .map(String::trim)
-        .findFirst()
-        .orElseGet(() -> elevenlabs.getAgents().stream()
-            .map(RealtimeProperties.ElevenLabsAgent::getAgentId)
-            .filter(StringUtils::hasText)
-            .map(String::trim)
-            .findFirst()
-            .orElse(""));
   }
 
   private record OpenAiCatalogModel(String id, String label, boolean defaultOption) {}

@@ -3,7 +3,7 @@ import { useRouter, RouterLink } from 'vue-router'
 import { ref, computed, onMounted } from 'vue'
 import { useLangStore } from '../stores/lang'
 import { Button } from '@/components/ui/button'
-import { Info, MessageSquare, ChevronRight, Mic, Headphones } from 'lucide-vue-next'
+import { MessageSquare, ChevronRight, Mic, Headphones } from 'lucide-vue-next'
 import { fetchRealtimeVoiceStatus } from '@/lib/realtime-voice'
 
 const router = useRouter()
@@ -30,24 +30,11 @@ const feedbackInvite = computed(() => {
   }
 })
 
-const futureWorkHomeLink = computed(() => {
-  if (language.value === 'no') {
-    return {
-      label: 'Videre arbeid og forbedringer',
-      ariaLabel: 'Gå til siden om planlagt utvikling av porteføljen',
-    }
-  }
-  return {
-    label: 'Future work and improvements',
-    ariaLabel: 'Go to the roadmap for planned portfolio improvements',
-  }
-})
-
 /** Null until loaded from GET /realtime/status */
-const liveEnabled = ref<boolean | null>(null)
+const voiceEnabled = ref<boolean | null>(null)
 
 const voiceCtaAria = computed(() =>
-  language.value === 'no' ? 'Gå til live stemmechat' : 'Go to live voice chat',
+  language.value === 'no' ? 'Gå til stemmemodus' : 'Go to voice mode',
 )
 
 function goToVoiceChat() {
@@ -56,18 +43,18 @@ function goToVoiceChat() {
 
 const voiceStatus = computed(() => {
   if (language.value === 'no') {
-    if (liveEnabled.value === true) return 'Live stemme er tilgjengelig'
-    if (liveEnabled.value === false) return 'Stemme er midlertidig av'
+    if (voiceEnabled.value === true) return 'Stemme er tilgjengelig'
+    if (voiceEnabled.value === false) return 'Stemme er midlertidig av'
     return 'Sjekker stemmestatus'
   }
-  if (liveEnabled.value === true) return 'Live voice is available'
-  if (liveEnabled.value === false) return 'Voice is temporarily off'
+  if (voiceEnabled.value === true) return 'Voice is available'
+  if (voiceEnabled.value === false) return 'Voice is temporarily off'
   return 'Checking voice status'
 })
 
 onMounted(() => {
   void fetchRealtimeVoiceStatus().then((status) => {
-    liveEnabled.value = status.liveEnabled
+    voiceEnabled.value = status.liveEnabled
   })
 })
 </script>
@@ -99,7 +86,7 @@ onMounted(() => {
           <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-xs font-semibold text-blue-800">
             <span
               class="size-2 rounded-full"
-              :class="liveEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
+              :class="voiceEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
               aria-hidden="true"
             ></span>
             {{ voiceStatus }}
@@ -113,8 +100,8 @@ onMounted(() => {
           <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
             {{
               language === 'no'
-                ? 'Live WebRTC-stemme kobler deg til Kevin sin AI i sanntid. Økter kan være ustabile og avsluttes etter ca. 3 minutter.'
-                : 'Live WebRTC voice connects you to Kevin\'s AI in real time. Sessions can be unstable and end after about 3 minutes.'
+                ? 'Snakk med en AI som kjenner porteføljen min og kan svare på spørsmål om prosjekter, erfaring og teknologi.'
+                : 'Talk with an AI that knows my portfolio and can answer questions about projects, experience, and tech.'
             }}
           </p>
           <div class="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -125,7 +112,7 @@ onMounted(() => {
               @click="goToVoiceChat"
             >
               <Headphones class="me-2 size-5" aria-hidden="true" />
-              {{ language === 'no' ? 'Start live stemme' : 'Start live voice' }}
+              {{ language === 'no' ? 'Start stemmechat' : 'Start voice chat' }}
             </Button>
             <Button
               as-child
@@ -151,18 +138,6 @@ onMounted(() => {
             <span class="absolute inset-8 rounded-full border border-white/30" aria-hidden="true"></span>
             <Mic class="size-20 transition group-hover:scale-105" stroke-width="1.8" aria-hidden="true" />
           </button>
-          <div class="relative z-10 mt-[-2rem] w-full max-w-[calc(100vw-4rem)] rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 text-sm text-slate-600 shadow-lg shadow-blue-950/10 backdrop-blur-md sm:absolute sm:bottom-2 sm:left-1/2 sm:mt-0 sm:w-[min(22rem,90vw)] sm:-translate-x-1/2">
-            <div class="flex items-start gap-3">
-              <Info class="mt-0.5 size-4 shrink-0 text-blue-600" aria-hidden="true" />
-              <p>
-                {{
-                  language === 'no'
-                    ? 'Live WebRTC-stemme er raskere enn tekstchat, men kan være ustabil. Bruk tekstchat hvis live ikke fungerer.'
-                    : 'Live WebRTC voice is faster than text chat, but can be unstable. Use text chat if live does not work.'
-                }}
-              </p>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -191,18 +166,6 @@ onMounted(() => {
             </div>
           </div>
         </section>
-
-        <RouterLink
-          to="/project#future-work"
-          class="group flex w-full max-w-2xl items-center justify-center gap-1 rounded-xl border border-blue-200/80 bg-white/90 px-4 py-3 text-center text-sm font-medium text-blue-800 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-blue-300 hover:bg-white hover:shadow-md hover:shadow-blue-500/10"
-          :aria-label="futureWorkHomeLink.ariaLabel"
-        >
-          {{ futureWorkHomeLink.label }}
-          <ChevronRight
-            class="size-4 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </RouterLink>
       </div>
     </div>
 

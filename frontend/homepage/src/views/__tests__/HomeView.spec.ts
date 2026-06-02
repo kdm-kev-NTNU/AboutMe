@@ -45,7 +45,7 @@ describe('HomeView', () => {
 				{ path: '/chat', name: 'chat', component: { template: '<div>chat</div>' } },
 				{ path: '/voice', name: 'voice', component: { template: '<div>voice</div>' } },
 				{ path: '/feedback', name: 'feedback', component: { template: '<div>feedback</div>' } },
-				{ path: '/project', name: 'project', component: { template: '<div>project</div>' } },
+				{ path: '/how', name: 'how', component: { template: '<div>how</div>' } },
 			],
 		})
 	}
@@ -90,23 +90,6 @@ describe('HomeView', () => {
 		expect(wrapper.find('a[href*="linkedin.com"]').exists()).toBe(true)
 	})
 
-	it('links to the future work roadmap from the home hero', async () => {
-		const pinia = createPinia()
-		setActivePinia(pinia)
-		const router = makeRouter()
-		await router.push('/')
-		await router.isReady()
-		const wrapper = mount(HomeView, {
-			global: {
-				plugins: [pinia, router],
-				stubs: commonStubs,
-			},
-		})
-		await flushPromises()
-		const futureLink = wrapper.get('a[href="/project#future-work"]')
-		expect(futureLink.text()).toContain('Future work and improvements')
-	})
-
 	it('navigates to voice chat when voice CTA is clicked', async () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
@@ -122,7 +105,7 @@ describe('HomeView', () => {
 		})
 		await flushPromises()
 
-		await wrapper.find('[aria-label="Go to live voice chat"]').trigger('click')
+		await wrapper.find('[aria-label="Go to voice mode"]').trigger('click')
 		expect(pushSpy).toHaveBeenCalledWith({ name: 'voice' })
 	})
 
@@ -141,7 +124,7 @@ describe('HomeView', () => {
 		})
 		await flushPromises()
 
-		await wrapper.find('[aria-label="Gå til live stemmechat"]').trigger('click')
+		await wrapper.find('[aria-label="Gå til stemmemodus"]').trigger('click')
 		expect(pushSpy).toHaveBeenCalledWith({ name: 'voice' })
 	})
 })

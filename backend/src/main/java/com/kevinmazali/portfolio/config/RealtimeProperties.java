@@ -142,7 +142,6 @@ public class RealtimeProperties {
 
   public static class Providers {
     private OpenAiProvider openai = new OpenAiProvider();
-    private ElevenLabsProvider elevenlabs = new ElevenLabsProvider();
 
     public OpenAiProvider getOpenai() {
       return openai;
@@ -150,14 +149,6 @@ public class RealtimeProperties {
 
     public void setOpenai(OpenAiProvider openai) {
       this.openai = openai != null ? openai : new OpenAiProvider();
-    }
-
-    public ElevenLabsProvider getElevenlabs() {
-      return elevenlabs;
-    }
-
-    public void setElevenlabs(ElevenLabsProvider elevenlabs) {
-      this.elevenlabs = elevenlabs != null ? elevenlabs : new ElevenLabsProvider();
     }
   }
 
@@ -218,93 +209,6 @@ public class RealtimeProperties {
 
     public void setDefaultModel(boolean defaultModel) {
       this.defaultModel = defaultModel;
-    }
-  }
-
-  public static class ElevenLabsProvider {
-    private boolean enabled = false;
-    private String apiKey = "";
-    private List<ElevenLabsAgent> agents = List.of();
-    private String defaultAgentId = "";
-
-    public boolean isEnabled() {
-      return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-      this.enabled = enabled;
-    }
-
-    public String getApiKey() {
-      return apiKey;
-    }
-
-    public void setApiKey(String apiKey) {
-      this.apiKey = apiKey;
-    }
-
-    public List<ElevenLabsAgent> getAgents() {
-      return agents;
-    }
-
-    public void setAgents(List<ElevenLabsAgent> agents) {
-      this.agents = agents != null ? agents : List.of();
-    }
-
-    public String getDefaultAgentId() {
-      return defaultAgentId;
-    }
-
-    public void setDefaultAgentId(String defaultAgentId) {
-      this.defaultAgentId = defaultAgentId;
-    }
-  }
-
-  public static class ElevenLabsAgent {
-    private String agentId = "";
-    private String label = "";
-    private boolean defaultAgent = false;
-    private String environment = "";
-    private String branchId = "";
-
-    public String getAgentId() {
-      return agentId;
-    }
-
-    public void setAgentId(String agentId) {
-      this.agentId = agentId;
-    }
-
-    public String getLabel() {
-      return label;
-    }
-
-    public void setLabel(String label) {
-      this.label = label;
-    }
-
-    public boolean isDefaultAgent() {
-      return defaultAgent;
-    }
-
-    public void setDefaultAgent(boolean defaultAgent) {
-      this.defaultAgent = defaultAgent;
-    }
-
-    public String getEnvironment() {
-      return environment;
-    }
-
-    public void setEnvironment(String environment) {
-      this.environment = environment;
-    }
-
-    public String getBranchId() {
-      return branchId;
-    }
-
-    public void setBranchId(String branchId) {
-      this.branchId = branchId;
     }
   }
 }

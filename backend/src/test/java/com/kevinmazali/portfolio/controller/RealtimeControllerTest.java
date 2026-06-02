@@ -14,7 +14,6 @@ import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.model.RealtimeLookupResponse;
 import com.kevinmazali.portfolio.model.RealtimeLookupSnippet;
 import com.kevinmazali.portfolio.model.RealtimeModelOption;
-import com.kevinmazali.portfolio.service.ElevenLabsRealtimeTokenService;
 import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
@@ -77,9 +76,6 @@ class RealtimeControllerTest {
   private RealtimeModelCatalog realtimeModelCatalog;
 
   @MockitoBean
-  private ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
-
-  @MockitoBean
   private RequestLogService requestLogService;
 
   @AfterEach
@@ -135,15 +131,12 @@ class RealtimeControllerTest {
   void modelsEndpointReturnsConfiguredVoiceCatalog() throws Exception {
     when(realtimeModelCatalog.listAvailableModels())
         .thenReturn(List.of(
-            new RealtimeModelOption("OPENAI", "gpt-realtime-2", "OpenAI GPT-Realtime-2", true),
-            new RealtimeModelOption("ELEVENLABS", "agent_123", "ElevenLabs Agent", false)));
+            new RealtimeModelOption("OPENAI", "gpt-realtime-2", "OpenAI GPT-Realtime-2", true)));
 
     mockMvc.perform(get("/realtime/models"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].provider").value("OPENAI"))
-        .andExpect(jsonPath("$[0].id").value("gpt-realtime-2"))
-        .andExpect(jsonPath("$[1].provider").value("ELEVENLABS"))
-        .andExpect(jsonPath("$[1].id").value("agent_123"));
+        .andExpect(jsonPath("$[0].id").value("gpt-realtime-2"));
   }
 
   @Test
@@ -324,9 +317,6 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
   private RealtimeModelCatalog realtimeModelCatalog;
 
   @MockitoBean
-  private ElevenLabsRealtimeTokenService elevenLabsRealtimeTokenService;
-
-  @MockitoBean
   private RequestLogService requestLogService;
 
   @Test
@@ -356,34 +346,5 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
 
     verify(realtimeSessionService).createRealtimeCall(eq("v=0"), isNull(), isNull(), isNull(), isNull());
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
-  }
-
-  @Test
-  void elevenLabsTokenEndpointReturnsToken() throws Exception {
-    when(elevenLabsRealtimeTokenService.createConversationToken("agent_123")).thenReturn("token_abc");
-
-    mockMvc.perform(post("/realtime/elevenlabs/token")
-            .content("{\"modelId\":\"agent_123\"}")
-            .contentType(MediaType.APPLICATION_JSON))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.token").value("token_abc"));
-
-    verify(requestLogService).save("/realtime/elevenlabs/token", "POST", "token", null);
-  }
-
-  @Test
-  void elevenLabsTokenEndpointMapsRealtimeErrors() throws Exception {
-    when(elevenLabsRealtimeTokenService.createConversationToken("agent_123"))
-        .thenThrow(new RealtimeSessionException(
-            HttpStatus.BAD_GATEWAY,
-            RealtimeErrorCode.ELEVENLABS_REJECTED,
-            "ElevenLabs rejected the session: invalid agent"));
-
-    mockMvc.perform(post("/realtime/elevenlabs/token")
-            .content("{\"modelId\":\"agent_123\"}")
-            .contentType(MediaType.APPLICATION_JSON))
-        .andExpect(status().isBadGateway())
-        .andExpect(jsonPath("$.code").value("ELEVENLABS_REJECTED"))
-        .andExpect(jsonPath("$.error").value("ElevenLabs rejected the session: invalid agent"));
   }
 }

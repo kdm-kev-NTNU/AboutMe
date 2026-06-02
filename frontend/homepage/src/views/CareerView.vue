@@ -6,14 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { MapPin } from 'lucide-vue-next'
 import type { WorkExperienceData } from '../types/workExperience'
 import type { EducationData } from '../types/education'
-import type { Course, CourseData } from '../types/courses'
 
 import workExperienceEn from '../types/workExperience.en.json'
 import workExperienceNo from '../types/workExperience.no.json'
 import educationEn from '../types/education.en.json'
 import educationNo from '../types/education.no.json'
-import coursesEn from '../types/courses.en.json'
-import coursesNo from '../types/courses.no.json'
 
 const langStore = useLangStore()
 
@@ -26,7 +23,6 @@ const workSectionTitle = computed(() =>
 const educationSectionTitle = computed(() =>
   langStore.language === 'no' ? 'Utdanning' : 'Education',
 )
-const coursesTitle = computed(() => (langStore.language === 'no' ? 'Emner' : 'Courses'))
 
 const workExperienceData = computed(() => {
   const rawData = langStore.language === 'no' ? workExperienceNo : workExperienceEn
@@ -56,16 +52,6 @@ const educationData = computed(() => {
   return data.education
 })
 
-const coursesData = computed(() => {
-  const rawData = langStore.language === 'no' ? coursesNo : coursesEn
-  const data: CourseData = {
-    courses: rawData.courses.map((course) => ({
-      ...course,
-      status: course.status as 'completed' | 'ongoing' | 'planned',
-    })),
-  }
-  return data.courses
-})
 
 const formatDate = (dateString: string | null, language: 'en' | 'no'): string => {
   if (!dateString) return language === 'no' ? 'd.d.' : 'Present'
@@ -107,52 +93,6 @@ const getStatusText = (status: string, language: 'en' | 'no') => {
   return statusTexts[status as keyof typeof statusTexts]?.[language] || status
 }
 
-const getCourseStatusVariant = (status: string) => {
-  switch (status) {
-    case 'ongoing':
-      return 'default'
-    case 'completed':
-      return 'secondary'
-    case 'planned':
-      return 'outline'
-    default:
-      return 'secondary'
-  }
-}
-
-const getCourseStatusText = (status: string, language: 'en' | 'no') => {
-  const statusTexts = {
-    ongoing: { en: 'Ongoing', no: 'Pågående' },
-    completed: { en: 'Completed', no: 'Fullført' },
-    planned: { en: 'Planned', no: 'Planlagt' },
-  }
-  return statusTexts[status as keyof typeof statusTexts]?.[language] || status
-}
-
-const coursesBySemester = computed(() => {
-  const grouped: { [key: string]: Course[] } = {}
-
-  coursesData.value.forEach((course) => {
-    if (!grouped[course.semester]) {
-      grouped[course.semester] = []
-    }
-    grouped[course.semester].push(course)
-  })
-
-  const getSemesterNumber = (semesterLabel: string): number => {
-    const match = semesterLabel.match(/semester\s+(\d+)/i)
-    return match ? parseInt(match[1], 10) : 0
-  }
-
-  const sortedSemesters = Object.keys(grouped).sort((a, b) => {
-    return getSemesterNumber(b) - getSemesterNumber(a)
-  })
-
-  return sortedSemesters.map((semester) => ({
-    semester,
-    courses: grouped[semester],
-  }))
-})
 
 const experiences = computed(() => {
   return [...workExperienceData.value]
@@ -344,65 +284,6 @@ const education = computed(() => {
         </div>
       </section>
 
-      <!-- Courses -->
-      <section aria-labelledby="career-courses-heading">
-        <h2
-          id="career-courses-heading"
-          class="text-2xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent animate-gradient-x"
-        >
-          {{ coursesTitle }}
-        </h2>
-
-        <div class="mx-auto max-w-4xl space-y-12">
-          <div v-for="semesterGroup in coursesBySemester" :key="semesterGroup.semester" class="space-y-4">
-            <h3 class="text-lg font-semibold text-blue-700 border-b border-blue-200 pb-2">
-              {{ semesterGroup.semester }}
-            </h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card
-                v-for="course in semesterGroup.courses"
-                :key="course.id"
-                class="relative border border-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm hover:border-blue-300/30 hover:bg-white/90 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/10"
-              >
-                <CardHeader class="pb-3">
-                  <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                      <CardTitle class="text-sm font-medium text-gray-600 mb-1">
-                        {{ course.courseCode }}
-                      </CardTitle>
-                      <h4 class="text-base font-semibold text-gray-800 leading-tight">
-                        {{ course.courseName }}
-                      </h4>
-                    </div>
-                    <Badge
-                      :variant="getCourseStatusVariant(course.status)"
-                      :class="[
-                        'text-xs ml-2 flex-shrink-0 transition-all duration-200',
-                        course.status === 'ongoing'
-                          ? 'border border-blue-400/40 text-blue-800 bg-blue-100/50 hover:border-blue-400/60 hover:bg-blue-100 hover:text-blue-900'
-                          : course.status === 'completed'
-                            ? 'border border-green-300/30 text-green-700 bg-green-50/50 hover:border-green-300/50 hover:bg-green-50 hover:text-green-800'
-                            : 'border border-gray-300/30 text-gray-600 bg-gray-50/50 hover:border-gray-300/50 hover:bg-gray-50 hover:text-gray-700',
-                      ]"
-                    >
-                      {{ getCourseStatusText(course.status, langStore.language) }}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent class="pt-0">
-                  <div class="flex items-center justify-between text-sm text-gray-600">
-                    <span>{{ course.credits }} {{ langStore.language === 'no' ? 'studiepoeng' : 'credits' }}</span>
-                    <span v-if="course.grade" class="font-medium text-gray-700">
-                      {{ langStore.language === 'no' ? 'Karakter' : 'Grade' }}: {{ course.grade }}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   </main>
 </template>
