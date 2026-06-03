@@ -38,7 +38,7 @@ const videoSection = computed(() =>
 		? {
 				heading: 'Hva vi har jobbet med',
 				description:
-					'I videoen under presenterer jeg og Kamya Shindai bachelorprosjektet Foresight AI om hvordan naturlig språk kan gjøre energiinnsikt mer tilgjengelig i samarbeid med Piscada. Videoen oppsummerer problemstilling, løsning, evaluering og hovedfunn, og forteller at stemmen er laget med en ElevenLabs voice-modell.',
+					'I videoen under presenterer jeg og Kaamya Shinde bachelorprosjektet Foresight AI om hvordan naturlig språk kan gjøre energiinnsikt mer tilgjengelig i samarbeid med Piscada. Videoen oppsummerer problemstilling, løsning, evaluering og hovedfunn, og forteller at stemmen er laget med en ElevenLabs voice-modell.',
 				badge: 'Demo',
         iframeTitle: 'YouTube-video om bachelorprosjektet',
 				watchLabel: 'Åpne på YouTube (ny fane)',
@@ -46,7 +46,7 @@ const videoSection = computed(() =>
 		: {
 				heading: 'What we have been working on',
 				description:
-					'In the video below, Kamya Shindai and I present our bachelor project, Foresight AI, on democratizing energy insights through natural-language interaction in collaboration with Piscada. The recording summarizes the problem, solution, evaluation, and key findings, and notes that the narration uses an ElevenLabs voice model.',
+					'In the video below, Kaamya Shinde and I present our bachelor project, Foresight AI, on democratizing energy insights through natural-language interaction in collaboration with Piscada. The recording summarizes the problem, solution, evaluation, and key findings, and notes that the narration uses an ElevenLabs voice model.',
 				badge: 'Demo',
         iframeTitle: "YouTube video about the bachelor's thesis project",
 				watchLabel: 'Watch on YouTube (opens in a new tab)',
