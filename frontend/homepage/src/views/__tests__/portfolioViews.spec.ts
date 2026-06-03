@@ -245,7 +245,7 @@ describe('portfolio views (smoke)', () => {
 			await flushPromises()
 			expect(wrapper.text()).toContain("Bachelor's thesis")
 			expect(wrapper.text()).toContain('active work in progress')
-			expect(wrapper.text()).toContain('shaping the portfolio now')
+			expect(wrapper.text()).toContain('What the evaluation showed')
 		},
 		25_000,
 	)
