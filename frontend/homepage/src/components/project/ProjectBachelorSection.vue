@@ -38,7 +38,7 @@ const videoSection = computed(() =>
 		? {
 				heading: 'Hva vi har jobbet med',
 				description:
-					'I videoen under forklarer jeg og samarbeidspartneren min kort hva vi har jobbet med de siste månedene i forbindelse med bacheloroppgaven og det tilhørende prosjektet. Dette er videoen fra presentasjonen vi fremviste for veiledere både internt og eksternt. Vi jobber med en mer raffinert video snart.',
+					'I videoen under forklarer jeg og samarbeidspartneren min hva vi har jobbet med de siste månedene i forbindelse med bacheloroppgaven og det tilhørende prosjektet. Dette er den nye, mer raffinerte versjonen av presentasjonen vi holdt for veiledere både internt og eksternt.',
 				badge: 'Demo',
         iframeTitle: 'YouTube-video om bachelorprosjektet',
 				watchLabel: 'Åpne på YouTube (ny fane)',
@@ -46,7 +46,7 @@ const videoSection = computed(() =>
 		: {
 				heading: 'What we have been working on',
 				description:
-					'In the video below, my collaboration partner and I explain what we have been working on over the past few months as part of the bachelor thesis and related project. This is the recording from the presentation we gave to supervisors internally and externally. We are working on a more refined version soon.',
+					'In the video below, my collaboration partner and I explain what we have been working on over the past few months as part of the bachelor thesis and related project. This is the new, more refined version of the presentation we gave to supervisors internally and externally.',
 				badge: 'Demo',
         iframeTitle: "YouTube video about the bachelor's thesis project",
 				watchLabel: 'Watch on YouTube (opens in a new tab)',
