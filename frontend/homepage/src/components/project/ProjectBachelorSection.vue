@@ -38,7 +38,7 @@ const videoSection = computed(() =>
 		? {
 				heading: 'Hva vi har jobbet med',
 				description:
-					'I videoen under forklarer jeg og samarbeidspartneren min hva vi har jobbet med de siste månedene i forbindelse med bacheloroppgaven og det tilhørende prosjektet. Dette er den nye, mer raffinerte versjonen av presentasjonen vi holdt for veiledere både internt og eksternt.',
+					'I videoen under presenterer jeg og Kamya Shindai bachelorprosjektet Foresight AI om hvordan naturlig språk kan gjøre energiinnsikt mer tilgjengelig i samarbeid med Piscada. Videoen oppsummerer problemstilling, løsning, evaluering og hovedfunn, og forteller at stemmen er laget med en ElevenLabs voice-modell.',
 				badge: 'Demo',
         iframeTitle: 'YouTube-video om bachelorprosjektet',
 				watchLabel: 'Åpne på YouTube (ny fane)',
@@ -46,7 +46,7 @@ const videoSection = computed(() =>
 		: {
 				heading: 'What we have been working on',
 				description:
-					'In the video below, my collaboration partner and I explain what we have been working on over the past few months as part of the bachelor thesis and related project. This is the new, more refined version of the presentation we gave to supervisors internally and externally.',
+					'In the video below, Kamya Shindai and I present our bachelor project, Foresight AI, on democratizing energy insights through natural-language interaction in collaboration with Piscada. The recording summarizes the problem, solution, evaluation, and key findings, and notes that the narration uses an ElevenLabs voice model.',
 				badge: 'Demo',
         iframeTitle: "YouTube video about the bachelor's thesis project",
 				watchLabel: 'Watch on YouTube (opens in a new tab)',
@@ -58,54 +58,54 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 		? [
 				{
 					category: 'Bakgrunn',
-					title: 'Hva oppgaven handler om',
+					title: 'Prosjekt og problemstilling',
 					body: [
-						'Oppgaven er knyttet til industriell kontekst og utforsker hvordan retrieval-augmented generation og tilhørende verktøy kan brukes i praksis.',
-						'Målet har vært å kombinere teori med konkret implementasjon, slik at resultatene kan diskuteres ut fra både kodekvalitet og brukeropplevelse.',
+						'Bachelorprosjektet Foresight AI ble utviklet med Piscada for energistyringssystemer som samler store mengder bygnings- og driftsdata.',
+						'Kjerneutfordringen var å støtte tolkning av energidata for brukere uten domenekompetanse, samtidig som vi balanserte svarkvalitet mot tokenkostnad.',
 					],
 				},
 				{
-					category: 'Ferdigheter',
-					title: 'Det jeg har lært',
+					category: 'Implementasjon',
+					title: 'Hva vi bygde',
 					body: [
-						'Jeg har jobbet tett med API-design, dokumentpipelines, vektorlagring og evaluering av språkmodeller: områder som direkte gjenbrukes i porteføljen.',
-						'Samarbeid med veileder og team hos Piscada har også trent meg i å scope arbeid, dokumentere beslutninger og levere i iterasjoner.',
+						'Vi bygde en RAG-basert assistent i et eksisterende dashboard der brukere kan stille spørsmål om valgte energigrafer og få forklaringer forankret i både grafdata og domenedokumenter.',
+						'Frontend inkluderte chatbot, hurtigspørsmål, widget-kontekst og annotasjoner, mens backend inkluderte dokumentprosessering med anonymisering, promptversjonering, logging og tracing.',
 					],
 				},
 				{
-					category: 'Porteføljen',
-					title: 'Hvordan dette styrer porteføljen nå',
+					category: 'Funn',
+					title: 'Hva vi fant',
 					body: [
-						'Nettsiden er et levende arbeidsrom der jeg kontinuerlig tester og justerer ideer fra bacheloroppgaven.',
-						'Det betyr at både innhold, prioriteringer og AI-atferd kan endres i iterasjoner etter hvert som jeg lærer mer.',
-						'Mer teknisk detalj finner du i seksjonen Teknologistakk på denne siden, og en forskningsforankret roadmap under Videre arbeid.',
+						'Kontekstforankret retrieval gjorde energidata enklere å forstå, og funksjoner som TL;DR, sitater og annotasjoner økte tillit og tolkbarhet.',
+						'RAG fjernet ikke hallusinasjoner helt, og vi fant en tydelig trade-off mellom kvalitet, ventetid og kostnad: ingen enkeltmodell var best i alle situasjoner.',
+						'Konklusjonen var at slike assistenter kan forbedre tilgang til energiinnsikt, men krever transparent forankring, godt grensesnittdesign og kontinuerlig evaluering.',
 					],
 				},
 			]
 		: [
 				{
 					category: 'Background',
-					title: 'What the thesis is about',
+					title: 'Project and problem statement',
 					body: [
-						'The thesis sits in an industrial setting and explores how retrieval-augmented generation and related tooling work in practice.',
-						'The aim has been to pair theory with concrete implementation so results can be discussed in terms of both code quality and user experience.',
+						'The bachelor project, Foresight AI, was developed with Piscada for energy-management systems that collect large volumes of building and operational data.',
+						'The core challenge was helping non-experts interpret energy data while balancing response quality against token-usage cost.',
 					],
 				},
 				{
-					category: 'Skills',
-					title: 'What I took away',
+					category: 'Implementation',
+					title: 'What we built',
 					body: [
-						'I worked closely with API design, document pipelines, vector storage, and evaluation of language models: areas that map directly onto this portfolio.',
-						'Collaboration with supervisors and the team at Piscada also trained me to scope work, document decisions, and ship in iterations.',
+						'We built a RAG-based assistant inside an existing dashboard so users can ask natural-language questions about selected energy charts and receive grounded explanations.',
+						'The frontend included chatbot UX, quick analysis prompts, widget-specific context, and chart annotations, while the backend included document processing with PII removal, prompt versioning, logging, and tracing.',
 					],
 				},
 				{
-					category: 'Portfolio',
-					title: 'How this is shaping the portfolio now',
+					category: 'Findings',
+					title: 'What the evaluation showed',
 					body: [
-						'The site is a living workspace where I continuously test and adjust ideas from the bachelor thesis.',
-						'This means content, priorities, and AI behavior can change in iterations as I keep learning.',
-						'For more technical depth, expand the Tech stack section on this page; for a research-backed roadmap, see Future work below.',
+						'Context-aware retrieval made energy data easier to understand, and features such as TL;DR summaries, citations, and chart annotations improved trust and interpretation.',
+						'RAG did not fully remove hallucinations, and we observed a clear trade-off between quality, latency, and token cost, meaning no single model was best in every scenario.',
+						'Overall, the project indicates that LLM assistants can improve access to energy insights when paired with transparent grounding, careful interface design, and continuous evaluation.',
 					],
 				},
 			],
