@@ -41,7 +41,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/admin/tools/interview")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
-@Tag(name = "Admin interview", description = "Voice interview practice with document context (ADMIN)")
+@Tag(name = "Admin interview", description = "Voice interview practice with user-provided questions (ADMIN)")
 @SecurityRequirement(name = OpenApiConfig.BASIC_AUTH_SCHEME)
 public class InterviewController {
 
@@ -50,7 +50,7 @@ public class InterviewController {
   private final InterviewRealtimeSessionService interviewRealtimeSessionService;
   private final RequestLogService requestLogService;
 
-  @Operation(summary = "Upload interview source document")
+  @Operation(summary = "Upload interview questions file")
   @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<InterviewDocumentResponse> uploadDocument(
       @RequestParam("file") MultipartFile file, Principal principal) throws IOException {
@@ -58,7 +58,7 @@ public class InterviewController {
     return ResponseEntity.ok(interviewDocumentService.storeMultipart(file, createdBy));
   }
 
-  @Operation(summary = "Create interview source document from pasted text")
+  @Operation(summary = "Create interview questions from pasted text")
   @PostMapping(value = "/documents/text", consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<InterviewDocumentResponse> createTextDocument(
       @RequestBody InterviewTextDocumentRequest request, Principal principal) {
@@ -67,7 +67,7 @@ public class InterviewController {
         interviewDocumentService.storeText(request.text(), request.filename(), createdBy));
   }
 
-  @Operation(summary = "Get interview source document metadata")
+  @Operation(summary = "Get interview questions metadata")
   @GetMapping("/documents/{id}")
   public ResponseEntity<InterviewDocumentResponse> getDocument(@PathVariable String id) {
     return ResponseEntity.ok(interviewDocumentService.getDocument(id));

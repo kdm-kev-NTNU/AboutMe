@@ -29,7 +29,7 @@ const voiceModelStore = useVoiceModelStore()
 const step = ref<WizardStep>('source')
 const uiLang = ref<'en' | 'no'>('no')
 const pastedText = ref('')
-const pasteFilename = ref('interview-source.md')
+const pasteFilename = ref('interview-questions.md')
 const busy = ref(false)
 const error = ref('')
 const status = ref('')
@@ -63,16 +63,37 @@ const {
   flushTurns,
 } = useInterviewVoice(sessionId, uiLang, sessionOptions, selectedVoiceModel)
 
+function countQuestions(text: string): number {
+  return text.split('\n').filter((line) => line.trim() !== '').length
+}
+
+const canStartInterview = computed(() => !!document.value || pastedText.value.trim() !== '')
+
+const activeQuestionCount = computed(() => {
+  if (pastedText.value.trim()) return countQuestions(pastedText.value)
+  return document.value ? null : 0
+})
+
 const copy = computed(() => {
   const en = uiLang.value === 'en'
   return {
     title: en ? 'Voice interview (about you)' : 'Stemmeintervju (om deg)',
-    source: en ? '1. Source document' : '1. Kildedokument',
+    intro: en
+      ? 'Write or upload questions you want to be asked, practice with voice, save the transcript, clean it, and add it to RAG.'
+      : 'Skriv eller last opp spørsmål du vil bli stilt, øv med stemme, lagre transkriptet, rens det og legg det til i RAG.',
+    source: en ? '1. Questions' : '1. Spørsmål',
     interview: en ? '2. Live interview' : '2. Live intervju',
     transcript: en ? '3. Transcript' : '3. Transkript',
     clean: en ? '4. Clean & ingest' : '4. Rens og ingest',
-    upload: en ? 'Upload file' : 'Last opp fil',
-    paste: en ? 'Or paste text' : 'Eller lim inn tekst',
+    upload: en ? 'Upload file with questions' : 'Last opp fil med spørsmål',
+    paste: en ? 'Or paste questions' : 'Eller lim inn spørsmål',
+    pastePlaceholder: en
+      ? 'One question per line, e.g.:\nTell me about a project you are proud of.\nWhat is your biggest technical strength?'
+      : 'Ett spørsmål per linje, f.eks.:\nFortell om et prosjekt du er stolt av.\nHva er din største tekniske styrke?',
+    saveText: en ? 'Save questions' : 'Lagre spørsmål',
+    activeQuestions: en ? 'Active questions' : 'Aktive spørsmål',
+    activeFile: en ? 'Active file' : 'Aktiv fil',
+    lines: en ? 'lines' : 'linjer',
     lang: en ? 'Interview language' : 'Intervjuspråk',
     start: en ? 'Start interview' : 'Start intervju',
     connect: en ? 'Connect microphone' : 'Koble til mikrofon',
@@ -105,7 +126,11 @@ async function handleFileUpload(event: Event) {
   error.value = ''
   try {
     document.value = await uploadInterviewDocument(file)
-    status.value = `Dokument lagret (${document.value.charCount} tegn)`
+    pastedText.value = ''
+    status.value =
+      uiLang.value === 'en'
+        ? `Questions file saved (${document.value.charCount} chars)`
+        : `Spørsmålsfil lagret (${document.value.charCount} tegn)`
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Upload failed'
   } finally {
@@ -120,7 +145,11 @@ async function handlePasteDocument() {
   error.value = ''
   try {
     document.value = await createInterviewTextDocument(pastedText.value.trim(), pasteFilename.value)
-    status.value = `Tekst lagret (${document.value.charCount} tegn)`
+    const n = countQuestions(pastedText.value)
+    status.value =
+      uiLang.value === 'en'
+        ? `Questions saved (${n} lines)`
+        : `Spørsmål lagret (${n} linjer)`
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Create failed'
   } finally {
@@ -128,12 +157,21 @@ async function handlePasteDocument() {
   }
 }
 
+async function ensureQuestionsDocument(): Promise<InterviewDocument | null> {
+  if (document.value) return document.value
+  if (!pastedText.value.trim()) return null
+  document.value = await createInterviewTextDocument(pastedText.value.trim(), pasteFilename.value)
+  return document.value
+}
+
 async function startInterview() {
-  if (!document.value) return
+  if (!canStartInterview.value) return
   busy.value = true
   error.value = ''
   try {
-    const session = await createInterviewSession(document.value.id, uiLang.value, selectedVoice.value)
+    const doc = await ensureQuestionsDocument()
+    if (!doc) return
+    const session = await createInterviewSession(doc.id, uiLang.value, selectedVoice.value)
     sessionId.value = session.id
     resetTurns()
     step.value = 'interview'
@@ -212,9 +250,7 @@ async function runIngest() {
 
     <main id="main-content" class="mx-auto max-w-3xl px-4 pt-8">
       <h1 class="text-2xl font-semibold tracking-tight text-gray-900 mb-2">{{ copy.title }}</h1>
-      <p class="text-sm text-gray-600 mb-6">
-        Last opp et dokument om deg, bli intervjuet med stemme, lagre transkriptet, rens det og legg det til i RAG.
-      </p>
+      <p class="text-sm text-gray-600 mb-6">{{ copy.intro }}</p>
 
       <p v-if="status" class="text-sm text-green-700 mb-4">{{ status }}</p>
       <p v-if="error" class="text-sm text-red-700 mb-4">{{ error }}</p>
@@ -242,7 +278,7 @@ async function runIngest() {
             v-model="pastedText"
             rows="8"
             class="w-full border rounded p-2 text-sm font-mono"
-            placeholder="Lim inn CV, notater eller annet stoff om deg…"
+            :placeholder="copy.pastePlaceholder"
           />
           <button
             type="button"
@@ -250,19 +286,22 @@ async function runIngest() {
             :disabled="busy || !pastedText.trim()"
             @click="handlePasteDocument"
           >
-            Lagre tekst
+            {{ copy.saveText }}
           </button>
         </div>
 
-        <p v-if="document" class="text-sm text-gray-700">
-          Aktivt dokument: <code class="bg-gray-100 px-1 rounded">{{ document.originalFilename }}</code>
-          ({{ document.charCount }} tegn)
+        <p v-if="document && activeQuestionCount != null && activeQuestionCount > 0" class="text-sm text-gray-700">
+          {{ copy.activeQuestions }}: {{ activeQuestionCount }} {{ copy.lines }}
+        </p>
+        <p v-else-if="document" class="text-sm text-gray-700">
+          {{ copy.activeFile }}: <code class="bg-gray-100 px-1 rounded">{{ document.originalFilename }}</code>
+          ({{ document.charCount }} {{ uiLang === 'en' ? 'chars' : 'tegn' }})
         </p>
 
         <button
           type="button"
           class="rounded bg-blue-600 text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
-          :disabled="busy || !document"
+          :disabled="busy || !canStartInterview"
           @click="startInterview"
         >
           <Loader2 v-if="busy" class="inline size-4 animate-spin mr-1" />

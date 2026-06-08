@@ -18,7 +18,7 @@ describe('ProjectFutureWorkSection', () => {
     expect(wrapper.text()).toContain('Query analysis and corpus maintenance')
     expect(wrapper.text()).not.toContain('Retrieval pipeline improvements')
     expect(wrapper.text()).not.toContain('Continuous model lifecycle')
-    expect(wrapper.text()).toMatch(/voice clone|retrieval/i)
+    expect(wrapper.text()).not.toContain('Custom voice clone')
   })
 
   it('renders Norwegian roadmap title', async () => {
@@ -34,5 +34,6 @@ describe('ProjectFutureWorkSection', () => {
     expect(wrapper.text()).toContain('Spørringsanalyse og korpusvedlikehold')
     expect(wrapper.text()).not.toContain('Forbedringer i retrieval-pipelinen')
     expect(wrapper.text()).not.toContain('Kontinuerlig modell-livssyklus')
+    expect(wrapper.text()).not.toContain('Egen stemmeklone')
   })
 })

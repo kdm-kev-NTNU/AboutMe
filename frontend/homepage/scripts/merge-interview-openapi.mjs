@@ -60,7 +60,7 @@ base.tags ??= []
 if (!base.tags.some((t) => t.name === 'Admin interview')) {
   base.tags.push({
     name: 'Admin interview',
-    description: 'Voice interview practice with document context (ADMIN)',
+    description: 'Voice interview practice with user-provided questions (ADMIN)',
   })
 }
 
