@@ -18,19 +18,6 @@ type SectionCopy = {
 
 const sectionsEn: SectionCopy[] = [
 	{
-		category: 'Voice',
-		title: "Custom voice clone: Kevin\u2019s AI speaks in his own voice",
-		intro:
-			"A planned feature where the AI chatbot uses a cloned version of Kevin\u2019s actual voice, so visitors hear Kevin\u2019s tone and cadence when using voice mode \u2014 not a generic TTS voice. The current OpenAI Realtime voice mode stays, but the synthetic voice will be replaced with a personal clone trained on Kevin\u2019s speech.",
-		points: [
-			"Voice cloning: train a high-fidelity voice model on recordings of Kevin\u2019s speech using a suitable TTS provider, capturing natural intonation and rhythm.",
-			'Integration: swap the default TTS output in the existing Realtime voice pipeline with the custom clone, keeping the same conversational AI backend.',
-			'Quality control: validate that the clone sounds natural across different answer lengths, languages, and emotional tones before going live.',
-			"Consent and transparency: clearly disclose to visitors that the voice is AI-generated from Kevin\u2019s recordings, not a live human conversation.",
-		],
-		refs: [],
-	},
-	{
 		category: 'Generation',
 		title: 'Output consistency and reproducibility',
 		intro:
@@ -70,19 +57,6 @@ const sectionsEn: SectionCopy[] = [
 ]
 
 const sectionsNo: SectionCopy[] = [
-	{
-		category: 'Stemme',
-		title: 'Egen stemmeklone: Kevins AI snakker med hans stemme',
-		intro:
-			'Planlagt funksjon der AI-chatboten bruker en klonet versjon av Kevins faktiske stemme, slik at bes\u00f8kende h\u00f8rer Kevins tone og rytme i stemmemodus \u2014 ikke en generisk TTS-stemme. Den eksisterende OpenAI Realtime-stemmemodusen beholdes, men den syntetiske stemmen byttes ut med en personlig klone trent p\u00e5 Kevins tale.',
-		points: [
-			'Stemmekloning: trene en h\u00f8ykvalitets stemmemodell p\u00e5 opptak av Kevins tale via en egnet TTS-leverand\u00f8r, med naturlig intonasjon og rytme.',
-			'Integrasjon: bytte standard TTS-utdata i den eksisterende Realtime-stemmepipelinen med den egne klonen, med samme samtale-AI-backend.',
-			'Kvalitetskontroll: validere at klonen l\u00e5ter naturlig p\u00e5 tvers av ulike svarlengder, spr\u00e5k og emosjonelle toner f\u00f8r lansering.',
-			'Samtykke og \u00e5penhet: tydelig opplyse bes\u00f8kende om at stemmen er AI-generert fra Kevins opptak, ikke en live samtale med et menneske.',
-		],
-		refs: [],
-	},
 	{
 		category: 'Generering',
 		title: 'Konsistens og reproduserbarhet i svar',
