@@ -63,6 +63,8 @@ public class WebConfig {
     private final Map<String, Bucket> datasetGenerateBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> realtimeSessionBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> realtimeLookupBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> interviewRealtimeBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> interviewTurnBuckets = new ConcurrentHashMap<>();
 
     private Bucket newAskBucketAuthenticated() {
         AskRateLimitProperties p = askRateLimitProperties;
@@ -375,6 +377,92 @@ public class WebConfig {
         registration.addUrlPatterns("/realtime/lookup");
         registration.setName("realtimeLookupRateLimitFilter");
         registration.setOrder(6);
+        return registration;
+    }
+
+    private Bucket newInterviewRealtimeBucket() {
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(5)
+            .refillGreedy(5, Duration.ofHours(1))
+            .build();
+        return Bucket.builder().addLimit(limit).build();
+    }
+
+    private String interviewRealtimeKey(HttpServletRequest req) {
+        String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : "unknown";
+        return "interview-rt:" + user;
+    }
+
+    private Bucket newInterviewTurnBucket() {
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(30)
+            .refillGreedy(30, Duration.ofMinutes(1))
+            .build();
+        return Bucket.builder().addLimit(limit).build();
+    }
+
+    private String interviewTurnKey(HttpServletRequest req) {
+        String user = req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : "unknown";
+        return "interview-turn:" + user;
+    }
+
+    @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> interviewRealtimeRateLimitFilter() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<Filter>();
+        registration.setFilter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+                throws ServletException, IOException {
+                String uri = request.getRequestURI();
+                if (!"POST".equalsIgnoreCase(request.getMethod())
+                    || uri == null
+                    || !uri.contains("/admin/tools/interview/sessions/")
+                    || !uri.endsWith("/realtime/session")) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                Bucket bucket = interviewRealtimeBuckets.computeIfAbsent(interviewRealtimeKey(request), k -> newInterviewRealtimeBucket());
+                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+                if (probe.isConsumed()) {
+                    filterChain.doFilter(request, response);
+                } else {
+                    write429(response, probe, "Too many interview voice sessions. Please wait before trying again.");
+                }
+            }
+        });
+        registration.addUrlPatterns("/admin/tools/interview/sessions/*");
+        registration.setName("interviewRealtimeRateLimitFilter");
+        registration.setOrder(7);
+        return registration;
+    }
+
+    @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<Filter> interviewTurnRateLimitFilter() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<Filter>();
+        registration.setFilter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+                throws ServletException, IOException {
+                String uri = request.getRequestURI();
+                if (!"POST".equalsIgnoreCase(request.getMethod())
+                    || uri == null
+                    || !uri.contains("/admin/tools/interview/sessions/")
+                    || !uri.endsWith("/turns")) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                Bucket bucket = interviewTurnBuckets.computeIfAbsent(interviewTurnKey(request), k -> newInterviewTurnBucket());
+                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+                if (probe.isConsumed()) {
+                    filterChain.doFilter(request, response);
+                } else {
+                    write429(response, probe, "Too many transcript saves. Please wait before trying again.");
+                }
+            }
+        });
+        registration.addUrlPatterns("/admin/tools/interview/sessions/*");
+        registration.setName("interviewTurnRateLimitFilter");
+        registration.setOrder(8);
         return registration;
     }
 }

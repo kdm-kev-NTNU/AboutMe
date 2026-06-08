@@ -132,6 +132,12 @@ export function createPortfolioRouter(opts?: PortfolioRouterOptions): Router {
 				meta: { requiresAdmin: true },
 				component: () => import('../views/AdminExperimentsView.vue'),
 			},
+			{
+				path: '/admin/interview',
+				name: 'admin-interview',
+				meta: { requiresAdmin: true },
+				component: () => import('../views/AdminInterviewView.vue'),
+			},
 		],
 	})
 

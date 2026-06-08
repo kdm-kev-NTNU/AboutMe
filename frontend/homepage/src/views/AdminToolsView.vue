@@ -116,6 +116,17 @@ onMounted(() => {
           <li
             class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)] hover:border-gray-300 transition-colors"
           >
+            <RouterLink to="/admin/interview" class="block group">
+              <span class="text-base font-semibold text-blue-600 group-hover:underline">Voice interview</span>
+              <p class="text-sm text-gray-600 mt-2 leading-relaxed">
+                Last opp et dokument om deg, bli intervjuet med OpenAI Realtime (STT+TTS), lagre transkript, rens det og
+                ingest til pgvector.
+              </p>
+            </RouterLink>
+          </li>
+          <li
+            class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)] hover:border-gray-300 transition-colors"
+          >
             <RouterLink to="/admin/experiments" class="block group">
               <span class="text-base font-semibold text-blue-600 group-hover:underline">Experiments</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">

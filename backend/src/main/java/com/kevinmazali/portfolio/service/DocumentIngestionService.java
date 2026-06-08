@@ -317,6 +317,30 @@ public class DocumentIngestionService implements ApplicationRunner {
     return filename.substring(i + 1).toLowerCase(Locale.ROOT);
   }
 
+  /**
+   * Ingest plain text/markdown content (e.g. cleaned interview transcripts) into pgvector.
+   */
+  public IngestionResult ingestTextContent(String text, String displayFilename, boolean force) throws IOException {
+    if (text == null || text.isBlank()) {
+      return new IngestionResult("", displayFilename, 0, false, "Empty text");
+    }
+    byte[] bytes = text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    if (bytes.length > documentIngestProperties.getMaxParseBytes()) {
+      throw new IOException("Text exceeds maximum parse size of " + documentIngestProperties.getMaxParseBytes() + " bytes");
+    }
+    String contentHash = sha256Hex(bytes);
+    String logicalName =
+        (displayFilename != null && !displayFilename.isBlank()) ? displayFilename.trim() : "text-upload.md";
+    ByteArrayResource resource =
+        new ByteArrayResource(bytes) {
+          @Override
+          public String getFilename() {
+            return logicalName;
+          }
+        };
+    return ingestFromResource(resource, contentHash, logicalName, force);
+  }
+
   public IngestionResult ingestMultipart(MultipartFile file, String titleOverride, boolean force) throws IOException {
     if (file == null || file.isEmpty()) {
       return new IngestionResult("", "", 0, false, "Empty file");

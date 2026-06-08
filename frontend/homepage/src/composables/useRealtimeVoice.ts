@@ -51,6 +51,18 @@ function isLikelyGetUserMediaError(e: unknown): boolean {
   )
 }
 
+export type RealtimeTurnRole = 'user' | 'interviewer'
+
+export type UseRealtimeVoiceOptions = {
+  exchangeSdp?: (
+    offerSdp: string,
+    lang: SpeechUiLang,
+    sessionOpts?: RealtimeVoiceSessionOptions,
+    modelId?: string,
+  ) => Promise<{ ok: true; answerSdp: string } | RealtimeSdpFailure>
+  onTurnCommitted?: (role: RealtimeTurnRole, text: string) => void
+}
+
 /** Wait until ICE candidates are gathered (or timeout) so the SDP posted to the server includes candidates. */
 const ICE_GATHERING_TIMEOUT_MS = 8000
 const LIVE_LOOKUP_TIMEOUT_MS = 8_000
@@ -142,6 +154,7 @@ export function useRealtimeVoice(
   language: Ref<SpeechUiLang>,
   sessionOptions?: Readonly<Ref<RealtimeVoiceSessionOptions>>,
   selectedModel?: Readonly<Ref<RealtimeVoiceModelOption | undefined>>,
+  voiceOptions?: UseRealtimeVoiceOptions,
 ) {
   const connectionState = ref<RealtimeConnectionState>('idle')
   const errorMessage = ref('')
@@ -376,6 +389,10 @@ export function useRealtimeVoice(
       }
       if (t === 'response.output_audio_transcript.done' && typeof ev.transcript === 'string') {
         assistantTranscript.value = ev.transcript
+        const trimmed = ev.transcript.trim()
+        if (trimmed !== '') {
+          voiceOptions?.onTurnCommitted?.('interviewer', trimmed)
+        }
         return
       }
       if (t === 'conversation.item.input_audio_transcription.delta' && typeof ev.delta === 'string') {
@@ -387,6 +404,10 @@ export function useRealtimeVoice(
         typeof ev.transcript === 'string'
       ) {
         userTranscript.value = ev.transcript
+        const trimmed = ev.transcript.trim()
+        if (trimmed !== '') {
+          voiceOptions?.onTurnCommitted?.('user', trimmed)
+        }
       }
     } catch {
       /* ignore malformed */
@@ -463,7 +484,11 @@ export function useRealtimeVoice(
         throw new Error('Missing local SDP')
       }
 
-      const result = await exchangeRealtimeSdp(offerSdp, language.value, sessionOptions?.value, selectedModelId())
+      const exchange =
+        voiceOptions?.exchangeSdp ??
+        ((sdp: string, lang: SpeechUiLang, opts?: RealtimeVoiceSessionOptions, modelId?: string) =>
+          exchangeRealtimeSdp(sdp, lang, opts, modelId))
+      const result = await exchange(offerSdp, language.value, sessionOptions?.value, selectedModelId())
       if (!result.ok) {
         throw new Error(mapSdpFailureToUserMessage(language.value, result))
       }

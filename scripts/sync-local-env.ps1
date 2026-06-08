@@ -86,6 +86,8 @@ $rootUpdates = @{
     PORTFOLIO_REALTIME_ENABLED   = $(if ($backend['PORTFOLIO_REALTIME_ENABLED']) { $backend['PORTFOLIO_REALTIME_ENABLED'] } else { 'true' })
     PORTFOLIO_JWT_SECRET         = $(if ($backend['PORTFOLIO_JWT_SECRET']) { $backend['PORTFOLIO_JWT_SECRET'] } else { 'dev-only-change-me-use-32-chars-minimum!!' })
     AI_BUDGET_ANON_SALT          = $(if ($backend['AI_BUDGET_ANON_SALT']) { $backend['AI_BUDGET_ANON_SALT'] } else { 'portfolio-ai-budget-local-dev' })
+    ADMIN_BOOTSTRAP_USERNAME     = $(if ($backend['ADMIN_BOOTSTRAP_USERNAME']) { $backend['ADMIN_BOOTSTRAP_USERNAME'] } else { 'admin' })
+    ADMIN_BOOTSTRAP_PASSWORD     = $(if ($backend['ADMIN_BOOTSTRAP_PASSWORD']) { $backend['ADMIN_BOOTSTRAP_PASSWORD'] } else { 'admin' })
 }
 Merge-EnvFile $rootEnv $rootUpdates
 Write-Host "Updated repo-root .env for Docker Compose."

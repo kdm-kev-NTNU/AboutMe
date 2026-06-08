@@ -47,6 +47,10 @@
     {
       "name": "AI cost controls",
       "description": "AI cost controls"
+    },
+    {
+      "name": "Admin interview",
+      "description": "Voice interview practice with document context (ADMIN)"
     }
   ],
   "components": {
@@ -1037,6 +1041,156 @@
           "languageConsistencyExplanation": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "InterviewTranscriptResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "rawText": {
+            "type": "string"
+          },
+          "cleanedText": {
+            "type": "string"
+          },
+          "cleanStatus": {
+            "type": "string"
+          },
+          "ingestedDocumentId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cleanedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "InterviewSessionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "voice": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "transcriptId": {
+            "type": "string"
+          },
+          "cleanStatus": {
+            "type": "string"
+          },
+          "ingestedDocumentId": {
+            "type": "string"
+          },
+          "turns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InterviewTurnDto"
+            }
+          }
+        }
+      },
+      "CreateInterviewSessionRequest": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "voice": {
+            "type": "string"
+          }
+        }
+      },
+      "InterviewTurnBatchRequest": {
+        "type": "object",
+        "properties": {
+          "turns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InterviewTurnDto"
+            }
+          }
+        }
+      },
+      "InterviewDocumentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "originalFilename": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "charCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "InterviewTextDocumentRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          }
+        }
+      },
+      "InterviewTurnDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "sequenceNo": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       }
@@ -2546,6 +2700,523 @@
             "description": "No Content"
           }
         }
+      }
+    },
+    "/admin/tools/interview/transcripts/{id}/ingest": {
+      "post": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Ingest cleaned transcript into vector store",
+        "operationId": "interviewTranscriptsIngest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionResult"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/transcripts/{id}/clean": {
+      "post": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Clean transcript for knowledge-base ingest",
+        "operationId": "interviewTranscriptsClean",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewTranscriptResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/sessions": {
+      "get": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "List interview sessions",
+        "operationId": "interviewSessionsList",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InterviewSessionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Create interview session",
+        "operationId": "createSession_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInterviewSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewSessionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/sessions/{id}/turns": {
+      "post": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Append transcript turns",
+        "operationId": "interviewSessionsAppendTurns",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewTurnBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/sessions/{id}/realtime/session": {
+      "post": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Create admin interview Realtime WebRTC session",
+        "operationId": "interviewSessionsRealtimeSession",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Chat-Language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Realtime-Model",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Realtime-Voice",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Realtime-Reasoning-Effort",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/sdp": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/sessions/{id}/finalize": {
+      "post": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Finalize interview session and save raw transcript",
+        "operationId": "interviewSessionsFinalize",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewTranscriptResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/documents": {
+      "post": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Upload interview source document",
+        "operationId": "interviewDocumentsUpload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewDocumentResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/documents/text": {
+      "post": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Create interview source document from pasted text",
+        "operationId": "interviewDocumentsCreateText",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewTextDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewDocumentResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/transcripts/{id}": {
+      "get": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Get transcript",
+        "operationId": "interviewTranscriptsGet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewTranscriptResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/sessions/{id}": {
+      "get": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Get interview session with turns",
+        "operationId": "interviewSessionsGet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewSessionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Soft-delete interview session",
+        "operationId": "interviewSessionsDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/tools/interview/documents/{id}": {
+      "get": {
+        "tags": [
+          "Admin interview"
+        ],
+        "summary": "Get interview source document metadata",
+        "operationId": "interviewDocumentsGet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewDocumentResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
       }
     }
   }
