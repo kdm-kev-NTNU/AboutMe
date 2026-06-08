@@ -260,6 +260,7 @@ class InterviewSessionServiceTest {
             .build();
     when(sessionRepository.findByDeletedAtIsNullOrderByStartedAtDesc()).thenReturn(List.of(session));
     when(transcriptRepository.findBySessionId("sess1")).thenReturn(Optional.of(transcript));
+    when(transcriptRepository.findById("tr1")).thenReturn(Optional.of(transcript));
     when(sessionRepository.findById("sess1")).thenReturn(Optional.of(session));
     when(turnRepository.findBySessionIdOrderBySequenceNoAsc("sess1")).thenReturn(List.of());
 
