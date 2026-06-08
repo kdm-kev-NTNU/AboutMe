@@ -41,6 +41,7 @@ export default mergeConfig(
           'src/views/ProjectsView.vue',
           'src/components/voice/**',
           'src/composables/**',
+          'src/film-demo/**',
         ],
         // Vitest 4 switched to AST-based v8 analysis; numbers shifted down vs the old v8-to-istanbul pipeline.
         // Branch % stays lowest on template-heavy Vue (many ternaries). If the branch gate fails, add tests

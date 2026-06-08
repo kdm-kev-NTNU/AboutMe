@@ -201,7 +201,7 @@ class InterviewSessionServiceTest {
   }
 
   @Test
-  void ingestTranscript_returnsExistingWhenAlreadyIngested() {
+  void ingestTranscript_returnsExistingWhenAlreadyIngested() throws Exception {
     InterviewTranscriptEntity transcript =
         InterviewTranscriptEntity.builder()
             .id("tr1")
@@ -221,7 +221,7 @@ class InterviewSessionServiceTest {
   }
 
   @Test
-  void ingestTranscript_ingestsCleanedText() {
+  void ingestTranscript_ingestsCleanedText() throws Exception {
     InterviewTranscriptEntity transcript =
         InterviewTranscriptEntity.builder()
             .id("tr1")
