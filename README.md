@@ -56,3 +56,10 @@ Commit `openapi/openapi.json` and `src/api/generated/portfolio.ts` if they chang
 ## Deploy
 
 Production runs on Railway with `SPRING_PROFILES_ACTIVE=prod`. Set `PORTFOLIO_JWT_SECRET` and `AI_BUDGET_ANON_SALT` before going live.
+
+Two Railway services share this monorepo: **AboutMe** (backend, `backend/railway.toml`) and **resilient-emotion** (frontend, `frontend/homepage/railway.toml`). Each has `rootDirectory` set in the dashboard; `watchPatterns` in those files are relative to that root. A push that only touches frontend files will show **SKIPPED** on the backend service — that is expected. If a service should have deployed but shows SKIPPED, redeploy manually:
+
+```powershell
+railway redeploy --service resilient-emotion   # frontend
+railway redeploy --service AboutMe             # backend
+```
