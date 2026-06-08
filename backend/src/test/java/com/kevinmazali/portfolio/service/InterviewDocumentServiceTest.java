@@ -103,6 +103,34 @@ class InterviewDocumentServiceTest {
   }
 
   @Test
+  void storeMultipart_rejectsEmptyFile() {
+    MockMultipartFile file = new MockMultipartFile("file", "empty.txt", "text/plain", new byte[0]);
+
+    assertThatThrownBy(() -> service.storeMultipart(file, "admin"))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("Empty file");
+  }
+
+  @Test
+  void storeMultipart_rejectsOversizedFile() {
+    documentIngestProperties.setMaxParseBytes(4);
+    MockMultipartFile file = new MockMultipartFile("file", "big.txt", "text/plain", "12345".getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(() -> service.storeMultipart(file, "admin"))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("maximum parse size");
+  }
+
+  @Test
+  void getDocument_throwsWhenMissing() {
+    when(documentRepository.findById("missing")).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.getDocument("missing"))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("Document not found");
+  }
+
+  @Test
   void getDocument_mapsEntity() {
     InterviewDocumentEntity entity =
         InterviewDocumentEntity.builder()

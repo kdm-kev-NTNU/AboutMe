@@ -242,6 +242,82 @@ class InterviewSessionServiceTest {
   }
 
   @Test
+  void listSessions_andGetSession_mapTranscriptMetadata() {
+    InterviewSessionEntity session =
+        InterviewSessionEntity.builder()
+            .id("sess1")
+            .documentId("doc1")
+            .language("en")
+            .status(InterviewSessionService.STATUS_FINALIZED)
+            .startedAt(Instant.now())
+            .build();
+    InterviewTranscriptEntity transcript =
+        InterviewTranscriptEntity.builder()
+            .id("tr1")
+            .sessionId("sess1")
+            .cleanStatus(InterviewSessionService.CLEAN_CLEANED)
+            .createdAt(Instant.now())
+            .build();
+    when(sessionRepository.findByDeletedAtIsNullOrderByStartedAtDesc()).thenReturn(List.of(session));
+    when(transcriptRepository.findBySessionId("sess1")).thenReturn(Optional.of(transcript));
+    when(sessionRepository.findById("sess1")).thenReturn(Optional.of(session));
+    when(turnRepository.findBySessionIdOrderBySequenceNoAsc("sess1")).thenReturn(List.of());
+
+    assertThat(service.listSessions()).hasSize(1);
+    assertThat(service.getSession("sess1").transcriptId()).isEqualTo("tr1");
+    assertThat(service.getTranscript("tr1").id()).isEqualTo("tr1");
+  }
+
+  @Test
+  void cleanTranscript_marksFailedOnCleanerError() {
+    InterviewTranscriptEntity transcript =
+        InterviewTranscriptEntity.builder()
+            .id("tr1")
+            .sessionId("sess1")
+            .rawText("raw")
+            .cleanStatus(InterviewSessionService.CLEAN_PENDING)
+            .createdAt(Instant.now())
+            .build();
+    when(transcriptRepository.findById("tr1")).thenReturn(Optional.of(transcript));
+    when(sessionRepository.findById("sess1"))
+        .thenReturn(
+            Optional.of(
+                InterviewSessionEntity.builder()
+                    .id("sess1")
+                    .documentId("doc1")
+                    .language("en")
+                    .status(InterviewSessionService.STATUS_FINALIZED)
+                    .startedAt(Instant.now())
+                    .build()));
+    when(transcriptCleanerService.cleanForIngest("raw", "en")).thenThrow(new RuntimeException("boom"));
+    when(transcriptRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    assertThatThrownBy(() -> service.cleanTranscript("tr1"))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("Transcript clean failed");
+    assertThat(transcript.getCleanStatus()).isEqualTo(InterviewSessionService.CLEAN_FAILED);
+  }
+
+  @Test
+  void requireActiveSession_rejectsDeleted() {
+    when(sessionRepository.findById("sess1"))
+        .thenReturn(
+            Optional.of(
+                InterviewSessionEntity.builder()
+                    .id("sess1")
+                    .documentId("doc1")
+                    .language("en")
+                    .status(InterviewSessionService.STATUS_DELETED)
+                    .startedAt(Instant.now())
+                    .deletedAt(Instant.now())
+                    .build()));
+
+    assertThatThrownBy(() -> service.getSession("sess1"))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("Session not found");
+  }
+
+  @Test
   void deleteSession_softDeletes() {
     InterviewSessionEntity session =
         InterviewSessionEntity.builder()
