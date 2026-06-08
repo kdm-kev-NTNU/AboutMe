@@ -431,6 +431,61 @@ export interface TranscribeResponse {
   text?: string;
 }
 
+export interface InterviewTranscriptResponse {
+  id?: string;
+  sessionId?: string;
+  rawText?: string;
+  cleanedText?: string;
+  cleanStatus?: string;
+  ingestedDocumentId?: string;
+  createdAt?: string;
+  cleanedAt?: string;
+}
+
+export interface InterviewTurnDto {
+  role?: string;
+  text?: string;
+  sequenceNo?: number;
+}
+
+export interface InterviewSessionResponse {
+  id?: string;
+  documentId?: string;
+  language?: string;
+  status?: string;
+  voice?: string;
+  startedAt?: string;
+  endedAt?: string;
+  transcriptId?: string;
+  cleanStatus?: string;
+  ingestedDocumentId?: string;
+  turns?: InterviewTurnDto[];
+}
+
+export interface CreateInterviewSessionRequest {
+  documentId?: string;
+  language?: string;
+  voice?: string;
+}
+
+export interface InterviewTurnBatchRequest {
+  turns?: InterviewTurnDto[];
+}
+
+export interface InterviewDocumentResponse {
+  id?: string;
+  originalFilename?: string;
+  mimeType?: string;
+  charCount?: number;
+  createdBy?: string;
+  createdAt?: string;
+}
+
+export interface InterviewTextDocumentRequest {
+  text?: string;
+  filename?: string;
+}
+
 export type AdminDocumentsUploadBody = {
   file: Blob;
   title?: string;
@@ -485,6 +540,16 @@ export type ExperimentsStartRun202 = {
 };
 
 export type AiAdminStatus200 = { [key: string]: unknown };
+
+export type InterviewTranscriptsIngestParams = {
+force?: boolean;
+};
+
+export type InterviewSessionsRealtimeSession200 = { [key: string]: unknown };
+
+export type InterviewDocumentsUploadBody = {
+  file: Blob;
+};
 
 export type authLoginResponse200 = {
   data: LoginResponse
@@ -2081,6 +2146,489 @@ export const authLogout = async ( options?: RequestInit): Promise<authLogoutResp
   {
     ...options,
     method: 'POST'
+
+
+  }
+);}
+
+
+
+export type interviewTranscriptsIngestResponse200 = {
+  data: IngestionResult
+  status: 200
+}
+
+export type interviewTranscriptsIngestResponseSuccess = (interviewTranscriptsIngestResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewTranscriptsIngestResponse = (interviewTranscriptsIngestResponseSuccess)
+
+export const getInterviewTranscriptsIngestUrl = (id: string,
+    params?: InterviewTranscriptsIngestParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/admin/tools/interview/transcripts/${id}/ingest?${stringifiedParams}` : `/admin/tools/interview/transcripts/${id}/ingest`
+}
+
+/**
+ * @summary Ingest cleaned transcript into vector store
+ */
+export const interviewTranscriptsIngest = async (id: string,
+    params?: InterviewTranscriptsIngestParams, options?: RequestInit): Promise<interviewTranscriptsIngestResponse> => {
+
+  return customFetch<interviewTranscriptsIngestResponse>(getInterviewTranscriptsIngestUrl(id,params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type interviewTranscriptsCleanResponse200 = {
+  data: InterviewTranscriptResponse
+  status: 200
+}
+
+export type interviewTranscriptsCleanResponseSuccess = (interviewTranscriptsCleanResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewTranscriptsCleanResponse = (interviewTranscriptsCleanResponseSuccess)
+
+export const getInterviewTranscriptsCleanUrl = (id: string,) => {
+
+
+
+
+  return `/admin/tools/interview/transcripts/${id}/clean`
+}
+
+/**
+ * @summary Clean transcript for knowledge-base ingest
+ */
+export const interviewTranscriptsClean = async (id: string, options?: RequestInit): Promise<interviewTranscriptsCleanResponse> => {
+
+  return customFetch<interviewTranscriptsCleanResponse>(getInterviewTranscriptsCleanUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type interviewSessionsListResponse200 = {
+  data: InterviewSessionResponse[]
+  status: 200
+}
+
+export type interviewSessionsListResponseSuccess = (interviewSessionsListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewSessionsListResponse = (interviewSessionsListResponseSuccess)
+
+export const getInterviewSessionsListUrl = () => {
+
+
+
+
+  return `/admin/tools/interview/sessions`
+}
+
+/**
+ * @summary List interview sessions
+ */
+export const interviewSessionsList = async ( options?: RequestInit): Promise<interviewSessionsListResponse> => {
+
+  return customFetch<interviewSessionsListResponse>(getInterviewSessionsListUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createSession1Response200 = {
+  data: InterviewSessionResponse
+  status: 200
+}
+
+export type createSession1ResponseSuccess = (createSession1Response200) & {
+  headers: Headers;
+};
+;
+
+export type createSession1Response = (createSession1ResponseSuccess)
+
+export const getCreateSession1Url = () => {
+
+
+
+
+  return `/admin/tools/interview/sessions`
+}
+
+/**
+ * @summary Create interview session
+ */
+export const createSession1 = async (createInterviewSessionRequest: CreateInterviewSessionRequest, options?: RequestInit): Promise<createSession1Response> => {
+
+  return customFetch<createSession1Response>(getCreateSession1Url(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createInterviewSessionRequest)
+  }
+);}
+
+
+
+export type interviewSessionsAppendTurnsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type interviewSessionsAppendTurnsResponseSuccess = (interviewSessionsAppendTurnsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewSessionsAppendTurnsResponse = (interviewSessionsAppendTurnsResponseSuccess)
+
+export const getInterviewSessionsAppendTurnsUrl = (id: string,) => {
+
+
+
+
+  return `/admin/tools/interview/sessions/${id}/turns`
+}
+
+/**
+ * @summary Append transcript turns
+ */
+export const interviewSessionsAppendTurns = async (id: string,
+    interviewTurnBatchRequest: InterviewTurnBatchRequest, options?: RequestInit): Promise<interviewSessionsAppendTurnsResponse> => {
+
+  return customFetch<interviewSessionsAppendTurnsResponse>(getInterviewSessionsAppendTurnsUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(interviewTurnBatchRequest)
+  }
+);}
+
+
+
+export type interviewSessionsRealtimeSessionResponse200 = {
+  data: InterviewSessionsRealtimeSession200
+  status: 200
+}
+
+export type interviewSessionsRealtimeSessionResponseSuccess = (interviewSessionsRealtimeSessionResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewSessionsRealtimeSessionResponse = (interviewSessionsRealtimeSessionResponseSuccess)
+
+export const getInterviewSessionsRealtimeSessionUrl = (id: string,) => {
+
+
+
+
+  return `/admin/tools/interview/sessions/${id}/realtime/session`
+}
+
+/**
+ * @summary Create admin interview Realtime WebRTC session
+ */
+export const interviewSessionsRealtimeSession = async (id: string,
+    interviewSessionsRealtimeSessionBody: string, options?: RequestInit): Promise<interviewSessionsRealtimeSessionResponse> => {
+
+  return customFetch<interviewSessionsRealtimeSessionResponse>(getInterviewSessionsRealtimeSessionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/sdp', ...options?.headers },
+    body: JSON.stringify(interviewSessionsRealtimeSessionBody)
+  }
+);}
+
+
+
+export type interviewSessionsFinalizeResponse200 = {
+  data: InterviewTranscriptResponse
+  status: 200
+}
+
+export type interviewSessionsFinalizeResponseSuccess = (interviewSessionsFinalizeResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewSessionsFinalizeResponse = (interviewSessionsFinalizeResponseSuccess)
+
+export const getInterviewSessionsFinalizeUrl = (id: string,) => {
+
+
+
+
+  return `/admin/tools/interview/sessions/${id}/finalize`
+}
+
+/**
+ * @summary Finalize interview session and save raw transcript
+ */
+export const interviewSessionsFinalize = async (id: string, options?: RequestInit): Promise<interviewSessionsFinalizeResponse> => {
+
+  return customFetch<interviewSessionsFinalizeResponse>(getInterviewSessionsFinalizeUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type interviewDocumentsUploadResponse200 = {
+  data: InterviewDocumentResponse
+  status: 200
+}
+
+export type interviewDocumentsUploadResponseSuccess = (interviewDocumentsUploadResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewDocumentsUploadResponse = (interviewDocumentsUploadResponseSuccess)
+
+export const getInterviewDocumentsUploadUrl = () => {
+
+
+
+
+  return `/admin/tools/interview/documents`
+}
+
+/**
+ * @summary Upload interview source document
+ */
+export const interviewDocumentsUpload = async (interviewDocumentsUploadBody?: InterviewDocumentsUploadBody, options?: RequestInit): Promise<interviewDocumentsUploadResponse> => {
+    const formData = new FormData();
+if(interviewDocumentsUploadBody?.file !== undefined) {
+ formData.append(`file`, interviewDocumentsUploadBody.file);
+ }
+
+  return customFetch<interviewDocumentsUploadResponse>(getInterviewDocumentsUploadUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+export type interviewDocumentsCreateTextResponse200 = {
+  data: InterviewDocumentResponse
+  status: 200
+}
+
+export type interviewDocumentsCreateTextResponseSuccess = (interviewDocumentsCreateTextResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewDocumentsCreateTextResponse = (interviewDocumentsCreateTextResponseSuccess)
+
+export const getInterviewDocumentsCreateTextUrl = () => {
+
+
+
+
+  return `/admin/tools/interview/documents/text`
+}
+
+/**
+ * @summary Create interview source document from pasted text
+ */
+export const interviewDocumentsCreateText = async (interviewTextDocumentRequest: InterviewTextDocumentRequest, options?: RequestInit): Promise<interviewDocumentsCreateTextResponse> => {
+
+  return customFetch<interviewDocumentsCreateTextResponse>(getInterviewDocumentsCreateTextUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(interviewTextDocumentRequest)
+  }
+);}
+
+
+
+export type interviewTranscriptsGetResponse200 = {
+  data: InterviewTranscriptResponse
+  status: 200
+}
+
+export type interviewTranscriptsGetResponseSuccess = (interviewTranscriptsGetResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewTranscriptsGetResponse = (interviewTranscriptsGetResponseSuccess)
+
+export const getInterviewTranscriptsGetUrl = (id: string,) => {
+
+
+
+
+  return `/admin/tools/interview/transcripts/${id}`
+}
+
+/**
+ * @summary Get transcript
+ */
+export const interviewTranscriptsGet = async (id: string, options?: RequestInit): Promise<interviewTranscriptsGetResponse> => {
+
+  return customFetch<interviewTranscriptsGetResponse>(getInterviewTranscriptsGetUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type interviewSessionsGetResponse200 = {
+  data: InterviewSessionResponse
+  status: 200
+}
+
+export type interviewSessionsGetResponseSuccess = (interviewSessionsGetResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewSessionsGetResponse = (interviewSessionsGetResponseSuccess)
+
+export const getInterviewSessionsGetUrl = (id: string,) => {
+
+
+
+
+  return `/admin/tools/interview/sessions/${id}`
+}
+
+/**
+ * @summary Get interview session with turns
+ */
+export const interviewSessionsGet = async (id: string, options?: RequestInit): Promise<interviewSessionsGetResponse> => {
+
+  return customFetch<interviewSessionsGetResponse>(getInterviewSessionsGetUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type interviewSessionsDeleteResponse200 = {
+  data: void
+  status: 200
+}
+
+export type interviewSessionsDeleteResponseSuccess = (interviewSessionsDeleteResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewSessionsDeleteResponse = (interviewSessionsDeleteResponseSuccess)
+
+export const getInterviewSessionsDeleteUrl = (id: string,) => {
+
+
+
+
+  return `/admin/tools/interview/sessions/${id}`
+}
+
+/**
+ * @summary Soft-delete interview session
+ */
+export const interviewSessionsDelete = async (id: string, options?: RequestInit): Promise<interviewSessionsDeleteResponse> => {
+
+  return customFetch<interviewSessionsDeleteResponse>(getInterviewSessionsDeleteUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type interviewDocumentsGetResponse200 = {
+  data: InterviewDocumentResponse
+  status: 200
+}
+
+export type interviewDocumentsGetResponseSuccess = (interviewDocumentsGetResponse200) & {
+  headers: Headers;
+};
+;
+
+export type interviewDocumentsGetResponse = (interviewDocumentsGetResponseSuccess)
+
+export const getInterviewDocumentsGetUrl = (id: string,) => {
+
+
+
+
+  return `/admin/tools/interview/documents/${id}`
+}
+
+/**
+ * @summary Get interview source document metadata
+ */
+export const interviewDocumentsGet = async (id: string, options?: RequestInit): Promise<interviewDocumentsGetResponse> => {
+
+  return customFetch<interviewDocumentsGetResponse>(getInterviewDocumentsGetUrl(id),
+  {
+    ...options,
+    method: 'GET'
 
 
   }

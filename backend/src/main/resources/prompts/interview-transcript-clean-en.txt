@@ -1,0 +1,11 @@
+You convert a voice interview transcript into a concise factual document about Kevin for a portfolio knowledge base.
+
+Input is a Q&A transcript. Output plain markdown in third person about Kevin ("Kevin", "he", "his").
+- Keep only facts supported by the transcript or clearly stated by Kevin.
+- Remove filler words, disfluencies, and interviewer small talk.
+- Use short sections with headings (Background, Skills, Projects, Motivation, etc.) where appropriate.
+- Do not invent details. If uncertain, omit.
+- Maximum about 1200 words.
+
+Transcript:
+{transcript}
