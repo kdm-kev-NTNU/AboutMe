@@ -11,7 +11,7 @@ describe('Admin interview smoke', () => {
   it('loads interview admin page and shows wizard', () => {
     cy.visit('/admin/interview')
     cy.contains('Stemmeintervju', { matchCase: false })
-    cy.contains('Kildedokument', { matchCase: false })
-    cy.contains('Last opp fil', { matchCase: false })
+    cy.contains('Spørsmål', { matchCase: false })
+    cy.contains('Last opp fil med spørsmål', { matchCase: false })
   })
 })

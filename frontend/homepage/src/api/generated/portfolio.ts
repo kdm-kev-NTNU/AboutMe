@@ -2437,7 +2437,7 @@ export const getInterviewDocumentsUploadUrl = () => {
 }
 
 /**
- * @summary Upload interview source document
+ * @summary Upload interview questions file
  */
 export const interviewDocumentsUpload = async (interviewDocumentsUploadBody?: InterviewDocumentsUploadBody, options?: RequestInit): Promise<interviewDocumentsUploadResponse> => {
     const formData = new FormData();
@@ -2477,7 +2477,7 @@ export const getInterviewDocumentsCreateTextUrl = () => {
 }
 
 /**
- * @summary Create interview source document from pasted text
+ * @summary Create interview questions from pasted text
  */
 export const interviewDocumentsCreateText = async (interviewTextDocumentRequest: InterviewTextDocumentRequest, options?: RequestInit): Promise<interviewDocumentsCreateTextResponse> => {
 
@@ -2621,7 +2621,7 @@ export const getInterviewDocumentsGetUrl = (id: string,) => {
 }
 
 /**
- * @summary Get interview source document metadata
+ * @summary Get interview questions metadata
  */
 export const interviewDocumentsGet = async (id: string, options?: RequestInit): Promise<interviewDocumentsGetResponse> => {
 

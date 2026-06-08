@@ -50,7 +50,7 @@
     },
     {
       "name": "Admin interview",
-      "description": "Voice interview practice with document context (ADMIN)"
+      "description": "Voice interview practice with user-provided questions (ADMIN)"
     }
   ],
   "components": {
@@ -3009,7 +3009,7 @@
         "tags": [
           "Admin interview"
         ],
-        "summary": "Upload interview source document",
+        "summary": "Upload interview questions file",
         "operationId": "interviewDocumentsUpload",
         "requestBody": {
           "content": {
@@ -3053,7 +3053,7 @@
         "tags": [
           "Admin interview"
         ],
-        "summary": "Create interview source document from pasted text",
+        "summary": "Create interview questions from pasted text",
         "operationId": "interviewDocumentsCreateText",
         "requestBody": {
           "content": {
@@ -3188,7 +3188,7 @@
         "tags": [
           "Admin interview"
         ],
-        "summary": "Get interview source document metadata",
+        "summary": "Get interview questions metadata",
         "operationId": "interviewDocumentsGet",
         "parameters": [
           {

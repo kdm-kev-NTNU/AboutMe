@@ -115,8 +115,8 @@ public class InterviewRealtimeSessionService {
     aiBudgetService.assertWithinBudget(budgetUserId, anonymous);
 
     String lang = normalizeLang(chatLanguage != null ? chatLanguage : session.getLanguage());
-    String documentContext = interviewDocumentService.contextForSession(session.getDocumentId());
-    String instructions = instructionsForLanguage(lang).replace("{document_context}", documentContext);
+    String questions = interviewDocumentService.contextForSession(session.getDocumentId());
+    String instructions = instructionsForLanguage(lang).replace("{questions}", questions);
     String voice = realtimeProperties.resolveVoice(
         StringUtils.hasText(requestedVoice) ? requestedVoice : session.getVoice());
     String reasoningEffort = realtimeProperties.resolveReasoningEffort(requestedReasoningEffort);
@@ -193,7 +193,7 @@ public class InterviewRealtimeSessionService {
       return StreamUtils.copyToString(res.getInputStream(), StandardCharsets.UTF_8).trim();
     } catch (IOException e) {
       log.warn("Could not load interview prompt {}: {}", path, e.getMessage());
-      return "You are an interviewer. Use this document:\n{document_context}";
+      return "You are an interviewer. Ask these questions in order:\n{questions}";
     }
   }
 
