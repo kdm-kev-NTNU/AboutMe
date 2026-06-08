@@ -85,7 +85,10 @@ describe('portfolio views (smoke)', () => {
 		return mount(HowView, {
 			global: {
 				plugins: [pinia, router, MotionPlugin],
-				stubs: { RouterLink: routerLinkStub },
+				stubs: {
+					RouterLink: routerLinkStub,
+					ProjectCardsSection: { template: '<div>AboutMe</div>' },
+				},
 			},
 		})
 	}

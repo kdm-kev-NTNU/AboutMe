@@ -5,7 +5,7 @@ import { useLangStore } from '../stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { ProjectsData } from '../types/projects'
+import type { Project, ProjectsData } from '../types/projects'
 
 // Import JSON data
 import projectsEn from '../types/projects.en.json'
@@ -21,7 +21,8 @@ const projectsData = computed(() => {
   const data: ProjectsData = {
     projects: rawData.projects.map(project => ({
       ...project,
-      status: project.status as 'completed' | 'ongoing' | 'planned'
+      status: project.status as 'completed' | 'ongoing' | 'planned',
+      mediaType: project.mediaType as Project['mediaType'],
     }))
   }
   return data.projects

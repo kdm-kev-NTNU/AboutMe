@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useLangStore } from '@/stores/lang'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { ProjectsData } from '@/types/projects'
+import type { Project, ProjectsData } from '@/types/projects'
+import { FilmDemoCard } from '@/film-demo'
 import projectsEn from '@/types/projects.en.json'
 import projectsNo from '@/types/projects.no.json'
 
@@ -18,6 +19,7 @@ const projectsData = computed(() => {
     projects: rawData.projects.map((project) => ({
       ...project,
       status: project.status as 'completed' | 'ongoing' | 'planned',
+      mediaType: project.mediaType as Project['mediaType'],
     })),
   }
   return data.projects
@@ -53,11 +55,38 @@ const getStatusText = (status: string) => {
   }
   return statusTexts[status as keyof typeof statusTexts]?.[isNo.value ? 'no' : 'en'] || status
 }
+
+const expandedIds = ref<Set<string>>(new Set())
+
+const isExpanded = (id: string) => expandedIds.value.has(id)
+
+const toggleExpanded = (id: string) => {
+  const next = new Set(expandedIds.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  expandedIds.value = next
+}
+
+const hasCollapsibleMedia = (project: Project) =>
+  Boolean(project.imageUrl) || project.mediaType === 'demo'
 </script>
 
 <template>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <Card v-for="project in projects" :key="project.id" class="bg-white/90 border border-slate-200 shadow-sm">
+    <Card v-for="project in projects" :key="project.id" class="bg-white/90 border border-slate-200 shadow-sm overflow-hidden">
+      <FilmDemoCard
+        v-if="project.mediaType === 'demo' && project.demoId"
+        :demo-id="project.demoId"
+      />
+      <img
+        v-else-if="project.imageUrl"
+        :src="project.imageUrl"
+        :alt="project.projectName"
+        class="w-full h-52 object-cover"
+      />
       <CardHeader>
         <div class="flex items-start justify-between gap-3 mb-2">
           <div>
@@ -73,7 +102,23 @@ const getStatusText = (status: string) => {
         </div>
       </CardHeader>
       <CardContent>
-        <p class="text-sm text-slate-700 leading-relaxed mb-4">{{ project.projectDescription }}</p>
+        <div class="mb-4">
+          <p
+            v-if="!hasCollapsibleMedia(project) || isExpanded(project.id)"
+            class="text-sm text-slate-700 leading-relaxed"
+          >
+            {{ project.projectDescription }}
+          </p>
+          <button
+            v-if="hasCollapsibleMedia(project)"
+            type="button"
+            class="text-sm text-blue-700 underline underline-offset-2 mt-1"
+            :aria-expanded="isExpanded(project.id)"
+            @click="toggleExpanded(project.id)"
+          >
+            {{ isExpanded(project.id) ? (isNo ? 'Skjul beskrivelse' : 'Hide description') : (isNo ? 'Les beskrivelse' : 'Read description') }}
+          </button>
+        </div>
         <div class="flex flex-wrap gap-2">
           <Button v-if="project.githubUrl" as="a" :href="project.githubUrl" target="_blank" rel="noopener noreferrer" variant="outline" size="sm">
             GitHub

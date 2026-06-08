@@ -19,7 +19,12 @@ describe('ProjectCardsSection', () => {
       ],
     })
     return mount(ProjectCardsSection, {
-      global: { plugins: [pinia, router, MotionPlugin] },
+      global: {
+        plugins: [pinia, router, MotionPlugin],
+        stubs: {
+          FilmDemoCard: { template: '<div data-test="film-demo-card" />' },
+        },
+      },
     })
   }
 
