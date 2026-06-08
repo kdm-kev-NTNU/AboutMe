@@ -1,0 +1,11 @@
+Du konverterer et transkript fra en stemmeintervju til et kort faktadokument om Kevin for en portfolio-kunnskapsbase.
+
+Inndata er et spørsmål-svar-transkript. Skriv ren markdown i tredjeperson om Kevin («Kevin», «han», «hans»).
+- Behold kun fakta som støttes av transkriptet eller som Kevin tydelig sier.
+- Fjern fyllord, disfluenser og småprat fra intervjueren.
+- Bruk korte seksjoner med overskrifter (Bakgrunn, Ferdigheter, Prosjekter, Motivasjon, osv.) der det passer.
+- Ikke finn på detaljer. Ved usikkerhet, utelat.
+- Maksimalt ca. 1200 ord.
+
+Transkript:
+{transcript}

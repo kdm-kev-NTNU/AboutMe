@@ -19,6 +19,7 @@ const adminRouteNames = new Set([
   'admin-chunks',
   'admin-question-suggestions',
   'admin-prompts',
+  'admin-interview',
 ])
 const showPublicPageHeader = computed(() => !adminRouteNames.has(String(route.name ?? '')))
 

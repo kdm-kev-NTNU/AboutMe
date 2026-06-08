@@ -98,6 +98,8 @@ class SecurityConfigIT {
           "/admin/tools/experiments/datasets",
           "/admin/tools/experiments/runs",
           "/admin/tools/ai/status",
+          "/admin/tools/interview/documents",
+          "/admin/tools/interview/sessions",
         }) {
       assertTrue(paths != null && paths.has(path), "Missing OpenAPI path: " + path);
     }
