@@ -98,7 +98,7 @@ class InterviewRealtimeSessionServiceTest {
   }
 
   @Test
-  void createInterviewCall_rejectsWhenRealtimeDisabled() {
+  void createInterviewCall_rejectsWhenRealtimeDisabled() throws Exception {
     realtimeProperties.setEnabled(false);
 
     assertThatThrownBy(() -> service.createInterviewCall("sess1", "v=0", "en", null, null, null))
@@ -109,7 +109,7 @@ class InterviewRealtimeSessionServiceTest {
   }
 
   @Test
-  void createInterviewCall_rejectsMissingApiKey() {
+  void createInterviewCall_rejectsMissingApiKey() throws Exception {
     InterviewRealtimeSessionService svc =
         new InterviewRealtimeSessionService(
             realtimeProperties,
