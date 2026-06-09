@@ -281,6 +281,7 @@ describe('portfolio views (smoke)', () => {
 		const wrapper = await mountHowViewWithRoute('#future-work')
 		await flushPromises()
 		expect(wrapper.text()).toContain('How')
+		expect(wrapper.text()).toContain('AI in the development workflow')
 		expect(wrapper.text()).toContain('Future work')
 		expect(wrapper.text()).not.toContain('Heathen Army (Vikings blog)')
 		expect(wrapper.text()).toContain('References (arXiv)')
@@ -289,6 +290,15 @@ describe('portfolio views (smoke)', () => {
 		await toggles[0].trigger('click')
 		await flushPromises()
 		expect(wrapper.text()).toContain("Bachelor's thesis")
+	})
+
+	it('opens HowView AI workflow accordion from route hash', async () => {
+		const wrapper = await mountHowViewWithRoute('#ai-workflow')
+		await flushPromises()
+		expect(wrapper.text()).toContain('How I use AI without outsourcing the thinking')
+		const iframe = wrapper.find('#panel-ai-workflow iframe')
+		expect(iframe.exists()).toBe(true)
+		expect(iframe.attributes('src')).toContain('C87ITeVS9hs')
 	})
 
 	it('renders HeathenArmyView and opens gallery details', async () => {

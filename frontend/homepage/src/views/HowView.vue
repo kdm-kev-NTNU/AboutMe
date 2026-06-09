@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { ChevronDown, FolderKanban } from 'lucide-vue-next'
 import { useLangStore } from '@/stores/lang'
 import ProjectBachelorSection from '@/components/project/ProjectBachelorSection.vue'
+import ProjectHowAiWorkflowSection from '@/components/project/ProjectHowAiWorkflowSection.vue'
 import ProjectFutureWorkSection from '@/components/project/ProjectFutureWorkSection.vue'
 
 const langStore = useLangStore()
@@ -14,21 +15,22 @@ const hero = computed(() =>
   isNo.value
     ? {
         title: 'Hvordan',
-        lead: 'Hvordan portefoljen er bygget: bachelorkontekst og videre arbeid.',
+        lead: 'Hvordan portefoljen er bygget: bachelorkontekst, AI-støttet utviklingsflyt og videre arbeid.',
       }
     : {
         title: 'How',
-        lead: 'How the portfolio is built: bachelor context and future work.',
+        lead: 'How the portfolio is built: bachelor context, AI-supported development workflow, and future work.',
       },
 )
 
 const labels = computed(() =>
   isNo.value
-    ? { bachelor: 'Bacheloroppgaven', future: 'Videre arbeid' }
-    : { bachelor: "Bachelor's thesis", future: 'Future work' },
+    ? { bachelor: 'Bacheloroppgaven', workflow: 'AI i utviklingsflyten', future: 'Videre arbeid' }
+    : { bachelor: "Bachelor's thesis", workflow: 'AI in the development workflow', future: 'Future work' },
 )
 
 const bachelorOpen = ref(false)
+const workflowOpen = ref(false)
 const futureOpen = ref(false)
 
 function scrollToSection(elementId: string) {
@@ -43,6 +45,9 @@ function applyRouteHash(hash: string | undefined) {
   if (h === 'bachelor') {
     bachelorOpen.value = true
     scrollToSection('accordion-bachelor')
+  } else if (h === 'ai-workflow') {
+    workflowOpen.value = true
+    scrollToSection('accordion-ai-workflow')
   } else if (h === 'future-work') {
     futureOpen.value = true
     scrollToSection('accordion-future-work')
@@ -92,6 +97,29 @@ watch(
             class="border-t border-slate-200/80"
           >
             <ProjectBachelorSection />
+          </div>
+        </section>
+
+        <section id="accordion-ai-workflow" class="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg shadow-slate-900/5 overflow-hidden">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600"
+            :aria-expanded="workflowOpen"
+            aria-controls="panel-ai-workflow"
+            id="section-ai-workflow"
+            @click="workflowOpen = !workflowOpen"
+          >
+            <span class="text-lg font-semibold text-slate-900">{{ labels.workflow }}</span>
+            <ChevronDown class="h-5 w-5 shrink-0 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': workflowOpen }" aria-hidden="true" />
+          </button>
+          <div
+            v-show="workflowOpen"
+            id="panel-ai-workflow"
+            role="region"
+            aria-labelledby="section-ai-workflow"
+            class="border-t border-slate-200/80"
+          >
+            <ProjectHowAiWorkflowSection />
           </div>
         </section>
 
