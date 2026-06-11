@@ -108,6 +108,21 @@ class RagPromptLanguageRulesTest {
       "templates/rag-prompt-template-openai.st",
       "templates/rag-prompt-template-anthropic.st"
   })
+  void templateContainsBachelorThesisGradeException(String path) throws IOException {
+    String template = loadTemplate(path);
+    assertTrue(
+        template.contains("IDATT2901") || template.contains("Foresight AI"),
+        path + " must allow disclosing the bachelor's thesis grade");
+    assertTrue(
+        template.toLowerCase().contains("any other course"),
+        path + " must still refuse grades for other courses");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "templates/rag-prompt-template-openai.st",
+      "templates/rag-prompt-template-anthropic.st"
+  })
   void templateContainsBilingualOffTopicResponse(String path) throws IOException {
     String template = loadTemplate(path);
     assertTrue(
