@@ -22,15 +22,21 @@ const hero = computed(() =>
 		? {
 				title: 'Bacheloroppgaven',
 				lead:
-					'Denne porteføljen er et aktivt arbeid i utvikling. Jeg tilpasser innhold, struktur og AI-atferd fortløpende med læring fra bacheloroppgaven (2026) hos Piscada AS i Trondheim, slik at siden blir tydeligere og mer treffsikker over tid.',
-				lastUpdated: 'Sist oppdatert: april 2026',
+					'Bacheloroppgaven Foresight AI ble levert våren 2026 hos Piscada AS i Trondheim. Porteføljen er fortsatt et aktivt arbeid i utvikling — jeg tilpasser innhold, struktur og AI-atferd med det jeg lærte der, slik at siden blir tydeligere og mer treffsikker over tid.',
+				lastUpdated: 'Sist oppdatert: juni 2026',
 			}
 		: {
 				title: "Bachelor's thesis",
 				lead:
-					"This portfolio is an active work in progress. I continuously adapt content, structure, and AI behavior using learnings from my bachelor's thesis (2026) at Piscada AS in Trondheim so the site becomes clearer and more accurate over time.",
-				lastUpdated: 'Last updated: April 2026',
+					"The bachelor's thesis Foresight AI was delivered in spring 2026 at Piscada AS in Trondheim. This portfolio remains an active work in progress — I keep adapting content, structure, and AI behavior using what I learned there so the site becomes clearer and more accurate over time.",
+				lastUpdated: 'Last updated: June 2026',
 			},
+)
+
+const gradeStamp = computed(() =>
+	isNo.value
+		? { letter: 'A', label: 'IDATT2901 · vår 2026' }
+		: { letter: 'A', label: 'IDATT2901 · spring 2026' },
 )
 
 const videoSection = computed(() =>
@@ -81,6 +87,13 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 						'Konklusjonen var at slike assistenter kan forbedre tilgang til energiinnsikt, men krever transparent forankring, godt grensesnittdesign og kontinuerlig evaluering.',
 					],
 				},
+				{
+					category: 'Avslutning',
+					title: 'Sensor og alfabet',
+					body: [
+						'Våren 2026 ble Foresight AI sensurert ved NTNU. På det skala-systemet vi bruker der, endte vi på første bokstav — bokstavelig talt.',
+					],
+				},
 			]
 		: [
 				{
@@ -106,6 +119,13 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 						'Context-aware retrieval made energy data easier to understand, and features such as TL;DR summaries, citations, and chart annotations improved trust and interpretation.',
 						'RAG did not fully remove hallucinations, and we observed a clear trade-off between quality, latency, and token cost, meaning no single model was best in every scenario.',
 						'Overall, the project indicates that LLM assistants can improve access to energy insights when paired with transparent grounding, careful interface design, and continuous evaluation.',
+					],
+				},
+				{
+					category: 'Wrap-up',
+					title: 'Assessment and alphabet',
+					body: [
+						'In spring 2026, Foresight AI was assessed at NTNU. On the letter scale they use there, we landed on the first letter — literally.',
 					],
 				},
 			],
@@ -135,6 +155,18 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 				<p class="text-gray-600 max-w-3xl mx-auto leading-relaxed text-sm sm:text-base">
 					{{ hero.lead }}
 				</p>
+				<div
+					class="mt-5 inline-flex flex-col items-center gap-1.5"
+					:aria-label="`${gradeStamp.letter}, ${gradeStamp.label}`"
+				>
+					<span
+						class="inline-flex h-11 w-11 items-center justify-center rounded-full border-2 border-blue-600/40 bg-blue-50/80 text-xl font-bold text-blue-700 shadow-sm"
+						aria-hidden="true"
+					>
+						{{ gradeStamp.letter }}
+					</span>
+					<span class="text-xs font-medium tracking-wide text-slate-500">{{ gradeStamp.label }}</span>
+				</div>
 				<p class="mt-3 text-xs text-gray-500">{{ hero.lastUpdated }}</p>
 			</div>
 
@@ -211,7 +243,10 @@ const narrativeCards = computed<NarrativeCard[]>(() =>
 								variant="secondary"
 								class="text-xs border border-blue-300/30 text-blue-700 bg-blue-50/70"
 							>
-								{{ card.category }}
+								<span
+									v-if="card.category === 'Avslutning' || card.category === 'Wrap-up'"
+									class="font-semibold text-blue-700"
+								>{{ card.category.charAt(0) }}</span><span>{{ card.category.slice(1) }}</span>
 							</Badge>
 						</div>
 						<CardTitle class="text-xl text-gray-900">{{ card.title }}</CardTitle>

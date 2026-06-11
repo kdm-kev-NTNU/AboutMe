@@ -166,7 +166,8 @@
       "courseName": "Bacheloroppgave",
       "credits": 22.5,
       "semester": "Semester 6 (Vår 2026)",
-      "status": "ongoing"
+      "status": "completed",
+      "grade": "A"
     },
     {
       "id": "sem6-ingt2301",

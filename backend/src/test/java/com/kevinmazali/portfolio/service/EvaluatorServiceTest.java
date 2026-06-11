@@ -322,6 +322,30 @@ class EvaluatorServiceTest {
     assertEquals(1.0, s.score(), 1e-6);
   }
 
+  @Test
+  void evaluateLanguageConsistencyBachelorThesisGradeNorwegian() {
+    stubOpenAiReturns("{\"score\": 1.0, \"label\": \"consistent\", \"explanation\": \"Full Norwegian response.\"}");
+
+    EvaluationScore s = evaluatorService.evaluateLanguageConsistency(
+        OPENAI_EVAL,
+        "Hvilken karakter fikk Kevin på bacheloroppgaven?",
+        "Kevin fikk karakter A på bacheloroppgaven Foresight AI (IDATT2901, vår 2026) ved NTNU, utviklet i samarbeid med Piscada AS.");
+
+    assertEquals(1.0, s.score(), 1e-6);
+  }
+
+  @Test
+  void evaluateLanguageConsistencyBachelorThesisGradeEnglish() {
+    stubOpenAiReturns("{\"score\": 1.0, \"label\": \"consistent\", \"explanation\": \"Full English response.\"}");
+
+    EvaluationScore s = evaluatorService.evaluateLanguageConsistency(
+        OPENAI_EVAL,
+        "What grade did Kevin get on his bachelor's thesis?",
+        "Kevin received grade A on his bachelor's thesis Foresight AI (IDATT2901, spring 2026) at NTNU, developed with Piscada AS.");
+
+    assertEquals(1.0, s.score(), 1e-6);
+  }
+
   private void stubOpenAiReturns(String text) {
     ChatResponse r = mock(ChatResponse.class, RETURNS_DEEP_STUBS);
     when(r.getResult().getOutput().getText()).thenReturn(text);

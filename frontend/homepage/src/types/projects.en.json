@@ -13,7 +13,7 @@
     {
       "id": "portfolio-project-2025",
       "projectName": "AboutMe — portfolio & AI",
-      "projectDescription": "Personal site and digital CV with a built-in AI demo: ask questions in chat or use live voice, with answers grounded in documents about me. Built with Vue and Spring Boot on PostgreSQL; still evolving alongside my bachelor's thesis work (2026).",
+      "projectDescription": "Personal site and digital CV with a built-in AI demo: ask questions in chat or use live voice, with answers grounded in documents about me. Built with Vue and Spring Boot on PostgreSQL; still evolving following my bachelor's thesis (2026).",
       "startDate": "2025-09-01",
       "endDate": null,
       "technologies": ["Vue", "TypeScript", "Spring Boot", "PostgreSQL", "OpenAI", "Docker"],

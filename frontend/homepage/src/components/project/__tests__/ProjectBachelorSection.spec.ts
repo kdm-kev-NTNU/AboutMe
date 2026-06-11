@@ -16,6 +16,8 @@ describe('ProjectBachelorSection', () => {
     await flushPromises()
     expect(wrapper.text()).toContain("Bachelor's thesis")
     expect(wrapper.text()).toMatch(/Piscada|Trondheim/i)
+    expect(wrapper.text()).toContain('IDATT2901')
+    expect(wrapper.text()).toContain('first letter')
   })
 
   it('renders Norwegian bachelor hero', async () => {
@@ -27,5 +29,7 @@ describe('ProjectBachelorSection', () => {
     })
     await flushPromises()
     expect(wrapper.text()).toContain('Bacheloroppgaven')
+    expect(wrapper.text()).toContain('IDATT2901')
+    expect(wrapper.text()).toContain('første bokstav')
   })
 })

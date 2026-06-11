@@ -188,7 +188,7 @@ const popupCopy = computed(() =>
   language.value === 'no'
     ? {
         title: 'Porteføljen oppdateres fortløpende',
-        body: 'Chatten og kunnskapsgrunnlaget endrer seg etter hvert som jeg lærer mer i bacheloroppgaven. Svarene blir gjerne mer treffsikre over tid.',
+        body: 'Chatten og kunnskapsgrunnlaget endrer seg etter hvert som jeg tar med meg læring fra bacheloroppgaven. Svarene blir gjerne mer treffsikre over tid.',
         aiNote:
           'Du snakker med en AI-assistent — ikke meg direkte. Svarene kan være unøyaktige.',
         recommendation: 'Lurer du på hva som skjer akkurat nå? Ta en titt på prosjektsiden.',
@@ -197,7 +197,7 @@ const popupCopy = computed(() =>
       }
     : {
         title: 'This portfolio keeps evolving',
-        body: "I'm updating this chat and its knowledge base as I learn more in my bachelor's thesis. Answers should get sharper over time.",
+        body: "I'm updating this chat and its knowledge base as I apply what I learned from my bachelor's thesis. Answers should get sharper over time.",
         aiNote:
           'You are chatting with an AI assistant — not me directly. Replies may be inaccurate.',
         recommendation: 'Curious what I am working on? Check the project page.',

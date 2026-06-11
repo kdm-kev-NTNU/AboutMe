@@ -2,10 +2,10 @@
   "version": 1,
   "languages": {
     "no": {
-      "profileCard": "Kevin studerer dataingeniør ved NTNU i Trondheim, med retning systemutvikling. Han bygger denne porteføljen som et personlig AI- og RAG-prosjekt med Vue, TypeScript, Spring Boot, Spring AI, OpenAI og PostgreSQL/pgvector. Voice-boten kan svare kort om offentlig informasjon om studier, prosjekter, kursområder og relevant arbeidserfaring. Den skal ikke dele karakterer eller private detaljer."
+      "profileCard": "Kevin studerer dataingeniør ved NTNU i Trondheim, med retning systemutvikling. Han bygger denne porteføljen som et personlig AI- og RAG-prosjekt med Vue, TypeScript, Spring Boot, Spring AI, OpenAI og PostgreSQL/pgvector. Voice-boten kan svare kort om offentlig informasjon om studier, prosjekter, kursområder og relevant arbeidserfaring. Karakteren A på bacheloroppgaven Foresight AI (IDATT2901) er offentlig; andre emnekarakterer deles ikke."
     },
     "en": {
-      "profileCard": "Kevin studies data engineering at NTNU in Trondheim, focused on system development. He built this portfolio as a personal AI and RAG project using Vue, TypeScript, Spring Boot, Spring AI, OpenAI, and PostgreSQL/pgvector. The voice bot can answer briefly about public information on his studies, projects, course areas, and relevant work experience. It must not share grades or private details."
+      "profileCard": "Kevin studies data engineering at NTNU in Trondheim, focused on system development. He built this portfolio as a personal AI and RAG project using Vue, TypeScript, Spring Boot, Spring AI, OpenAI, and PostgreSQL/pgvector. The voice bot can answer briefly about public information on his studies, projects, course areas, and relevant work experience. Grade A on the bachelor's thesis Foresight AI (IDATT2901) is public; other course grades are not shared."
     }
   },
   "facts": [
@@ -153,6 +153,19 @@
       "tags": ["courses", "kurs", "programming", "databases", "algorithms", "full-stack", "machine learning", "c++", "mobile"]
     },
     {
+      "id": "bachelor-thesis-grade",
+      "category": "education",
+      "title": {
+        "no": "Karakter på bacheloroppgaven",
+        "en": "Bachelor's thesis grade"
+      },
+      "text": {
+        "no": "Kevin fikk karakter A på bacheloroppgaven Foresight AI (IDATT2901, vår 2026) ved NTNU, utviklet i samarbeid med Piscada AS i Trondheim.",
+        "en": "Kevin received grade A on his bachelor's thesis Foresight AI (IDATT2901, spring 2026) at NTNU, developed in collaboration with Piscada AS in Trondheim."
+      },
+      "tags": ["bachelor", "bacheloroppgave", "bachelor's thesis", "foresight", "foresight ai", "idatt2901", "grade", "grades", "karakter", "karakterer", "oppgave", "thesis", "ntnu", "piscada"]
+    },
+    {
       "id": "privacy-boundaries",
       "category": "policy",
       "title": {
@@ -160,8 +173,8 @@
         "en": "Voice answer boundaries"
       },
       "text": {
-        "no": "Voice-boten skal ikke oppgi karakterer, familieinformasjon, private detaljer eller andre sensitive opplysninger. For karakterer skal den avvise lett og vennlig.",
-        "en": "The voice bot must not share grades, family information, private details, or other sensitive information. For grades, it should decline lightly and politely."
+        "no": "Voice-boten kan oppgi karakter A på bacheloroppgaven Foresight AI (IDATT2901). For andre emnekarakterer, familieinformasjon, private detaljer eller sensitive opplysninger skal den avvise lett og vennlig.",
+        "en": "The voice bot may share grade A on the bachelor's thesis Foresight AI (IDATT2901). For other course grades, family information, private details, or sensitive information, it should decline lightly and politely."
       },
       "tags": ["privacy", "personvern", "grades", "karakterer", "private", "sensitive"]
     }
