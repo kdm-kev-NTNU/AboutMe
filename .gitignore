@@ -103,3 +103,5 @@ backend/*.db
 backend/*.sqlite
 backend/*.sqlite3
 backend/*.h2.db
+
+.agents/
