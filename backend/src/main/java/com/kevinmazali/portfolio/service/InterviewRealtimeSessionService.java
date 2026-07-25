@@ -120,10 +120,11 @@ public class InterviewRealtimeSessionService {
     String voice = realtimeProperties.resolveVoice(
         StringUtils.hasText(requestedVoice) ? requestedVoice : session.getVoice());
     String reasoningEffort = realtimeProperties.resolveReasoningEffort(requestedReasoningEffort);
+    String vadEagerness = realtimeProperties.defaultVadEagerness();
 
     String sessionJson;
     try {
-      sessionJson = buildSessionJson(instructions, model, voice, reasoningEffort);
+      sessionJson = buildSessionJson(instructions, model, voice, reasoningEffort, vadEagerness);
     } catch (IOException e) {
       throw new RealtimeSessionException(
           HttpStatus.INTERNAL_SERVER_ERROR,
@@ -197,7 +198,8 @@ public class InterviewRealtimeSessionService {
     }
   }
 
-  private String buildSessionJson(String instructions, String model, String voice, String reasoningEffort)
+  private String buildSessionJson(
+      String instructions, String model, String voice, String reasoningEffort, String vadEagerness)
       throws IOException {
     ObjectNode root = objectMapper.createObjectNode();
     root.put("type", "realtime");
@@ -222,7 +224,7 @@ public class InterviewRealtimeSessionService {
 
     ObjectNode turnDetection = objectMapper.createObjectNode();
     turnDetection.put("type", "semantic_vad");
-    turnDetection.put("eagerness", "auto");
+    turnDetection.put("eagerness", vadEagerness);
     turnDetection.put("create_response", true);
     turnDetection.put("interrupt_response", true);
     input.set("turn_detection", turnDetection);

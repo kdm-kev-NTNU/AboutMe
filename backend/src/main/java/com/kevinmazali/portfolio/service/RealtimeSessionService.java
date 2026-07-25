@@ -117,7 +117,7 @@ public class RealtimeSessionService {
    * @return SDP answer text from OpenAI
    */
   public String createRealtimeCall(String sdp, String chatLanguage) {
-    return createRealtimeCall(sdp, chatLanguage, null, null, null);
+    return createRealtimeCall(sdp, chatLanguage, null, null, null, null);
   }
 
   /**
@@ -129,7 +129,7 @@ public class RealtimeSessionService {
    */
   public String createRealtimeCall(
       String sdp, String chatLanguage, String requestedVoice, String requestedReasoningEffort) {
-    return createRealtimeCall(sdp, chatLanguage, null, requestedVoice, requestedReasoningEffort);
+    return createRealtimeCall(sdp, chatLanguage, null, requestedVoice, requestedReasoningEffort, null);
   }
 
   /**
@@ -138,6 +138,7 @@ public class RealtimeSessionService {
    * @param requestedModel optional configured OpenAI realtime model id from {@code X-Realtime-Model}
    * @param requestedVoice optional curated voice from {@code X-Realtime-Voice}
    * @param requestedReasoningEffort optional reasoning effort from {@code X-Realtime-Reasoning-Effort}
+   * @param requestedVadEagerness optional semantic VAD eagerness from {@code X-Realtime-Vad-Eagerness}
    * @return SDP answer text from OpenAI
    */
   public String createRealtimeCall(
@@ -145,7 +146,8 @@ public class RealtimeSessionService {
       String chatLanguage,
       String requestedModel,
       String requestedVoice,
-      String requestedReasoningEffort) {
+      String requestedReasoningEffort,
+      String requestedVadEagerness) {
     if (!StringUtils.hasText(openAiApiKey)) {
       throw new RealtimeSessionException(
           HttpStatus.SERVICE_UNAVAILABLE,
@@ -174,9 +176,10 @@ public class RealtimeSessionService {
         .replace("{profile_card}", realtimeProfileService.profileCard(lang));
     String voice = realtimeProperties.resolveVoice(requestedVoice);
     String reasoningEffort = realtimeProperties.resolveReasoningEffort(requestedReasoningEffort);
+    String vadEagerness = realtimeProperties.resolveVadEagerness(requestedVadEagerness);
     String sessionJson;
     try {
-      sessionJson = buildSessionJson(instructions, model, voice, reasoningEffort);
+      sessionJson = buildSessionJson(instructions, model, voice, reasoningEffort, vadEagerness);
     } catch (IOException e) {
       log.warn(
           "realtime_session_config_failed budgetUserId={} message={}",
@@ -307,7 +310,9 @@ public class RealtimeSessionService {
     return "en";
   }
 
-  private String buildSessionJson(String instructions, String model, String voice, String reasoningEffort) throws IOException {
+  private String buildSessionJson(
+      String instructions, String model, String voice, String reasoningEffort, String vadEagerness)
+      throws IOException {
     ObjectNode root = objectMapper.createObjectNode();
     root.put("type", "realtime");
     root.put("model", model);
@@ -332,7 +337,7 @@ public class RealtimeSessionService {
 
     ObjectNode turnDetection = objectMapper.createObjectNode();
     turnDetection.put("type", "semantic_vad");
-    turnDetection.put("eagerness", "auto");
+    turnDetection.put("eagerness", vadEagerness);
     turnDetection.put("create_response", true);
     turnDetection.put("interrupt_response", true);
     input.set("turn_detection", turnDetection);

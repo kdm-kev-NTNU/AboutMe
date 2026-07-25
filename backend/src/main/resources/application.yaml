@@ -144,6 +144,7 @@ portfolio:
     model: ${PORTFOLIO_REALTIME_MODEL:gpt-realtime-2}
     voice: ${PORTFOLIO_REALTIME_VOICE:marin}
     reasoning-effort: ${PORTFOLIO_REALTIME_REASONING_EFFORT:low}
+    vad-eagerness: ${PORTFOLIO_REALTIME_VAD_EAGERNESS:low}
     max-response-output-tokens: 1024
     reservation-input-tokens: 2000
     reservation-output-tokens: 2000
