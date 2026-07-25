@@ -30,8 +30,10 @@ describe('realtime-voice', () => {
       liveEnabled: false,
       voices: ['marin', 'cedar'],
       reasoningEfforts: ['low', 'medium', 'high'],
+      vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
       voice: 'cedar',
       reasoningEffort: 'medium',
+      vadEagerness: 'low',
     })
   })
 
@@ -55,6 +57,7 @@ describe('realtime-voice', () => {
     expect(init.headers['X-Chat-Language']).toBe('en')
     expect(init.headers['X-Realtime-Voice']).toBe('marin')
     expect(init.headers['X-Realtime-Reasoning-Effort']).toBe('low')
+    expect(init.headers['X-Realtime-Vad-Eagerness']).toBe('low')
     expect(init.body).toBe('offer')
   })
 
@@ -65,12 +68,18 @@ describe('realtime-voice', () => {
     })
     const { exchangeRealtimeSdp } = await import('../realtime-voice')
 
-    await exchangeRealtimeSdp('offer', 'no', { voice: 'cedar', reasoningEffort: 'high' }, 'gpt-realtime-2')
+    await exchangeRealtimeSdp(
+      'offer',
+      'no',
+      { voice: 'cedar', reasoningEffort: 'high', vadEagerness: 'high' },
+      'gpt-realtime-2',
+    )
 
     const init = mockCustomFetch.mock.calls[0][1] as RequestInit & { headers: Record<string, string> }
     expect(init.headers['X-Chat-Language']).toBe('no')
     expect(init.headers['X-Realtime-Voice']).toBe('cedar')
     expect(init.headers['X-Realtime-Reasoning-Effort']).toBe('high')
+    expect(init.headers['X-Realtime-Vad-Eagerness']).toBe('high')
     expect(init.headers['X-Realtime-Model']).toBe('gpt-realtime-2')
   })
 
@@ -179,8 +188,8 @@ describe('realtime-voice', () => {
     })
   })
 
-  it('REALTIME_SESSION_MAX_MS is three minutes', async () => {
+  it('REALTIME_SESSION_MAX_MS is five minutes', async () => {
     const { REALTIME_SESSION_MAX_MS } = await import('../realtime-voice')
-    expect(REALTIME_SESSION_MAX_MS).toBe(180000)
+    expect(REALTIME_SESSION_MAX_MS).toBe(300000)
   })
 })

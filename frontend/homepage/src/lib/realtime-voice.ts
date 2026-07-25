@@ -19,10 +19,12 @@ export type RealtimeLookupResponse = {
 
 export type RealtimeVoiceChoice = 'marin' | 'cedar'
 export type RealtimeReasoningEffort = 'low' | 'medium' | 'high'
+export type RealtimeVadEagerness = 'low' | 'medium' | 'high' | 'auto'
 
 export type RealtimeVoiceSessionOptions = {
   voice: RealtimeVoiceChoice
   reasoningEffort: RealtimeReasoningEffort
+  vadEagerness: RealtimeVadEagerness
 }
 
 export type RealtimeVoiceModelOption = {
@@ -37,12 +39,15 @@ export type RealtimeVoiceStatus = RealtimeVoiceSessionOptions & {
   liveEnabled: boolean
   voices: RealtimeVoiceChoice[]
   reasoningEfforts: RealtimeReasoningEffort[]
+  vadEagernessOptions: RealtimeVadEagerness[]
 }
 
 const DEFAULT_REALTIME_VOICE: RealtimeVoiceChoice = 'marin'
 const DEFAULT_REALTIME_REASONING_EFFORT: RealtimeReasoningEffort = 'low'
+const DEFAULT_REALTIME_VAD_EAGERNESS: RealtimeVadEagerness = 'low'
 const ALLOWED_REALTIME_VOICES: readonly RealtimeVoiceChoice[] = ['marin', 'cedar']
 const ALLOWED_REALTIME_REASONING_EFFORTS: readonly RealtimeReasoningEffort[] = ['low', 'medium', 'high']
+const ALLOWED_REALTIME_VAD_EAGERNESS: readonly RealtimeVadEagerness[] = ['low', 'medium', 'high', 'auto']
 
 /** Failure from POST /realtime/session (includes optional machine-readable `code` from backend). */
 export type RealtimeSdpFailure = {
@@ -62,6 +67,12 @@ function isRealtimeReasoningEffort(value: unknown): value is RealtimeReasoningEf
   return (
     typeof value === 'string' &&
     ALLOWED_REALTIME_REASONING_EFFORTS.includes(value as RealtimeReasoningEffort)
+  )
+}
+
+function isRealtimeVadEagerness(value: unknown): value is RealtimeVadEagerness {
+  return (
+    typeof value === 'string' && ALLOWED_REALTIME_VAD_EAGERNESS.includes(value as RealtimeVadEagerness)
   )
 }
 
@@ -87,14 +98,19 @@ function parseRealtimeVoiceStatus(data: unknown): RealtimeVoiceStatus | null {
     enabled?: unknown
     voices?: unknown
     reasoningEfforts?: unknown
+    vadEagernessOptions?: unknown
     defaultVoice?: unknown
     defaultReasoningEffort?: unknown
+    defaultVadEagerness?: unknown
     liveEnabled?: unknown
   }
   const voices = Array.isArray(d.voices) ? d.voices.filter(isRealtimeVoice) : [...ALLOWED_REALTIME_VOICES]
   const reasoningEfforts = Array.isArray(d.reasoningEfforts)
     ? d.reasoningEfforts.filter(isRealtimeReasoningEffort)
     : [...ALLOWED_REALTIME_REASONING_EFFORTS]
+  const vadEagernessOptions = Array.isArray(d.vadEagernessOptions)
+    ? d.vadEagernessOptions.filter(isRealtimeVadEagerness)
+    : [...ALLOWED_REALTIME_VAD_EAGERNESS]
   const defaultVoice = isRealtimeVoice(d.defaultVoice) && voices.includes(d.defaultVoice)
     ? d.defaultVoice
     : DEFAULT_REALTIME_VOICE
@@ -102,14 +118,21 @@ function parseRealtimeVoiceStatus(data: unknown): RealtimeVoiceStatus | null {
     isRealtimeReasoningEffort(d.defaultReasoningEffort) && reasoningEfforts.includes(d.defaultReasoningEffort)
       ? d.defaultReasoningEffort
       : DEFAULT_REALTIME_REASONING_EFFORT
+  const defaultVadEagerness =
+    isRealtimeVadEagerness(d.defaultVadEagerness) && vadEagernessOptions.includes(d.defaultVadEagerness)
+      ? d.defaultVadEagerness
+      : DEFAULT_REALTIME_VAD_EAGERNESS
 
   return {
     enabled: d.enabled === true,
     liveEnabled: d.liveEnabled === true,
     voices: voices.length > 0 ? voices : [...ALLOWED_REALTIME_VOICES],
     reasoningEfforts: reasoningEfforts.length > 0 ? reasoningEfforts : [...ALLOWED_REALTIME_REASONING_EFFORTS],
+    vadEagernessOptions:
+      vadEagernessOptions.length > 0 ? vadEagernessOptions : [...ALLOWED_REALTIME_VAD_EAGERNESS],
     voice: defaultVoice,
     reasoningEffort: defaultReasoningEffort,
+    vadEagerness: defaultVadEagerness,
   }
 }
 
@@ -127,8 +150,10 @@ export async function fetchRealtimeVoiceStatus(): Promise<RealtimeVoiceStatus> {
       liveEnabled: false,
       voices: [...ALLOWED_REALTIME_VOICES],
       reasoningEfforts: [...ALLOWED_REALTIME_REASONING_EFFORTS],
+      vadEagernessOptions: [...ALLOWED_REALTIME_VAD_EAGERNESS],
       voice: DEFAULT_REALTIME_VOICE,
       reasoningEffort: DEFAULT_REALTIME_REASONING_EFFORT,
+      vadEagerness: DEFAULT_REALTIME_VAD_EAGERNESS,
     }
   } catch {
     return {
@@ -136,8 +161,10 @@ export async function fetchRealtimeVoiceStatus(): Promise<RealtimeVoiceStatus> {
       liveEnabled: false,
       voices: [...ALLOWED_REALTIME_VOICES],
       reasoningEfforts: [...ALLOWED_REALTIME_REASONING_EFFORTS],
+      vadEagernessOptions: [...ALLOWED_REALTIME_VAD_EAGERNESS],
       voice: DEFAULT_REALTIME_VOICE,
       reasoningEffort: DEFAULT_REALTIME_REASONING_EFFORT,
+      vadEagerness: DEFAULT_REALTIME_VAD_EAGERNESS,
     }
   }
 }
@@ -215,6 +242,9 @@ export async function exchangeRealtimeSdp(
     'X-Realtime-Reasoning-Effort': isRealtimeReasoningEffort(options?.reasoningEffort)
       ? options.reasoningEffort
       : DEFAULT_REALTIME_REASONING_EFFORT,
+    'X-Realtime-Vad-Eagerness': isRealtimeVadEagerness(options?.vadEagerness)
+      ? options.vadEagerness
+      : DEFAULT_REALTIME_VAD_EAGERNESS,
   }
   if (modelId && modelId.trim() !== '') {
     headers['X-Realtime-Model'] = modelId.trim()
@@ -231,7 +261,8 @@ export async function exchangeRealtimeSdp(
 }
 
 /** Auto-disconnect after this many ms (aligned with backend cost controls). */
-export const REALTIME_SESSION_MAX_MS = 180_000
+/** Client-enforced live session cap (aligned with UI copy). */
+export const REALTIME_SESSION_MAX_MS = 300_000
 
 type RealtimeFetchFailureResponse = {
   status: number
