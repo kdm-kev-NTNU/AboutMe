@@ -28,8 +28,10 @@ describe('RealtimeVoicePanel', () => {
         available: true,
         voiceOptions: ['marin', 'cedar'],
         reasoningOptions: ['low', 'medium', 'high'],
+        vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
         defaultVoice: 'marin',
         defaultReasoningEffort: 'low',
+        defaultVadEagerness: 'low',
       },
       global: {
         plugins: [pinia],
@@ -44,11 +46,15 @@ describe('RealtimeVoicePanel', () => {
           MicOff: true,
           Loader2: true,
           TriangleAlert: true,
+          Square: true,
         },
       },
     })
 
     expect(wrapper.text()).toContain('Start live voice')
-    expect(wrapper.text()).toContain('Experimental mode')
+    expect(wrapper.text()).toContain('Tips for clearer voice')
+    expect(wrapper.text()).toContain('Reasoning vs speaking patience')
+    expect(wrapper.find('[data-testid="vad-eagerness-select"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="settings-help"]').exists()).toBe(true)
   })
 })

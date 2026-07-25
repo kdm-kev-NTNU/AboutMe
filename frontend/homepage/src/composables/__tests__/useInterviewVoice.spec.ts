@@ -20,7 +20,7 @@ vi.mock('@/composables/useRealtimeVoice', () => ({
       connect: vi.fn(),
       disconnect: vi.fn(),
       stopResponse: vi.fn(),
-      maxSessionMs: 180_000,
+      maxSessionMs: 300_000,
     }
   }),
 }))

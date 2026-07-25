@@ -294,7 +294,7 @@ class RealtimeSessionServiceTest {
     assertThat(json.at("/audio/output/voice").asText()).isEqualTo("marin");
     assertThat(json.at("/audio/input/transcription/model").asText()).isEqualTo("whisper-1");
     assertThat(json.at("/audio/input/turn_detection/type").asText()).isEqualTo("semantic_vad");
-    assertThat(json.at("/audio/input/turn_detection/eagerness").asText()).isEqualTo("auto");
+    assertThat(json.at("/audio/input/turn_detection/eagerness").asText()).isEqualTo("low");
     assertThat(json.at("/audio/input/turn_detection/create_response").asBoolean()).isTrue();
     assertThat(json.at("/audio/input/turn_detection/interrupt_response").asBoolean()).isTrue();
     assertThat(json.at("/output_modalities").toString()).contains("audio");
@@ -311,11 +311,12 @@ class RealtimeSessionServiceTest {
     ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
     when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
 
-    service.createRealtimeCall("v=0", "en", "cedar", "high");
+    service.createRealtimeCall("v=0", "en", null, "cedar", "high", "high");
 
     JsonNode json = extractSessionJson(captor.getValue());
     assertThat(json.at("/audio/output/voice").asText()).isEqualTo("cedar");
     assertThat(json.at("/reasoning/effort").asText()).isEqualTo("high");
+    assertThat(json.at("/audio/input/turn_detection/eagerness").asText()).isEqualTo("high");
   }
 
   @Test

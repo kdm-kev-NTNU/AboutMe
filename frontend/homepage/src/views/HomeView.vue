@@ -119,9 +119,13 @@ onMounted(() => {
               variant="outline"
               class="h-14 w-full justify-center rounded-2xl border-blue-200 bg-white/85 px-5 text-sm font-semibold text-slate-800 hover:bg-blue-50 sm:w-auto sm:px-7 sm:text-base"
             >
-              <RouterLink to="/chat" class="inline-flex items-center">
+              <RouterLink to="/chat" class="inline-flex items-center" data-testid="home-chat-alternative">
                 <MessageSquare class="me-2 size-5" aria-hidden="true" />
-                {{ language === 'no' ? 'Bruk tekstchat' : 'Use text chat' }}
+                {{
+                  language === 'no'
+                    ? 'Bruk tekstchat (uten mikrofon)'
+                    : 'Use text chat (no microphone)'
+                }}
               </RouterLink>
             </Button>
           </div>

@@ -568,8 +568,8 @@ export function useRealtimeVoice(
     if (reason === 'timeout') {
       sessionNotice.value =
         language.value === 'no'
-          ? 'Tidsbegrensning nådd (3 min). Start på nytt om du vil fortsette.'
-          : 'Time limit reached (3 minutes). Connect again to continue.'
+          ? 'Tidsbegrensning nådd (5 min). Start på nytt om du vil fortsette.'
+          : 'Time limit reached (5 minutes). Connect again to continue.'
     } else {
       sessionNotice.value = ''
     }

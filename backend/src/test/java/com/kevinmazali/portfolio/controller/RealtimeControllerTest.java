@@ -97,12 +97,14 @@ class RealtimeControllerTest {
         .andExpect(jsonPath("$.reasoningEfforts[1]").value("medium"))
         .andExpect(jsonPath("$.reasoningEfforts[2]").value("high"))
         .andExpect(jsonPath("$.defaultVoice").value("marin"))
-        .andExpect(jsonPath("$.defaultReasoningEffort").value("low"));
+        .andExpect(jsonPath("$.defaultReasoningEffort").value("low"))
+        .andExpect(jsonPath("$.vadEagernessOptions[0]").value("low"))
+        .andExpect(jsonPath("$.defaultVadEagerness").value("low"));
   }
 
   @Test
   void sessionReturnsSdpAnswer() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any())).thenReturn("v=0\r\no=-");
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any())).thenReturn("v=0\r\no=-");
 
     mockMvc.perform(post("/realtime/session")
             .content("v=0\r\no=offer")
@@ -114,7 +116,7 @@ class RealtimeControllerTest {
         .andExpect(content().contentTypeCompatibleWith("application/sdp"))
         .andExpect(content().string("v=0\r\no=-"));
 
-    verify(realtimeSessionService).createRealtimeCall(eq("v=0\r\no=offer"), eq("en"), isNull(), eq("cedar"), eq("medium"));
+    verify(realtimeSessionService).createRealtimeCall(eq("v=0\r\no=offer"), eq("en"), isNull(), eq("cedar"), eq("medium"), isNull());
   }
 
   @Test
@@ -148,7 +150,7 @@ class RealtimeControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
 
-    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any());
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any(), any());
     verify(requestLogService, never()).save(any(), any(), any(), any());
   }
 
@@ -161,7 +163,7 @@ class RealtimeControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
 
-    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any());
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any(), any());
     verify(requestLogService, never()).save(any(), any(), any(), any());
   }
 
@@ -176,13 +178,13 @@ class RealtimeControllerTest {
         .andExpect(jsonPath("$.error").exists())
         .andExpect(jsonPath("$.code").value("REALTIME_DISABLED"));
 
-    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any());
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any(), any());
     verify(requestLogService, never()).save(any(), any(), any(), any());
   }
 
   @Test
   void sessionReturns400WhenServiceRejectsOffer() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any()))
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any()))
         .thenThrow(new IllegalArgumentException("bad sdp"));
 
     mockMvc.perform(post("/realtime/session")
@@ -195,7 +197,7 @@ class RealtimeControllerTest {
 
   @Test
   void sessionReturns502WhenServiceFailsOpenAi() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any()))
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any()))
         .thenThrow(
             new RealtimeSessionException(
                 HttpStatus.BAD_GATEWAY,
@@ -212,7 +214,7 @@ class RealtimeControllerTest {
 
   @Test
   void sessionPassesNorwegianLanguageHeaderThrough() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any())).thenReturn("sdp-answer");
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any())).thenReturn("sdp-answer");
 
     mockMvc.perform(post("/realtime/session")
             .content("offer")
@@ -220,20 +222,20 @@ class RealtimeControllerTest {
             .header("X-Chat-Language", "NO"))
         .andExpect(status().isOk());
 
-    verify(realtimeSessionService).createRealtimeCall(eq("offer"), eq("NO"), isNull(), isNull(), isNull());
+    verify(realtimeSessionService).createRealtimeCall(eq("offer"), eq("NO"), isNull(), isNull(), isNull(), isNull());
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
   }
 
   @Test
   void sessionRecordsRequestBeforeCallingServiceOnSuccessPath() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any())).thenReturn("ok");
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any())).thenReturn("ok");
 
     mockMvc.perform(post("/realtime/session")
             .content("v")
             .contentType("application/sdp"));
 
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
-    verify(realtimeSessionService).createRealtimeCall(eq("v"), isNull(), isNull(), isNull(), isNull());
+    verify(realtimeSessionService).createRealtimeCall(eq("v"), isNull(), isNull(), isNull(), isNull(), isNull());
   }
 
   @Test
@@ -330,7 +332,7 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
 
   @Test
   void sessionPropagatesApiKeyMissingFromService() throws Exception {
-    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any()))
+    when(realtimeSessionService.createRealtimeCall(any(), any(), any(), any(), any(), any()))
         .thenThrow(
             new RealtimeSessionException(
                 HttpStatus.SERVICE_UNAVAILABLE,
@@ -344,7 +346,7 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
         .andExpect(jsonPath("$.error").exists())
         .andExpect(jsonPath("$.code").value("API_KEY_MISSING"));
 
-    verify(realtimeSessionService).createRealtimeCall(eq("v=0"), isNull(), isNull(), isNull(), isNull());
+    verify(realtimeSessionService).createRealtimeCall(eq("v=0"), isNull(), isNull(), isNull(), isNull(), isNull());
     verify(requestLogService).save("/realtime/session", "POST", "sdp-bytes", null);
   }
 }

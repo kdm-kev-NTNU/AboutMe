@@ -57,8 +57,10 @@ public class RealtimeController {
         liveEnabled,
         RealtimeProperties.ALLOWED_VOICES,
         RealtimeProperties.ALLOWED_REASONING_EFFORTS,
+        RealtimeProperties.ALLOWED_VAD_EAGERNESS,
         realtimeProperties.defaultVoice(),
-        realtimeProperties.defaultReasoningEffort()));
+        realtimeProperties.defaultReasoningEffort(),
+        realtimeProperties.defaultVadEagerness()));
   }
 
   @Operation(summary = "List realtime voice models", description = "Configured voice provider/model options.")
@@ -75,7 +77,8 @@ public class RealtimeController {
       @RequestHeader(value = "X-Chat-Language", required = false) String chatLanguage,
       @RequestHeader(value = "X-Realtime-Model", required = false) String model,
       @RequestHeader(value = "X-Realtime-Voice", required = false) String voice,
-      @RequestHeader(value = "X-Realtime-Reasoning-Effort", required = false) String reasoningEffort) {
+      @RequestHeader(value = "X-Realtime-Reasoning-Effort", required = false) String reasoningEffort,
+      @RequestHeader(value = "X-Realtime-Vad-Eagerness", required = false) String vadEagerness) {
     if (!realtimeProperties.isEnabled()) {
       return ResponseEntity.status(503)
           .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
@@ -86,9 +89,13 @@ public class RealtimeController {
     if (!realtimeProperties.isAllowedReasoningEffort(reasoningEffort)) {
       return ResponseEntity.badRequest().body(new ApiError("Unsupported realtime reasoning effort.", "BAD_REQUEST"));
     }
+    if (!realtimeProperties.isAllowedVadEagerness(vadEagerness)) {
+      return ResponseEntity.badRequest().body(new ApiError("Unsupported realtime VAD eagerness.", "BAD_REQUEST"));
+    }
     requestLogService.save("/realtime/session", "POST", "sdp-bytes", null);
     try {
-      String answer = realtimeSessionService.createRealtimeCall(sdp, chatLanguage, model, voice, reasoningEffort);
+      String answer =
+          realtimeSessionService.createRealtimeCall(sdp, chatLanguage, model, voice, reasoningEffort, vadEagerness);
       return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/sdp")).body(answer);
     } catch (IllegalArgumentException e) {
       return ResponseEntity.badRequest().body(new ApiError(e.getMessage(), "BAD_REQUEST"));

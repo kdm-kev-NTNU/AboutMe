@@ -11,8 +11,10 @@ vi.mock('@/lib/realtime-voice', () => ({
 		liveEnabled: false,
 		voices: ['marin', 'cedar'],
 		reasoningEfforts: ['low', 'medium', 'high'],
+		vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
 		voice: 'marin',
 		reasoningEffort: 'low',
+		vadEagerness: 'low',
 	}),
 }))
 

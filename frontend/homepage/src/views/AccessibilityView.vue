@@ -30,7 +30,7 @@ const sections = computed(() => {
       {
         heading: 'Kjente begrensninger',
         paragraphs: [
-          'Live stemmechat er eksperimentell og kan være vanskelig å bruke med enkelte hjelpemidler.',
+          'Live stemmechat er eksperimentell. Bruk headset og et stille sted for best resultat, eller velg tekstchat. Økten avsluttes automatisk etter ca. 5 minutter.',
           'Noen dekorative layout-elementer bruker div-er uten egen semantikk; hovedinnhold og overskrifter er likevel strukturert.',
           'Automatisert WCAG-revisjon i CI er ikke satt opp ennå.',
         ],
@@ -61,7 +61,7 @@ const sections = computed(() => {
     {
       heading: 'Known limitations',
       paragraphs: [
-        'Live voice chat is experimental and may be difficult to use with some assistive technologies.',
+        'Live voice chat is experimental. Use a headset in a quiet place for best results, or switch to text chat. Sessions end automatically after about 5 minutes.',
         'Some decorative layout wrappers use divs without their own semantics; main content and headings are still structured.',
         'Automated WCAG checks in CI are not set up yet.',
       ],

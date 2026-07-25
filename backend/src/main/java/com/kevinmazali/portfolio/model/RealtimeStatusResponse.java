@@ -10,5 +10,7 @@ public record RealtimeStatusResponse(
     boolean liveEnabled,
     List<String> voices,
     List<String> reasoningEfforts,
+    List<String> vadEagernessOptions,
     String defaultVoice,
-    String defaultReasoningEffort) {}
+    String defaultReasoningEffort,
+    String defaultVadEagerness) {}
