@@ -20,8 +20,12 @@ vi.mock('@/lib/realtime-voice', async (importOriginal) => {
 })
 
 describe('VoiceView.vue', () => {
-  async function factory(opts: { lang: 'en' | 'no'; liveEnabled: boolean }) {
+  async function factory(opts: { lang: 'en' | 'no'; liveEnabled: boolean; prepDismissed?: boolean }) {
     vi.clearAllMocks()
+    localStorage.clear()
+    if (opts.prepDismissed) {
+      localStorage.setItem('voicePrepDismissed.v1', 'true')
+    }
     fetchRealtimeVoiceStatusMock.mockReset()
     fetchRealtimeVoiceModelsMock.mockReset()
     fetchRealtimeVoiceModelsMock.mockResolvedValue([
@@ -32,11 +36,14 @@ describe('VoiceView.vue', () => {
       liveEnabled: opts.liveEnabled,
       voices: ['marin', 'cedar'],
       reasoningEfforts: ['low', 'medium', 'high'],
+      vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
       voice: 'cedar',
       reasoningEffort: 'medium',
+      vadEagerness: 'low',
     })
 
     const HomeStub = { template: '<div />' }
+    const ChatStub = { template: '<div />' }
 
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -47,6 +54,7 @@ describe('VoiceView.vue', () => {
       history: createMemoryHistory(),
       routes: [
         { path: '/', component: HomeStub },
+        { path: '/chat', name: 'chat', component: ChatStub },
         {
           path: '/voice',
           component: VoiceView as unknown as Component,
@@ -58,18 +66,30 @@ describe('VoiceView.vue', () => {
     await router.isReady()
 
     const stubs = {
-      RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
+      RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : to"><slot /></a>' },
       Button: {
+        props: ['asChild'],
         template: `
           <button type="button" @click="$emit('click')" class="__btn-portfolio">
             <slot />
           </button>
         `,
       },
+      Dialog: {
+        props: ['open'],
+        emits: ['update:open'],
+        template: '<div v-if="open" data-testid="voice-prep-dialog"><slot /></div>',
+      },
+      DialogContent: { template: '<div><slot /></div>' },
+      DialogHeader: { template: '<div><slot /></div>' },
+      DialogTitle: { template: '<div><slot /></div>' },
+      DialogDescription: { template: '<div><slot /></div>' },
+      DialogFooter: { template: '<div><slot /></div>' },
       Alert: { template: '<div class="__alert-portfolio"><slot /></div>' },
       AlertTitle: { template: '<div><slot /></div>' },
       AlertDescription: { template: '<div><slot /></div>' },
       MessageSquare: true,
+      Headphones: true,
       RealtimeVoicePanel: { template: '<div data-testid="live-panel">live panel</div>' },
     }
 
@@ -86,11 +106,12 @@ describe('VoiceView.vue', () => {
 
   beforeEach(async () => {
     document.body.innerHTML = ''
+    localStorage.clear()
     vi.clearAllMocks()
   })
 
   it('renders the live voice panel', async () => {
-    const { wrapper } = await factory({ lang: 'en', liveEnabled: true })
+    const { wrapper } = await factory({ lang: 'en', liveEnabled: true, prepDismissed: true })
 
     await flushPromises()
     expect(fetchRealtimeVoiceStatusMock).toHaveBeenCalledTimes(1)
@@ -98,12 +119,37 @@ describe('VoiceView.vue', () => {
     wrapper.unmount()
   })
 
-  it('renders Norwegian copy', async () => {
-    const { wrapper } = await factory({ lang: 'no', liveEnabled: false })
+  it('renders Norwegian copy and strengthened chat alternative', async () => {
+    const { wrapper } = await factory({ lang: 'no', liveEnabled: false, prepDismissed: true })
 
     await flushPromises()
     expect(wrapper.text()).toContain('Snakk med Kevin sin AI')
-    expect(wrapper.text()).toContain('Bruk tekstchat')
+    expect(wrapper.text()).toContain('Foretrekker du å skrive? Bruk tekstchat')
+    expect(wrapper.find('[data-testid="voice-chat-alternative"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('shows prep dialog on first visit and persists dismiss', async () => {
+    const { wrapper } = await factory({ lang: 'en', liveEnabled: true })
+
+    await flushPromises()
+    expect(wrapper.find('[data-testid="voice-prep-dialog"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Before you start')
+    expect(wrapper.text()).toContain('headset')
+
+    await wrapper.find('[data-testid="voice-prep-dismiss"]').trigger('click')
+    await flushPromises()
+
+    expect(localStorage.getItem('voicePrepDismissed.v1')).toBe('true')
+    expect(wrapper.find('[data-testid="voice-prep-dialog"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('does not show prep dialog when already dismissed', async () => {
+    const { wrapper } = await factory({ lang: 'en', liveEnabled: true, prepDismissed: true })
+
+    await flushPromises()
+    expect(wrapper.find('[data-testid="voice-prep-dialog"]').exists()).toBe(false)
     wrapper.unmount()
   })
 })

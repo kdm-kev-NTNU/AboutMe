@@ -15,6 +15,9 @@ public class RealtimeProperties {
 
   public static final List<String> ALLOWED_REASONING_EFFORTS = List.of("low", "medium", "high");
 
+  /** OpenAI semantic_vad eagerness: how quickly the model treats the user turn as finished. */
+  public static final List<String> ALLOWED_VAD_EAGERNESS = List.of("low", "medium", "high", "auto");
+
   /** When false, voice endpoints return 503 and the SPA should hide the feature. */
   private boolean enabled = false;
 
@@ -24,6 +27,11 @@ public class RealtimeProperties {
 
   /** Reasoning effort for GPT-Realtime-2. Public choices are intentionally curated. */
   private String reasoningEffort = "low";
+
+  /**
+   * Default semantic VAD eagerness ({@code low} waits longest before ending the user turn).
+   */
+  private String vadEagerness = "low";
 
   private int maxResponseOutputTokens = 1024;
 
@@ -69,12 +77,24 @@ public class RealtimeProperties {
     this.reasoningEffort = reasoningEffort;
   }
 
+  public String getVadEagerness() {
+    return vadEagerness;
+  }
+
+  public void setVadEagerness(String vadEagerness) {
+    this.vadEagerness = vadEagerness;
+  }
+
   public String defaultVoice() {
     return normalizeAllowed(voice, ALLOWED_VOICES, "marin");
   }
 
   public String defaultReasoningEffort() {
     return normalizeAllowed(reasoningEffort, ALLOWED_REASONING_EFFORTS, "low");
+  }
+
+  public String defaultVadEagerness() {
+    return normalizeAllowed(vadEagerness, ALLOWED_VAD_EAGERNESS, "low");
   }
 
   public String resolveVoice(String requestedVoice) {
@@ -85,12 +105,20 @@ public class RealtimeProperties {
     return normalizeAllowed(requestedReasoningEffort, ALLOWED_REASONING_EFFORTS, defaultReasoningEffort());
   }
 
+  public String resolveVadEagerness(String requestedVadEagerness) {
+    return normalizeAllowed(requestedVadEagerness, ALLOWED_VAD_EAGERNESS, defaultVadEagerness());
+  }
+
   public boolean isAllowedVoice(String requestedVoice) {
     return isAllowed(requestedVoice, ALLOWED_VOICES);
   }
 
   public boolean isAllowedReasoningEffort(String requestedReasoningEffort) {
     return isAllowed(requestedReasoningEffort, ALLOWED_REASONING_EFFORTS);
+  }
+
+  public boolean isAllowedVadEagerness(String requestedVadEagerness) {
+    return isAllowed(requestedVadEagerness, ALLOWED_VAD_EAGERNESS);
   }
 
   private static String normalizeAllowed(String value, List<String> allowed, String fallback) {

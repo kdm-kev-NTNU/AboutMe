@@ -3,7 +3,7 @@ import { effectScope, ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import type { SpeechUiLang } from '@/lib/realtime-voice'
 
-const SESSION_MAX_MS = 180_000
+const SESSION_MAX_MS = 300_000
 
 const exchangeRealtimeSdpMock = vi.hoisted(() => vi.fn())
 const lookupRealtimeInfoMock = vi.hoisted(() => vi.fn())
@@ -275,7 +275,11 @@ describe('useRealtimeVoice', () => {
     const { useRealtimeVoice } = await import('../useRealtimeVoice')
 
     const lang = ref<SpeechUiLang>('no')
-    const options = ref({ voice: 'cedar' as const, reasoningEffort: 'high' as const })
+    const options = ref({
+      voice: 'cedar' as const,
+      reasoningEffort: 'high' as const,
+      vadEagerness: 'medium' as const,
+    })
     const scope = effectScope()
     let api!: ReturnType<typeof useRealtimeVoice>
     scope.run(() => {
@@ -293,6 +297,7 @@ describe('useRealtimeVoice', () => {
       {
         voice: 'cedar',
         reasoningEffort: 'high',
+        vadEagerness: 'medium',
       },
       undefined,
     )
@@ -778,7 +783,7 @@ describe('useRealtimeVoice', () => {
     await connectPromise
 
     expect(api.connectionState.value).toBe('idle')
-    expect(api.sessionNotice.value.toLowerCase()).toContain('3')
+    expect(api.sessionNotice.value.toLowerCase()).toContain('5')
 
     scope.stop()
   })

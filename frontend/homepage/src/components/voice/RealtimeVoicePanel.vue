@@ -7,24 +7,32 @@ import AiStatusDialog from '@/components/AiStatusDialog.vue'
 import AiTransparencyNotice from '@/components/AiTransparencyNotice.vue'
 import { useVoiceModelStore } from '@/stores/voice-model'
 import { useRealtimeVoice } from '@/composables/useRealtimeVoice'
-import type { RealtimeReasoningEffort, RealtimeVoiceChoice } from '@/lib/realtime-voice'
+import type {
+  RealtimeReasoningEffort,
+  RealtimeVadEagerness,
+  RealtimeVoiceChoice,
+} from '@/lib/realtime-voice'
 
 const props = defineProps<{
   language: 'en' | 'no'
   available: boolean | null
   voiceOptions: RealtimeVoiceChoice[]
   reasoningOptions: RealtimeReasoningEffort[]
+  vadEagernessOptions: RealtimeVadEagerness[]
   defaultVoice: RealtimeVoiceChoice
   defaultReasoningEffort: RealtimeReasoningEffort
+  defaultVadEagerness: RealtimeVadEagerness
 }>()
 
 const voiceModelStore = useVoiceModelStore()
 const selectedVoice = ref<RealtimeVoiceChoice>(props.defaultVoice)
 const selectedReasoningEffort = ref<RealtimeReasoningEffort>(props.defaultReasoningEffort)
+const selectedVadEagerness = ref<RealtimeVadEagerness>(props.defaultVadEagerness)
 const aiErrorDialogOpen = ref(false)
 const selectedRealtimeOptions = computed(() => ({
   voice: selectedVoice.value,
   reasoningEffort: selectedReasoningEffort.value,
+  vadEagerness: selectedVadEagerness.value,
 }))
 const selectedVoiceModel = computed(() => voiceModelStore.selectedModel)
 
@@ -55,12 +63,20 @@ const copy = computed(() => {
     modelLabel: en ? 'Provider/model' : 'Leverandør/modell',
     voiceLabel: en ? 'Voice' : 'Stemme',
     reasoningLabel: en ? 'Reasoning' : 'Resonnering',
+    vadLabel: en ? 'Speaking patience (VAD)' : 'Snakkepause (VAD)',
+    settingsHelpTitle: en ? 'Reasoning vs speaking patience' : 'Resonnering vs snakkepause',
+    settingsHelpReasoning: en
+      ? 'Reasoning controls how thoroughly the AI thinks before answering (fast → thorough). It does not change when your turn ends.'
+      : 'Resonnering styrer hvor grundig AI-en tenker før den svarer (rask → grundig). Den endrer ikke når turen din avsluttes.',
+    settingsHelpVad: en
+      ? 'Speaking patience (semantic VAD eagerness) controls how quickly the AI decides you finished talking. Low waits longest (~8s); high responds sooner (~2s); auto is the model default (~4s).'
+      : 'Snakkepause (semantic VAD eagerness) styrer hvor raskt AI-en bestemmer at du er ferdig med å snakke. Low venter lengst (~8s); high svarer tidligere (~2s); auto er modellens standard (~4s).',
     you: en ? 'You (transcript)' : 'Du (transkripsjon)',
     assistant: en ? 'AI assistant (transcript)' : 'AI-assistent (transkripsjon)',
-    warningTitle: en ? 'Experimental mode' : 'Eksperimentell modus',
+    warningTitle: en ? 'Tips for clearer voice' : 'Tips for klarere stemme',
     warningBody: en
-      ? 'Live WebRTC voice is faster, but can be unstable. Sessions can drop and each session ends after ~3 minutes.'
-      : 'Live WebRTC-stemme er raskere, men kan være ustabil. Økter kan falle ut og avsluttes etter ca. 3 minutter.',
+      ? 'Use a headset in a quiet place when you can. Raise speaking patience if you get cut off mid-sentence. Each live session ends after about 5 minutes — reconnect to continue. Prefer typing? Use text chat instead.'
+      : 'Bruk headset på et stille sted når du kan. Øk snakkepause hvis du blir avbrutt midt i setningen. Hver live-økt avsluttes etter ca. 5 minutter — koble til på nytt for å fortsette. Foretrekker du å skrive? Bruk tekstchat.',
   }
 })
 
@@ -70,6 +86,21 @@ const reasoningLabels = computed<Record<RealtimeReasoningEffort, string>>(() => 
   medium: props.language === 'en' ? 'Balanced' : 'Balansert',
   high: props.language === 'en' ? 'Thorough' : 'Grundig',
 }))
+const vadLabels = computed<Record<RealtimeVadEagerness, string>>(() =>
+  props.language === 'en'
+    ? {
+        low: 'Patient (~8s)',
+        medium: 'Balanced (~4s)',
+        high: 'Quick (~2s)',
+        auto: 'Auto (default)',
+      }
+    : {
+        low: 'Tålmodig (~8s)',
+        medium: 'Balansert (~4s)',
+        high: 'Rask (~2s)',
+        auto: 'Auto (standard)',
+      },
+)
 
 const sessionControlsDisabled = computed(
   () => connectionState.value === 'connecting' || connectionState.value === 'connected',
@@ -87,6 +118,13 @@ const errorDialogCopy = computed(() => ({
 watch(errorMessage, (message) => {
   aiErrorDialogOpen.value = message.trim() !== ''
 })
+
+watch(
+  () => props.defaultVadEagerness,
+  (v) => {
+    selectedVadEagerness.value = v
+  },
+)
 
 function setVoiceModelFromEvent(event: Event) {
   const target = event.target
@@ -180,6 +218,27 @@ function setVoiceModelFromEvent(event: Event) {
             <option v-for="effort in reasoningOptions" :key="effort" :value="effort">{{ reasoningLabels[effort] }}</option>
           </select>
         </label>
+      </div>
+
+      <label class="w-full max-w-md text-left text-xs font-semibold uppercase text-slate-600">
+        {{ copy.vadLabel }}
+        <select
+          v-model="selectedVadEagerness"
+          data-testid="vad-eagerness-select"
+          class="mt-1 h-10 w-full rounded-lg border border-blue-100 bg-white/90 px-3 text-sm font-medium normal-case text-slate-800 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="sessionControlsDisabled"
+        >
+          <option v-for="level in vadEagernessOptions" :key="level" :value="level">{{ vadLabels[level] }}</option>
+        </select>
+      </label>
+
+      <div
+        data-testid="settings-help"
+        class="w-full max-w-md rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-left text-sm text-slate-700"
+      >
+        <p class="font-semibold text-slate-800">{{ copy.settingsHelpTitle }}</p>
+        <p class="mt-2 leading-relaxed">{{ copy.settingsHelpReasoning }}</p>
+        <p class="mt-2 leading-relaxed">{{ copy.settingsHelpVad }}</p>
       </div>
 
       <div class="flex flex-wrap justify-center gap-3">
