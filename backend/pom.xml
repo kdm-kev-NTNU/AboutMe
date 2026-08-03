@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.6</version>
+		<version>4.1.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.kevinmazali</groupId>
@@ -28,8 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
-		<spring-ai.version>2.0.0-M8</spring-ai.version>
-		<opennlp.version>2.5.9</opennlp.version>
+		<spring-ai.version>2.0.0</spring-ai.version>
+		<opennlp.version>2.5.11</opennlp.version>
 		<testcontainers.version>2.0.5</testcontainers.version>
 	</properties>
 	
@@ -191,7 +191,7 @@
 		<dependency>
 			<groupId>io.swagger.core.v3</groupId>
 			<artifactId>swagger-annotations-jakarta</artifactId>
-			<version>2.2.50</version>
+			<version>2.2.52</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -212,13 +212,13 @@
 		<dependency>
 			<groupId>com.posthog</groupId>
 			<artifactId>posthog-server</artifactId>
-			<version>2.6.1</version>
+			<version>2.9.0</version>
 		</dependency>
 		<!-- Local cross-encoder reranking (ONNX Runtime + Hugging Face tokenizers) -->
 		<dependency>
 			<groupId>com.microsoft.onnxruntime</groupId>
 			<artifactId>onnxruntime</artifactId>
-			<version>1.26.0</version>
+			<version>1.28.0</version>
 		</dependency>
 		<dependency>
 			<groupId>ai.djl.huggingface</groupId>
@@ -245,17 +245,17 @@
 			<dependency>
 				<groupId>io.swagger.core.v3</groupId>
 				<artifactId>swagger-annotations-jakarta</artifactId>
-				<version>2.2.50</version>
+				<version>2.2.52</version>
 			</dependency>
 			<dependency>
 				<groupId>io.swagger.core.v3</groupId>
 				<artifactId>swagger-models-jakarta</artifactId>
-				<version>2.2.50</version>
+				<version>2.2.52</version>
 			</dependency>
 			<dependency>
 				<groupId>io.swagger.core.v3</groupId>
 				<artifactId>swagger-core-jakarta</artifactId>
-				<version>2.2.50</version>
+				<version>2.2.52</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -302,7 +302,7 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.8.14</version>
+				<version>0.8.15</version>
 				<configuration>
 					<!-- Focus gate on executable code; models and Spring wiring are thin or DTO-like. -->
 					<excludes>
