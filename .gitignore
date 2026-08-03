@@ -12,6 +12,9 @@
 docs/
 frontend/homepage/docs/
 
+# Interview question bank (local practice material)
+interview-questions/
+
 # Git hooks (local setup)
 lefthook.yml
 
