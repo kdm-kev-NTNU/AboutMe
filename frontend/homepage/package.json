@@ -76,7 +76,7 @@
     "uuid": "^14.0.0",
     "qs": "^6.15.2",
     "js-cookie": "^3.0.7",
-    "systeminformation": "^5.31.6",
+    "systeminformation": "^5.33.1",
     "vite-plugin-inspect": "12.0.0-beta.1"
   }
 }
