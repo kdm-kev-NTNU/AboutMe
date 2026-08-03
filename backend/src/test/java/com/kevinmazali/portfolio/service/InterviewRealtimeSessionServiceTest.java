@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
+import com.kevinmazali.portfolio.config.InterviewProperties;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -44,6 +46,7 @@ class InterviewRealtimeSessionServiceTest {
   @Mock private InterviewSessionRepository sessionRepository;
 
   private RealtimeProperties realtimeProperties;
+  private InterviewProperties interviewProperties;
   private AiBudgetProperties budgetProperties;
   private InterviewRealtimeSessionService service;
 
@@ -58,6 +61,8 @@ class InterviewRealtimeSessionServiceTest {
     realtimeProperties.setReservationInputTokens(100);
     realtimeProperties.setReservationOutputTokens(200);
 
+    interviewProperties = new InterviewProperties();
+
     budgetProperties = new AiBudgetProperties();
     budgetProperties.setAnonIdentitySalt("test-salt");
     budgetProperties.setEnabled(false);
@@ -70,6 +75,7 @@ class InterviewRealtimeSessionServiceTest {
     service =
         new InterviewRealtimeSessionService(
             realtimeProperties,
+            interviewProperties,
             aiBudgetService,
             budgetProperties,
             aiCircuitBreaker,
@@ -98,6 +104,23 @@ class InterviewRealtimeSessionServiceTest {
   }
 
   @Test
+  void createInterviewCall_usesConfiguredTranscriptionModel() throws Exception {
+    stubActiveSession("sess1", "doc1");
+    when(interviewDocumentService.contextForSession("doc1")).thenReturn("Document context");
+    HttpResponse<String> response = mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(200);
+    when(response.body()).thenReturn("v=0");
+    ArgumentCaptor<java.net.http.HttpRequest> captor =
+        ArgumentCaptor.forClass(java.net.http.HttpRequest.class);
+    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+
+    service.createInterviewCall("sess1", "v=0", "en", null, null, null);
+
+    String raw = drainHttpBody(captor.getValue());
+    assertThat(raw).contains("\"model\":\"gpt-4o-transcribe\"");
+  }
+
+  @Test
   void createInterviewCall_rejectsWhenRealtimeDisabled() throws Exception {
     realtimeProperties.setEnabled(false);
 
@@ -113,6 +136,7 @@ class InterviewRealtimeSessionServiceTest {
     InterviewRealtimeSessionService svc =
         new InterviewRealtimeSessionService(
             realtimeProperties,
+            interviewProperties,
             aiBudgetService,
             budgetProperties,
             aiCircuitBreaker,
@@ -175,5 +199,41 @@ class InterviewRealtimeSessionServiceTest {
                     .voice("marin")
                     .startedAt(Instant.now())
                     .build()));
+  }
+
+  private static String drainHttpBody(java.net.http.HttpRequest request) throws Exception {
+    java.util.concurrent.Flow.Publisher<java.nio.ByteBuffer> publisher =
+        request.bodyPublisher().orElseThrow();
+    java.util.concurrent.CompletableFuture<java.io.ByteArrayOutputStream> done =
+        new java.util.concurrent.CompletableFuture<>();
+    publisher.subscribe(
+        new java.util.concurrent.Flow.Subscriber<>() {
+          private java.util.concurrent.Flow.Subscription subscription;
+          final java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+
+          @Override
+          public void onSubscribe(java.util.concurrent.Flow.Subscription subscription) {
+            this.subscription = subscription;
+            subscription.request(Long.MAX_VALUE);
+          }
+
+          @Override
+          public void onNext(java.nio.ByteBuffer item) {
+            byte[] chunk = new byte[item.remaining()];
+            item.get(chunk);
+            out.writeBytes(chunk);
+          }
+
+          @Override
+          public void onError(Throwable throwable) {
+            done.completeExceptionally(throwable);
+          }
+
+          @Override
+          public void onComplete() {
+            done.complete(out);
+          }
+        });
+    return done.get().toString(java.nio.charset.StandardCharsets.UTF_8);
   }
 }

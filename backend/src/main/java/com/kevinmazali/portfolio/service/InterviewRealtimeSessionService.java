@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
+import com.kevinmazali.portfolio.config.InterviewProperties;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
@@ -33,6 +34,7 @@ public class InterviewRealtimeSessionService {
   private static final String OPENAI_REALTIME_CALLS = "https://api.openai.com/v1/realtime/calls";
 
   private final RealtimeProperties realtimeProperties;
+  private final InterviewProperties interviewProperties;
   private final AiBudgetService aiBudgetService;
   private final AiBudgetProperties budgetProperties;
   private final AiCircuitBreaker aiCircuitBreaker;
@@ -49,6 +51,7 @@ public class InterviewRealtimeSessionService {
 
   public InterviewRealtimeSessionService(
       RealtimeProperties realtimeProperties,
+      InterviewProperties interviewProperties,
       AiBudgetService aiBudgetService,
       AiBudgetProperties budgetProperties,
       AiCircuitBreaker aiCircuitBreaker,
@@ -58,6 +61,7 @@ public class InterviewRealtimeSessionService {
       InterviewSessionRepository sessionRepository,
       @Value("${spring.ai.openai.api-key:}") String openAiApiKey) {
     this.realtimeProperties = realtimeProperties;
+    this.interviewProperties = interviewProperties;
     this.aiBudgetService = aiBudgetService;
     this.budgetProperties = budgetProperties;
     this.aiCircuitBreaker = aiCircuitBreaker;
@@ -219,7 +223,7 @@ public class InterviewRealtimeSessionService {
 
     ObjectNode input = objectMapper.createObjectNode();
     ObjectNode transcription = objectMapper.createObjectNode();
-    transcription.put("model", "whisper-1");
+    transcription.put("model", interviewProperties.resolvedTranscriptionModel());
     input.set("transcription", transcription);
 
     ObjectNode turnDetection = objectMapper.createObjectNode();

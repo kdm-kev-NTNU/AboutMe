@@ -75,8 +75,8 @@ const copy = computed(() => {
     assistant: en ? 'AI assistant (transcript)' : 'AI-assistent (transkripsjon)',
     warningTitle: en ? 'Tips for clearer voice' : 'Tips for klarere stemme',
     warningBody: en
-      ? 'Use a headset in a quiet place when you can. Raise speaking patience if you get cut off mid-sentence. Each live session ends after about 5 minutes — reconnect to continue. Prefer typing? Use text chat instead.'
-      : 'Bruk headset på et stille sted når du kan. Øk snakkepause hvis du blir avbrutt midt i setningen. Hver live-økt avsluttes etter ca. 5 minutter — koble til på nytt for å fortsette. Foretrekker du å skrive? Bruk tekstchat.',
+      ? `Use a headset in a quiet place when you can. Raise speaking patience if you get cut off mid-sentence. Each live session ends after about ${Math.round(maxSessionMs / 60_000)} minutes — reconnect to continue. Prefer typing? Use text chat instead.`
+      : `Bruk headset på et stille sted når du kan. Øk snakkepause hvis du blir avbrutt midt i setningen. Hver live-økt avsluttes etter ca. ${Math.round(maxSessionMs / 60_000)} minutter — koble til på nytt for å fortsette. Foretrekker du å skrive? Bruk tekstchat.`,
   }
 })
 

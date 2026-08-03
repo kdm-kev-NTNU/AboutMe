@@ -139,6 +139,7 @@ class InterviewSessionServiceTest {
                     .text("Answer")
                     .sequenceNo(0)
                     .build()));
+    when(transcriptRepository.findBySessionId("sess1")).thenReturn(Optional.empty());
     when(transcriptCleanerService.structureRawTranscript(any())).thenReturn("raw transcript");
     when(transcriptRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     when(sessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -152,6 +153,98 @@ class InterviewSessionServiceTest {
     verify(sessionRepository).save(sessionCaptor.capture());
     assertThat(sessionCaptor.getValue().getStatus()).isEqualTo(InterviewSessionService.STATUS_FINALIZED);
     assertThat(sessionCaptor.getValue().getEndedAt()).isNotNull();
+  }
+
+  @Test
+  void finalizeSession_upsertsExistingTranscriptAndResetsCleanState() {
+    stubActiveSession("sess1");
+    when(turnRepository.findBySessionIdOrderBySequenceNoAsc("sess1"))
+        .thenReturn(
+            List.of(
+                InterviewTranscriptTurnEntity.builder()
+                    .sessionId("sess1")
+                    .role("user")
+                    .text("More")
+                    .sequenceNo(1)
+                    .build()));
+    InterviewTranscriptEntity existing =
+        InterviewTranscriptEntity.builder()
+            .id("tr-existing")
+            .sessionId("sess1")
+            .rawText("old")
+            .cleanedText("old cleaned")
+            .cleanStatus(InterviewSessionService.CLEAN_CLEANED)
+            .ingestedDocumentId("ing1")
+            .cleanedAt(Instant.now())
+            .createdAt(Instant.now())
+            .build();
+    when(transcriptRepository.findBySessionId("sess1")).thenReturn(Optional.of(existing));
+    when(transcriptCleanerService.structureRawTranscript(any())).thenReturn("updated raw");
+    when(transcriptRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    when(sessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    var response = service.finalizeSession("sess1");
+
+    assertThat(response.id()).isEqualTo("tr-existing");
+    assertThat(response.rawText()).isEqualTo("updated raw");
+    assertThat(response.cleanStatus()).isEqualTo(InterviewSessionService.CLEAN_PENDING);
+    assertThat(response.cleanedText()).isNull();
+    assertThat(response.ingestedDocumentId()).isNull();
+    assertThat(existing.getCleanedAt()).isNull();
+  }
+
+  @Test
+  void reopenSession_setsActiveAndClearsEndedAt() {
+    InterviewSessionEntity session =
+        InterviewSessionEntity.builder()
+            .id("sess1")
+            .documentId("doc1")
+            .language("en")
+            .status(InterviewSessionService.STATUS_FINALIZED)
+            .startedAt(Instant.now())
+            .endedAt(Instant.now())
+            .build();
+    when(sessionRepository.findById("sess1")).thenReturn(Optional.of(session));
+    when(sessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    when(turnRepository.findBySessionIdOrderBySequenceNoAsc("sess1")).thenReturn(List.of());
+    when(transcriptRepository.findBySessionId("sess1")).thenReturn(Optional.empty());
+
+    InterviewSessionResponse response = service.reopenSession("sess1");
+
+    assertThat(response.status()).isEqualTo(InterviewSessionService.STATUS_ACTIVE);
+    assertThat(response.endedAt()).isNull();
+    assertThat(session.getStatus()).isEqualTo(InterviewSessionService.STATUS_ACTIVE);
+    assertThat(session.getEndedAt()).isNull();
+  }
+
+  @Test
+  void reopenSession_rejectsActiveSession() {
+    stubActiveSession("sess1");
+
+    assertThatThrownBy(() -> service.reopenSession("sess1"))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("Only finalized");
+  }
+
+  @Test
+  void appendTurns_rejectsFinalizedSession() {
+    when(sessionRepository.findById("sess1"))
+        .thenReturn(
+            Optional.of(
+                InterviewSessionEntity.builder()
+                    .id("sess1")
+                    .documentId("doc1")
+                    .language("en")
+                    .status(InterviewSessionService.STATUS_FINALIZED)
+                    .startedAt(Instant.now())
+                    .build()));
+
+    assertThatThrownBy(
+            () ->
+                service.appendTurns(
+                    "sess1", new InterviewTurnBatchRequest(List.of(new InterviewTurnDto("user", "hi", 0)))))
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("not active");
   }
 
   @Test

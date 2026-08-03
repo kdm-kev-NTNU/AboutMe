@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
+import com.kevinmazali.portfolio.config.InterviewProperties;
 import com.kevinmazali.portfolio.model.interview.InterviewTurnDto;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,8 @@ class InterviewTranscriptCleanerServiceTest {
             mock(ObjectProvider.class),
             mock(AiBudgetService.class),
             new AiBudgetProperties(),
-            mock(AiCircuitBreaker.class));
+            mock(AiCircuitBreaker.class),
+            new InterviewProperties());
 
     String raw =
         service.structureRawTranscript(
@@ -46,7 +48,8 @@ class InterviewTranscriptCleanerServiceTest {
             openAiProvider,
             mock(AiBudgetService.class),
             new AiBudgetProperties(),
-            mock(AiCircuitBreaker.class));
+            mock(AiCircuitBreaker.class),
+            new InterviewProperties());
 
     String cleaned = service.cleanForIngest("Kevin studies at NTNU.\n\nPage 1 of 1\n", "en");
     assertThat(cleaned).contains("NTNU");

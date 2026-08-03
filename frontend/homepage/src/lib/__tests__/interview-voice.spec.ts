@@ -126,6 +126,43 @@ describe('interview-voice', () => {
     await expect(finalizeInterviewSession('sess1')).resolves.toEqual(transcript)
   })
 
+  it('listInterviewSessions returns sessions array', async () => {
+    const sessions = [
+      {
+        id: 'sess1',
+        documentId: 'doc1',
+        language: 'no',
+        status: 'FINALIZED',
+        startedAt: '2026-01-01T00:00:00Z',
+      },
+    ]
+    mockCustomFetch.mockResolvedValue({ status: 200, data: sessions })
+    const { listInterviewSessions } = await import('../interview-voice')
+    await expect(listInterviewSessions()).resolves.toEqual(sessions)
+    expect(mockCustomFetch).toHaveBeenCalledWith('/admin/tools/interview/sessions', { method: 'GET' })
+  })
+
+  it('getInterviewSession and reopenInterviewSession hit session paths', async () => {
+    const session = {
+      id: 'sess1',
+      documentId: 'doc1',
+      language: 'no',
+      status: 'ACTIVE',
+      startedAt: '2026-01-01T00:00:00Z',
+      turns: [{ role: 'user', text: 'Hi', sequenceNo: 0 }],
+    }
+    mockCustomFetch.mockResolvedValue({ status: 200, data: session })
+    const { getInterviewSession, reopenInterviewSession } = await import('../interview-voice')
+
+    await expect(getInterviewSession('sess1')).resolves.toEqual(session)
+    expect(mockCustomFetch).toHaveBeenCalledWith('/admin/tools/interview/sessions/sess1', { method: 'GET' })
+
+    await expect(reopenInterviewSession('sess1')).resolves.toEqual(session)
+    expect(mockCustomFetch).toHaveBeenCalledWith('/admin/tools/interview/sessions/sess1/reopen', {
+      method: 'POST',
+    })
+  })
+
   it('cleanInterviewTranscript returns cleaned transcript', async () => {
     const transcript = {
       id: 'tr1',

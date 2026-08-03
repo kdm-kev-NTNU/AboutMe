@@ -6,6 +6,7 @@ import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.config.AskRateLimitProperties;
 import com.kevinmazali.portfolio.config.DatasetGenerateRateLimitProperties;
 import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
+import com.kevinmazali.portfolio.config.InterviewProperties;
 import com.kevinmazali.portfolio.config.PostHogProperties;
 import com.kevinmazali.portfolio.config.RealtimeLookupRateLimitProperties;
 import com.kevinmazali.portfolio.config.RealtimeProperties;
@@ -30,6 +31,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     AskRateLimitProperties.class,
     ExperimentRunRateLimitProperties.class,
     DatasetGenerateRateLimitProperties.class,
+    InterviewProperties.class,
     PostHogProperties.class,
     RealtimeProperties.class,
     RealtimeRateLimitProperties.class,

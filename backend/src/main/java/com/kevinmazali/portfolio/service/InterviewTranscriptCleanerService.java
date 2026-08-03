@@ -1,6 +1,7 @@
 package com.kevinmazali.portfolio.service;
 
 import com.kevinmazali.portfolio.config.AiBudgetProperties;
+import com.kevinmazali.portfolio.config.InterviewProperties;
 import com.kevinmazali.portfolio.model.SanitizeResult;
 import com.kevinmazali.portfolio.model.interview.InterviewTurnDto;
 import com.kevinmazali.portfolio.util.AiRequestContext;
@@ -30,6 +31,7 @@ public class InterviewTranscriptCleanerService {
   private final AiBudgetService aiBudgetService;
   private final AiBudgetProperties budgetProperties;
   private final AiCircuitBreaker aiCircuitBreaker;
+  private final InterviewProperties interviewProperties;
 
   private volatile String cleanPromptEn;
   private volatile String cleanPromptNo;
@@ -40,13 +42,15 @@ public class InterviewTranscriptCleanerService {
       ObjectProvider<OpenAiChatModel> openAiChatModel,
       AiBudgetService aiBudgetService,
       AiBudgetProperties budgetProperties,
-      AiCircuitBreaker aiCircuitBreaker) {
+      AiCircuitBreaker aiCircuitBreaker,
+      InterviewProperties interviewProperties) {
     this.noiseCleaner = noiseCleaner;
     this.piiSanitizerProvider = piiSanitizerProvider;
     this.openAiChatModel = openAiChatModel;
     this.aiBudgetService = aiBudgetService;
     this.budgetProperties = budgetProperties;
     this.aiCircuitBreaker = aiCircuitBreaker;
+    this.interviewProperties = interviewProperties;
   }
 
   public String structureRawTranscript(List<InterviewTurnDto> turns) {
@@ -92,8 +96,10 @@ public class InterviewTranscriptCleanerService {
     try {
       aiCircuitBreaker.assertClosed();
       aiBudgetService.assertWithinBudget(budgetUserId, anonymous);
+      String cleanModel = interviewProperties.resolvedCleanModel();
+      int maxTokens = interviewProperties.resolvedCleanMaxTokens();
       OpenAiChatOptions options =
-          OpenAiChatOptions.builder().model("gpt-4o-mini").maxTokens(2000).temperature(0.2).build();
+          OpenAiChatOptions.builder().model(cleanModel).maxTokens(maxTokens).temperature(0.2).build();
       ChatResponse response = model.call(new Prompt(promptText, options));
       String output =
           response.getResult() != null && response.getResult().getOutput() != null
@@ -104,9 +110,9 @@ public class InterviewTranscriptCleanerService {
       }
       aiBudgetService.recordUsage(
           budgetUserId,
-          "gpt-4o-mini",
+          cleanModel,
           500,
-          1500,
+          Math.min(1500, maxTokens),
           anonymous,
           null,
           "interview_transcript_clean");

@@ -106,6 +106,12 @@ public class InterviewController {
     return ResponseEntity.ok(interviewSessionService.finalizeSession(id));
   }
 
+  @Operation(summary = "Reopen a finalized interview session for more voice turns")
+  @PostMapping("/sessions/{id}/reopen")
+  public ResponseEntity<InterviewSessionResponse> reopenSession(@PathVariable String id) {
+    return ResponseEntity.ok(interviewSessionService.reopenSession(id));
+  }
+
   @Operation(summary = "Create admin interview Realtime WebRTC session")
   @PostMapping(value = "/sessions/{id}/realtime/session", consumes = {"application/sdp", "text/plain"})
   public ResponseEntity<?> createRealtimeSession(
