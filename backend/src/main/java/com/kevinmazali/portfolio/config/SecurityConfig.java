@@ -25,7 +25,6 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -62,12 +61,11 @@ public class SecurityConfig {
         if (disableCsrfForTests) {
             http.csrf(AbstractHttpConfigurer::disable);
         } else {
-            CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-            csrfTokenRepository.setCookieName("XSRF-TOKEN");
-            csrfTokenRepository.setHeaderName("X-XSRF-TOKEN");
+            // spa(): CookieCsrfTokenRepository (XSRF-TOKEN / X-XSRF-TOKEN) + SpaCsrfTokenRequestHandler
+            // so the SPA can send the raw cookie value in the header (not the BREACH-masked form token).
             http.csrf(
                 csrf ->
-                    csrf.csrfTokenRepository(csrfTokenRepository)
+                    csrf.spa()
                         .ignoringRequestMatchers(
                             "/ask",
                             "/feedback",

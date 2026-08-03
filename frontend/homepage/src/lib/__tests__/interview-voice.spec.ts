@@ -34,11 +34,23 @@ describe('interview-voice', () => {
   })
 
   it('uploadInterviewDocument throws on non-200', async () => {
-    mockCustomFetch.mockResolvedValue({ status: 400, data: {} })
+    mockCustomFetch.mockResolvedValue({
+      status: 403,
+      data: { error: 'Access denied', code: 'FORBIDDEN' },
+    })
     const { uploadInterviewDocument } = await import('../interview-voice')
     const file = new File(['x'], 'cv.pdf')
 
-    await expect(uploadInterviewDocument(file)).rejects.toThrow('Upload failed (400)')
+    await expect(uploadInterviewDocument(file)).rejects.toThrow('Access denied')
+  })
+
+  it('createInterviewTextDocument throws structured 403 message', async () => {
+    mockCustomFetch.mockResolvedValue({
+      status: 403,
+      data: { error: 'Access denied', code: 'FORBIDDEN' },
+    })
+    const { createInterviewTextDocument } = await import('../interview-voice')
+    await expect(createInterviewTextDocument('hello')).rejects.toThrow('Access denied')
   })
 
   it('createInterviewTextDocument posts JSON body', async () => {

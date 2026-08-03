@@ -17,6 +17,31 @@ export const useAuthStore = defineStore('auth', {
     isAdmin: (state) => state.role === 'ADMIN',
   },
   actions: {
+    clearLocal() {
+      this.username = null
+      this.role = null
+      sessionStorage.removeItem('auth')
+    },
+    /**
+     * Validates the httpOnly session via GET /auth/me (also primes XSRF-TOKEN for admin mutations)
+     * and refreshes client role from the server. Returns true only for an ADMIN session.
+     */
+    async ensureAdminSession(): Promise<boolean> {
+      try {
+        const r = await authMe()
+        if (r.status !== 200) {
+          this.clearLocal()
+          return false
+        }
+        this.username = r.data.username
+        this.role = r.data.role as 'USER' | 'ADMIN'
+        sessionStorage.setItem('auth', JSON.stringify({ username: this.username, role: this.role }))
+        return this.role === 'ADMIN'
+      } catch {
+        this.clearLocal()
+        return false
+      }
+    },
     async login(username: string, password: string) {
       const r = await authLogin({ username, password })
       if (r.status !== 200) {
@@ -29,7 +54,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         await authMe()
       } catch {
-        // Session cookie is set; CSRF priming is best-effort
+        // Session cookie is set; CSRF priming is best-effort until the admin route guard runs.
       }
     },
     async logout() {
@@ -38,9 +63,7 @@ export const useAuthStore = defineStore('auth', {
       } catch {
         // Clear local state even if the network call fails
       }
-      this.username = null
-      this.role = null
-      sessionStorage.removeItem('auth')
+      this.clearLocal()
     },
     /** Hydrates Pinia from sessionStorage on hard refresh (router guard calls this before admin routes). */
     restore() {
