@@ -25,7 +25,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
         with:
           java-version: '21'
@@ -65,7 +65,7 @@ jobs:
       run:
         working-directory: frontend/homepage
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: '22.22.2'
@@ -111,7 +111,7 @@ jobs:
       run:
         working-directory: frontend/homepage
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: '22.22.2'
@@ -147,7 +147,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout coverage script
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             .github/scripts/build-coverage-comment.py
