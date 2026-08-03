@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
 import type { RealtimeVoiceModelOption, RealtimeVoiceSessionOptions, SpeechUiLang } from '@/lib/realtime-voice'
+import { INTERVIEW_REALTIME_SESSION_MAX_MS } from '@/lib/realtime-voice'
 import { useRealtimeVoice } from '@/composables/useRealtimeVoice'
 import { appendInterviewTurns, exchangeInterviewRealtimeSdp, type InterviewTurn } from '@/lib/interview-voice'
 
@@ -48,6 +49,7 @@ export function useInterviewVoice(
 
   const voice = useRealtimeVoice(language, sessionOptions, selectedModel, {
     onTurnCommitted,
+    maxSessionMs: INTERVIEW_REALTIME_SESSION_MAX_MS,
     exchangeSdp: (offerSdp, lang, opts, modelId) => {
       const sid = sessionId.value
       if (!sid) {
@@ -80,11 +82,31 @@ export function useInterviewVoice(
     }
   }
 
+  function hydrateTurns(turns: InterviewTurn[]) {
+    if (saveTimer !== null) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+    pendingTurns.value = []
+    const normalized = turns
+      .filter((t) => t.text?.trim())
+      .map((t) => ({
+        role: (t.role === 'interviewer' ? 'interviewer' : 'user') as 'user' | 'interviewer',
+        text: t.text.trim(),
+        sequenceNo: typeof t.sequenceNo === 'number' ? t.sequenceNo : 0,
+      }))
+      .sort((a, b) => a.sequenceNo - b.sequenceNo)
+    committedTurns.value = normalized
+    sequenceCounter =
+      normalized.reduce((max, t) => Math.max(max, t.sequenceNo), -1) + 1
+  }
+
   return {
     ...voice,
     committedTurns,
     disconnectAndFlush,
     flushTurns,
     resetTurns,
+    hydrateTurns,
   }
 }

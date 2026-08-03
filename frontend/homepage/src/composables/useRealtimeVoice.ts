@@ -61,6 +61,8 @@ export type UseRealtimeVoiceOptions = {
     modelId?: string,
   ) => Promise<{ ok: true; answerSdp: string } | RealtimeSdpFailure>
   onTurnCommitted?: (role: RealtimeTurnRole, text: string) => void
+  /** Client-enforced live session cap; defaults to {@link REALTIME_SESSION_MAX_MS}. */
+  maxSessionMs?: number
 }
 
 /** Wait until ICE candidates are gathered (or timeout) so the SDP posted to the server includes candidates. */
@@ -156,6 +158,7 @@ export function useRealtimeVoice(
   selectedModel?: Readonly<Ref<RealtimeVoiceModelOption | undefined>>,
   voiceOptions?: UseRealtimeVoiceOptions,
 ) {
+  const maxSessionMs = voiceOptions?.maxSessionMs ?? REALTIME_SESSION_MAX_MS
   const connectionState = ref<RealtimeConnectionState>('idle')
   const errorMessage = ref('')
   /** Non-error notice (e.g. session time limit). */
@@ -506,7 +509,7 @@ export function useRealtimeVoice(
 
       sessionTimer = setTimeout(() => {
         disconnect('timeout')
-      }, REALTIME_SESSION_MAX_MS)
+      }, maxSessionMs)
     } catch (e) {
       captureClientException(e)
       teardownMedia()
@@ -566,10 +569,11 @@ export function useRealtimeVoice(
     teardownMedia()
     connectionState.value = 'idle'
     if (reason === 'timeout') {
+      const minutes = Math.max(1, Math.round(maxSessionMs / 60_000))
       sessionNotice.value =
         language.value === 'no'
-          ? 'Tidsbegrensning nådd (5 min). Start på nytt om du vil fortsette.'
-          : 'Time limit reached (5 minutes). Connect again to continue.'
+          ? `Tidsbegrensning nådd (${minutes} min). Start på nytt om du vil fortsette.`
+          : `Time limit reached (${minutes} minutes). Connect again to continue.`
     } else {
       sessionNotice.value = ''
     }
@@ -593,6 +597,6 @@ export function useRealtimeVoice(
     connect,
     disconnect: () => disconnect('user'),
     stopResponse,
-    maxSessionMs: REALTIME_SESSION_MAX_MS,
+    maxSessionMs,
   }
 }

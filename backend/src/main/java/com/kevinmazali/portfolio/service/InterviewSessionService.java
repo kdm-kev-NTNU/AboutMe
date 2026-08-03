@@ -79,7 +79,7 @@ public class InterviewSessionService {
   }
 
   public InterviewSessionResponse getSession(String sessionId) {
-    InterviewSessionEntity session = requireActiveSession(sessionId);
+    InterviewSessionEntity session = requireExistingSession(sessionId);
     List<InterviewTurnDto> turns = loadTurns(sessionId);
     InterviewTranscriptEntity transcript = transcriptRepository.findBySessionId(sessionId).orElse(null);
     return toResponse(session, turns, transcript);
@@ -87,7 +87,7 @@ public class InterviewSessionService {
 
   @Transactional
   public void appendTurns(String sessionId, InterviewTurnBatchRequest request) {
-    requireActiveSession(sessionId);
+    requireLiveSession(sessionId);
     if (request == null || request.turns() == null || request.turns().isEmpty()) {
       return;
     }
@@ -117,23 +117,46 @@ public class InterviewSessionService {
 
   @Transactional
   public InterviewTranscriptResponse finalizeSession(String sessionId) {
-    InterviewSessionEntity session = requireActiveSession(sessionId);
+    InterviewSessionEntity session = requireExistingSession(sessionId);
+    if (!STATUS_ACTIVE.equals(session.getStatus()) && !STATUS_FINALIZED.equals(session.getStatus())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session cannot be finalized");
+    }
     List<InterviewTurnDto> turns = loadTurns(sessionId);
     String raw = transcriptCleanerService.structureRawTranscript(turns);
-    String transcriptId = UUID.randomUUID().toString().replace("-", "");
     InterviewTranscriptEntity transcript =
-        InterviewTranscriptEntity.builder()
-            .id(transcriptId)
-            .sessionId(sessionId)
-            .rawText(raw)
-            .cleanStatus(CLEAN_PENDING)
-            .createdAt(Instant.now())
-            .build();
+        transcriptRepository
+            .findBySessionId(sessionId)
+            .orElseGet(
+                () ->
+                    InterviewTranscriptEntity.builder()
+                        .id(UUID.randomUUID().toString().replace("-", ""))
+                        .sessionId(sessionId)
+                        .createdAt(Instant.now())
+                        .build());
+    transcript.setRawText(raw);
+    transcript.setCleanStatus(CLEAN_PENDING);
+    transcript.setCleanedText(null);
+    transcript.setCleanedAt(null);
+    transcript.setIngestedDocumentId(null);
     transcriptRepository.save(transcript);
     session.setStatus(STATUS_FINALIZED);
     session.setEndedAt(Instant.now());
     sessionRepository.save(session);
     return toTranscriptResponse(transcript);
+  }
+
+  @Transactional
+  public InterviewSessionResponse reopenSession(String sessionId) {
+    InterviewSessionEntity session = requireExistingSession(sessionId);
+    if (!STATUS_FINALIZED.equals(session.getStatus())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only finalized sessions can be reopened");
+    }
+    session.setStatus(STATUS_ACTIVE);
+    session.setEndedAt(null);
+    sessionRepository.save(session);
+    List<InterviewTurnDto> turns = loadTurns(sessionId);
+    InterviewTranscriptEntity transcript = transcriptRepository.findBySessionId(sessionId).orElse(null);
+    return toResponse(session, turns, transcript);
   }
 
   @Transactional
@@ -201,7 +224,10 @@ public class InterviewSessionService {
     sessionRepository.save(session);
   }
 
-  InterviewSessionEntity requireActiveSession(String sessionId) {
+  /**
+   * Returns a non-deleted session (ACTIVE or FINALIZED). Soft-deleted sessions are not found.
+   */
+  InterviewSessionEntity requireExistingSession(String sessionId) {
     InterviewSessionEntity session =
         sessionRepository
             .findById(sessionId)
@@ -210,6 +236,20 @@ public class InterviewSessionService {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
     }
     return session;
+  }
+
+  /** Live voice and turn append require an ACTIVE, non-deleted session. */
+  InterviewSessionEntity requireLiveSession(String sessionId) {
+    InterviewSessionEntity session = requireExistingSession(sessionId);
+    if (!STATUS_ACTIVE.equals(session.getStatus())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Interview session is not active");
+    }
+    return session;
+  }
+
+  /** @deprecated Prefer {@link #requireExistingSession(String)} or {@link #requireLiveSession(String)}. */
+  InterviewSessionEntity requireActiveSession(String sessionId) {
+    return requireExistingSession(sessionId);
   }
 
   private InterviewTranscriptEntity requireTranscript(String transcriptId) {

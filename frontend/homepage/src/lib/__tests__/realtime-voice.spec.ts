@@ -189,7 +189,8 @@ describe('realtime-voice', () => {
   })
 
   it('REALTIME_SESSION_MAX_MS is five minutes', async () => {
-    const { REALTIME_SESSION_MAX_MS } = await import('../realtime-voice')
+    const { REALTIME_SESSION_MAX_MS, INTERVIEW_REALTIME_SESSION_MAX_MS } = await import('../realtime-voice')
     expect(REALTIME_SESSION_MAX_MS).toBe(300000)
+    expect(INTERVIEW_REALTIME_SESSION_MAX_MS).toBe(1_800_000)
   })
 })

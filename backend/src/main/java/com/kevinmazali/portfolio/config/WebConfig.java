@@ -382,8 +382,8 @@ public class WebConfig {
 
     private Bucket newInterviewRealtimeBucket() {
         Bandwidth limit = Bandwidth.builder()
-            .capacity(5)
-            .refillGreedy(5, Duration.ofHours(1))
+            .capacity(20)
+            .refillGreedy(20, Duration.ofHours(1))
             .build();
         return Bucket.builder().addLimit(limit).build();
     }

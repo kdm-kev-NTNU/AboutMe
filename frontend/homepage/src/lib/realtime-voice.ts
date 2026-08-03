@@ -260,9 +260,11 @@ export async function exchangeRealtimeSdp(
   return parseRealtimeApiFailure(r)
 }
 
-/** Auto-disconnect after this many ms (aligned with backend cost controls). */
-/** Client-enforced live session cap (aligned with UI copy). */
+/** Client-enforced live session cap for public voice (aligned with UI copy). */
 export const REALTIME_SESSION_MAX_MS = 300_000
+
+/** Client-enforced live session cap for admin voice interviews. */
+export const INTERVIEW_REALTIME_SESSION_MAX_MS = 1_800_000
 
 type RealtimeFetchFailureResponse = {
   status: number

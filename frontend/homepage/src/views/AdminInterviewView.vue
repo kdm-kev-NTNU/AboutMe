@@ -15,9 +15,14 @@ import {
   createInterviewSession,
   createInterviewTextDocument,
   finalizeInterviewSession,
+  getInterviewSession,
+  getInterviewTranscript,
   ingestInterviewTranscript,
+  listInterviewSessions,
+  reopenInterviewSession,
   uploadInterviewDocument,
   type InterviewDocument,
+  type InterviewSession,
   type InterviewTranscript,
 } from '@/lib/interview-voice'
 
@@ -37,6 +42,7 @@ const status = ref('')
 const document = ref<InterviewDocument | null>(null)
 const sessionId = ref<string | null>(null)
 const transcript = ref<InterviewTranscript | null>(null)
+const pastSessions = ref<InterviewSession[]>([])
 
 const liveAvailable = ref<boolean | null>(null)
 const selectedVoice = ref<RealtimeVoiceChoice>('marin')
@@ -57,10 +63,12 @@ const {
   userTranscript,
   isModelSpeaking,
   committedTurns,
+  maxSessionMs,
   connect,
   disconnectAndFlush,
   stopResponse,
   resetTurns,
+  hydrateTurns,
   flushTurns,
 } = useInterviewVoice(sessionId, uiLang, sessionOptions, selectedVoiceModel)
 
@@ -74,6 +82,8 @@ const activeQuestionCount = computed(() => {
   if (pastedText.value.trim()) return countQuestions(pastedText.value)
   return document.value ? null : 0
 })
+
+const maxSessionMinutes = computed(() => Math.round(maxSessionMs / 60_000))
 
 const copy = computed(() => {
   const en = uiLang.value === 'en'
@@ -104,8 +114,23 @@ const copy = computed(() => {
     ingest: en ? 'Add to knowledge base' : 'Legg til i kontekstbase',
     raw: en ? 'Raw transcript' : 'Rått transkript',
     cleaned: en ? 'Cleaned document' : 'Renset dokument',
+    pastSessions: en ? 'Previous sessions' : 'Tidligere sesjoner',
+    continueSession: en ? 'Continue' : 'Fortsett',
+    continueInterview: en ? 'Continue interview' : 'Fortsett intervju',
+    noPastSessions: en ? 'No previous sessions yet.' : 'Ingen tidligere sesjoner ennå.',
+    sessionCap: en
+      ? `Live voice sessions last up to ~${maxSessionMinutes.value} minutes.`
+      : `Live stemmeøkter varer opptil ca. ${maxSessionMinutes.value} minutter.`,
   }
 })
+
+async function refreshPastSessions() {
+  try {
+    pastSessions.value = await listInterviewSessions()
+  } catch {
+    pastSessions.value = []
+  }
+}
 
 onMounted(async () => {
   auth.restore()
@@ -113,11 +138,75 @@ onMounted(async () => {
   liveAvailable.value = statusRes.liveEnabled && (await voiceModelStore.ensureModelsLoaded(), voiceModelStore.hasModels)
   selectedVoice.value = statusRes.voice
   selectedReasoning.value = statusRes.reasoningEffort
+  await refreshPastSessions()
 })
 
 watch(errorMessage, (msg) => {
   if (msg.trim() !== '') error.value = msg
 })
+
+function formatSessionLabel(session: InterviewSession): string {
+  const started = session.startedAt ? new Date(session.startedAt).toLocaleString() : session.id
+  return `${started} · ${session.status}${session.cleanStatus ? ` · ${session.cleanStatus}` : ''}`
+}
+
+async function applyResumedSession(session: InterviewSession) {
+  sessionId.value = session.id
+  if (session.language === 'en' || session.language === 'no') {
+    uiLang.value = session.language
+  }
+  if (session.voice === 'marin' || session.voice === 'cedar') {
+    selectedVoice.value = session.voice
+  }
+  hydrateTurns(session.turns ?? [])
+  if (session.transcriptId) {
+    try {
+      transcript.value = await getInterviewTranscript(session.transcriptId)
+    } catch {
+      transcript.value = null
+    }
+  } else {
+    transcript.value = null
+  }
+  step.value = 'interview'
+}
+
+async function continuePastSession(session: InterviewSession) {
+  busy.value = true
+  error.value = ''
+  try {
+    let live = session
+    if (session.status === 'FINALIZED') {
+      live = await reopenInterviewSession(session.id)
+    } else if (session.status === 'ACTIVE') {
+      live = await getInterviewSession(session.id)
+    } else {
+      throw new Error(uiLang.value === 'en' ? 'Session cannot be continued' : 'Sesjonen kan ikke fortsettes')
+    }
+    await applyResumedSession(live)
+    status.value = uiLang.value === 'en' ? 'Session resumed' : 'Sesjon gjenopptatt'
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Resume failed'
+  } finally {
+    busy.value = false
+  }
+}
+
+async function continueInterviewFromClean() {
+  if (!sessionId.value) return
+  busy.value = true
+  error.value = ''
+  try {
+    await disconnectAndFlush()
+    const live = await reopenInterviewSession(sessionId.value)
+    await applyResumedSession(live)
+    status.value = uiLang.value === 'en' ? 'Interview continued' : 'Intervju fortsetter'
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Reopen failed'
+  } finally {
+    busy.value = false
+  }
+}
 
 async function handleFileUpload(event: Event) {
   const input = event.target as HTMLInputElement
@@ -174,9 +263,11 @@ async function startInterview() {
     if (!doc) return
     const session = await createInterviewSession(doc.id, uiLang.value, selectedVoice.value)
     sessionId.value = session.id
+    transcript.value = null
     resetTurns()
     step.value = 'interview'
     status.value = 'Sesjon opprettet'
+    await refreshPastSessions()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Session failed'
   } finally {
@@ -198,6 +289,7 @@ async function saveTranscript() {
     transcript.value = await finalizeInterviewSession(sessionId.value)
     step.value = 'clean'
     status.value = 'Transkript lagret'
+    await refreshPastSessions()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Finalize failed'
   } finally {
@@ -229,6 +321,7 @@ async function runIngest() {
   try {
     const result = await ingestInterviewTranscript(transcript.value.id, false)
     status.value = `Ingest fullført: ${JSON.stringify(result)}`
+    await refreshPastSessions()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Ingest failed'
   } finally {
@@ -308,10 +401,33 @@ async function runIngest() {
           <Loader2 v-if="busy" class="inline size-4 animate-spin mr-1" />
           {{ copy.start }}
         </button>
+
+        <div class="border-t border-gray-100 pt-4 space-y-2">
+          <h3 class="text-sm font-semibold text-gray-800">{{ copy.pastSessions }}</h3>
+          <p v-if="pastSessions.length === 0" class="text-sm text-gray-500">{{ copy.noPastSessions }}</p>
+          <ul v-else class="space-y-2">
+            <li
+              v-for="s in pastSessions"
+              :key="s.id"
+              class="flex flex-wrap items-center justify-between gap-2 rounded border border-gray-200 px-3 py-2 text-sm"
+            >
+              <span class="text-gray-700">{{ formatSessionLabel(s) }}</span>
+              <button
+                type="button"
+                class="rounded border border-blue-600 text-blue-700 px-2 py-1 text-xs disabled:opacity-50"
+                :disabled="busy || (s.status !== 'ACTIVE' && s.status !== 'FINALIZED')"
+                @click="continuePastSession(s)"
+              >
+                {{ copy.continueSession }}
+              </button>
+            </li>
+          </ul>
+        </div>
       </section>
 
       <section v-else-if="step === 'interview'" class="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <h2 class="text-lg font-semibold">{{ copy.interview }}</h2>
+        <p class="text-sm text-gray-600">{{ copy.sessionCap }}</p>
 
         <p v-if="liveAvailable === false" class="text-sm text-amber-800">
           Realtime voice er ikke tilgjengelig. Sjekk PORTFOLIO_REALTIME_ENABLED og OPENAI_API_KEY.
@@ -367,6 +483,14 @@ async function runIngest() {
           </div>
         </div>
 
+        <div v-if="committedTurns.length" class="rounded border p-3 text-sm max-h-48 overflow-y-auto space-y-1">
+          <p class="font-medium text-gray-700 mb-1">Lagrede turns</p>
+          <p v-for="(t, i) in committedTurns" :key="i" class="text-gray-800">
+            <span class="font-medium">{{ t.role === 'user' ? 'Kevin' : 'Intervjuer' }}:</span>
+            {{ t.text }}
+          </p>
+        </div>
+
         <button
           type="button"
           class="rounded border border-blue-600 text-blue-700 px-4 py-2 text-sm"
@@ -407,6 +531,14 @@ async function runIngest() {
           </div>
         </div>
         <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="rounded border border-blue-600 text-blue-700 px-4 py-2 text-sm disabled:opacity-50"
+            :disabled="busy || !sessionId"
+            @click="continueInterviewFromClean"
+          >
+            {{ copy.continueInterview }}
+          </button>
           <button
             type="button"
             class="rounded bg-gray-800 text-white px-4 py-2 text-sm disabled:opacity-50"

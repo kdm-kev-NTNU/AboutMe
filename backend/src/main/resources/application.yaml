@@ -138,6 +138,10 @@ portfolio:
       window-seconds: 300
   chat:
     default-model-id: gpt-5.4-mini
+  interview:
+    transcription-model: gpt-4o-transcribe
+    clean-model: gpt-5.4-mini
+    clean-max-tokens: 8192
   # OpenAI Realtime (WebRTC) — disabled by default; set PORTFOLIO_REALTIME_ENABLED=true and OPENAI_API_KEY to enable.
   realtime:
     enabled: ${PORTFOLIO_REALTIME_ENABLED:false}

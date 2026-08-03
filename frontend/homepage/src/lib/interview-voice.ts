@@ -89,6 +89,42 @@ export async function createInterviewSession(
   return r.data
 }
 
+export async function listInterviewSessions(): Promise<InterviewSession[]> {
+  const r = await customFetch<{ data: InterviewSession[]; status: number }>(
+    '/admin/tools/interview/sessions',
+    { method: 'GET' },
+  )
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
+  return Array.isArray(r.data) ? r.data : []
+}
+
+export async function getInterviewSession(sessionId: string): Promise<InterviewSession> {
+  const r = await customFetch<{ data: InterviewSession; status: number }>(
+    `/admin/tools/interview/sessions/${sessionId}`,
+    { method: 'GET' },
+  )
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
+  return r.data
+}
+
+export async function reopenInterviewSession(sessionId: string): Promise<InterviewSession> {
+  const r = await customFetch<{ data: InterviewSession; status: number }>(
+    `/admin/tools/interview/sessions/${sessionId}/reopen`,
+    { method: 'POST' },
+  )
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
+  return r.data
+}
+
+export async function getInterviewTranscript(transcriptId: string): Promise<InterviewTranscript> {
+  const r = await customFetch<{ data: InterviewTranscript; status: number }>(
+    `/admin/tools/interview/transcripts/${transcriptId}`,
+    { method: 'GET' },
+  )
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
+  return r.data
+}
+
 export async function appendInterviewTurns(sessionId: string, turns: InterviewTurn[]): Promise<void> {
   const r = await customFetch<{ status: number; data?: unknown }>(
     `/admin/tools/interview/sessions/${sessionId}/turns`,
