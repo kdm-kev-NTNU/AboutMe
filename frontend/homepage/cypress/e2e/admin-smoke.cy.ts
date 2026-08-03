@@ -16,6 +16,11 @@ describe('Admin smoke', () => {
   }
 
   beforeEach(() => {
+    cy.intercept('GET', '**/api/auth/me', {
+      statusCode: 200,
+      body: { username: 'admin', role: 'ADMIN' },
+    }).as('authMe')
+
     cy.intercept('GET', '**/api/health/chroma', {
       statusCode: 200,
       body: {
@@ -51,6 +56,7 @@ describe('Admin smoke', () => {
         seedAdminSession(win)
       },
     })
+    cy.wait('@authMe')
     cy.wait('@chromaHealth')
     cy.contains('Internal tools').should('be.visible')
     cy.contains('Document pipeline').should('be.visible')
@@ -60,6 +66,7 @@ describe('Admin smoke', () => {
         seedAdminSession(win)
       },
     })
+    cy.wait('@authMe')
     cy.wait('@adminDocumentsList')
     cy.wait('@adminCollections')
     cy.contains('Document pipeline').should('be.visible')

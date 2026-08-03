@@ -1,4 +1,5 @@
 import { customFetch } from '@/api/orval-mutator'
+import { formatAdminHttpError } from '@/lib/api-error'
 import type {
   SpeechUiLang,
   RealtimeVoiceSessionOptions,
@@ -57,7 +58,7 @@ export async function uploadInterviewDocument(file: File): Promise<InterviewDocu
     '/admin/tools/interview/documents',
     { method: 'POST', body: form },
   )
-  if (r.status !== 200) throw new Error(`Upload failed (${r.status})`)
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
   return r.data
 }
 
@@ -70,7 +71,7 @@ export async function createInterviewTextDocument(text: string, filename?: strin
       body: JSON.stringify({ text, filename }),
     },
   )
-  if (r.status !== 200) throw new Error(`Create document failed (${r.status})`)
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
   return r.data
 }
 
@@ -84,19 +85,22 @@ export async function createInterviewSession(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ documentId, language, voice }),
   })
-  if (r.status !== 200) throw new Error(`Create session failed (${r.status})`)
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
   return r.data
 }
 
 export async function appendInterviewTurns(sessionId: string, turns: InterviewTurn[]): Promise<void> {
-  const r = await customFetch<{ status: number }>(`/admin/tools/interview/sessions/${sessionId}/turns`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      turns: turns.map((t) => ({ role: t.role, text: t.text, sequenceNo: t.sequenceNo })),
-    }),
-  })
-  if (r.status !== 200) throw new Error(`Save turns failed (${r.status})`)
+  const r = await customFetch<{ status: number; data?: unknown }>(
+    `/admin/tools/interview/sessions/${sessionId}/turns`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        turns: turns.map((t) => ({ role: t.role, text: t.text, sequenceNo: t.sequenceNo })),
+      }),
+    },
+  )
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
 }
 
 export async function finalizeInterviewSession(sessionId: string): Promise<InterviewTranscript> {
@@ -104,7 +108,7 @@ export async function finalizeInterviewSession(sessionId: string): Promise<Inter
     `/admin/tools/interview/sessions/${sessionId}/finalize`,
     { method: 'POST' },
   )
-  if (r.status !== 200) throw new Error(`Finalize failed (${r.status})`)
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
   return r.data
 }
 
@@ -113,7 +117,7 @@ export async function cleanInterviewTranscript(transcriptId: string): Promise<In
     `/admin/tools/interview/transcripts/${transcriptId}/clean`,
     { method: 'POST' },
   )
-  if (r.status !== 200) throw new Error(`Clean failed (${r.status})`)
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
   return r.data
 }
 
@@ -123,7 +127,7 @@ export async function ingestInterviewTranscript(transcriptId: string, force = fa
     `/admin/tools/interview/transcripts/${transcriptId}/ingest${q}`,
     { method: 'POST' },
   )
-  if (r.status !== 200) throw new Error(`Ingest failed (${r.status})`)
+  if (r.status !== 200) throw new Error(formatAdminHttpError(r.status, r.data))
   return r.data
 }
 

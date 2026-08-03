@@ -1,11 +1,23 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { authMe } from '@/api/generated/portfolio'
 import { createPortfolioRouter } from '../createPortfolioRouter'
+
+vi.mock('@/api/generated/portfolio', async (importOriginal) => {
+	const mod = await importOriginal<typeof import('@/api/generated/portfolio')>()
+	return { ...mod, authMe: vi.fn() }
+})
 
 describe('application router (index)', () => {
 	beforeEach(() => {
 		sessionStorage.clear()
 		setActivePinia(createPinia())
+		vi.mocked(authMe).mockReset()
+		vi.mocked(authMe).mockResolvedValue({
+			status: 200,
+			data: { username: 'admin', role: 'ADMIN' },
+			headers: new Headers(),
+		} as never)
 	})
 
 	it('registers portfolio and admin route names', () => {
@@ -97,7 +109,7 @@ describe('application router (index)', () => {
 		expect(router.currentRoute.value.name).toBe('feedback')
 	})
 
-	it('allows admin routes when ADMIN session is restored', async () => {
+	it('allows admin routes when ADMIN session is validated via authMe', async () => {
 		sessionStorage.setItem(
 			'auth',
 			JSON.stringify({ username: 'admin', role: 'ADMIN' }),
@@ -106,6 +118,7 @@ describe('application router (index)', () => {
 
 		await router.push('/admin/tools')
 		expect(router.currentRoute.value.name).toBe('admin-tools')
+		expect(authMe).toHaveBeenCalled()
 
 		await router.push('/admin/pipeline')
 		expect(router.currentRoute.value.name).toBe('admin-pipeline')
