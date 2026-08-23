@@ -6,6 +6,7 @@ import com.kevinmazali.portfolio.model.analytics.AiGenerationAnalytics;
 import com.kevinmazali.portfolio.model.AiUsageEvent;
 import com.kevinmazali.portfolio.repository.AiUsageRepository;
 import com.kevinmazali.portfolio.repository.UserRepository;
+import com.kevinmazali.portfolio.security.AnalyticsIdentityService;
 import com.kevinmazali.portfolio.util.AiUsageIdentity;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -40,17 +41,20 @@ public class AiBudgetService {
   private final MeterRegistry meterRegistry;
   @Nullable
   private final PostHogLlmService postHogLlmService;
+  private final AnalyticsIdentityService analyticsIdentityService;
 
   public AiBudgetService(
       AiBudgetProperties properties,
       AiUsageRepository usageRepository,
       UserRepository userRepository,
       MeterRegistry meterRegistry,
+      AnalyticsIdentityService analyticsIdentityService,
       @Autowired(required = false) @Nullable PostHogLlmService postHogLlmService) {
     this.properties = properties;
     this.usageRepository = usageRepository;
     this.userRepository = userRepository;
     this.meterRegistry = meterRegistry;
+    this.analyticsIdentityService = analyticsIdentityService;
     this.postHogLlmService = postHogLlmService;
   }
 
@@ -204,15 +208,17 @@ public class AiBudgetService {
       return;
     }
     String uid = userIdentifier != null ? userIdentifier : "unknown";
+    AnalyticsIdentityService.PostHogCaptureIdentity phIdentity =
+        analyticsIdentityService.captureIdentity(uid, anonymous);
     Runnable task =
         () ->
             sink.captureGenerationAsync(
-                uid,
+                phIdentity.distinctId(),
                 modelId,
                 promptTokens,
                 completionTokens,
                 cost,
-                anonymous,
+                phIdentity.anonymous(),
                 latencySeconds,
                 generationSpanName,
                 analytics);

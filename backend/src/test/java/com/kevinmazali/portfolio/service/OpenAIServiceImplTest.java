@@ -5,6 +5,7 @@ import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.config.RetrievalProperties;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
+import com.kevinmazali.portfolio.security.AnalyticsIdentityService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,7 @@ class OpenAIServiceImplTest {
 
   private OpenAIServiceImpl openAIServiceImpl;
   private RetrievalProperties retrievalProperties;
+  private AnalyticsIdentityService analyticsIdentityService;
 
   @BeforeEach
   void setUp() {
@@ -80,6 +82,7 @@ class OpenAIServiceImplTest {
     AiLimitsProperties limits = new AiLimitsProperties();
     AiBudgetProperties budgetProps = new AiBudgetProperties();
     retrievalProperties = new RetrievalProperties();
+    analyticsIdentityService = new AnalyticsIdentityService(new com.kevinmazali.portfolio.config.PostHogProperties());
     openAIServiceImpl = new OpenAIServiceImpl(
         openAiChatModelProvider,
         anthropicChatModelProvider,
@@ -93,6 +96,7 @@ class OpenAIServiceImplTest {
         new PassThroughDocumentReranker(),
         retrievalProperties,
         new PostHogTraceContext(),
+        analyticsIdentityService,
         null,
         null);
   }
@@ -139,6 +143,7 @@ class OpenAIServiceImplTest {
             reranker,
             retrievalProperties,
             new PostHogTraceContext(),
+            analyticsIdentityService,
             null,
             null);
 

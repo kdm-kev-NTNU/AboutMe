@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { authLogin, authLogout, authMe } from '@/api/generated/portfolio'
+import { revokeOwnerIdentity, setOwnerIdentity } from '@/lib/analytics-identity'
 
 // Session: POST /auth/login sets an httpOnly cookie; we keep username/role in sessionStorage for UI only.
 interface AuthState {
@@ -36,6 +37,7 @@ export const useAuthStore = defineStore('auth', {
         this.username = r.data.username
         this.role = r.data.role as 'USER' | 'ADMIN'
         sessionStorage.setItem('auth', JSON.stringify({ username: this.username, role: this.role }))
+        syncOwnerAnalyticsIdentity(this.role, r.data.analyticsId)
         return this.role === 'ADMIN'
       } catch {
         this.clearLocal()
@@ -51,6 +53,7 @@ export const useAuthStore = defineStore('auth', {
       this.username = data.username
       this.role = data.role as 'USER' | 'ADMIN'
       sessionStorage.setItem('auth', JSON.stringify({ username: this.username, role: this.role }))
+      syncOwnerAnalyticsIdentity(this.role, data.analyticsId)
       try {
         await authMe()
       } catch {
@@ -63,6 +66,7 @@ export const useAuthStore = defineStore('auth', {
       } catch {
         // Clear local state even if the network call fails
       }
+      revokeOwnerIdentity()
       this.clearLocal()
     },
     /** Hydrates Pinia from sessionStorage on hard refresh (router guard calls this before admin routes). */
@@ -80,3 +84,13 @@ export const useAuthStore = defineStore('auth', {
     },
   },
 })
+
+function syncOwnerAnalyticsIdentity(
+  role: 'USER' | 'ADMIN' | null,
+  analyticsId: string | null | undefined,
+): void {
+  if (role !== 'ADMIN') return
+  const id = analyticsId?.trim()
+  if (!id) return
+  setOwnerIdentity(id)
+}

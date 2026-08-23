@@ -4,6 +4,7 @@ import com.kevinmazali.portfolio.config.AiBudgetProperties;
 import com.kevinmazali.portfolio.exception.BudgetExceededException;
 import com.kevinmazali.portfolio.repository.AiUsageRepository;
 import com.kevinmazali.portfolio.repository.UserRepository;
+import com.kevinmazali.portfolio.security.AnalyticsIdentityService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -29,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +46,9 @@ class AiBudgetServiceTest {
 
   @Mock
   private UserRepository userRepository;
+
+  @Mock
+  private AnalyticsIdentityService analyticsIdentityService;
 
   private AiBudgetProperties properties;
   private AiBudgetService service;
@@ -58,9 +65,20 @@ class AiBudgetServiceTest {
     pricing.setInputPerMillionUsd(new BigDecimal("1"));
     pricing.setOutputPerMillionUsd(new BigDecimal("2"));
     properties.getModels().put("gpt-5.4-mini", pricing);
+    lenient()
+        .when(analyticsIdentityService.captureIdentity(anyString(), anyBoolean()))
+        .thenAnswer(
+            inv ->
+                new AnalyticsIdentityService.PostHogCaptureIdentity(
+                    inv.getArgument(0), inv.getArgument(1)));
     service =
         new AiBudgetService(
-            properties, usageRepository, userRepository, new SimpleMeterRegistry(), postHogLlmService);
+            properties,
+            usageRepository,
+            userRepository,
+            new SimpleMeterRegistry(),
+            analyticsIdentityService,
+            postHogLlmService);
   }
 
   @Test

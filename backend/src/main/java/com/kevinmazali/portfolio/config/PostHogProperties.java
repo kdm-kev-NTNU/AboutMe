@@ -28,6 +28,12 @@ public class PostHogProperties {
   /** HTTP timeout for {@code /decide} (milliseconds). */
   private int featureFlagsTimeoutMs = 2_000;
 
+  /**
+   * Salt for deriving stable admin analytics distinct ids. Not secret — must remain stable across
+   * deploys (do not reuse JWT secret or rotation would split one owner into two PostHog persons).
+   */
+  private String identitySalt = "aboutme-analytics-identity-v1";
+
   public boolean isEnabled() {
     return enabled;
   }
@@ -66,6 +72,14 @@ public class PostHogProperties {
 
   public void setFeatureFlagsTimeoutMs(int featureFlagsTimeoutMs) {
     this.featureFlagsTimeoutMs = featureFlagsTimeoutMs;
+  }
+
+  public String getIdentitySalt() {
+    return identitySalt;
+  }
+
+  public void setIdentitySalt(String identitySalt) {
+    this.identitySalt = identitySalt;
   }
 
   public boolean isCaptureConfigured() {

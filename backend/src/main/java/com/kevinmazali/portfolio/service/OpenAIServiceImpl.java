@@ -12,6 +12,7 @@ import com.kevinmazali.portfolio.model.Question;
 import com.kevinmazali.portfolio.model.RagAnswer;
 import com.kevinmazali.portfolio.model.chat.ChatProvider;
 import com.kevinmazali.portfolio.model.chat.SupportedChatModel;
+import com.kevinmazali.portfolio.security.AnalyticsIdentityService;
 import com.kevinmazali.portfolio.util.AiRequestContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.anthropic.AnthropicChatModel;
@@ -68,6 +69,7 @@ public class OpenAIServiceImpl implements OpenAIService {
   private final PostHogFeatureFlagService postHogFeatureFlagService;
   @org.springframework.lang.Nullable
   private final PostHogLlmService postHogLlmService;
+  private final AnalyticsIdentityService analyticsIdentityService;
 
   public OpenAIServiceImpl(
       ObjectProvider<OpenAiChatModel> openAiChatModel,
@@ -82,6 +84,7 @@ public class OpenAIServiceImpl implements OpenAIService {
       DocumentReranker documentReranker,
       RetrievalProperties retrievalProperties,
       PostHogTraceContext postHogTraceContext,
+      AnalyticsIdentityService analyticsIdentityService,
       @Autowired(required = false) @org.springframework.lang.Nullable PostHogFeatureFlagService postHogFeatureFlagService,
       @Autowired(required = false) @org.springframework.lang.Nullable PostHogLlmService postHogLlmService) {
     this.openAiChatModel = openAiChatModel;
@@ -96,6 +99,7 @@ public class OpenAIServiceImpl implements OpenAIService {
     this.documentReranker = documentReranker;
     this.retrievalProperties = retrievalProperties;
     this.postHogTraceContext = postHogTraceContext;
+    this.analyticsIdentityService = analyticsIdentityService;
     this.postHogFeatureFlagService = postHogFeatureFlagService;
     this.postHogLlmService = postHogLlmService;
   }
@@ -140,8 +144,10 @@ public class OpenAIServiceImpl implements OpenAIService {
     try {
       Map<String, Object> phFeatureProps = Collections.emptyMap();
       PostHogFeatureFlagService ffSvc = postHogFeatureFlagService;
+      AnalyticsIdentityService.PostHogCaptureIdentity phIdentity =
+          analyticsIdentityService.captureIdentity(budgetUserId, anonymous);
       if (ffSvc != null && ffSvc.isEnabled()) {
-        phFeatureProps = ffSvc.resolveForDistinctId(budgetUserId);
+        phFeatureProps = ffSvc.resolveForDistinctId(phIdentity.distinctId());
       }
 
       List<String> queries =
@@ -180,7 +186,7 @@ public class OpenAIServiceImpl implements OpenAIService {
           documentReranker.rerank(question.question(), candidates, contextTopK);
 
       double retrievalLatencySec = (System.nanoTime() - retrievalStartNs) / 1_000_000_000.0;
-      captureRagRetrievalSpanIfEnabled(budgetUserId, anonymous, retrievalSpanId, retrievalLatencySec);
+      captureRagRetrievalSpanIfEnabled(phIdentity, retrievalSpanId, retrievalLatencySec);
 
       log.debug(
           "RAG retrieval: merged={} dedupCapped={} contextTopK={} finalDocs={}",
@@ -222,12 +228,14 @@ public class OpenAIServiceImpl implements OpenAIService {
       throw e;
     } finally {
       captureRagTraceSummaryIfEnabled(
-          budgetUserId, anonymous, traceStartNs, traceFailed, traceErrorMsg);
+          phIdentity, traceStartNs, traceFailed, traceErrorMsg);
     }
   }
 
   private void captureRagRetrievalSpanIfEnabled(
-      String budgetUserId, boolean anonymous, String retrievalSpanId, double latencySec) {
+      AnalyticsIdentityService.PostHogCaptureIdentity phIdentity,
+      String retrievalSpanId,
+      double latencySec) {
     PostHogLlmService ph = postHogLlmService;
     if (ph == null || !ph.isEnabled()) {
       return;
@@ -238,7 +246,7 @@ public class OpenAIServiceImpl implements OpenAIService {
       return;
     }
     ph.captureSpanAsync(
-        budgetUserId,
+        phIdentity.distinctId(),
         traceId,
         sessionId,
         retrievalSpanId,
@@ -246,12 +254,11 @@ public class OpenAIServiceImpl implements OpenAIService {
         "rag_retrieval",
         latencySec,
         false,
-        anonymous);
+        phIdentity.anonymous());
   }
 
   private void captureRagTraceSummaryIfEnabled(
-      String budgetUserId,
-      boolean anonymous,
+      AnalyticsIdentityService.PostHogCaptureIdentity phIdentity,
       long traceStartNs,
       boolean failed,
       @org.springframework.lang.Nullable String errorMessage) {
@@ -265,14 +272,14 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
     double totalSec = (System.nanoTime() - traceStartNs) / 1_000_000_000.0;
     ph.captureTraceAsync(
-        budgetUserId,
+        phIdentity.distinctId(),
         traceId,
         postHogTraceContext.conversationId(),
         postHogTraceContext.traceName(),
         totalSec,
         failed,
         errorMessage,
-        anonymous);
+        phIdentity.anonymous());
   }
 
   private static List<Document> dedupePreserveOrder(List<Document> merged) {

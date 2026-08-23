@@ -183,6 +183,7 @@ portfolio:
     enabled: ${POSTHOG_ENABLED:false}
     api-key: ${POSTHOG_API_KEY:}
     host: ${POSTHOG_HOST:https://eu.i.posthog.com}
+    identity-salt: ${POSTHOG_IDENTITY_SALT:aboutme-analytics-identity-v1}
     feature-flag-keys:
       - aboutme_rag_feature_flags
     feature-flags-timeout-ms: 2000

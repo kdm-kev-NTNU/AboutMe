@@ -4,6 +4,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { MotionPlugin } from '@vueuse/motion'
 import { captureClientException } from './lib/analytics'
+import { applyPendingOwnerIdentity } from './lib/analytics-identity'
 import {
   applyStoredTrackingConsent,
   isPosthogEnabled,
@@ -28,6 +29,7 @@ app.use(MotionPlugin)
 if (posthogEnabled) {
   registerPosthogActivationHandler(() => {
     setupPosthogAppHooks(app, router)
+    applyPendingOwnerIdentity()
   })
   applyStoredTrackingConsent()
 } else {

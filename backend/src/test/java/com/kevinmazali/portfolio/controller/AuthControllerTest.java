@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.controller;
 
 
 import com.kevinmazali.portfolio.MvcTestSecurityImports;
+import com.kevinmazali.portfolio.security.AnalyticsIdentityService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -11,12 +12,14 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,21 +34,26 @@ class AuthControllerTest {
 	@MockitoBean
 	private AuthenticationManager authenticationManager;
 
+	@MockitoBean
+	private AnalyticsIdentityService analyticsIdentityService;
+
 	@Test
-	void loginReturnsRoleWhenAuthenticationSucceeds() throws Exception {
+	void loginReturnsRoleAndAnalyticsIdWhenAuthenticationSucceeds() throws Exception {
 		var auth = new UsernamePasswordAuthenticationToken(
 			"alice",
 			"secret",
 			List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
 		);
 		when(authenticationManager.authenticate(any())).thenReturn(auth);
+		when(analyticsIdentityService.distinctIdFor("alice")).thenReturn("owner_test123");
 
 		mockMvc.perform(post("/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"username\":\"alice\",\"password\":\"secret\"}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.username").value("alice"))
-			.andExpect(jsonPath("$.role").value("ADMIN"));
+			.andExpect(jsonPath("$.role").value("ADMIN"))
+			.andExpect(jsonPath("$.analyticsId").value("owner_test123"));
 	}
 
 	@Test
@@ -61,7 +69,7 @@ class AuthControllerTest {
 	}
 
 	@Test
-	void loginReturnsUserRoleWhenNotAdmin() throws Exception {
+	void loginReturnsUserRoleWithoutAnalyticsIdWhenNotAdmin() throws Exception {
 		var auth = new UsernamePasswordAuthenticationToken(
 			"bob",
 			"pw",
@@ -73,6 +81,26 @@ class AuthControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"username\":\"bob\",\"password\":\"pw\"}"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.role").value("USER"));
+			.andExpect(jsonPath("$.role").value("USER"))
+			.andExpect(jsonPath("$.analyticsId").doesNotExist());
+	}
+
+	@Test
+	@WithMockUser(username = "alice", authorities = "ROLE_ADMIN")
+	void meReturnsAuthenticatedAdminWithAnalyticsId() throws Exception {
+		when(analyticsIdentityService.distinctIdFor("alice")).thenReturn("owner_test123");
+
+		mockMvc.perform(get("/auth/me"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.username").value("alice"))
+			.andExpect(jsonPath("$.role").value("ADMIN"))
+			.andExpect(jsonPath("$.analyticsId").value("owner_test123"));
+	}
+
+	@Test
+	void meReturns401WhenNotAuthenticated() throws Exception {
+		mockMvc.perform(get("/auth/me"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.error").exists());
 	}
 }

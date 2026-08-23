@@ -5,6 +5,7 @@ import com.kevinmazali.portfolio.config.AiLimitsProperties;
 import com.kevinmazali.portfolio.config.RetrievalProperties;
 import com.kevinmazali.portfolio.model.Answer;
 import com.kevinmazali.portfolio.model.Question;
+import com.kevinmazali.portfolio.security.AnalyticsIdentityService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -163,6 +164,7 @@ class LanguageConsistencyContractTest {
           new PassThroughDocumentReranker(),
           new RetrievalProperties(),
           new PostHogTraceContext(),
+          new AnalyticsIdentityService(new com.kevinmazali.portfolio.config.PostHogProperties()),
           null,
           null);
     }

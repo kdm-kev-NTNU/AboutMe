@@ -3,6 +3,7 @@ package com.kevinmazali.portfolio.controller;
 import com.kevinmazali.portfolio.model.ApiError;
 import com.kevinmazali.portfolio.model.LoginResponse;
 import com.kevinmazali.portfolio.model.User;
+import com.kevinmazali.portfolio.security.AnalyticsIdentityService;
 import com.kevinmazali.portfolio.security.JwtService;
 import com.kevinmazali.portfolio.security.SessionCookieSupport;
 import com.kevinmazali.portfolio.util.ClientIpResolver;
@@ -41,14 +42,17 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final SessionCookieSupport sessionCookieSupport;
+    private final AnalyticsIdentityService analyticsIdentityService;
 
     public AuthController(
             AuthenticationManager authenticationManager,
             JwtService jwtService,
-            SessionCookieSupport sessionCookieSupport) {
+            SessionCookieSupport sessionCookieSupport,
+            AnalyticsIdentityService analyticsIdentityService) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.sessionCookieSupport = sessionCookieSupport;
+        this.analyticsIdentityService = analyticsIdentityService;
     }
 
     @Schema(description = "Username and password (same as Spring Security users)")
@@ -84,7 +88,7 @@ public class AuthController {
             String jwt = jwtService.issueToken(username, role);
             sessionCookieSupport.writeSessionCookie(httpResponse, jwt);
 
-            return ResponseEntity.ok(new LoginResponse(username, role.name()));
+            return ResponseEntity.ok(loginResponse(username, role));
         } catch (BadCredentialsException ex) {
             String userLabel = request.username() == null ? "<null>" : request.username();
             log.warn("Failed login attempt for username='{}' from IP={}", userLabel, ClientIpResolver.resolve(httpRequest));
@@ -108,7 +112,13 @@ public class AuthController {
         boolean isAdmin = auth.getAuthorities().stream()
             .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         User.Role role = isAdmin ? User.Role.ADMIN : User.Role.USER;
-        return ResponseEntity.ok(new LoginResponse(auth.getName(), role.name()));
+        return ResponseEntity.ok(loginResponse(auth.getName(), role));
+    }
+
+    private LoginResponse loginResponse(String username, User.Role role) {
+        String analyticsId =
+            role == User.Role.ADMIN ? analyticsIdentityService.distinctIdFor(username) : null;
+        return new LoginResponse(username, role.name(), analyticsId);
     }
 
     @Operation(summary = "Logout", description = "Clears the session cookie.")
