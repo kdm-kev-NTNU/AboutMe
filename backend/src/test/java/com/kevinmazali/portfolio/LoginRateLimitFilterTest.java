@@ -7,6 +7,7 @@ import com.kevinmazali.portfolio.config.ExperimentRunRateLimitProperties;
 import com.kevinmazali.portfolio.config.RealtimeRateLimitProperties;
 import com.kevinmazali.portfolio.config.WebConfig;
 import com.kevinmazali.portfolio.controller.AuthController;
+import com.kevinmazali.portfolio.security.AnalyticsIdentityService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.kevinmazali.portfolio.config.SecurityConfig;
@@ -41,6 +42,9 @@ class LoginRateLimitFilterTest {
 
 	@MockitoBean
 	private AuthenticationManager authenticationManager;
+
+	@MockitoBean
+	private AnalyticsIdentityService analyticsIdentityService;
 
 	@Test
 	void loginRateLimiterReturns429AfterFiveAttemptsPerWindow() throws Exception {
