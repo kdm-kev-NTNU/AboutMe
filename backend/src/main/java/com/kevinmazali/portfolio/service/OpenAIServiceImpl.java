@@ -141,11 +141,11 @@ public class OpenAIServiceImpl implements OpenAIService {
     long traceStartNs = System.nanoTime();
     boolean traceFailed = false;
     String traceErrorMsg = null;
+    AnalyticsIdentityService.PostHogCaptureIdentity phIdentity =
+        analyticsIdentityService.captureIdentity(budgetUserId, anonymous);
     try {
       Map<String, Object> phFeatureProps = Collections.emptyMap();
       PostHogFeatureFlagService ffSvc = postHogFeatureFlagService;
-      AnalyticsIdentityService.PostHogCaptureIdentity phIdentity =
-          analyticsIdentityService.captureIdentity(budgetUserId, anonymous);
       if (ffSvc != null && ffSvc.isEnabled()) {
         phFeatureProps = ffSvc.resolveForDistinctId(phIdentity.distinctId());
       }
