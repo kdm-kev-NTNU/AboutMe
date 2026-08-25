@@ -37,4 +37,21 @@ class RealtimeProfileServiceTest {
         .extracting(snippet -> snippet.title())
         .anySatisfy(title -> assertThat(String.valueOf(title)).contains("Portefølje"));
   }
+
+  @Test
+  void lookupFindsCompletedSpareBankInternship() {
+    assertThat(service.lookup("SpareBank 1 Utvikling sommerjobb SIFO", "no"))
+        .extracting(snippet -> snippet.text())
+        .anySatisfy(text -> assertThat(String.valueOf(text))
+            .contains("regelbasert anbefalingssystem")
+            .contains("SIFOs referansebudsjett")
+            .doesNotContain("skal gjennomføre"));
+
+    assertThat(service.lookup("SpareBank 1 housing savings recommendation", "en"))
+        .extracting(snippet -> snippet.text())
+        .anySatisfy(text -> assertThat(String.valueOf(text))
+            .contains("rule-based recommendation system")
+            .contains("SIFO")
+            .doesNotContain("scheduled to complete"));
+  }
 }

@@ -264,6 +264,9 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapperEn.text()).toContain('IMAT3011')
 		expect(wrapperEn.text()).toContain('TDT4172')
 		expect(wrapperEn.text()).toContain('Will assist with teaching and exercises')
+		expect(wrapperEn.text()).toContain('SpareBank 1 Utvikling')
+		expect(wrapperEn.text()).toContain('rule-based recommendation system')
+		expect(wrapperEn.text()).toContain("SIFO's reference budget")
 
 		const wrapperNo = mountReasonView('no')
 		await flushPromises()
@@ -275,6 +278,9 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapperNo.text()).toContain('IMAT3011')
 		expect(wrapperNo.text()).toContain('TDT4172')
 		expect(wrapperNo.text()).toContain('Kommer til å bistå med undervisning og øvinger')
+		expect(wrapperNo.text()).toContain('SpareBank 1 Utvikling')
+		expect(wrapperNo.text()).toContain('regelbasert anbefalingssystem')
+		expect(wrapperNo.text()).toContain('SIFOs referansebudsjett')
 	})
 
 	it('opens HowView accordions from route hash and toggles sections', async () => {

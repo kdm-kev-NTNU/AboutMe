@@ -25,8 +25,8 @@
       "startDate": "2026-06-15",
       "endDate": "2026-08-15",
       "company": "SpareBank 1 Utvikling",
-      "position": "Summer Intern",
-      "description": "Will be completing an 8-week summer internship in software development.",
+      "position": "Summer Developer",
+      "description": "SpareBank 1 Utvikling is the SpareBank 1 banks' joint company for development, operations, procurement and branding, and has one of Norway's largest in-house development environments. In summer 2026 I worked eight weeks as a developer in Oslo, in a cross-functional team of two designers and four developers building a new housing savings product for young adults aged 18 to 28. My main contribution was a rule-based recommendation system that analyzes transaction data and compares actual spending with SIFO's reference budget to give personal savings advice. The work gave me practical insight into what financial data looks like in production — noisy, unevenly categorized and full of edge cases — and into the need for explainability when advice concerns someone's personal finances. I also developed new features in an existing codebase, wrote technical documentation and unit and integration tests, fixed and debugged bugs, and took part in daily stand-ups and other Scrum ceremonies.",
       "location": "Oslo, Norway",
       "type": "internship"
     },

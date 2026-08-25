@@ -25,8 +25,8 @@
       "startDate": "2026-06-15",
       "endDate": "2026-08-15",
       "company": "SpareBank 1 Utvikling",
-      "position": "Sommerintern",
-      "description": "Kommer til å gjennomføre et 8-ukers sommerinternship innen utvikling.",
+      "position": "Sommerutvikler",
+      "description": "SpareBank 1 Utvikling er SpareBank 1-bankenes felles selskap for utvikling, drift, innkjøp og merkevare, og har et av Norges største inhouse-utviklingsmiljøer. Sommeren 2026 jobbet jeg åtte uker som utvikler i Oslo, i et tverrfaglig team med to designere og fire utviklere som bygget en ny boligsparingsløsning for unge voksne mellom 18 og 28 år. Mitt hovedbidrag var et regelbasert anbefalingssystem som analyserer transaksjonsdata og sammenligner faktisk forbruk mot SIFOs referansebudsjett for å gi personlige spareråd. Arbeidet ga meg praktisk innsikt i hvordan økonomiske data ser ut i produksjon — støyete, ujevnt kategorisert og fulle av kanttilfeller — og i kravet til forklarbarhet når et råd handler om noens privatøkonomi. Jeg utviklet nye funksjoner i eksisterende kodebase, skrev teknisk dokumentasjon og enhets- og integrasjonstester, rettet og feilsøkte bugs, og deltok i daglige stand-ups og andre Scrum-seremonier.",
       "location": "Oslo, Norge",
       "type": "internship"
     },
