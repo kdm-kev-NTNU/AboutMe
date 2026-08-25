@@ -104,14 +104,14 @@
       "id": "work-sparebank1-internship",
       "category": "work",
       "title": {
-        "no": "Sommerintern i SpareBank 1 Utvikling",
-        "en": "Summer intern at SpareBank 1 Utvikling"
+        "no": "Sommerutvikler i SpareBank 1 Utvikling",
+        "en": "Summer developer at SpareBank 1 Utvikling"
       },
       "text": {
-        "no": "Kevin skal gjennomføre et 8-ukers sommerinternship innen utvikling hos SpareBank 1 Utvikling sommeren 2026.",
-        "en": "Kevin is scheduled to complete an 8-week software development summer internship at SpareBank 1 Utvikling in summer 2026."
+        "no": "Kevin jobbet åtte uker som sommerutvikler hos SpareBank 1 Utvikling i Oslo sommeren 2026, i et tverrfaglig team med to designere og fire utviklere. SpareBank 1 Utvikling er SpareBank 1-bankenes felles selskap for utvikling, drift, innkjøp og merkevare, og har et av Norges største inhouse-utviklingsmiljøer. Teamet bygget en ny boligsparingsløsning for unge voksne mellom 18 og 28 år. Kevins hovedbidrag var et regelbasert anbefalingssystem som analyserer transaksjonsdata og sammenligner faktisk forbruk mot SIFOs referansebudsjett for å gi personlige spareråd. Arbeidet ga innsikt i støyete, ujevnt kategoriserte produksjonsdata og kravet til forklarbarhet når råd handler om noens privatøkonomi. Han utviklet også nye funksjoner i eksisterende kodebase, skrev teknisk dokumentasjon og enhets- og integrasjonstester, rettet og feilsøkte bugs, og deltok i daglige stand-ups og andre Scrum-seremonier.",
+        "en": "Kevin worked eight weeks as a summer developer at SpareBank 1 Utvikling in Oslo in summer 2026, in a cross-functional team of two designers and four developers. SpareBank 1 Utvikling is the SpareBank 1 banks' joint company for development, operations, procurement and branding, and has one of Norway's largest in-house development environments. The team built a new housing savings product for young adults aged 18 to 28. Kevin's main contribution was a rule-based recommendation system that analyzes transaction data and compares actual spending with SIFO's reference budget to give personal savings advice. The work gave insight into noisy, unevenly categorized production data and the need for explainability when advice concerns someone's personal finances. He also developed new features in an existing codebase, wrote technical documentation and unit and integration tests, fixed and debugged bugs, and took part in daily stand-ups and other Scrum ceremonies."
       },
-      "tags": ["sparebank 1", "sparebank1", "internship", "sommerintern", "utvikling", "software development"]
+      "tags": ["sparebank 1", "sparebank1", "internship", "sommerintern", "sommerutvikler", "sommerjobb", "summer job", "utvikling", "software development", "oslo", "boligsparing", "housing savings", "sifo", "anbefalingssystem", "recommendation", "transaksjonsdata", "transaction data", "scrum", "testing"]
     },
     {
       "id": "work-ntnu-teaching-assistant",
