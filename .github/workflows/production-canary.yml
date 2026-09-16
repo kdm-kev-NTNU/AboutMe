@@ -1,0 +1,118 @@
+# Production canary: daily verification that chat and live voice actually work for visitors.
+#
+# Triggers: daily schedule (06:00 UTC ~= 08:00 Europe/Oslo); manual workflow_dispatch.
+# Green means: the backend is UP, chat answers a live question, and the backend can reach the
+#   OpenAI Realtime API. See scripts/production-canary.mjs for what each check proves.
+# Red means: a feature is broken for real visitors. The job opens (or comments on) a GitHub issue
+#   labelled `production-canary`, and closes it automatically once the next run is green.
+#
+# This exists because PR CI cannot catch production egress faults: the Cypress voice smoke spec
+# that would have caught one is opt-in (CYPRESS_VOICE_LIVE) and never ran on a schedule.
+name: Production canary
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL to probe (defaults to production)'
+        required: false
+        default: 'https://kevindmazali.me'
+
+# Least privilege: read the canary script, and manage the single alert issue.
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      ALERT_LABEL: production-canary
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout canary script
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            scripts/production-canary.mjs
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.22.2'
+
+      # continue-on-error so a red result still reaches the alerting steps below; the final step
+      # re-fails the job so the workflow badge and run history stay truthful.
+      - name: Probe production
+        id: probe
+        continue-on-error: true
+        run: |
+          node scripts/production-canary.mjs \
+            --base-url "${{ inputs.base_url || 'https://kevindmazali.me' }}" \
+            --json canary-report.json \
+            --markdown canary-report.md
+
+      - name: Upload canary report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: canary-report
+          path: |
+            canary-report.json
+            canary-report.md
+          if-no-files-found: warn
+
+      - name: Find existing alert issue
+        id: alert
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          number="$(gh issue list --label "$ALERT_LABEL" --state open --limit 1 \
+            --json number --jq '.[0].number // empty')"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update alert issue
+        if: steps.probe.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          broken="$(jq -r '.failedFeatures | join(", ")' canary-report.json 2>/dev/null || echo 'unknown')"
+          {
+            echo "Daily production canary detected a broken feature: **${broken}**."
+            echo
+            cat canary-report.md
+            echo
+            echo "[Workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+          } > alert-body.md
+
+          if [ -n "${{ steps.alert.outputs.number }}" ]; then
+            gh issue comment "${{ steps.alert.outputs.number }}" --body-file alert-body.md
+          else
+            # Label may not exist yet on a fresh repo; creating it is idempotent enough to ignore failure.
+            gh label create "$ALERT_LABEL" --color B60205 \
+              --description 'Opened automatically by the daily production canary' || true
+            gh issue create --title "Production canary: ${broken} broken" \
+              --label "$ALERT_LABEL" --body-file alert-body.md
+          fi
+
+      - name: Close alert issue after recovery
+        if: steps.probe.outcome == 'success' && steps.alert.outputs.number != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh issue close "${{ steps.alert.outputs.number }}" --reason completed --comment \
+            "Daily production canary is green again. [Workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+
+      - name: Fail the job when a check failed
+        if: steps.probe.outcome == 'failure'
+        run: |
+          echo "::error::Production canary detected a broken feature. See the job summary and the $ALERT_LABEL issue."
+          exit 1

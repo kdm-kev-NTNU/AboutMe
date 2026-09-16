@@ -98,6 +98,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Production canary reports (scripts/production-canary.mjs writes these on demand)
+canary-report.json
+canary-report.md
+
 # Local runtime/db/temp
 *.local
 *.tmp
