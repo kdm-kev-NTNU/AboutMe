@@ -10,8 +10,16 @@ public class RealtimeRateLimitProperties {
 
   private boolean enabled = true;
 
-  /** Max POST /realtime/session calls per window per IP. */
-  private int capacity = 3;
+  /**
+   * Max POST /realtime/session calls per window per IP.
+   *
+   * <p>This bucket exists to stop scripted abuse, not to control spend: cost is bounded by
+   * {@code portfolio.ai.budget} and the kill switch, which reserve tokens per session. Sized to
+   * absorb the reconnects a real visitor makes after a denied microphone prompt or a dropped
+   * network, since each retry consumes a token and the previous limit of 3/hour locked such a
+   * visitor out of the feature entirely.
+   */
+  private int capacity = 30;
 
   /** Refill window in seconds (e.g. 3600 = hourly). */
   private int windowSeconds = 3600;

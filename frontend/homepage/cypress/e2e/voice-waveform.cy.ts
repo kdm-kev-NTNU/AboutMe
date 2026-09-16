@@ -34,7 +34,6 @@ describe('Voice waveform visual', () => {
         win.sessionStorage.clear()
         /** Otherwise navigator locale can pick NO and Mic uses aria-label Taleinndata */
         win.localStorage.setItem('lang', 'en')
-        win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
         Object.defineProperty(win.navigator, 'mediaDevices', {
           configurable: true,
           value: {
@@ -80,7 +79,6 @@ describe('Voice waveform visual', () => {
       onBeforeLoad(win) {
         win.sessionStorage.clear()
         win.localStorage.setItem('lang', 'en')
-        win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
         Object.defineProperty(win.navigator, 'mediaDevices', {
           configurable: true,
           value: {

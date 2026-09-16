@@ -28,7 +28,6 @@ describe('Chat e2e flow', () => {
   beforeEach(() => {
     cy.window().then((win) => {
       win.sessionStorage.clear()
-      win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
     })
   })
 

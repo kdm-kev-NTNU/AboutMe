@@ -6,15 +6,6 @@ import { useChatModelStore } from '../stores/model'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import AiStatusDialog from '@/components/AiStatusDialog.vue'
-import AiTransparencyNotice from '@/components/AiTransparencyNotice.vue'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import MessagesArea from '@/views/MessagesArea.vue'
 import {
   askQuestion,
@@ -50,10 +41,8 @@ const input = ref('')
 const isLoading = ref(false)
 const errorText = ref('')
 const aiErrorDialogOpen = ref(false)
-const showInfoPopup = ref(false)
 const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = MAX_SPEECH_PROMPT_CHARS
-const CHAT_INFO_DISMISSED_KEY = 'chatInfoPopupDismissed.v2'
 const langStore = useLangStore()
 const chatModelStore = useChatModelStore()
 const language = computed(() => langStore.language)
@@ -184,28 +173,6 @@ const showProviderToggle = computed(
   () => chatModelStore.hasOpenAI && chatModelStore.hasAnthropic,
 )
 
-const popupCopy = computed(() =>
-  language.value === 'no'
-    ? {
-        title: 'Porteføljen oppdateres fortløpende',
-        body: 'Chatten og kunnskapsgrunnlaget endrer seg etter hvert som jeg tar med meg læring fra bacheloroppgaven. Svarene blir gjerne mer treffsikre over tid.',
-        aiNote:
-          'Du snakker med en AI-assistent — ikke meg direkte. Svarene kan være unøyaktige.',
-        recommendation: 'Lurer du på hva som skjer akkurat nå? Ta en titt på prosjektsiden.',
-        bachelorCta: 'Åpne prosjektsiden',
-        dismiss: 'Forstått',
-      }
-    : {
-        title: 'This portfolio keeps evolving',
-        body: "I'm updating this chat and its knowledge base as I apply what I learned from my bachelor's thesis. Answers should get sharper over time.",
-        aiNote:
-          'You are chatting with an AI assistant — not me directly. Replies may be inaccurate.',
-        recommendation: 'Curious what I am working on? Check the project page.',
-        bachelorCta: 'Open the project page',
-        dismiss: 'Got it',
-      },
-)
-
 const chatInputLabel = computed(() =>
   language.value === 'no' ? 'Skriv melding til Kevin sin AI' : "Message Kevin's AI",
 )
@@ -256,31 +223,6 @@ const clearChat = () => {
   resetChatConversationId()
   void router.replace({ name: 'chat', query: {} })
 }
-
-const shouldShowInfoPopup = () => {
-  try {
-    return !localStorage.getItem(CHAT_INFO_DISMISSED_KEY)
-  } catch {
-    return true
-  }
-}
-
-const markInfoPopupDismissed = () => {
-  try {
-    localStorage.setItem(CHAT_INFO_DISMISSED_KEY, 'true')
-  } catch {}
-}
-
-const dismissInfoPopup = () => {
-  showInfoPopup.value = false
-  markInfoPopupDismissed()
-}
-
-watch(showInfoPopup, (isOpen, wasOpen) => {
-  if (wasOpen && !isOpen) {
-    markInfoPopupDismissed()
-  }
-})
 
 // Calls the portfolio backend; auth store is restored so optional future authenticated asks use the same path.
 async function send(text: string) {
@@ -391,9 +333,6 @@ async function send(text: string) {
 
 onMounted(async () => {
   await chatModelStore.ensureModelsLoaded()
-  if (shouldShowInfoPopup()) {
-    showInfoPopup.value = true
-  }
 
   const conversationId = getOrCreateChatConversationId()
   if (hasPageviewConsent()) {
@@ -424,26 +363,6 @@ onMounted(async () => {
       @retry="retryAfterError"
     />
 
-    <Dialog v-model:open="showInfoPopup">
-      <DialogContent class="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>{{ popupCopy.title }}</DialogTitle>
-          <DialogDescription>{{ popupCopy.body }}</DialogDescription>
-        </DialogHeader>
-        <p class="text-sm text-slate-700">
-          {{ popupCopy.aiNote }}
-        </p>
-        <p class="text-sm text-slate-700">
-          {{ popupCopy.recommendation }}
-        </p>
-        <DialogFooter class="flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button as-child variant="outline">
-            <RouterLink :to="{ name: 'how', hash: '#bachelor' }">{{ popupCopy.bachelorCta }}</RouterLink>
-          </Button>
-          <Button type="button" @click="dismissInfoPopup">{{ popupCopy.dismiss }}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
     <!-- Background overlay -->
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.05) 0%, transparent 70%);"></div>
@@ -479,10 +398,6 @@ onMounted(async () => {
           </div>
         </div>
       </section>
-
-      <div class="mb-4 flex-shrink-0">
-        <AiTransparencyNotice />
-      </div>
 
       <!-- Messages Area -->
       <div class="flex-1 mb-6 min-h-0">

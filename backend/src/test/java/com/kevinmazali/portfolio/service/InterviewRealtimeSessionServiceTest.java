@@ -9,7 +9,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,7 +20,7 @@ import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.model.interview.InterviewSessionEntity;
 import com.kevinmazali.portfolio.repository.InterviewSessionRepository;
-import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,10 +90,8 @@ class InterviewRealtimeSessionServiceTest {
   void createInterviewCall_returnsSdpOnSuccess() throws Exception {
     stubActiveSession("sess1", "doc1");
     when(interviewDocumentService.contextForSession("doc1")).thenReturn("Document context");
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(200);
-    when(response.body()).thenReturn("v=0\r\no=- interview answer");
-    when(openAiRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+    when(openAiRealtimeHttpInvoker.post(any(), any(), any()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(200, "v=0\r\no=- interview answer"));
 
     assertThat(service.createInterviewCall("sess1", "v=0\r\no=offer", "no", null, "cedar", "high"))
         .isEqualTo("v=0\r\no=- interview answer");
@@ -107,17 +104,14 @@ class InterviewRealtimeSessionServiceTest {
   void createInterviewCall_usesConfiguredTranscriptionModel() throws Exception {
     stubActiveSession("sess1", "doc1");
     when(interviewDocumentService.contextForSession("doc1")).thenReturn("Document context");
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(200);
-    when(response.body()).thenReturn("v=0");
-    ArgumentCaptor<java.net.http.HttpRequest> captor =
-        ArgumentCaptor.forClass(java.net.http.HttpRequest.class);
-    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+    ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
+    when(openAiRealtimeHttpInvoker.post(any(), any(), body.capture()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(200, "v=0"));
 
     service.createInterviewCall("sess1", "v=0", "en", null, null, null);
 
-    String raw = drainHttpBody(captor.getValue());
-    assertThat(raw).contains("\"model\":\"gpt-4o-transcribe\"");
+    assertThat(new String(body.getValue(), StandardCharsets.UTF_8))
+        .contains("\"model\":\"gpt-4o-transcribe\"");
   }
 
   @Test
@@ -128,7 +122,7 @@ class InterviewRealtimeSessionServiceTest {
         .isInstanceOf(RealtimeSessionException.class)
         .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.REALTIME_DISABLED);
 
-    verify(openAiRealtimeHttpInvoker, never()).invoke(any());
+    verify(openAiRealtimeHttpInvoker, never()).post(any(), any(), any());
   }
 
   @Test
@@ -174,10 +168,8 @@ class InterviewRealtimeSessionServiceTest {
   void createInterviewCall_mapsOpenAi4xx() throws Exception {
     stubActiveSession("sess1", "doc1");
     when(interviewDocumentService.contextForSession("doc1")).thenReturn("ctx");
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(400);
-    when(response.body()).thenReturn("{\"error\":\"bad sdp\"}");
-    when(openAiRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+    when(openAiRealtimeHttpInvoker.post(any(), any(), any()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(400, "{\"error\":\"bad sdp\"}"));
 
     assertThatThrownBy(() -> service.createInterviewCall("sess1", "v=0", "en", null, null, null))
         .isInstanceOf(RealtimeSessionException.class)
@@ -199,41 +191,5 @@ class InterviewRealtimeSessionServiceTest {
                     .voice("marin")
                     .startedAt(Instant.now())
                     .build()));
-  }
-
-  private static String drainHttpBody(java.net.http.HttpRequest request) throws Exception {
-    java.util.concurrent.Flow.Publisher<java.nio.ByteBuffer> publisher =
-        request.bodyPublisher().orElseThrow();
-    java.util.concurrent.CompletableFuture<java.io.ByteArrayOutputStream> done =
-        new java.util.concurrent.CompletableFuture<>();
-    publisher.subscribe(
-        new java.util.concurrent.Flow.Subscriber<>() {
-          private java.util.concurrent.Flow.Subscription subscription;
-          final java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-
-          @Override
-          public void onSubscribe(java.util.concurrent.Flow.Subscription subscription) {
-            this.subscription = subscription;
-            subscription.request(Long.MAX_VALUE);
-          }
-
-          @Override
-          public void onNext(java.nio.ByteBuffer item) {
-            byte[] chunk = new byte[item.remaining()];
-            item.get(chunk);
-            out.writeBytes(chunk);
-          }
-
-          @Override
-          public void onError(Throwable throwable) {
-            done.completeExceptionally(throwable);
-          }
-
-          @Override
-          public void onComplete() {
-            done.complete(out);
-          }
-        });
-    return done.get().toString(java.nio.charset.StandardCharsets.UTF_8);
   }
 }

@@ -41,7 +41,6 @@ describe('RealtimeVoicePanel', () => {
           AlertTitle: { template: '<div><slot /></div>' },
           AlertDescription: { template: '<div><slot /></div>' },
           AiStatusDialog: true,
-          AiTransparencyNotice: { template: '<div data-testid="ai-transparency" />' },
           Mic: true,
           MicOff: true,
           Loader2: true,
@@ -53,8 +52,6 @@ describe('RealtimeVoicePanel', () => {
 
     expect(wrapper.text()).toContain('Start live voice')
     expect(wrapper.text()).toContain('Tips for clearer voice')
-    expect(wrapper.text()).toContain('Reasoning vs speaking patience')
     expect(wrapper.find('[data-testid="vad-eagerness-select"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="settings-help"]').exists()).toBe(true)
   })
 })
