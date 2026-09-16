@@ -23,7 +23,6 @@ describe('Chat model catalog', () => {
   beforeEach(() => {
     cy.window().then((win) => {
       win.sessionStorage.clear()
-      win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
     })
   })
 

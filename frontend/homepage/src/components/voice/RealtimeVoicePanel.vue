@@ -4,7 +4,6 @@ import { Mic, MicOff, Loader2, TriangleAlert, Square } from 'lucide-vue-next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import AiStatusDialog from '@/components/AiStatusDialog.vue'
-import AiTransparencyNotice from '@/components/AiTransparencyNotice.vue'
 import { useVoiceModelStore } from '@/stores/voice-model'
 import { useRealtimeVoice } from '@/composables/useRealtimeVoice'
 import type {
@@ -64,13 +63,6 @@ const copy = computed(() => {
     voiceLabel: en ? 'Voice' : 'Stemme',
     reasoningLabel: en ? 'Reasoning' : 'Resonnering',
     vadLabel: en ? 'Speaking patience (VAD)' : 'Snakkepause (VAD)',
-    settingsHelpTitle: en ? 'Reasoning vs speaking patience' : 'Resonnering vs snakkepause',
-    settingsHelpReasoning: en
-      ? 'Reasoning controls how thoroughly the AI thinks before answering (fast → thorough). It does not change when your turn ends.'
-      : 'Resonnering styrer hvor grundig AI-en tenker før den svarer (rask → grundig). Den endrer ikke når turen din avsluttes.',
-    settingsHelpVad: en
-      ? 'Speaking patience (semantic VAD eagerness) controls how quickly the AI decides you finished talking. Low waits longest (~8s); high responds sooner (~2s); auto is the model default (~4s).'
-      : 'Snakkepause (semantic VAD eagerness) styrer hvor raskt AI-en bestemmer at du er ferdig med å snakke. Low venter lengst (~8s); high svarer tidligere (~2s); auto er modellens standard (~4s).',
     you: en ? 'You (transcript)' : 'Du (transkripsjon)',
     assistant: en ? 'AI assistant (transcript)' : 'AI-assistent (transkripsjon)',
     warningTitle: en ? 'Tips for clearer voice' : 'Tips for klarere stemme',
@@ -145,14 +137,11 @@ function setVoiceModelFromEvent(event: Event) {
     @retry="connect"
   />
 
-  <div class="mb-4 space-y-4">
-    <AiTransparencyNotice />
-    <Alert class="border-amber-300 bg-amber-50/90 text-amber-900">
-      <TriangleAlert class="size-4" aria-hidden="true" />
-      <AlertTitle>{{ copy.warningTitle }}</AlertTitle>
-      <AlertDescription>{{ copy.warningBody }}</AlertDescription>
-    </Alert>
-  </div>
+  <Alert class="mb-4 border-amber-300 bg-amber-50/90 text-amber-900">
+    <TriangleAlert class="size-4" aria-hidden="true" />
+    <AlertTitle>{{ copy.warningTitle }}</AlertTitle>
+    <AlertDescription>{{ copy.warningBody }}</AlertDescription>
+  </Alert>
 
   <div
     v-if="available === false"
@@ -231,15 +220,6 @@ function setVoiceModelFromEvent(event: Event) {
           <option v-for="level in vadEagernessOptions" :key="level" :value="level">{{ vadLabels[level] }}</option>
         </select>
       </label>
-
-      <div
-        data-testid="settings-help"
-        class="w-full max-w-md rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-left text-sm text-slate-700"
-      >
-        <p class="font-semibold text-slate-800">{{ copy.settingsHelpTitle }}</p>
-        <p class="mt-2 leading-relaxed">{{ copy.settingsHelpReasoning }}</p>
-        <p class="mt-2 leading-relaxed">{{ copy.settingsHelpVad }}</p>
-      </div>
 
       <div class="flex flex-wrap justify-center gap-3">
         <Button v-if="connectionState === 'idle' || connectionState === 'error'" type="button" @click="connect">

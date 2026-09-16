@@ -29,7 +29,6 @@ function withFakeMicrophone() {
     onBeforeLoad(win: Cypress.AUTWindow) {
       win.sessionStorage.clear()
       win.localStorage.setItem('lang', 'en')
-      win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
       Object.defineProperty(win.navigator, 'mediaDevices', {
         configurable: true,
         value: {
@@ -177,7 +176,6 @@ describe('Transcription flow', () => {
       onBeforeLoad(win) {
         win.sessionStorage.clear()
         win.localStorage.setItem('lang', 'no')
-        win.localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
         Object.defineProperty(win.navigator, 'mediaDevices', {
           configurable: true,
           value: {

@@ -32,7 +32,6 @@ describe('ChatView', () => {
 
   /** Matches VoiceView.spec AiStatusDialog stub; keeps ChatView tests stable alongside Dialog stubs. */
   const chatViewTestStubs = {
-    AiTransparencyNotice: { template: '<div data-testid="ai-transparency-notice" />' },
     AiStatusDialog: {
       props: [
         'open',
@@ -281,21 +280,16 @@ describe('ChatView', () => {
     expect(pushSpy).not.toHaveBeenCalledWith({ name: 'home' })
   })
 
-  it('shows updated first-time popup and saves versioned dismissal key', async () => {
+  /**
+   * A first-visit interstitial covered the chat input and had to be dismissed before the feature
+   * could be used. Asserting its absence keeps the chat reachable on the first render.
+   */
+  it('opens straight into a usable chat with no first-visit interstitial', async () => {
     const { wrapper } = await mountChat({})
-    expect(wrapper.text()).toContain('This portfolio keeps evolving')
 
-    const dismissBtn = wrapper.findAll('button').find((b) => /got it/i.test(b.text()))
-    expect(dismissBtn).toBeDefined()
-    await dismissBtn!.trigger('click')
-
-    expect(localStorage.getItem('chatInfoPopupDismissed.v2')).toBe('true')
-  })
-
-  it('shows updated popup even when legacy dismissal key exists', async () => {
-    localStorage.setItem('chatInfoPopupDismissed', 'true')
-    const { wrapper } = await mountChat({})
-    expect(wrapper.text()).toContain('This portfolio keeps evolving')
+    expect(wrapper.text()).not.toContain('This portfolio keeps evolving')
+    expect(wrapper.text()).not.toContain('You are chatting with an AI assistant')
+    expect(wrapper.find('input[type="text"]').exists()).toBe(true)
   })
 
   // --- Language-dependent UI tests ---
@@ -328,54 +322,6 @@ describe('ChatView', () => {
     const input = wrapper.find('input[type="text"]')
     expect(input.exists()).toBe(true)
     expect(input.attributes('placeholder')).toContain('Ask')
-  })
-
-  it('shows Norwegian popup text when language is no', async () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    useLangStore().setLanguage('no')
-    useChatModelStore().$reset()
-
-    const router = makeRouter()
-    await router.push({ path: '/chat' })
-    await router.isReady()
-
-    const wrapper = mount(ChatView, {
-      global: {
-        plugins: [pinia, router],
-        stubs: chatViewTestStubs,
-      },
-    })
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('Porteføljen oppdateres fortløpende')
-  })
-
-  it('shows English popup text when language is en', async () => {
-    const { wrapper } = await mountChat({})
-    expect(wrapper.text()).toContain('This portfolio keeps evolving')
-  })
-
-  it('shows Norwegian dismiss button when language is no', async () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    useLangStore().setLanguage('no')
-    useChatModelStore().$reset()
-
-    const router = makeRouter()
-    await router.push({ path: '/chat' })
-    await router.isReady()
-
-    const wrapper = mount(ChatView, {
-      global: {
-        plugins: [pinia, router],
-        stubs: chatViewTestStubs,
-      },
-    })
-    await flushPromises()
-
-    const dismissBtn = wrapper.findAll('button').find((b) => /forstått/i.test(b.text()))
-    expect(dismissBtn).toBeDefined()
   })
 
   it('shows Norwegian error when prompt is too long and language is no', async () => {
@@ -498,7 +444,6 @@ describe('ChatView', () => {
 
   it('blocks English question after Norwegian conversation start', async () => {
     const { wrapper } = await mountChat({})
-    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
     await flushPromises()
 
     const input = wrapper.find('input[type="text"]')
@@ -519,7 +464,6 @@ describe('ChatView', () => {
 
   it('blocks Norwegian question after English conversation start', async () => {
     const { wrapper } = await mountChat({})
-    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
     await flushPromises()
 
     const input = wrapper.find('input[type="text"]')
@@ -540,7 +484,6 @@ describe('ChatView', () => {
 
   it('allows same language questions within a conversation', async () => {
     const { wrapper } = await mountChat({})
-    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
     await flushPromises()
 
     const input = wrapper.find('input[type="text"]')
@@ -560,7 +503,6 @@ describe('ChatView', () => {
 
   it('resets language lock on clear chat', async () => {
     const { wrapper } = await mountChat({})
-    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
     await flushPromises()
 
     const input = wrapper.find('input[type="text"]')
@@ -584,7 +526,6 @@ describe('ChatView', () => {
 
   it('clears language warning when user types new input', async () => {
     const { wrapper } = await mountChat({})
-    localStorage.setItem('chatInfoPopupDismissed.v2', 'true')
     await flushPromises()
 
     const input = wrapper.find('input[type="text"]')
