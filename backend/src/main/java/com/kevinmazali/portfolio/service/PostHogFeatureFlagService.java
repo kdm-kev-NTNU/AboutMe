@@ -2,6 +2,7 @@ package com.kevinmazali.portfolio.service;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import com.kevinmazali.portfolio.config.OutboundHttp;
 import com.kevinmazali.portfolio.config.PostHogProperties;
 import java.time.Duration;
 import java.util.Collections;
@@ -9,7 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -24,6 +24,9 @@ import org.springframework.web.client.RestClientException;
 @Service
 public class PostHogFeatureFlagService {
 
+  /** Flag resolution is best-effort and on the request path, so connecting must fail fast. */
+  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
+
   private final PostHogProperties properties;
   private final ObjectMapper objectMapper;
   @Nullable
@@ -34,9 +37,12 @@ public class PostHogFeatureFlagService {
     this.objectMapper = objectMapper;
     if (properties.isFeatureFlagDecideConfigured()) {
       String base = normalizeBaseUrl(properties.getHost());
-      JdkClientHttpRequestFactory rf = new JdkClientHttpRequestFactory();
-      rf.setReadTimeout(Duration.ofMillis(Math.max(200, properties.getFeatureFlagsTimeoutMs())));
-      this.restClient = RestClient.builder().requestFactory(rf).baseUrl(base).build();
+      Duration readTimeout =
+          Duration.ofMillis(Math.max(200, properties.getFeatureFlagsTimeoutMs()));
+      this.restClient = RestClient.builder()
+          .requestFactory(OutboundHttp.requestFactory(CONNECT_TIMEOUT, readTimeout))
+          .baseUrl(base)
+          .build();
     } else {
       this.restClient = null;
     }

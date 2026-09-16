@@ -9,7 +9,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,18 +21,11 @@ import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.exception.RealtimeErrorCode;
 import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.util.AiRequestContext;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Flow;
-import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,6 +44,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class RealtimeSessionServiceTest {
 
+  private static final URI OPENAI_CALLS = URI.create("https://api.openai.com/v1/realtime/calls");
+
   @Mock private AiBudgetService aiBudgetService;
 
   @Mock private AiCircuitBreaker aiCircuitBreaker;
@@ -67,10 +61,6 @@ class RealtimeSessionServiceTest {
 
   @BeforeEach
   void setUp() {
-    // clear interrupt flag leaked from interrupt tests on some JVM/thread pool setups
-    // noinspection ResultOfMethodCallIgnored
-    Thread.interrupted();
-
     realtimeProperties = new RealtimeProperties();
     realtimeProperties.setModel("gpt-realtime-2");
     realtimeProperties.setVoice("marin");
@@ -103,8 +93,6 @@ class RealtimeSessionServiceTest {
   @AfterEach
   void tearDown() {
     SecurityContextHolder.clearContext();
-    // noinspection ResultOfMethodCallIgnored
-    Thread.interrupted();
   }
 
   @Test
@@ -117,10 +105,7 @@ class RealtimeSessionServiceTest {
   @Test
   void createRealtimeCall_returnsSdpOnSuccess_recordsUsage_invokesAssertions() throws Exception {
     String answer = "v=0\r\no=- realtime answer";
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(200);
-    when(response.body()).thenReturn(answer);
-    when(openAiRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+    stubUpstream(200, answer);
 
     assertThat(service.createRealtimeCall("v=0\r\no=offer", "en")).isEqualTo(answer);
 
@@ -153,7 +138,7 @@ class RealtimeSessionServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("SDP");
 
-    verify(openAiRealtimeHttpInvoker, never()).invoke(any());
+    verify(openAiRealtimeHttpInvoker, never()).post(any(), any(), any());
   }
 
   @Test
@@ -175,17 +160,14 @@ class RealtimeSessionServiceTest {
         .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.API_KEY_MISSING)
         .hasFieldOrPropertyWithValue("httpStatus", HttpStatus.SERVICE_UNAVAILABLE);
 
-    verify(openAiRealtimeHttpInvoker, never()).invoke(any());
+    verify(openAiRealtimeHttpInvoker, never()).post(any(), any(), any());
   }
 
   @Test
   void createRealtimeCall_mapsHttp4xxFromOpenAi() throws Exception {
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(400);
-    when(response.body())
-        .thenReturn(
-            "{\"error\":{\"message\":\"bad sdp\",\"type\":\"invalid_request_error\",\"code\":\"invalid_value\"}}");
-    when(openAiRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+    stubUpstream(
+        400,
+        "{\"error\":{\"message\":\"bad sdp\",\"type\":\"invalid_request_error\",\"code\":\"invalid_value\"}}");
 
     assertThatThrownBy(() -> service.createRealtimeCall("v=0\r\no=x", null))
         .isInstanceOf(RealtimeSessionException.class)
@@ -199,10 +181,7 @@ class RealtimeSessionServiceTest {
 
   @Test
   void createRealtimeCall_mapsHttp5xxFromOpenAi() throws Exception {
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(503);
-    when(response.body()).thenReturn("{}");
-    when(openAiRealtimeHttpInvoker.invoke(any())).thenReturn(response);
+    stubUpstream(503, "{}");
 
     assertThatThrownBy(() -> service.createRealtimeCall("v=0\r\no=x", null))
         .isInstanceOf(RealtimeSessionException.class)
@@ -212,39 +191,35 @@ class RealtimeSessionServiceTest {
         .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), nullable(Double.class), anyString());
   }
 
+  /**
+   * The transport reports "no response at all" as {@link IOException}, and that must surface to the
+   * SPA as OPENAI_UNREACHABLE. This is the exact path that was live in production when voice broke:
+   * the backend could not open a connection to api.openai.com.
+   */
   @Test
-  void createRealtimeCall_mapsIoExceptionFromInvoker() throws Exception {
-    when(openAiRealtimeHttpInvoker.invoke(any())).thenThrow(new IOException("reset"));
+  void createRealtimeCall_mapsTransportFailureToUnreachable() throws Exception {
+    when(openAiRealtimeHttpInvoker.post(any(), any(), any()))
+        .thenThrow(new IOException("Network is unreachable"));
 
     assertThatThrownBy(() -> service.createRealtimeCall("v=0\r\no=x", "en"))
         .isInstanceOf(RealtimeSessionException.class)
         .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.OPENAI_UNREACHABLE)
+        .hasMessageContaining("Network is unreachable")
         .hasCauseInstanceOf(IOException.class);
-  }
 
-  @Test
-  void createRealtimeCall_restoresInterruptOnInterruptedInvoker() throws Exception {
-    when(openAiRealtimeHttpInvoker.invoke(any())).thenThrow(new InterruptedException("boom"));
-
-    assertThatThrownBy(() -> service.createRealtimeCall("v=0\r\no=x", "en"))
-        .isInstanceOf(RealtimeSessionException.class)
-        .hasFieldOrPropertyWithValue("errorCode", RealtimeErrorCode.OPENAI_UNREACHABLE)
-        .hasCauseInstanceOf(InterruptedException.class);
-
-    assertThat(Thread.interrupted()).isTrue();
+    verify(aiBudgetService, never())
+        .recordUsage(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), nullable(Double.class), anyString());
   }
 
   @Test
   void createRealtimeCall_includesMultipartSdpOffer() throws Exception {
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(200);
-    when(response.body()).thenReturn("ok");
-    ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
-    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+    ArgumentCaptor<byte[]> body = bodyCaptor();
+    when(openAiRealtimeHttpInvoker.post(any(), any(), body.capture()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(200, "ok"));
 
     service.createRealtimeCall("v=0\r\nCUSTOM_OFFER_MARK", null);
 
-    String raw = utf8Drain(captor.getValue());
+    String raw = utf8(body.getValue());
     assertThat(raw).contains("CUSTOM_OFFER_MARK");
     assertThat(raw).contains("name=\"sdp\"");
     assertThat(raw).contains("name=\"session\"");
@@ -252,35 +227,28 @@ class RealtimeSessionServiceTest {
 
   @Test
   void createRealtimeCall_multipartUsesCrlfBeforeBoundary_afterLfOnlySdp() throws Exception {
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(200);
-    when(response.body()).thenReturn("ok");
-    ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
-    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+    ArgumentCaptor<byte[]> body = bodyCaptor();
+    when(openAiRealtimeHttpInvoker.post(any(), any(), body.capture()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(200, "ok"));
 
-    String sdpLfOnly = "v=0\no=LF_ONLY_TERMINATOR\n";
-    service.createRealtimeCall(sdpLfOnly, null);
+    service.createRealtimeCall("v=0\no=LF_ONLY_TERMINATOR\n", null);
 
-    String raw = utf8Drain(captor.getValue());
+    String raw = utf8(body.getValue());
     assertThat(raw).contains("o=LF_ONLY_TERMINATOR\r\n");
     int marker = raw.indexOf("o=LF_ONLY_TERMINATOR");
     assertThat(marker).isGreaterThan(0);
-    String afterOfferLine =
-        raw.substring(marker + "o=LF_ONLY_TERMINATOR".length());
-    assertThat(afterOfferLine).startsWith("\r\n\r\n--");
+    assertThat(raw.substring(marker + "o=LF_ONLY_TERMINATOR".length())).startsWith("\r\n\r\n--");
   }
 
   @Test
   void createRealtimeCall_usesNorwegianInstructionsForNb() throws Exception {
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(200);
-    when(response.body()).thenReturn("ok");
-    ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
-    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+    ArgumentCaptor<byte[]> body = bodyCaptor();
+    when(openAiRealtimeHttpInvoker.post(any(), any(), body.capture()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(200, "ok"));
 
     service.createRealtimeCall("v=0", " NB ");
 
-    JsonNode json = extractSessionJson(captor.getValue());
+    JsonNode json = extractSessionJson(body.getValue());
 
     assertThat(json.get("instructions").asText()).contains("Du er en hjelpsom");
     assertThat(json.get("instructions").asText()).contains("Kevin studerer dataingeniør ved NTNU");
@@ -305,15 +273,13 @@ class RealtimeSessionServiceTest {
 
   @Test
   void createRealtimeCall_usesRequestedCuratedVoiceAndReasoningEffort() throws Exception {
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(200);
-    when(response.body()).thenReturn("ok");
-    ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
-    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+    ArgumentCaptor<byte[]> body = bodyCaptor();
+    when(openAiRealtimeHttpInvoker.post(any(), any(), body.capture()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(200, "ok"));
 
     service.createRealtimeCall("v=0", "en", null, "cedar", "high", "high");
 
-    JsonNode json = extractSessionJson(captor.getValue());
+    JsonNode json = extractSessionJson(body.getValue());
     assertThat(json.at("/audio/output/voice").asText()).isEqualTo("cedar");
     assertThat(json.at("/reasoning/effort").asText()).isEqualTo("high");
     assertThat(json.at("/audio/input/turn_detection/eagerness").asText()).isEqualTo("high");
@@ -321,20 +287,20 @@ class RealtimeSessionServiceTest {
 
   @Test
   void createRealtimeCall_defaultsToEnglishForUnsupportedLanguageHeaders() throws Exception {
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(200);
-    when(response.body()).thenReturn("ok");
-    ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
-    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+    ArgumentCaptor<URI> uri = ArgumentCaptor.forClass(URI.class);
+    ArgumentCaptor<Map<String, String>> headers = headerCaptor();
+    ArgumentCaptor<byte[]> body = bodyCaptor();
+    when(openAiRealtimeHttpInvoker.post(uri.capture(), headers.capture(), body.capture()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(200, "ok"));
 
     service.createRealtimeCall("v=0", "fr");
 
-    JsonNode json = extractSessionJson(captor.getValue());
+    JsonNode json = extractSessionJson(body.getValue());
     assertThat(json.get("instructions").asText()).contains("portfolio website").contains("third person");
 
-    HttpRequest req = captor.getValue();
-    assertThat(req.uri()).isEqualTo(URI.create("https://api.openai.com/v1/realtime/calls"));
-    assertThat(req.headers().firstValue("Authorization")).hasValue("Bearer sk-test-openai-key");
+    assertThat(uri.getValue()).isEqualTo(OPENAI_CALLS);
+    assertThat(headers.getValue()).containsEntry("Authorization", "Bearer sk-test-openai-key");
+    assertThat(headers.getValue().get("Content-Type")).startsWith("multipart/form-data; boundary=");
 
     verify(aiCircuitBreaker).assertClosed();
     verify(aiBudgetService).assertWithinBudget(anyString(), anyBoolean());
@@ -346,70 +312,44 @@ class RealtimeSessionServiceTest {
     SecurityContextHolder.getContext().setAuthentication(
         new UsernamePasswordAuthenticationToken(username, "pw", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
 
-    HttpResponse<String> response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(200);
-    when(response.body()).thenReturn("ok");
-    ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
-    when(openAiRealtimeHttpInvoker.invoke(captor.capture())).thenReturn(response);
+    ArgumentCaptor<Map<String, String>> headers = headerCaptor();
+    when(openAiRealtimeHttpInvoker.post(any(), headers.capture(), any()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(200, "ok"));
 
     service.createRealtimeCall("v=0\r\noffer", null);
 
     String budgetId = "user:" + username;
-    String safety = captor.getValue().headers().firstValue("OpenAI-Safety-Identifier").orElseThrow();
+    String safety = headers.getValue().get("OpenAI-Safety-Identifier");
     assertThat(safety).hasSize(64).matches("[0-9a-f]{64}").isEqualTo(AiRequestContext.openAiSafetyIdentifier(budgetId));
     verify(aiBudgetService).assertWithinBudget(eq(budgetId), eq(false));
   }
 
-  static String utf8Drain(HttpRequest request) throws Exception {
-    Flow.Publisher<ByteBuffer> publisher = request.bodyPublisher().orElseThrow();
-
-    CompletableFuture<ByteArrayOutputStream> done = new CompletableFuture<>();
-    publisher.subscribe(
-        new Flow.Subscriber<>() {
-          private Subscription subscription;
-          final ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-          @Override
-          public void onSubscribe(final Subscription subscription) {
-            this.subscription = subscription;
-            subscription.request(Long.MAX_VALUE);
-          }
-
-          @Override
-          public void onNext(final ByteBuffer b) {
-            while (b.hasRemaining()) {
-              out.write(b.get());
-            }
-          }
-
-          @Override
-          public void onError(final Throwable throwable) {
-            done.completeExceptionally(throwable);
-          }
-
-          @Override
-          public void onComplete() {
-            done.complete(out);
-          }
-        });
-
-    ByteArrayOutputStream bos = done.get(5, TimeUnit.SECONDS);
-    return bos.toString(StandardCharsets.UTF_8);
+  private void stubUpstream(int status, String body) throws IOException {
+    when(openAiRealtimeHttpInvoker.post(any(), any(), any()))
+        .thenReturn(new OpenAiRealtimeHttpInvoker.Response(status, body));
   }
 
-  private JsonNode extractSessionJson(HttpRequest request) throws IOException {
-    try {
-      String raw = utf8Drain(request);
-      int sessionField = raw.indexOf("name=\"session\"");
-      assertThat(sessionField).isGreaterThanOrEqualTo(0);
-      int jsonStart = raw.indexOf('{', sessionField);
-      assertThat(jsonStart).isGreaterThanOrEqualTo(0);
-      int jsonEndExclusive = raw.indexOf("\r\n--", jsonStart);
-      assertThat(jsonEndExclusive).isGreaterThan(jsonStart);
-      String jsonSlice = raw.substring(jsonStart, jsonEndExclusive).trim();
-      return mapper.readTree(jsonSlice);
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+  private static ArgumentCaptor<byte[]> bodyCaptor() {
+    return ArgumentCaptor.forClass(byte[].class);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static ArgumentCaptor<Map<String, String>> headerCaptor() {
+    return ArgumentCaptor.forClass(Map.class);
+  }
+
+  private static String utf8(byte[] body) {
+    return new String(body, StandardCharsets.UTF_8);
+  }
+
+  private JsonNode extractSessionJson(byte[] body) throws IOException {
+    String raw = utf8(body);
+    int sessionField = raw.indexOf("name=\"session\"");
+    assertThat(sessionField).isGreaterThanOrEqualTo(0);
+    int jsonStart = raw.indexOf('{', sessionField);
+    assertThat(jsonStart).isGreaterThanOrEqualTo(0);
+    int jsonEndExclusive = raw.indexOf("\r\n--", jsonStart);
+    assertThat(jsonEndExclusive).isGreaterThan(jsonStart);
+    return mapper.readTree(raw.substring(jsonStart, jsonEndExclusive).trim());
   }
 }

@@ -10,11 +10,9 @@ import com.kevinmazali.portfolio.exception.RealtimeSessionException;
 import com.kevinmazali.portfolio.util.AiRequestContext;
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.PostConstruct;
@@ -197,19 +195,15 @@ public class RealtimeSessionService {
 
     String safetyId = AiRequestContext.openAiSafetyIdentifier(budgetUserId);
 
-    HttpRequest request =
-        HttpRequest.newBuilder()
-            .uri(URI.create(OPENAI_REALTIME_CALLS))
-            .timeout(Duration.ofSeconds(60))
-            .header("Authorization", "Bearer " + openAiApiKey)
-            .header("OpenAI-Safety-Identifier", safetyId)
-            .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-            .POST(HttpRequest.BodyPublishers.ofByteArray(body))
-            .build();
+    Map<String, String> headers = Map.of(
+        "Authorization", "Bearer " + openAiApiKey,
+        "OpenAI-Safety-Identifier", safetyId,
+        "Content-Type", "multipart/form-data; boundary=" + boundary);
 
     try {
-      HttpResponse<String> response = openAiRealtimeHttpInvoker.invoke(request);
-      int status = response.statusCode();
+      OpenAiRealtimeHttpInvoker.Response response =
+          openAiRealtimeHttpInvoker.post(URI.create(OPENAI_REALTIME_CALLS), headers, body);
+      int status = response.status();
       if (status >= 200 && status < 300) {
         aiBudgetService.recordUsage(
             budgetUserId,
@@ -243,10 +237,7 @@ public class RealtimeSessionService {
               ? "OpenAI rejected the session: " + openAiSummary
               : "OpenAI Realtime session failed (HTTP " + status + ").";
       throw new RealtimeSessionException(HttpStatus.BAD_GATEWAY, code, userMessage);
-    } catch (IOException | InterruptedException e) {
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
+    } catch (IOException e) {
       log.warn(
           "openai_realtime_unreachable budgetUserId={} errorCode={} message={}",
           truncateId(budgetUserId),
