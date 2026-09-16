@@ -11,7 +11,7 @@ class RealtimeRateLimitPropertiesTest {
     RealtimeRateLimitProperties p = new RealtimeRateLimitProperties();
 
     assertThat(p.isEnabled()).isTrue();
-    assertThat(p.getCapacity()).isEqualTo(3);
+    assertThat(p.getCapacity()).isEqualTo(30);
     assertThat(p.getWindowSeconds()).isEqualTo(3600);
   }
 
