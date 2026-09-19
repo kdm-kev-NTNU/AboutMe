@@ -103,9 +103,10 @@ class InterviewRealtimeSessionServiceTest {
   @Test
   void interviewService_hasNoPublicVoiceKillSwitchDependency() {
     // Structural invariant: public kill switch must not gate admin interview SDP exchange.
-    assertThat(InterviewRealtimeSessionService.class.getDeclaredFields())
-        .extracting(java.lang.reflect.Field::getType)
-        .doesNotContain(VoiceKillSwitch.class);
+    boolean dependsOnKillSwitch =
+        java.util.Arrays.stream(InterviewRealtimeSessionService.class.getDeclaredFields())
+            .anyMatch(field -> field.getType() == VoiceKillSwitch.class);
+    assertThat(dependsOnKillSwitch).isFalse();
   }
 
   @Test

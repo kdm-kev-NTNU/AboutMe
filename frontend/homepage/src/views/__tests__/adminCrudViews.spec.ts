@@ -219,7 +219,8 @@ describe('Admin CRUD views (integration-style)', () => {
       },
       headers: headersJson,
     })
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-export')
+    const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
 
     const wrapper = mountAdmin(AdminChunksView)
     await flushPromises()
@@ -230,8 +231,10 @@ describe('Admin CRUD views (integration-style)', () => {
     await flushPromises()
 
     expect(adminDocumentsChunksExport).toHaveBeenCalledWith({ documentId: undefined })
-    expect(clickSpy).toHaveBeenCalled()
-    clickSpy.mockRestore()
+    expect(createObjectURLSpy).toHaveBeenCalled()
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-export')
+    createObjectURLSpy.mockRestore()
+    revokeObjectURLSpy.mockRestore()
   })
 
   it('AdminQuestionSuggestionsView generates suggestions from current chunks', async () => {
