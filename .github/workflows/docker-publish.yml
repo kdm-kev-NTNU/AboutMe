@@ -53,7 +53,7 @@ jobs:
           echo "Docker publish config detected for ${DOCKER_ACCOUNT}/${CLOUD_BUILDER_NAME}."
       # Build JAR once on the runner (Maven cache) instead of inside multi-arch Docker Build Cloud,
       # avoiding Maven Central rate limits (429) when amd64 + arm64 resolve deps in parallel.
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           java-version: "21"
           distribution: "temurin"

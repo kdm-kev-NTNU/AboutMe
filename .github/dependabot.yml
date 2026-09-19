@@ -9,6 +9,9 @@ updates:
       all-maven:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: npm
     directory: /frontend/homepage
@@ -23,8 +26,32 @@ updates:
           # Transitive of vitest; security bumps fail when parent is still <4.1.11.
           # Pin via package.json overrides + keep vitest / @vitest/coverage-v8 current.
           - "@vitest/mocker"
+        update-types:
+          - "minor"
+          - "patch"
     ignore:
       - dependency-name: "@vitest/mocker"
+      # Majors that need a dedicated migration PR (build/test break on current main).
+      - dependency-name: "pinia"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/coverage-v8"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "markdown-it"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "cypress"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-plugin-cypress"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/jsdom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
