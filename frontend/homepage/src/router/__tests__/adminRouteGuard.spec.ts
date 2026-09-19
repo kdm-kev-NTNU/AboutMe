@@ -28,6 +28,12 @@ describe('registerAdminRouteGuard', () => {
 					meta: { requiresAdmin: true },
 					component: { template: '<div>admin</div>' },
 				},
+				{
+					path: '/admin/features',
+					name: 'admin-features',
+					meta: { requiresAdmin: true },
+					component: { template: '<div>features</div>' },
+				},
 			],
 		})
 		registerAdminRouteGuard(router)
@@ -85,5 +91,18 @@ describe('registerAdminRouteGuard', () => {
 		const router = buildRouter()
 		await router.push('/admin/tools')
 		expect(router.currentRoute.value.path).toBe('/')
+	})
+
+	it('guards admin-features the same way as other admin tools', async () => {
+		vi.mocked(authMe).mockResolvedValue({
+			status: 401,
+			data: { error: 'Not authenticated' },
+			headers: new Headers(),
+		} as never)
+
+		const router = buildRouter()
+		await router.push('/admin/features')
+		expect(router.currentRoute.value.path).toBe('/')
+		expect(authMe).toHaveBeenCalled()
 	})
 })

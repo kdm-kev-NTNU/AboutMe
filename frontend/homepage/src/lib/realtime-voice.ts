@@ -35,8 +35,12 @@ export type RealtimeVoiceModelOption = {
 }
 
 export type RealtimeVoiceStatus = RealtimeVoiceSessionOptions & {
+  /** Realtime capability (config + API key); used by admin interview. */
   enabled: boolean
+  /** Public availability (capability and kill switch not engaged). */
   liveEnabled: boolean
+  /** Present when public voice is intentionally off, e.g. KILL_SWITCH. */
+  liveDisabledReason: 'KILL_SWITCH' | null
   voices: RealtimeVoiceChoice[]
   reasoningEfforts: RealtimeReasoningEffort[]
   vadEagernessOptions: RealtimeVadEagerness[]
@@ -103,6 +107,7 @@ function parseRealtimeVoiceStatus(data: unknown): RealtimeVoiceStatus | null {
     defaultReasoningEffort?: unknown
     defaultVadEagerness?: unknown
     liveEnabled?: unknown
+    liveDisabledReason?: unknown
   }
   const voices = Array.isArray(d.voices) ? d.voices.filter(isRealtimeVoice) : [...ALLOWED_REALTIME_VOICES]
   const reasoningEfforts = Array.isArray(d.reasoningEfforts)
@@ -126,6 +131,7 @@ function parseRealtimeVoiceStatus(data: unknown): RealtimeVoiceStatus | null {
   return {
     enabled: d.enabled === true,
     liveEnabled: d.liveEnabled === true,
+    liveDisabledReason: d.liveDisabledReason === 'KILL_SWITCH' ? 'KILL_SWITCH' : null,
     voices: voices.length > 0 ? voices : [...ALLOWED_REALTIME_VOICES],
     reasoningEfforts: reasoningEfforts.length > 0 ? reasoningEfforts : [...ALLOWED_REALTIME_REASONING_EFFORTS],
     vadEagernessOptions:
@@ -140,32 +146,25 @@ function parseRealtimeVoiceStatus(data: unknown): RealtimeVoiceStatus | null {
  * Whether the backend exposes Realtime voice (feature flag + API key).
  */
 export async function fetchRealtimeVoiceStatus(): Promise<RealtimeVoiceStatus> {
+  const fallback: RealtimeVoiceStatus = {
+    enabled: false,
+    liveEnabled: false,
+    liveDisabledReason: null,
+    voices: [...ALLOWED_REALTIME_VOICES],
+    reasoningEfforts: [...ALLOWED_REALTIME_REASONING_EFFORTS],
+    vadEagernessOptions: [...ALLOWED_REALTIME_VAD_EAGERNESS],
+    voice: DEFAULT_REALTIME_VOICE,
+    reasoningEffort: DEFAULT_REALTIME_REASONING_EFFORT,
+    vadEagerness: DEFAULT_REALTIME_VAD_EAGERNESS,
+  }
   try {
     const r = await customFetch<{ data: unknown; status: number }>('/realtime/status', { method: 'GET' })
     if (r.status !== 200) {
       throw new Error(`HTTP ${r.status}`)
     }
-    return parseRealtimeVoiceStatus(r.data) ?? {
-      enabled: false,
-      liveEnabled: false,
-      voices: [...ALLOWED_REALTIME_VOICES],
-      reasoningEfforts: [...ALLOWED_REALTIME_REASONING_EFFORTS],
-      vadEagernessOptions: [...ALLOWED_REALTIME_VAD_EAGERNESS],
-      voice: DEFAULT_REALTIME_VOICE,
-      reasoningEffort: DEFAULT_REALTIME_REASONING_EFFORT,
-      vadEagerness: DEFAULT_REALTIME_VAD_EAGERNESS,
-    }
+    return parseRealtimeVoiceStatus(r.data) ?? fallback
   } catch {
-    return {
-      enabled: false,
-      liveEnabled: false,
-      voices: [...ALLOWED_REALTIME_VOICES],
-      reasoningEfforts: [...ALLOWED_REALTIME_REASONING_EFFORTS],
-      vadEagernessOptions: [...ALLOWED_REALTIME_VAD_EAGERNESS],
-      voice: DEFAULT_REALTIME_VOICE,
-      reasoningEffort: DEFAULT_REALTIME_REASONING_EFFORT,
-      vadEagerness: DEFAULT_REALTIME_VAD_EAGERNESS,
-    }
+    return fallback
   }
 }
 

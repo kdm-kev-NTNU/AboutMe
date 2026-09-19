@@ -53,6 +53,9 @@ jobs:
       - name: Probe production
         id: probe
         continue-on-error: true
+        env:
+          # GITHUB_SHA is the tip of main on schedule/dispatch after checkout — used by DEPLOYED_REVISION.
+          CANARY_EXPECTED_REVISION: ${{ github.sha }}
         run: |
           node scripts/production-canary.mjs \
             --base-url "${{ inputs.base_url || 'https://kevindmazali.me' }}" \

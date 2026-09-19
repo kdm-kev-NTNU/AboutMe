@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import HomeView from '../HomeView.vue'
 import AdminToolsView from '../AdminToolsView.vue'
 import AdminChunksView from '../AdminChunksView.vue'
 import AdminPipelineView from '../AdminPipelineView.vue'
@@ -134,16 +133,11 @@ describe('HomeView, admin views (smoke)', () => {
     })
   }
 
-  it('renders HomeView voice-first hero', async () => {
-    const wrapper = mountView(HomeView)
-    await flushPromises()
-    expect(wrapper.text()).toMatch(/Talk with Kevin's AI first/i)
-  })
-
-  it('renders AdminToolsView hub', async () => {
+  it('renders AdminToolsView hub with feature switches link', async () => {
     const wrapper = mountView(AdminToolsView)
     await flushPromises()
     expect(wrapper.text()).toContain('Internal tools')
+    expect(wrapper.text()).toContain('Feature switches')
   })
 
   it('renders AdminChunksView', async () => {

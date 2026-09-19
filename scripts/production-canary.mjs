@@ -12,17 +12,20 @@
  * The lesson encoded here: an availability check that stops at the process boundary cannot detect
  * an egress fault. Each feature is therefore probed at the boundary that can actually break.
  *
- * The backend has two distinct outbound HTTP stacks, and they fail independently:
- *   - Apache HttpClient 5  (Spring AI chat + transcription)  -> exercised by CHAT_EGRESS
- *   - java.net.http.HttpClient (realtime session + PostHog)  -> exercised by VOICE_EGRESS
- * Covering one says nothing about the other, so both are probed on every run.
+ * Both chat and live voice now share the address-family-safe Apache HttpComponents stack via
+ * OutboundHttp, but they still use separate RestClient beans and configs, so both paths are
+ * probed. A second failure mode this canary catches is a skipped Railway deploy: when GitHub
+ * check suites fail (e.g. Dependabot), Railway can mark the backend deploy SKIPPED while
+ * `/actuator/health` stays UP on the previous image. DEPLOYED_REVISION compares
+ * `/actuator/info`.deploy.revision to the expected main SHA.
  *
  * Usage
  * -----
  *   node scripts/production-canary.mjs [--base-url https://example.com] [--json out.json]
- *                                      [--markdown out.md]
+ *                                      [--markdown out.md] [--expected-revision <sha>]
  *
  * Environment: CANARY_BASE_URL overrides the default base URL.
+ *              CANARY_EXPECTED_REVISION (or GITHUB_SHA) sets the expected deploy revision.
  * Exit code 0 when no check FAILED, 1 otherwise. INCONCLUSIVE never fails the run.
  */
 
@@ -73,12 +76,17 @@ const REALTIME_CODES_MEANING_BROKEN = new Map([
 const INVALID_SDP_OFFER = 'v=0\r\n'
 
 function parseArgs(argv) {
-  const args = { baseUrl: process.env.CANARY_BASE_URL || DEFAULT_BASE_URL }
+  const args = {
+    baseUrl: process.env.CANARY_BASE_URL || DEFAULT_BASE_URL,
+    expectedRevision:
+      process.env.CANARY_EXPECTED_REVISION || process.env.GITHUB_SHA || undefined,
+  }
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
     if (arg === '--base-url') args.baseUrl = argv[(i += 1)]
     else if (arg === '--json') args.jsonPath = argv[(i += 1)]
     else if (arg === '--markdown') args.markdownPath = argv[(i += 1)]
+    else if (arg === '--expected-revision') args.expectedRevision = argv[(i += 1)]
     else throw new Error(`Unknown argument: ${arg}`)
   }
   if (!args.baseUrl) throw new Error('Base URL must not be empty')
@@ -130,6 +138,21 @@ function excerpt(text, limit = 300) {
 
 const result = (status, summary, detail) => ({ status, summary, detail })
 
+function normalizeRevision(sha) {
+  if (!sha || typeof sha !== 'string') return ''
+  return sha.trim().toLowerCase()
+}
+
+function revisionsMatch(deployed, expected) {
+  const a = normalizeRevision(deployed)
+  const b = normalizeRevision(expected)
+  if (!a || !b) return false
+  // Accept either full SHA or a unique prefix (Railway may expose abbreviated forms).
+  const shorter = a.length <= b.length ? a : b
+  const longer = a.length <= b.length ? b : a
+  return longer.startsWith(shorter) && shorter.length >= 7
+}
+
 // --- Checks -------------------------------------------------------------------------------------
 // Each check answers one question and owns its own pass/fail contract. A check never throws; an
 // unexpected shape is reported as INCONCLUSIVE so unknown states do not masquerade as outages.
@@ -147,6 +170,47 @@ async function checkBackendHealth(baseUrl) {
     return result(FAIL, `Backend health status is ${body?.status ?? 'unparseable'}`, excerpt(response.text))
   }
   return result(PASS, 'Backend reports UP')
+}
+
+/**
+ * Proves production is running the expected git revision (catches Railway SKIPPED deploys).
+ * When no expected revision is provided (local ad-hoc run), the check is INCONCLUSIVE.
+ */
+async function checkDeployedRevision(baseUrl, expectedRevision) {
+  if (!expectedRevision) {
+    return result(
+      INCONCLUSIVE,
+      'No expected revision provided (pass --expected-revision or CANARY_EXPECTED_REVISION / GITHUB_SHA)',
+    )
+  }
+  const response = await request(`${baseUrl}/api/actuator/info`, { timeoutMs: 20_000 })
+  if (response.transportError) {
+    return result(FAIL, 'Backend info endpoint is unreachable', response.transportError)
+  }
+  if (response.status !== 200) {
+    return result(FAIL, `Backend info returned HTTP ${response.status}`, excerpt(response.text))
+  }
+  const body = parseJson(response.text)
+  const deployed =
+    body?.deploy?.revision ||
+    body?.git?.commit?.id?.full ||
+    (typeof body?.git?.commit?.id === 'string' ? body.git.commit.id : undefined) ||
+    body?.git?.commit?.id
+  if (!deployed || typeof deployed !== 'string') {
+    return result(
+      FAIL,
+      'Backend /actuator/info has no deploy.revision (stale image or missing RAILWAY_GIT_COMMIT_SHA)',
+      excerpt(response.text),
+    )
+  }
+  if (!revisionsMatch(deployed, expectedRevision)) {
+    return result(
+      FAIL,
+      `Production revision ${deployed} does not match expected ${expectedRevision}`,
+      'Backend deploy is stale relative to main (often a SKIPPED Railway deploy after a failing check suite).',
+    )
+  }
+  return result(PASS, `Production revision matches expected`, deployed)
 }
 
 /** A non-empty model list is what the SPA gates its chat UI on. */
@@ -192,7 +256,11 @@ async function checkChatEgress(baseUrl) {
   return result(PASS, 'Chat answered a live question', `answer: ${excerpt(answer, 120)}`)
 }
 
-/** The two signals the SPA uses to decide whether to show the "Start live voice" button. */
+/**
+ * The two signals the SPA uses to decide whether to show the "Start live voice" button.
+ * When the operator engaged the PostHog voice kill switch, liveEnabled is false with
+ * liveDisabledReason=KILL_SWITCH — that is intentional, not an outage.
+ */
 async function checkVoiceAvailability(baseUrl) {
   const statusResponse = await request(`${baseUrl}/api/realtime/status`, { timeoutMs: 20_000 })
   if (statusResponse.transportError) {
@@ -201,7 +269,15 @@ async function checkVoiceAvailability(baseUrl) {
   if (statusResponse.status !== 200) {
     return result(FAIL, `Realtime status returned HTTP ${statusResponse.status}`, excerpt(statusResponse.text))
   }
-  if (parseJson(statusResponse.text)?.liveEnabled !== true) {
+  const statusBody = parseJson(statusResponse.text)
+  if (statusBody?.liveDisabledReason === 'KILL_SWITCH') {
+    return result(
+      INCONCLUSIVE,
+      'Live voice is intentionally disabled by the operator kill switch',
+      excerpt(statusResponse.text),
+    )
+  }
+  if (statusBody?.liveEnabled !== true) {
     return result(
       FAIL,
       'Realtime status reports liveEnabled=false, so the SPA hides live voice',
@@ -225,10 +301,20 @@ async function checkVoiceAvailability(baseUrl) {
 }
 
 /**
- * Proves the backend can reach the OpenAI Realtime API over the java.net.http.HttpClient stack.
+ * Proves the backend can reach the OpenAI Realtime API over the shared OutboundHttp stack.
  * See INVALID_SDP_OFFER for why an upstream rejection is the expected healthy outcome.
  */
 async function checkVoiceEgress(baseUrl) {
+  // Skip spending a session attempt when the operator already disabled public voice.
+  const statusResponse = await request(`${baseUrl}/api/realtime/status`, { timeoutMs: 20_000 })
+  const statusBody = parseJson(statusResponse.text)
+  if (statusBody?.liveDisabledReason === 'KILL_SWITCH') {
+    return result(
+      INCONCLUSIVE,
+      'Voice egress not probed: voice intentionally disabled by operator kill switch',
+    )
+  }
+
   const response = await request(`${baseUrl}/api/realtime/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/sdp', 'X-Chat-Language': 'en' },
@@ -268,13 +354,21 @@ async function checkVoiceEgress(baseUrl) {
   )
 }
 
-const CHECKS = [
-  { id: 'BACKEND_HEALTH', feature: 'platform', title: 'Backend process health', run: checkBackendHealth },
-  { id: 'CHAT_AVAILABILITY', feature: 'chat', title: 'Chat models advertised', run: checkChatAvailability },
-  { id: 'CHAT_EGRESS', feature: 'chat', title: 'Chat answers a live question', run: checkChatEgress },
-  { id: 'VOICE_AVAILABILITY', feature: 'voice', title: 'Live voice advertised', run: checkVoiceAvailability },
-  { id: 'VOICE_EGRESS', feature: 'voice', title: 'Backend reaches OpenAI Realtime', run: checkVoiceEgress },
-]
+function buildChecks(expectedRevision) {
+  return [
+    { id: 'BACKEND_HEALTH', feature: 'platform', title: 'Backend process health', run: (url) => checkBackendHealth(url) },
+    {
+      id: 'DEPLOYED_REVISION',
+      feature: 'platform',
+      title: 'Production revision matches main',
+      run: (url) => checkDeployedRevision(url, expectedRevision),
+    },
+    { id: 'CHAT_AVAILABILITY', feature: 'chat', title: 'Chat models advertised', run: (url) => checkChatAvailability(url) },
+    { id: 'CHAT_EGRESS', feature: 'chat', title: 'Chat answers a live question', run: (url) => checkChatEgress(url) },
+    { id: 'VOICE_AVAILABILITY', feature: 'voice', title: 'Live voice advertised', run: (url) => checkVoiceAvailability(url) },
+    { id: 'VOICE_EGRESS', feature: 'voice', title: 'Backend reaches OpenAI Realtime', run: (url) => checkVoiceEgress(url) },
+  ]
+}
 
 // --- Reporting ----------------------------------------------------------------------------------
 
@@ -297,7 +391,7 @@ function buildMarkdown(report) {
     lines.push(
       '',
       'A failing check means the feature is broken for real visitors. `INCONCLUSIVE` means the run',
-      'could not determine the state (usually rate limiting) and is not an outage.',
+      'could not determine the state (usually rate limiting or an intentional kill switch) and is not an outage.',
     )
   }
   return `${lines.join('\n')}\n`
@@ -309,7 +403,7 @@ async function main() {
 
   console.log(`Production canary against ${args.baseUrl}\n`)
   const checks = []
-  for (const check of CHECKS) {
+  for (const check of buildChecks(args.expectedRevision)) {
     const outcome = await check.run(args.baseUrl)
     checks.push({ id: check.id, feature: check.feature, title: check.title, ...outcome })
     console.log(`${ICONS[outcome.status]} ${outcome.status.padEnd(12)} ${check.title}: ${outcome.summary}`)
@@ -319,6 +413,7 @@ async function main() {
   const report = {
     baseUrl: args.baseUrl,
     checkedAt: new Date().toISOString(),
+    expectedRevision: args.expectedRevision ?? null,
     passed: checks.filter((c) => c.status === PASS).length,
     failed: checks.filter((c) => c.status === FAIL).length,
     inconclusive: checks.filter((c) => c.status === INCONCLUSIVE).length,

@@ -4,9 +4,9 @@ import { RouterLink } from 'vue-router'
 import { Loader2, Mic, MicOff, Square } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useVoiceModelStore } from '@/stores/voice-model'
+import { useVoiceAvailabilityStore } from '@/stores/voice-availability'
 import { useInterviewVoice } from '@/composables/useInterviewVoice'
 import {
-  fetchRealtimeVoiceStatus,
   type RealtimeReasoningEffort,
   type RealtimeVoiceChoice,
 } from '@/lib/realtime-voice'
@@ -30,6 +30,7 @@ type WizardStep = 'source' | 'interview' | 'transcript' | 'clean'
 
 const auth = useAuthStore()
 const voiceModelStore = useVoiceModelStore()
+const voiceAvailability = useVoiceAvailabilityStore()
 
 const step = ref<WizardStep>('source')
 const uiLang = ref<'en' | 'no'>('no')
@@ -44,7 +45,11 @@ const sessionId = ref<string | null>(null)
 const transcript = ref<InterviewTranscript | null>(null)
 const pastSessions = ref<InterviewSession[]>([])
 
-const liveAvailable = ref<boolean | null>(null)
+/** Admin interview uses realtime capability, not the public kill switch. */
+const liveAvailable = computed(() => {
+  if (voiceAvailability.capability === null) return null
+  return voiceAvailability.capability === true && voiceModelStore.hasModels
+})
 const selectedVoice = ref<RealtimeVoiceChoice>('marin')
 const selectedReasoning = ref<RealtimeReasoningEffort>('low')
 
@@ -134,10 +139,9 @@ async function refreshPastSessions() {
 
 onMounted(async () => {
   auth.restore()
-  const statusRes = await fetchRealtimeVoiceStatus()
-  liveAvailable.value = statusRes.liveEnabled && (await voiceModelStore.ensureModelsLoaded(), voiceModelStore.hasModels)
-  selectedVoice.value = statusRes.voice
-  selectedReasoning.value = statusRes.reasoningEffort
+  await Promise.all([voiceAvailability.ensureLoaded(), voiceModelStore.ensureModelsLoaded()])
+  selectedVoice.value = voiceAvailability.defaultVoice
+  selectedReasoning.value = voiceAvailability.defaultReasoningEffort
   await refreshPastSessions()
 })
 

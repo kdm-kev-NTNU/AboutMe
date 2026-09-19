@@ -50,7 +50,7 @@
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.9.2",
     "@vitejs/plugin-vue": "^6.0.8",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.11",
     "@vitest/eslint-plugin": "^1.6.24",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.9.0",
@@ -69,7 +69,7 @@
     "typescript": "6.0.3",
     "vite": "8.0.16",
     "vite-plugin-vue-devtools": "^8.2.1",
-    "vitest": "^4.1.10",
+    "vitest": "^4.1.11",
     "vue-tsc": "^3.3.8"
   },
   "overrides": {
@@ -84,6 +84,7 @@
     "shell-quote": "^1.10.0",
     "fast-uri": "^3.1.5",
     "postcss": "^8.5.25",
-    "linkify-it": "^5.0.2"
+    "linkify-it": "^5.0.2",
+    "@vitest/mocker": "^4.1.11"
   }
 }

@@ -5,17 +5,10 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import HomeView from '../HomeView.vue'
 import { useLangStore } from '@/stores/lang'
 
+const fetchRealtimeVoiceStatus = vi.fn()
+
 vi.mock('@/lib/realtime-voice', () => ({
-	fetchRealtimeVoiceStatus: vi.fn().mockResolvedValue({
-		enabled: false,
-		liveEnabled: false,
-		voices: ['marin', 'cedar'],
-		reasoningEfforts: ['low', 'medium', 'high'],
-		vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
-		voice: 'marin',
-		reasoningEffort: 'low',
-		vadEagerness: 'low',
-	}),
+	fetchRealtimeVoiceStatus: (...args: unknown[]) => fetchRealtimeVoiceStatus(...args),
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -38,6 +31,24 @@ const commonStubs = {
 	Headphones: true,
 }
 
+const voiceOnStatus = {
+	enabled: true,
+	liveEnabled: true,
+	liveDisabledReason: null,
+	voices: ['marin', 'cedar'],
+	reasoningEfforts: ['low', 'medium', 'high'],
+	vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
+	voice: 'marin',
+	reasoningEffort: 'low',
+	vadEagerness: 'low',
+}
+
+const voiceOffStatus = {
+	...voiceOnStatus,
+	liveEnabled: false,
+	liveDisabledReason: 'KILL_SWITCH' as const,
+}
+
 describe('HomeView', () => {
 	function makeRouter() {
 		return createRouter({
@@ -56,9 +67,10 @@ describe('HomeView', () => {
 		sessionStorage.clear()
 		localStorage.clear()
 		vi.clearAllMocks()
+		fetchRealtimeVoiceStatus.mockResolvedValue(voiceOnStatus)
 	})
 
-	it('switches language with EN/NO toggle and renders Norwegian voice status', async () => {
+	it('switches language with EN/NO toggle and renders Norwegian voice-first hero when voice is on', async () => {
 		const pinia = createPinia()
 		setActivePinia(pinia)
 		const router = makeRouter()
@@ -74,6 +86,27 @@ describe('HomeView', () => {
 		expect(noBtn).toBeTruthy()
 		await noBtn!.trigger('click')
 		expect(wrapper.text()).toContain('Snakk med Kevin sin AI først.')
+		expect(wrapper.find('[data-testid="home-voice-cta"]').exists()).toBe(true)
+	})
+
+	it('renders text-first hero when voice is unavailable', async () => {
+		fetchRealtimeVoiceStatus.mockResolvedValue(voiceOffStatus)
+		const pinia = createPinia()
+		setActivePinia(pinia)
+		useLangStore().setLanguage('en')
+		const router = makeRouter()
+		await router.push('/')
+		const wrapper = mount(HomeView, {
+			global: {
+				plugins: [pinia, router],
+				stubs: commonStubs,
+			},
+		})
+		await flushPromises()
+		expect(wrapper.text()).toContain("Ask Kevin's AI in text.")
+		expect(wrapper.find('[data-testid="home-voice-cta"]').exists()).toBe(false)
+		expect(wrapper.find('[data-testid="home-chat-primary"]').exists()).toBe(true)
+		expect(wrapper.find('[data-testid="home-chat-illustration"]').exists()).toBe(true)
 	})
 
 	it('renders GitHub and LinkedIn social links', async () => {
@@ -107,7 +140,7 @@ describe('HomeView', () => {
 		})
 		await flushPromises()
 
-		await wrapper.find('[aria-label="Go to voice mode"]').trigger('click')
+		await wrapper.find('[data-testid="home-voice-cta"]').trigger('click')
 		expect(pushSpy).toHaveBeenCalledWith({ name: 'voice' })
 	})
 

@@ -127,6 +127,16 @@ onMounted(() => {
           <li
             class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)] hover:border-gray-300 transition-colors"
           >
+            <RouterLink to="/admin/features" class="block group">
+              <span class="text-base font-semibold text-blue-600 group-hover:underline">Feature switches</span>
+              <p class="text-sm text-gray-600 mt-2 leading-relaxed">
+                Skru av offentlig live voice via PostHog-flagg uten redeploy. Admin-intervjuet forblir tilgjengelig.
+              </p>
+            </RouterLink>
+          </li>
+          <li
+            class="rounded-xl border border-gray-200 bg-white p-5 shadow-[0_1px_3px_rgb(0_0_0/0.06)] hover:border-gray-300 transition-colors"
+          >
             <RouterLink to="/admin/experiments" class="block group">
               <span class="text-base font-semibold text-blue-600 group-hover:underline">Experiments</span>
               <p class="text-sm text-gray-600 mt-2 leading-relaxed">

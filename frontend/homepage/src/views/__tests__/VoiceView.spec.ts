@@ -34,6 +34,7 @@ describe('VoiceView.vue', () => {
     fetchRealtimeVoiceStatusMock.mockResolvedValue({
       enabled: opts.liveEnabled,
       liveEnabled: opts.liveEnabled,
+      liveDisabledReason: opts.liveEnabled ? null : 'KILL_SWITCH',
       voices: ['marin', 'cedar'],
       reasoningEfforts: ['low', 'medium', 'high'],
       vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
@@ -119,13 +120,22 @@ describe('VoiceView.vue', () => {
     wrapper.unmount()
   })
 
-  it('renders Norwegian copy and strengthened chat alternative', async () => {
+  it('renders Norwegian copy and strengthened chat alternative when voice is off', async () => {
     const { wrapper } = await factory({ lang: 'no', liveEnabled: false, prepDismissed: true })
 
     await flushPromises()
-    expect(wrapper.text()).toContain('Snakk med Kevin sin AI')
+    expect(wrapper.text()).toContain('Stemmechat er midlertidig av')
     expect(wrapper.text()).toContain('Foretrekker du å skrive? Bruk tekstchat')
     expect(wrapper.find('[data-testid="voice-chat-alternative"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="voice-prep-dialog"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('does not open prep dialog when voice is unavailable', async () => {
+    const { wrapper } = await factory({ lang: 'en', liveEnabled: false })
+
+    await flushPromises()
+    expect(wrapper.find('[data-testid="voice-prep-dialog"]').exists()).toBe(false)
     wrapper.unmount()
   })
 
