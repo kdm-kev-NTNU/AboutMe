@@ -70,4 +70,56 @@ class VoiceKillSwitchTest {
     switcher.refresh();
     assertThat(switcher.isEngaged()).isTrue();
   }
+
+  @Test
+  void parseFlags_textualTrueIsEngaged() throws Exception {
+    String json = "{\"flags\":{\"aboutme_voice_kill_switch\":\"true\"}}";
+    assertThat(VoiceKillSwitch.parseFlagsResponse(json, "aboutme_voice_kill_switch"))
+        .isEqualTo(VoiceKillSwitch.State.ENGAGED);
+  }
+
+  @Test
+  void parseFlags_nestedEnabledFalse() throws Exception {
+    String json =
+        "{\"flags\":{\"aboutme_voice_kill_switch\":{\"enabled\":false}}}";
+    assertThat(VoiceKillSwitch.parseFlagsResponse(json, "aboutme_voice_kill_switch"))
+        .isEqualTo(VoiceKillSwitch.State.NOT_ENGAGED);
+  }
+
+  @Test
+  void parseFlags_emptyRootIsNotEngaged() throws Exception {
+    assertThat(VoiceKillSwitch.parseFlagsResponse("{}", "aboutme_voice_kill_switch"))
+        .isEqualTo(VoiceKillSwitch.State.NOT_ENGAGED);
+  }
+
+  @Test
+  void disabledKillSwitchMarksSourceDisabled() {
+    VoiceKillSwitchProperties props = new VoiceKillSwitchProperties();
+    props.setEnabled(false);
+    PostHogProperties posthog = new PostHogProperties();
+    posthog.setEnabled(false);
+    VoiceKillSwitch switcher = new VoiceKillSwitch(props, posthog, new ObjectMapper());
+    assertThat(switcher.snapshot().source()).isEqualTo(VoiceKillSwitch.Source.DISABLED);
+    assertThat(switcher.isEngaged()).isFalse();
+    assertThat(switcher.isPosthogReadConfigured()).isFalse();
+  }
+
+  @Test
+  void normalizeHost_stripsTrailingSlashAndDefaultsBlank() {
+    assertThat(VoiceKillSwitch.normalizeHost("https://eu.i.posthog.com/"))
+        .isEqualTo("https://eu.i.posthog.com");
+    assertThat(VoiceKillSwitch.normalizeHost("  ")).isEqualTo("https://eu.i.posthog.com");
+    assertThat(VoiceKillSwitch.normalizeHost(null)).isEqualTo("https://eu.i.posthog.com");
+  }
+
+  @Test
+  void applyKnownStateReleaseClearsEngagement() {
+    VoiceKillSwitchProperties props = new VoiceKillSwitchProperties();
+    PostHogProperties posthog = new PostHogProperties();
+    VoiceKillSwitch switcher = new VoiceKillSwitch(props, posthog, new ObjectMapper());
+    switcher.applyKnownState(true, VoiceKillSwitch.Source.MANAGEMENT_WRITE);
+    switcher.applyKnownState(false, VoiceKillSwitch.Source.MANAGEMENT_WRITE);
+    assertThat(switcher.isEngaged()).isFalse();
+    assertThat(switcher.snapshot().state()).isEqualTo(VoiceKillSwitch.State.NOT_ENGAGED);
+  }
 }
