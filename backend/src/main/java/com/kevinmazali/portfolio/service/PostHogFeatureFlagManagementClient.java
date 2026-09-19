@@ -5,6 +5,7 @@ import com.kevinmazali.portfolio.config.VoiceKillSwitchProperties;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class PostHogFeatureFlagManagementClient {
   @Nullable private final RestClient restClient;
   private final AtomicReference<Long> cachedFlagId = new AtomicReference<>(null);
 
+  @Autowired
   public PostHogFeatureFlagManagementClient(
       VoiceKillSwitchProperties properties, ObjectMapper objectMapper) {
     this(
