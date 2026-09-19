@@ -1,6 +1,9 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
+# Deploy on every main push (not only frontend/homepage/**), so FE stays on the same
+# tip as backend after monorepo merges. Backend still uses backend/** only.
+watchPatterns = ["**/*"]
 
 [deploy]
 healthcheckPath = "/"
