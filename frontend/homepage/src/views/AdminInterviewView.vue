@@ -56,7 +56,7 @@ const selectedReasoning = ref<RealtimeReasoningEffort>('low')
 const sessionOptions = computed(() => ({
   voice: selectedVoice.value,
   reasoningEffort: selectedReasoning.value,
-  vadEagerness: 'low' as const,
+  vadEagerness: 'medium' as const,
 }))
 const selectedVoiceModel = computed(() => voiceModelStore.selectedModel)
 

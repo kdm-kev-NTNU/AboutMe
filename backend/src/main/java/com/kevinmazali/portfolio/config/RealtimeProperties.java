@@ -29,9 +29,9 @@ public class RealtimeProperties {
   private String reasoningEffort = "low";
 
   /**
-   * Default semantic VAD eagerness ({@code low} waits longest before ending the user turn).
+   * Default semantic VAD eagerness ({@code medium} ≈ 4s max wait; {@code low} ≈ 8s, {@code high} ≈ 2s).
    */
-  private String vadEagerness = "low";
+  private String vadEagerness = "medium";
 
   private int maxResponseOutputTokens = 1024;
 
@@ -94,7 +94,7 @@ public class RealtimeProperties {
   }
 
   public String defaultVadEagerness() {
-    return normalizeAllowed(vadEagerness, ALLOWED_VAD_EAGERNESS, "low");
+    return normalizeAllowed(vadEagerness, ALLOWED_VAD_EAGERNESS, "medium");
   }
 
   public String resolveVoice(String requestedVoice) {

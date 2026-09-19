@@ -44,7 +44,7 @@ export const useVoiceAvailabilityStore = defineStore('voiceAvailability', {
       return state.status?.reasoningEffort ?? 'low'
     },
     defaultVadEagerness(state): RealtimeVadEagerness {
-      return state.status?.vadEagerness ?? 'low'
+      return state.status?.vadEagerness ?? 'medium'
     },
   },
 

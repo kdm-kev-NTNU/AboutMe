@@ -15,13 +15,13 @@ class RealtimePropertiesTest {
     assertThat(p.getModel()).isEqualTo("gpt-realtime-2");
     assertThat(p.getVoice()).isEqualTo("marin");
     assertThat(p.getReasoningEffort()).isEqualTo("low");
-    assertThat(p.getVadEagerness()).isEqualTo("low");
+    assertThat(p.getVadEagerness()).isEqualTo("medium");
     assertThat(p.getMaxResponseOutputTokens()).isEqualTo(1024);
     assertThat(p.getReservationInputTokens()).isEqualTo(2000);
     assertThat(p.getReservationOutputTokens()).isEqualTo(2000);
     assertThat(p.defaultVoice()).isEqualTo("marin");
     assertThat(p.defaultReasoningEffort()).isEqualTo("low");
-    assertThat(p.defaultVadEagerness()).isEqualTo("low");
+    assertThat(p.defaultVadEagerness()).isEqualTo("medium");
     assertThat(RealtimeProperties.ALLOWED_VOICES).containsExactly("marin", "cedar");
     assertThat(RealtimeProperties.ALLOWED_REASONING_EFFORTS).containsExactly("low", "medium", "high");
     assertThat(RealtimeProperties.ALLOWED_VAD_EAGERNESS).containsExactly("low", "medium", "high", "auto");
@@ -68,9 +68,9 @@ class RealtimePropertiesTest {
     assertThat(p.isAllowedReasoningEffort("low")).isTrue();
     assertThat(p.isAllowedReasoningEffort("minimal")).isFalse();
 
-    assertThat(p.resolveVadEagerness(null)).isEqualTo("low");
+    assertThat(p.resolveVadEagerness(null)).isEqualTo("medium");
     assertThat(p.resolveVadEagerness(" AUTO ")).isEqualTo("auto");
-    assertThat(p.resolveVadEagerness("nope")).isEqualTo("low");
+    assertThat(p.resolveVadEagerness("nope")).isEqualTo("medium");
     assertThat(p.isAllowedVadEagerness(null)).isTrue();
     assertThat(p.isAllowedVadEagerness("high")).isTrue();
     assertThat(p.isAllowedVadEagerness("instant")).isFalse();
@@ -84,5 +84,8 @@ class RealtimePropertiesTest {
 
     assertThat(p.defaultVoice()).isEqualTo("marin");
     assertThat(p.defaultReasoningEffort()).isEqualTo("low");
+    p.setVadEagerness("instant");
+    assertThat(p.defaultVadEagerness()).isEqualTo("medium");
   }
 }
+

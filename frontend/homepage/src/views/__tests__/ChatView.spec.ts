@@ -95,7 +95,7 @@ describe('ChatView', () => {
       vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
       voice: 'cedar',
       reasoningEffort: 'medium',
-      vadEagerness: 'low',
+      vadEagerness: 'medium',
     })
     vi.mocked(listChatModels).mockResolvedValue({
       status: 200,
@@ -700,7 +700,7 @@ describe('ChatView', () => {
       vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
       voice: 'cedar',
       reasoningEffort: 'medium',
-      vadEagerness: 'low',
+      vadEagerness: 'medium',
     })
     const { wrapper } = await mountChat({})
     await flushPromises()

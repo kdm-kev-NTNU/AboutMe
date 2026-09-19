@@ -40,7 +40,7 @@ describe('VoiceView.vue', () => {
       vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
       voice: 'cedar',
       reasoningEffort: 'medium',
-      vadEagerness: 'low',
+      vadEagerness: 'medium',
     })
 
     const HomeStub = { template: '<div />' }

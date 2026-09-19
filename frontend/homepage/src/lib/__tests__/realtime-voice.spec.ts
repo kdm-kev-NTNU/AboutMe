@@ -34,7 +34,7 @@ describe('realtime-voice', () => {
       vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
       voice: 'cedar',
       reasoningEffort: 'medium',
-      vadEagerness: 'low',
+      vadEagerness: 'medium',
     })
   })
 
@@ -58,7 +58,7 @@ describe('realtime-voice', () => {
     expect(init.headers['X-Chat-Language']).toBe('en')
     expect(init.headers['X-Realtime-Voice']).toBe('marin')
     expect(init.headers['X-Realtime-Reasoning-Effort']).toBe('low')
-    expect(init.headers['X-Realtime-Vad-Eagerness']).toBe('low')
+    expect(init.headers['X-Realtime-Vad-Eagerness']).toBe('medium')
     expect(init.body).toBe('offer')
   })
 

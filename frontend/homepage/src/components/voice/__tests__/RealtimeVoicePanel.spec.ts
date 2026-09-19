@@ -31,7 +31,7 @@ describe('RealtimeVoicePanel', () => {
         vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
         defaultVoice: 'marin',
         defaultReasoningEffort: 'low',
-        defaultVadEagerness: 'low',
+        defaultVadEagerness: 'medium',
       },
       global: {
         plugins: [pinia],
