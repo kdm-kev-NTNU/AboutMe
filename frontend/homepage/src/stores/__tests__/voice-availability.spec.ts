@@ -27,7 +27,7 @@ describe('useVoiceAvailabilityStore', () => {
       vadEagernessOptions: ['low'],
       voice: 'marin',
       reasoningEffort: 'low',
-      vadEagerness: 'low',
+      vadEagerness: 'medium',
     })
     const { useVoiceAvailabilityStore } = await import('../voice-availability')
     const store = useVoiceAvailabilityStore()
@@ -48,7 +48,7 @@ describe('useVoiceAvailabilityStore', () => {
       vadEagernessOptions: ['low'],
       voice: 'marin',
       reasoningEffort: 'low',
-      vadEagerness: 'low',
+      vadEagerness: 'medium',
     })
     const { useVoiceAvailabilityStore } = await import('../voice-availability')
     const store = useVoiceAvailabilityStore()

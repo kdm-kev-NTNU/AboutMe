@@ -48,7 +48,7 @@ export type RealtimeVoiceStatus = RealtimeVoiceSessionOptions & {
 
 const DEFAULT_REALTIME_VOICE: RealtimeVoiceChoice = 'marin'
 const DEFAULT_REALTIME_REASONING_EFFORT: RealtimeReasoningEffort = 'low'
-const DEFAULT_REALTIME_VAD_EAGERNESS: RealtimeVadEagerness = 'low'
+const DEFAULT_REALTIME_VAD_EAGERNESS: RealtimeVadEagerness = 'medium'
 const ALLOWED_REALTIME_VOICES: readonly RealtimeVoiceChoice[] = ['marin', 'cedar']
 const ALLOWED_REALTIME_REASONING_EFFORTS: readonly RealtimeReasoningEffort[] = ['low', 'medium', 'high']
 const ALLOWED_REALTIME_VAD_EAGERNESS: readonly RealtimeVadEagerness[] = ['low', 'medium', 'high', 'auto']

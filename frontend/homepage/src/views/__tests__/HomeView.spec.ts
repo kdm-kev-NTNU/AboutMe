@@ -40,7 +40,7 @@ const voiceOnStatus = {
 	vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
 	voice: 'marin',
 	reasoningEffort: 'low',
-	vadEagerness: 'low',
+	vadEagerness: 'medium',
 }
 
 const voiceOffStatus = {

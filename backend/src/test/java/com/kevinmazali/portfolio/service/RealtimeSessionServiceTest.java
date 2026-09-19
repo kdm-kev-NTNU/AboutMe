@@ -262,7 +262,7 @@ class RealtimeSessionServiceTest {
     assertThat(json.at("/audio/output/voice").asText()).isEqualTo("marin");
     assertThat(json.at("/audio/input/transcription/model").asText()).isEqualTo("whisper-1");
     assertThat(json.at("/audio/input/turn_detection/type").asText()).isEqualTo("semantic_vad");
-    assertThat(json.at("/audio/input/turn_detection/eagerness").asText()).isEqualTo("low");
+    assertThat(json.at("/audio/input/turn_detection/eagerness").asText()).isEqualTo("medium");
     assertThat(json.at("/audio/input/turn_detection/create_response").asBoolean()).isTrue();
     assertThat(json.at("/audio/input/turn_detection/interrupt_response").asBoolean()).isTrue();
     assertThat(json.at("/output_modalities").toString()).contains("audio");

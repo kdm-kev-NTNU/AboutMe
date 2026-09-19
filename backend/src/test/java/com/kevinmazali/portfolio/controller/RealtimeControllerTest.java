@@ -104,7 +104,7 @@ class RealtimeControllerTest {
         .andExpect(jsonPath("$.defaultVoice").value("marin"))
         .andExpect(jsonPath("$.defaultReasoningEffort").value("low"))
         .andExpect(jsonPath("$.vadEagernessOptions[0]").value("low"))
-        .andExpect(jsonPath("$.defaultVadEagerness").value("low"));
+        .andExpect(jsonPath("$.defaultVadEagerness").value("medium"));
   }
 
   @Test
