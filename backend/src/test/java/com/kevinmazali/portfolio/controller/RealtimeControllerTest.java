@@ -18,6 +18,7 @@ import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
+import com.kevinmazali.portfolio.service.VoiceKillSwitch;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,9 @@ class RealtimeControllerTest {
   @MockitoBean
   private RequestLogService requestLogService;
 
+  @MockitoBean
+  private VoiceKillSwitch voiceKillSwitch;
+
   @AfterEach
   void restoreRealtimeDefaults() {
     realtimeProperties.setEnabled(true);
@@ -86,6 +90,7 @@ class RealtimeControllerTest {
   @Test
   void statusEnabledWhenFlagAndKey() throws Exception {
     when(realtimeModelCatalog.hasAvailableModels()).thenReturn(true);
+    when(voiceKillSwitch.isEngaged()).thenReturn(false);
 
     mockMvc.perform(get("/realtime/status"))
         .andExpect(status().isOk())
@@ -100,6 +105,31 @@ class RealtimeControllerTest {
         .andExpect(jsonPath("$.defaultReasoningEffort").value("low"))
         .andExpect(jsonPath("$.vadEagernessOptions[0]").value("low"))
         .andExpect(jsonPath("$.defaultVadEagerness").value("low"));
+  }
+
+  @Test
+  void statusLiveDisabledWhenKillSwitchEngaged() throws Exception {
+    when(realtimeModelCatalog.hasAvailableModels()).thenReturn(true);
+    when(voiceKillSwitch.isEngaged()).thenReturn(true);
+
+    mockMvc.perform(get("/realtime/status"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enabled").value(true))
+        .andExpect(jsonPath("$.liveEnabled").value(false))
+        .andExpect(jsonPath("$.liveDisabledReason").value("KILL_SWITCH"));
+  }
+
+  @Test
+  void sessionReturns503WhenKillSwitchEngagedWithoutCallingSessionService() throws Exception {
+    when(voiceKillSwitch.isEngaged()).thenReturn(true);
+
+    mockMvc.perform(post("/realtime/session")
+            .content("v=0")
+            .contentType("application/sdp"))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(jsonPath("$.code").value("REALTIME_DISABLED"));
+
+    verify(realtimeSessionService, never()).createRealtimeCall(any(), any(), any(), any(), any(), any());
   }
 
   @Test
@@ -321,9 +351,13 @@ class RealtimeControllerMissingOpenAiKeyMvcTest {
   @MockitoBean
   private RequestLogService requestLogService;
 
+  @MockitoBean
+  private VoiceKillSwitch voiceKillSwitch;
+
   @Test
   void statusDisabledWhenApiKeyUnset() throws Exception {
     when(realtimeModelCatalog.hasAvailableModels()).thenReturn(false);
+    when(voiceKillSwitch.isEngaged()).thenReturn(false);
     mockMvc.perform(get("/realtime/status"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.enabled").value(false))

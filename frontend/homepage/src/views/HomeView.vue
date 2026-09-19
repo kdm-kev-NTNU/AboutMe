@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { useRouter, RouterLink } from 'vue-router'
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useLangStore } from '../stores/lang'
+import { useVoiceAvailabilityStore } from '../stores/voice-availability'
 import { Button } from '@/components/ui/button'
 import { MessageSquare, ChevronRight, Mic, Headphones } from 'lucide-vue-next'
-import { fetchRealtimeVoiceStatus } from '@/lib/realtime-voice'
 
 const router = useRouter()
-
 const langStore = useLangStore()
+const voiceAvailability = useVoiceAvailabilityStore()
 
 const language = computed({
   get: () => langStore.language,
@@ -30,8 +30,53 @@ const feedbackInvite = computed(() => {
   }
 })
 
-/** Null until loaded from GET /realtime/status */
-const voiceEnabled = ref<boolean | null>(null)
+const voiceOn = computed(() => voiceAvailability.state === 'available')
+const voiceOff = computed(() => voiceAvailability.state === 'unavailable')
+const voiceUnknown = computed(() => voiceAvailability.state === 'unknown')
+
+const voiceStatus = computed(() => {
+  if (language.value === 'no') {
+    if (voiceOn.value) return 'Stemme er tilgjengelig'
+    if (voiceOff.value) return 'Stemme er midlertidig av'
+    return 'Sjekker stemmestatus'
+  }
+  if (voiceOn.value) return 'Voice is available'
+  if (voiceOff.value) return 'Voice is temporarily off'
+  return 'Checking voice status'
+})
+
+const heroCopy = computed(() => {
+  if (language.value === 'no') {
+    if (voiceOff.value) {
+      return {
+        title: 'Spør Kevin sin AI med tekst.',
+        body: 'Tekstchat kjenner porteføljen min og svarer på spørsmål om prosjekter, erfaring og teknologi. Stemmechat er midlertidig av.',
+        primaryCta: 'Bruk tekstchat',
+        secondaryCta: null as string | null,
+      }
+    }
+    return {
+      title: 'Snakk med Kevin sin AI først.',
+      body: 'Snakk med en AI som kjenner porteføljen min og kan svare på spørsmål om prosjekter, erfaring og teknologi.',
+      primaryCta: 'Start stemmechat',
+      secondaryCta: 'Bruk tekstchat (uten mikrofon)',
+    }
+  }
+  if (voiceOff.value) {
+    return {
+      title: "Ask Kevin's AI in text.",
+      body: 'Text chat knows my portfolio and answers questions about projects, experience, and tech. Voice chat is temporarily off.',
+      primaryCta: 'Use text chat',
+      secondaryCta: null as string | null,
+    }
+  }
+  return {
+    title: "Talk with Kevin's AI first.",
+    body: 'Talk with an AI that knows my portfolio and can answer questions about projects, experience, and tech.',
+    primaryCta: 'Start voice chat',
+    secondaryCta: 'Use text chat (no microphone)',
+  }
+})
 
 const voiceCtaAria = computed(() =>
   language.value === 'no' ? 'Gå til stemmemodus' : 'Go to voice mode',
@@ -41,32 +86,17 @@ function goToVoiceChat() {
   router.push({ name: 'voice' })
 }
 
-const voiceStatus = computed(() => {
-  if (language.value === 'no') {
-    if (voiceEnabled.value === true) return 'Stemme er tilgjengelig'
-    if (voiceEnabled.value === false) return 'Stemme er midlertidig av'
-    return 'Sjekker stemmestatus'
-  }
-  if (voiceEnabled.value === true) return 'Voice is available'
-  if (voiceEnabled.value === false) return 'Voice is temporarily off'
-  return 'Checking voice status'
-})
-
 onMounted(() => {
-  void fetchRealtimeVoiceStatus().then((status) => {
-    voiceEnabled.value = status.liveEnabled
-  })
+  void voiceAvailability.ensureLoaded()
 })
 </script>
 
 <template>
   <main id="main-content" class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 pt-20">
-    <!-- Gradient Background Overlay -->
     <div class="absolute inset-0 pointer-events-none">
       <div class="absolute top-0 left-0 w-full h-full" style="background: radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 50%);"></div>
     </div>
 
-    <!-- Blue Blob Shapes -->
     <div class="blob-container">
       <div class="blob blob-1"></div>
       <div class="blob blob-2"></div>
@@ -76,72 +106,108 @@ onMounted(() => {
       <div class="blob blob-6"></div>
     </div>
 
-    <!-- Main Content - Centered -->
     <div class="relative z-10 flex min-h-full flex-col items-center justify-start gap-8 px-4 py-8">
       <section
         class="grid w-full max-w-6xl items-center gap-8 overflow-hidden rounded-[2rem] border border-blue-100/80 bg-white/82 p-5 shadow-2xl shadow-blue-950/10 backdrop-blur-xl sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-10"
         aria-labelledby="voice-first-title"
       >
         <div class="min-w-0">
-          <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-xs font-semibold text-blue-800">
+          <div
+            class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-xs font-semibold text-blue-800"
+            aria-live="polite"
+          >
             <span
               class="size-2 rounded-full"
-              :class="voiceEnabled === false ? 'bg-amber-500' : 'bg-emerald-500'"
+              :class="voiceOff ? 'bg-amber-500' : voiceUnknown ? 'bg-slate-300' : 'bg-emerald-500'"
               aria-hidden="true"
             ></span>
             {{ voiceStatus }}
           </div>
-          <h1
-            id="voice-first-title"
-            class="max-w-3xl text-3xl font-bold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl"
-          >
-            {{ language === 'no' ? 'Snakk med Kevin sin AI først.' : "Talk with Kevin's AI first." }}
-          </h1>
-          <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-            {{
-              language === 'no'
-                ? 'Snakk med en AI som kjenner porteføljen min og kan svare på spørsmål om prosjekter, erfaring og teknologi.'
-                : 'Talk with an AI that knows my portfolio and can answer questions about projects, experience, and tech.'
-            }}
-          </p>
-          <div class="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Button
-              type="button"
-              :aria-label="voiceCtaAria"
-              class="h-14 w-full justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 text-sm font-semibold text-white shadow-xl shadow-blue-500/25 transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-indigo-800 sm:w-auto sm:px-7 sm:text-base"
-              @click="goToVoiceChat"
+
+          <template v-if="voiceUnknown">
+            <div class="h-12 w-4/5 max-w-xl animate-pulse rounded-lg bg-slate-200/80" aria-hidden="true"></div>
+            <div class="mt-5 h-16 max-w-2xl animate-pulse rounded-lg bg-slate-200/60" aria-hidden="true"></div>
+            <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+              <div class="h-14 w-full animate-pulse rounded-2xl bg-slate-200/80 sm:w-48" aria-hidden="true"></div>
+              <div class="h-14 w-full animate-pulse rounded-2xl bg-slate-200/60 sm:w-56" aria-hidden="true"></div>
+            </div>
+          </template>
+
+          <template v-else>
+            <h1
+              id="voice-first-title"
+              class="max-w-3xl text-3xl font-bold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl"
             >
-              <Headphones class="me-2 size-5" aria-hidden="true" />
-              {{ language === 'no' ? 'Start stemmechat' : 'Start voice chat' }}
-            </Button>
-            <Button
-              as-child
-              variant="outline"
-              class="h-14 w-full justify-center rounded-2xl border-blue-200 bg-white/85 px-5 text-sm font-semibold text-slate-800 hover:bg-blue-50 sm:w-auto sm:px-7 sm:text-base"
-            >
-              <RouterLink to="/chat" class="inline-flex items-center" data-testid="home-chat-alternative">
-                <MessageSquare class="me-2 size-5" aria-hidden="true" />
-                {{
-                  language === 'no'
-                    ? 'Bruk tekstchat (uten mikrofon)'
-                    : 'Use text chat (no microphone)'
-                }}
-              </RouterLink>
-            </Button>
-          </div>
+              {{ heroCopy.title }}
+            </h1>
+            <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+              {{ heroCopy.body }}
+            </p>
+            <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+              <template v-if="voiceOn">
+                <Button
+                  type="button"
+                  :aria-label="voiceCtaAria"
+                  data-testid="home-voice-cta"
+                  class="h-14 w-full justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 text-sm font-semibold text-white shadow-xl shadow-blue-500/25 transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-indigo-800 sm:w-auto sm:px-7 sm:text-base"
+                  @click="goToVoiceChat"
+                >
+                  <Headphones class="me-2 size-5" aria-hidden="true" />
+                  {{ heroCopy.primaryCta }}
+                </Button>
+                <Button
+                  as-child
+                  variant="outline"
+                  class="h-14 w-full justify-center rounded-2xl border-blue-200 bg-white/85 px-5 text-sm font-semibold text-slate-800 hover:bg-blue-50 sm:w-auto sm:px-7 sm:text-base"
+                >
+                  <RouterLink to="/chat" class="inline-flex items-center" data-testid="home-chat-alternative">
+                    <MessageSquare class="me-2 size-5" aria-hidden="true" />
+                    {{ heroCopy.secondaryCta }}
+                  </RouterLink>
+                </Button>
+              </template>
+              <template v-else>
+                <Button
+                  as-child
+                  class="h-14 w-full justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 text-sm font-semibold text-white shadow-xl shadow-blue-500/25 transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-indigo-800 sm:w-auto sm:px-7 sm:text-base"
+                >
+                  <RouterLink to="/chat" class="inline-flex items-center" data-testid="home-chat-primary">
+                    <MessageSquare class="me-2 size-5" aria-hidden="true" />
+                    {{ heroCopy.primaryCta }}
+                  </RouterLink>
+                </Button>
+              </template>
+            </div>
+          </template>
         </div>
 
         <div class="relative mx-auto flex min-h-[21rem] w-full max-w-md flex-col items-center justify-center">
           <div class="absolute inset-6 rounded-full bg-blue-500/10 blur-3xl" aria-hidden="true"></div>
+          <div
+            v-if="voiceUnknown"
+            class="aspect-square w-64 max-w-[80vw] animate-pulse rounded-full bg-slate-200/80 sm:w-72"
+            aria-hidden="true"
+          ></div>
           <button
+            v-else-if="voiceOn"
             type="button"
             :aria-label="voiceCtaAria"
+            data-testid="home-voice-orb"
             class="group relative flex aspect-square w-64 max-w-[80vw] items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 via-blue-600 to-indigo-800 text-white shadow-2xl shadow-blue-700/30 ring-8 ring-white/70 transition hover:-translate-y-1 hover:shadow-blue-700/40 sm:w-72"
             @click="goToVoiceChat"
           >
             <span class="absolute inset-8 rounded-full border border-white/30" aria-hidden="true"></span>
             <Mic class="size-20 transition group-hover:scale-105" stroke-width="1.8" aria-hidden="true" />
           </button>
+          <div
+            v-else
+            class="relative flex aspect-square w-64 max-w-[80vw] items-center justify-center rounded-full bg-gradient-to-br from-slate-200 via-blue-100 to-indigo-200 text-blue-800 shadow-xl ring-8 ring-white/70 sm:w-72"
+            aria-hidden="true"
+            data-testid="home-chat-illustration"
+          >
+            <span class="absolute inset-8 rounded-full border border-blue-300/40"></span>
+            <MessageSquare class="size-20 opacity-90" stroke-width="1.8" />
+          </div>
         </div>
       </section>
 
@@ -173,7 +239,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Social links -->
     <div class="pb-8 flex-shrink-0 relative z-10 w-full max-w-2xl mx-auto px-4">
       <div class="flex justify-center gap-3">
         <a
@@ -205,7 +270,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Mobile: compact FAB; sm+: card with copy -->
     <RouterLink
       to="/feedback"
       class="feedback-corner-mobile group fixed bottom-6 left-5 z-[60] flex size-14 items-center justify-center rounded-full border-2 border-blue-300/70 bg-white/95 text-blue-700 shadow-lg shadow-blue-900/10 ring-1 ring-blue-500/15 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-white hover:shadow-xl hover:shadow-blue-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:hidden"
@@ -241,15 +305,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-@keyframes gradient-x {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
 @keyframes float {
   0%, 100% {
     transform: translate(0, 0) scale(1);
@@ -265,12 +320,6 @@ onMounted(() => {
   }
 }
 
-.animate-gradient-x {
-  background-size: 200% 200%;
-  animation: gradient-x 3s ease-in-out infinite;
-}
-
-/* Blue Blob Shapes */
 .blob-container {
   position: absolute;
   top: 0;
@@ -350,7 +399,6 @@ onMounted(() => {
   animation-duration: 6s;
 }
 
-/* Decorative blobs: smaller blur/size on narrow viewports */
 @media (max-width: 768px) {
   .blob {
     filter: blur(30px);

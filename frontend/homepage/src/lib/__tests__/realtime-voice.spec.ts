@@ -28,6 +28,7 @@ describe('realtime-voice', () => {
     await expect(fetchRealtimeVoiceStatus()).resolves.toEqual({
       enabled: true,
       liveEnabled: false,
+      liveDisabledReason: null,
       voices: ['marin', 'cedar'],
       reasoningEfforts: ['low', 'medium', 'high'],
       vadEagernessOptions: ['low', 'medium', 'high', 'auto'],

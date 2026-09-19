@@ -19,6 +19,12 @@ updates:
       all-npm:
         patterns:
           - "*"
+        exclude-patterns:
+          # Transitive of vitest; security bumps fail when parent is still <4.1.11.
+          # Pin via package.json overrides + keep vitest / @vitest/coverage-v8 current.
+          - "@vitest/mocker"
+    ignore:
+      - dependency-name: "@vitest/mocker"
 
   - package-ecosystem: github-actions
     directory: /

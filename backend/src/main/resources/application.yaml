@@ -189,6 +189,15 @@ portfolio:
     feature-flag-keys:
       - aboutme_rag_feature_flags
     feature-flags-timeout-ms: 2000
+  # Public voice kill switch (PostHog flag aboutme_voice_kill_switch). true in PostHog = voice off.
+  voice-kill-switch:
+    enabled: ${PORTFOLIO_VOICE_KILL_SWITCH_ENABLED:true}
+    flag-key: aboutme_voice_kill_switch
+    evaluate-distinct-id: aboutme-voice-kill-switch
+    poll-interval-ms: ${PORTFOLIO_VOICE_KILL_SWITCH_POLL_MS:30000}
+    api-host: ${POSTHOG_API_HOST:https://eu.posthog.com}
+    project-id: ${POSTHOG_PROJECT_ID:}
+    personal-api-key: ${POSTHOG_PERSONAL_API_KEY:}
   sanitizer:
     enabled: ${SANITIZER_ENABLED:true}
     redaction-format: "{{{REDACTED-%t}}}"
@@ -227,6 +236,11 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus
+  info:
+    git:
+      mode: full
+    build:
+      enabled: true
   tracing:
     sampling:
       probability: 1.0

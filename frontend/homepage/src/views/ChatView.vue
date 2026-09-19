@@ -3,6 +3,7 @@ import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useLangStore } from '../stores/lang'
 import { useChatModelStore } from '../stores/model'
+import { useVoiceAvailabilityStore } from '../stores/voice-availability'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import AiStatusDialog from '@/components/AiStatusDialog.vue'
@@ -45,6 +46,7 @@ const state = reactive<{ messages: Message[] }>({ messages: [] })
 const MAX_PROMPT_CHARS = MAX_SPEECH_PROMPT_CHARS
 const langStore = useLangStore()
 const chatModelStore = useChatModelStore()
+const voiceAvailability = useVoiceAvailabilityStore()
 const language = computed(() => langStore.language)
 
 // --- Conversation language lock ---
@@ -332,7 +334,7 @@ async function send(text: string) {
 }
 
 onMounted(async () => {
-  await chatModelStore.ensureModelsLoaded()
+  await Promise.all([chatModelStore.ensureModelsLoaded(), voiceAvailability.ensureLoaded()])
 
   const conversationId = getOrCreateChatConversationId()
   if (hasPageviewConsent()) {
@@ -380,8 +382,14 @@ onMounted(async () => {
             </span>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <Button as-child variant="outline" size="sm" class="border border-blue-200/80 bg-white/85 text-blue-700 hover:border-blue-300/80 hover:bg-blue-50/70 hover:text-blue-800">
-              <RouterLink to="/voice" class="inline-flex items-center gap-1.5">
+            <Button
+              v-if="voiceAvailability.state === 'available'"
+              as-child
+              variant="outline"
+              size="sm"
+              class="border border-blue-200/80 bg-white/85 text-blue-700 hover:border-blue-300/80 hover:bg-blue-50/70 hover:text-blue-800"
+            >
+              <RouterLink to="/voice" class="inline-flex items-center gap-1.5" data-testid="chat-voice-link">
                 <Headphones class="size-4 shrink-0" aria-hidden="true" />
                 {{ language === 'no' ? 'Stemmechat' : 'Voice chat' }}
               </RouterLink>

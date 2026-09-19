@@ -10,6 +10,7 @@ import com.kevinmazali.portfolio.service.RealtimeLookupService;
 import com.kevinmazali.portfolio.service.RealtimeModelCatalog;
 import com.kevinmazali.portfolio.service.RealtimeSessionService;
 import com.kevinmazali.portfolio.service.RequestLogService;
+import com.kevinmazali.portfolio.service.VoiceKillSwitch;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+
 /**
  * OpenAI Realtime voice: browser SDP exchange and availability flag.
  */
@@ -29,38 +31,51 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Chat", description = "RAG-backed question answering")
 public class RealtimeController {
 
+  public static final String LIVE_DISABLED_REASON_KILL_SWITCH = "KILL_SWITCH";
+
   private final RealtimeProperties realtimeProperties;
   private final RealtimeSessionService realtimeSessionService;
   private final RealtimeLookupService realtimeLookupService;
   private final RealtimeModelCatalog realtimeModelCatalog;
   private final RequestLogService requestLogService;
+  private final VoiceKillSwitch voiceKillSwitch;
 
   public RealtimeController(
       RealtimeProperties realtimeProperties,
       RealtimeSessionService realtimeSessionService,
       RealtimeLookupService realtimeLookupService,
       RealtimeModelCatalog realtimeModelCatalog,
-      RequestLogService requestLogService) {
+      RequestLogService requestLogService,
+      VoiceKillSwitch voiceKillSwitch) {
     this.realtimeProperties = realtimeProperties;
     this.realtimeSessionService = realtimeSessionService;
     this.realtimeLookupService = realtimeLookupService;
     this.realtimeModelCatalog = realtimeModelCatalog;
     this.requestLogService = requestLogService;
+    this.voiceKillSwitch = voiceKillSwitch;
   }
 
-  @Operation(summary = "Realtime voice available", description = "True when at least one realtime voice provider is configured.")
+  @Operation(
+      summary = "Realtime voice available",
+      description =
+          "enabled=capability; liveEnabled=public availability (capability and kill switch off).")
   @GetMapping("/realtime/status")
   public ResponseEntity<RealtimeStatusResponse> status() {
-    boolean liveEnabled = realtimeModelCatalog.hasAvailableModels();
-    return ResponseEntity.ok(new RealtimeStatusResponse(
-        liveEnabled,
-        liveEnabled,
-        RealtimeProperties.ALLOWED_VOICES,
-        RealtimeProperties.ALLOWED_REASONING_EFFORTS,
-        RealtimeProperties.ALLOWED_VAD_EAGERNESS,
-        realtimeProperties.defaultVoice(),
-        realtimeProperties.defaultReasoningEffort(),
-        realtimeProperties.defaultVadEagerness()));
+    boolean capability = realtimeModelCatalog.hasAvailableModels();
+    boolean killEngaged = voiceKillSwitch.isEngaged();
+    boolean liveEnabled = capability && !killEngaged;
+    String reason = killEngaged ? LIVE_DISABLED_REASON_KILL_SWITCH : null;
+    return ResponseEntity.ok(
+        new RealtimeStatusResponse(
+            capability,
+            liveEnabled,
+            reason,
+            RealtimeProperties.ALLOWED_VOICES,
+            RealtimeProperties.ALLOWED_REASONING_EFFORTS,
+            RealtimeProperties.ALLOWED_VAD_EAGERNESS,
+            realtimeProperties.defaultVoice(),
+            realtimeProperties.defaultReasoningEffort(),
+            realtimeProperties.defaultVadEagerness()));
   }
 
   @Operation(summary = "List realtime voice models", description = "Configured voice provider/model options.")
@@ -79,7 +94,7 @@ public class RealtimeController {
       @RequestHeader(value = "X-Realtime-Voice", required = false) String voice,
       @RequestHeader(value = "X-Realtime-Reasoning-Effort", required = false) String reasoningEffort,
       @RequestHeader(value = "X-Realtime-Vad-Eagerness", required = false) String vadEagerness) {
-    if (!realtimeProperties.isEnabled()) {
+    if (!realtimeProperties.isEnabled() || voiceKillSwitch.isEngaged()) {
       return ResponseEntity.status(503)
           .body(new ApiError("Voice chat is disabled.", "REALTIME_DISABLED"));
     }

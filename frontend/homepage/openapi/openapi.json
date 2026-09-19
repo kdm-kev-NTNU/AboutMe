@@ -686,10 +686,18 @@
         "type": "object",
         "properties": {
           "enabled": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Realtime capability (config + API key). Used by admin interview."
           },
           "liveEnabled": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Public availability (capability and kill switch not engaged)."
+          },
+          "liveDisabledReason": {
+            "type": "string",
+            "nullable": true,
+            "enum": ["KILL_SWITCH", null],
+            "description": "Present when public voice is intentionally off."
           },
           "voices": {
             "type": "array",
@@ -703,10 +711,19 @@
               "type": "string"
             }
           },
+          "vadEagernessOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "defaultVoice": {
             "type": "string"
           },
           "defaultReasoningEffort": {
+            "type": "string"
+          },
+          "defaultVadEagerness": {
             "type": "string"
           }
         }
@@ -2647,6 +2664,76 @@
             "basicAuth": []
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/features/voice": {
+      "get": {
+        "tags": [
+          "Feature switches"
+        ],
+        "summary": "Public voice kill-switch status",
+        "operationId": "featuresVoiceStatus",
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/tools/features/voice/kill-switch": {
+      "post": {
+        "tags": [
+          "Feature switches"
+        ],
+        "summary": "Toggle public voice kill switch via PostHog",
+        "operationId": "featuresVoiceKillSwitch",
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["engaged"],
+                "properties": {
+                  "engaged": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",

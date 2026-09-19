@@ -27,6 +27,11 @@ vi.mock('@/lib/transcribe-audio', () => ({
   transcribeSpeech: vi.fn(),
 }))
 
+const fetchRealtimeVoiceStatus = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/realtime-voice', () => ({
+  fetchRealtimeVoiceStatus: (...args: unknown[]) => fetchRealtimeVoiceStatus(...args),
+}))
+
 describe('ChatView', () => {
   const HomeStub = { template: '<div>home-stub</div>' }
 
@@ -81,6 +86,17 @@ describe('ChatView', () => {
     sessionStorage.clear()
     localStorage.clear()
     vi.clearAllMocks()
+    fetchRealtimeVoiceStatus.mockResolvedValue({
+      enabled: true,
+      liveEnabled: true,
+      liveDisabledReason: null,
+      voices: ['marin', 'cedar'],
+      reasoningEfforts: ['low', 'medium', 'high'],
+      vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
+      voice: 'cedar',
+      reasoningEffort: 'medium',
+      vadEagerness: 'low',
+    })
     vi.mocked(listChatModels).mockResolvedValue({
       status: 200,
       data: [],
@@ -672,5 +688,28 @@ describe('ChatView', () => {
         expect.any(AbortSignal),
       )
     })
+  })
+
+  it('hides voice chat link when public voice is unavailable', async () => {
+    fetchRealtimeVoiceStatus.mockResolvedValue({
+      enabled: true,
+      liveEnabled: false,
+      liveDisabledReason: 'KILL_SWITCH',
+      voices: ['marin', 'cedar'],
+      reasoningEfforts: ['low', 'medium', 'high'],
+      vadEagernessOptions: ['low', 'medium', 'high', 'auto'],
+      voice: 'cedar',
+      reasoningEffort: 'medium',
+      vadEagerness: 'low',
+    })
+    const { wrapper } = await mountChat({})
+    await flushPromises()
+    expect(wrapper.text()).not.toMatch(/Voice chat|Stemmechat/)
+  })
+
+  it('shows voice chat link when public voice is available', async () => {
+    const { wrapper } = await mountChat({})
+    await flushPromises()
+    expect(wrapper.text()).toMatch(/Voice chat/)
   })
 })

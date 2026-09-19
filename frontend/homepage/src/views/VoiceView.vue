@@ -4,12 +4,7 @@ import { RouterLink } from 'vue-router'
 import { Headphones, MessageSquare } from 'lucide-vue-next'
 import { useLangStore } from '@/stores/lang'
 import { useVoiceModelStore } from '@/stores/voice-model'
-import {
-  fetchRealtimeVoiceStatus,
-  type RealtimeReasoningEffort,
-  type RealtimeVadEagerness,
-  type RealtimeVoiceChoice,
-} from '@/lib/realtime-voice'
+import { useVoiceAvailabilityStore } from '@/stores/voice-availability'
 import RealtimeVoicePanel from '@/components/voice/RealtimeVoicePanel.vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,15 +20,9 @@ const VOICE_PREP_DISMISSED_KEY = 'voicePrepDismissed.v1'
 
 const langStore = useLangStore()
 const voiceModelStore = useVoiceModelStore()
+const voiceAvailability = useVoiceAvailabilityStore()
 const language = computed(() => langStore.language)
 
-const liveAvailable = ref<boolean | null>(null)
-const voiceOptions = ref<RealtimeVoiceChoice[]>(['marin', 'cedar'])
-const reasoningOptions = ref<RealtimeReasoningEffort[]>(['low', 'medium', 'high'])
-const vadEagernessOptions = ref<RealtimeVadEagerness[]>(['low', 'medium', 'high', 'auto'])
-const defaultVoice = ref<RealtimeVoiceChoice>('marin')
-const defaultReasoningEffort = ref<RealtimeReasoningEffort>('low')
-const defaultVadEagerness = ref<RealtimeVadEagerness>('low')
 const showPrepPopup = ref(false)
 
 const shouldShowPrepPopup = () => {
@@ -64,31 +53,37 @@ watch(showPrepPopup, (isOpen, wasOpen) => {
 })
 
 onMounted(async () => {
-  if (shouldShowPrepPopup()) {
+  await Promise.all([voiceAvailability.ensureLoaded(), voiceModelStore.ensureModelsLoaded()])
+  // Only prompt for headset prep when public voice is actually available.
+  if (voiceAvailability.state === 'available' && shouldShowPrepPopup()) {
     showPrepPopup.value = true
   }
+})
 
-  const [status] = await Promise.all([
-    fetchRealtimeVoiceStatus(),
-    voiceModelStore.ensureModelsLoaded(),
-  ])
-  liveAvailable.value = status.liveEnabled && voiceModelStore.hasModels
-  voiceOptions.value = status.voices
-  reasoningOptions.value = status.reasoningEfforts
-  vadEagernessOptions.value = status.vadEagernessOptions
-  defaultVoice.value = status.voice
-  defaultReasoningEffort.value = status.reasoningEffort
-  defaultVadEagerness.value = status.vadEagerness
+const liveAvailable = computed(() => {
+  if (voiceAvailability.state === 'unknown') return null
+  return voiceAvailability.state === 'available' && voiceModelStore.hasModels
 })
 
 const copy = computed(() => {
   const en = language.value === 'en'
+  const off = voiceAvailability.state === 'unavailable'
   return {
-    title: en ? "Talk with Kevin's AI" : 'Snakk med Kevin sin AI',
+    title: off
+      ? en
+        ? 'Voice chat is temporarily off'
+        : 'Stemmechat er midlertidig av'
+      : en
+        ? "Talk with Kevin's AI"
+        : 'Snakk med Kevin sin AI',
     chatAlt: en ? 'Prefer typing? Use text chat' : 'Foretrekker du å skrive? Bruk tekstchat',
-    chatAltHint: en
-      ? 'Text chat works well if you are in a noisy place or do not have a headset.'
-      : 'Tekstchat fungerer godt hvis du er et støyende sted eller ikke har headset.',
+    chatAltHint: off
+      ? en
+        ? 'Text chat is the best way to ask about projects, experience, and tech right now.'
+        : 'Tekstchat er den beste måten å spørre om prosjekter, erfaring og teknologi akkurat nå.'
+      : en
+        ? 'Text chat works well if you are in a noisy place or do not have a headset.'
+        : 'Tekstchat fungerer godt hvis du er et støyende sted eller ikke har headset.',
     prepTitle: en ? 'Before you start' : 'Før du starter',
     prepBody: en
       ? 'For clearer speech recognition, use a headset and sit somewhere quiet. If that is not possible, text chat is a better fit.'
@@ -159,12 +154,12 @@ const copy = computed(() => {
       <RealtimeVoicePanel
         :language="language"
         :available="liveAvailable"
-        :voice-options="voiceOptions"
-        :reasoning-options="reasoningOptions"
-        :vad-eagerness-options="vadEagernessOptions"
-        :default-voice="defaultVoice"
-        :default-reasoning-effort="defaultReasoningEffort"
-        :default-vad-eagerness="defaultVadEagerness"
+        :voice-options="voiceAvailability.voices"
+        :reasoning-options="voiceAvailability.reasoningEfforts"
+        :vad-eagerness-options="voiceAvailability.vadEagernessOptions"
+        :default-voice="voiceAvailability.defaultVoice"
+        :default-reasoning-effort="voiceAvailability.defaultReasoningEffort"
+        :default-vad-eagerness="voiceAvailability.defaultVadEagerness"
       />
     </div>
   </main>

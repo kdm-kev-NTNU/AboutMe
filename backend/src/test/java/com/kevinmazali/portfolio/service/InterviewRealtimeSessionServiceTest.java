@@ -101,6 +101,14 @@ class InterviewRealtimeSessionServiceTest {
   }
 
   @Test
+  void interviewService_hasNoPublicVoiceKillSwitchDependency() {
+    // Structural invariant: public kill switch must not gate admin interview SDP exchange.
+    assertThat(InterviewRealtimeSessionService.class.getDeclaredFields())
+        .extracting(java.lang.reflect.Field::getType)
+        .doesNotContain(VoiceKillSwitch.class);
+  }
+
+  @Test
   void createInterviewCall_usesConfiguredTranscriptionModel() throws Exception {
     stubActiveSession("sess1", "doc1");
     when(interviewDocumentService.contextForSession("doc1")).thenReturn("Document context");

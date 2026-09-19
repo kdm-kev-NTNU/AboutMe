@@ -13,6 +13,7 @@ import com.kevinmazali.portfolio.config.RealtimeProperties;
 import com.kevinmazali.portfolio.config.RealtimeRateLimitProperties;
 import com.kevinmazali.portfolio.config.RelevanceGateProperties;
 import com.kevinmazali.portfolio.config.RetrievalProperties;
+import com.kevinmazali.portfolio.config.VoiceKillSwitchProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -37,7 +38,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     RealtimeRateLimitProperties.class,
     RealtimeLookupRateLimitProperties.class,
     RelevanceGateProperties.class,
-    RetrievalProperties.class
+    RetrievalProperties.class,
+    VoiceKillSwitchProperties.class
 })
 public class PortfolioApplication {
 
