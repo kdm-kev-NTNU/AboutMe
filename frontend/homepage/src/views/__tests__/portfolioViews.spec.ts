@@ -249,7 +249,7 @@ describe('portfolio views (smoke)', () => {
 			await wrapper.find('#section-bachelor').trigger('click')
 			await flushPromises()
 			expect(wrapper.text()).toContain("Bachelor's thesis")
-			expect(wrapper.text()).toContain('active work in progress')
+			expect(wrapper.text()).toContain('finished in September 2026')
 			expect(wrapper.text()).toContain('What the evaluation showed')
 		},
 		25_000,

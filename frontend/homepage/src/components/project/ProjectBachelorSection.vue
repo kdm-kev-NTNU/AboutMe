@@ -22,13 +22,13 @@ const hero = computed(() =>
 		? {
 				title: 'Bacheloroppgaven',
 				lead:
-					'Bacheloroppgaven Foresight AI ble levert våren 2026 hos Piscada AS i Trondheim. Porteføljen er fortsatt et aktivt arbeid i utvikling — jeg tilpasser innhold, struktur og AI-atferd med det jeg lærte der, slik at siden blir tydeligere og mer treffsikker over tid.',
+					'Bacheloroppgaven Foresight AI ble levert våren 2026 hos Piscada AS i Trondheim. Porteføljen ble ferdigstilt i september 2026, med det jeg lærte der.',
 				lastUpdated: 'Sist oppdatert: juni 2026',
 			}
 		: {
 				title: "Bachelor's thesis",
 				lead:
-					"The bachelor's thesis Foresight AI was delivered in spring 2026 at Piscada AS in Trondheim. This portfolio remains an active work in progress — I keep adapting content, structure, and AI behavior using what I learned there so the site becomes clearer and more accurate over time.",
+					"The bachelor's thesis Foresight AI was delivered in spring 2026 at Piscada AS in Trondheim. This portfolio was finished in September 2026, using what I learned there.",
 				lastUpdated: 'Last updated: June 2026',
 			},
 )

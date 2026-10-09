@@ -103,9 +103,9 @@ const hero = computed(() =>
 		? {
 				title: 'Videre arbeid og forbedringer',
 				lead:
-					'En forskningsforankret roadmap for det som kommer videre: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, og promptversjoner. Portef\u00f8ljen oppdateres fortl\u00f8pende.',
+					'En forskningsforankret roadmap for det som kommer videre: RAG med vektorlagring, chat, flere modeller, dokument- og chunk-administrasjon, og promptversjoner.',
 				contextBefore:
-					'Roadmapen viser hva jeg prioriterer mens jeg kontinuerlig tilpasser portef\u00f8ljen med l\u00e6ring fra den ferdige bacheloroppgaven (A, v\u00e5r 2026) hos Piscada AS i Trondheim og arbeid p\u00e5 ',
+					'Roadmapen viser prioriteringene etter porteføljen, ferdigstilt i september 2026, med læring fra den ferdige bacheloroppgaven (A, vår 2026) hos Piscada AS i Trondheim og arbeid på ',
 				contextLinkText: 'Foresight AI',
 				contextAfter: '.',
 				contextLinkHref: foresightAiProductUrl,
@@ -113,9 +113,9 @@ const hero = computed(() =>
 		: {
 				title: 'Future work and improvements',
 				lead:
-					'A research-backed roadmap for what comes next: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning. This portfolio keeps evolving.',
+					'A research-backed roadmap for what comes next: RAG with a vector store, chat, multiple models, document and chunk administration, and prompt versioning.',
 				contextBefore:
-					"This roadmap reflects what I prioritize while continuously adapting the portfolio based on learnings from my completed bachelor's thesis (grade A, spring 2026) at Piscada AS in Trondheim and work on ",
+					"This roadmap reflects priorities after the portfolio, finished in September 2026, and learnings from my completed bachelor's thesis (grade A, spring 2026) at Piscada AS in Trondheim and work on ",
 				contextLinkText: 'Foresight AI',
 				contextAfter: '.',
 				contextLinkHref: foresightAiProductUrl,
