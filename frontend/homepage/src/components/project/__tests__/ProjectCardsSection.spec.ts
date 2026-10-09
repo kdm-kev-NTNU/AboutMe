@@ -36,6 +36,8 @@ describe('ProjectCardsSection', () => {
     expect(wrapper.text()).toContain('Ongoing')
     expect(wrapper.text()).toContain('Completed')
     expect(wrapper.find('a[href="/projects/heathen-army"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="https://kevindmazali.me"]').exists()).toBe(false)
+    expect(wrapper.find('a[href="https://krisefikser.app"]').exists()).toBe(true)
   })
 
   it('renders Norwegian project cards', async () => {

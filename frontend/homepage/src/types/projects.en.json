@@ -19,7 +19,6 @@
       "technologies": ["Vue", "TypeScript", "Spring Boot", "PostgreSQL", "OpenAI", "Docker"],
       "status": "ongoing",
       "githubUrl": "https://github.com/kdm-kev-NTNU/AboutMe",
-      "liveUrl": "https://kevindmazali.me",
       "mediaType": "demo",
       "demoId": "aboutme"
     },
