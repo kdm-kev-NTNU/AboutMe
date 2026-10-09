@@ -210,6 +210,8 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapper.text()).toContain('Work Experience')
 		expect(wrapper.text()).toMatch(/NTNU|Oslo Municipality/i)
 		expect(wrapper.text()).toContain('Education')
+		expect(wrapper.text()).toContain('Completed')
+		expect(wrapper.text()).not.toContain('Ongoing')
 	})
 
 	it('renders CareerView in Norwegian with translated section labels', async () => {
