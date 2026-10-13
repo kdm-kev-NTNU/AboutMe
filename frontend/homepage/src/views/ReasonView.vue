@@ -5,6 +5,7 @@ import { MapPin } from 'lucide-vue-next'
 import { useLangStore } from '@/stores/lang'
 import ProjectCardsSection from '@/components/project/ProjectCardsSection.vue'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { WorkExperienceData } from '@/types/workExperience'
 import type { EducationData } from '@/types/education'
@@ -83,6 +84,7 @@ const experiences = computed(() =>
       description: exp.description,
       location: exp.location,
       type: exp.type,
+      websiteUrl: exp.websiteUrl,
     })),
 )
 
@@ -149,6 +151,18 @@ const getStatusText = (status: string) => {
             </CardHeader>
             <CardContent>
               <p class="text-sm text-slate-700 leading-relaxed">{{ experience.description }}</p>
+              <div v-if="experience.websiteUrl" class="mt-4">
+                <Button
+                  as="a"
+                  :href="experience.websiteUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="outline"
+                  size="sm"
+                >
+                  Cogito
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

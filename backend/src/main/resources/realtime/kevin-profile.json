@@ -49,6 +49,19 @@
       "tags": ["vue", "typescript", "spring boot", "spring ai", "openai", "postgresql", "pgvector", "embeddings"]
     },
     {
+      "id": "project-explaining-markets",
+      "category": "project",
+      "title": {
+        "no": "Explaining Markets",
+        "en": "Explaining Markets"
+      },
+      "text": {
+        "no": "Kevin bygger en AI-agent for konkurransen Explaining Markets. Når et selskap legger frem resultater, anslår agenten hvordan aksjen reagerer neste dag sammenlignet med andre selskaper det kvartalet.",
+        "en": "Kevin is building an AI agent for the Explaining Markets competition. After a company reports earnings, it predicts how the stock will react the next day compared with other companies that quarter."
+      },
+      "tags": ["explaining markets", "explainingmarkets", "earnings", "resultat", "agent", "modal", "optiver", "booth", "finance", "finans", "python", "openai", "webhook"]
+    },
+    {
       "id": "project-heathen-army",
       "category": "project",
       "title": {
@@ -99,6 +112,19 @@
         "en": "Roadmap implements shortest-path search with Nordic map data. The program uses Dijkstra and ALT search, and can find nearby points of interest."
       },
       "tags": ["roadmap", "dijkstra", "alt", "shortest path", "korteste vei", "java", "algorithms", "algoritmer"]
+    },
+    {
+      "id": "work-cogito-cogihermes",
+      "category": "work",
+      "title": {
+        "no": "Prosjektmedlem i CogiHermes",
+        "en": "Project member, CogiHermes"
+      },
+      "text": {
+        "no": "Kevin er prosjektmedlem i CogiHermes hos Cogito NTNU i Trondheim fra august 2026. Han bygger CogiHermes, et agentisk AI-system som automatiserer operative og administrative oppgaver for styret og organisasjonen. Cogito: https://www.cogito-ntnu.no/",
+        "en": "Kevin is a project member on CogiHermes at Cogito NTNU in Trondheim from August 2026. He is building CogiHermes, an agentic AI system automating operational and administrative tasks for the board and organization. Cogito: https://www.cogito-ntnu.no/"
+      },
+      "tags": ["cogito", "cogihermes", "cogi hermes", "hermes", "prosjektmedlem", "project member", "ntnu", "trondheim", "agent", "ai"]
     },
     {
       "id": "work-sparebank1-internship",

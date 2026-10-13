@@ -1,6 +1,17 @@
 {
   "projects": [
     {
+      "id": "explaining-markets-2026",
+      "projectName": "Explaining Markets",
+      "projectDescription": "An AI agent for the Explaining Markets competition. After a company reports earnings, it predicts how the stock will react the next day compared with other companies that quarter.",
+      "startDate": "2026-10-09",
+      "endDate": null,
+      "technologies": ["Python", "Modal", "OpenAI"],
+      "status": "ongoing",
+      "githubUrl": "https://github.com/kdm-kev-NTNU/explaining-markets-agent",
+      "liveUrl": "https://explainingmarkets.ai/"
+    },
+    {
       "id": "heathen-army-blog",
       "projectName": "Heathen Army (Vikings blog)",
       "projectDescription": "A Vikings TV series fan blog I built and ran between ages 12 and 14: consistent publishing, SEO with Yoast on WordPress, Google Analytics, Patreon, and a global audience — lessons in community, grit, and solo execution before AI tooling existed.",

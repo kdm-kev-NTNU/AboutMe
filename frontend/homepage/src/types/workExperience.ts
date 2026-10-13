@@ -7,6 +7,8 @@ export interface WorkExperience {
   description: string
   location?: string
   type?: 'full-time' | 'part-time' | 'contract' | 'internship' | 'summer-job'
+  /** Public site for the organization, shown as a link on the experience card. */
+  websiteUrl?: string
 }
 
 export interface WorkExperienceData {

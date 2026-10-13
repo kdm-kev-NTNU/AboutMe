@@ -1,6 +1,17 @@
 {
   "experiences": [
     {
+      "id": "cogito-cogihermes-2026",
+      "startDate": "2026-08-01",
+      "endDate": null,
+      "company": "Cogito NTNU",
+      "position": "Project member, CogiHermes",
+      "description": "Building CogiHermes, an agentic AI system automating operational and administrative tasks for the board and organization.",
+      "location": "Trondheim, Norway",
+      "type": "part-time",
+      "websiteUrl": "https://www.cogito-ntnu.no/"
+    },
+    {
       "id": "ntnu-imat3011-studass-2026",
       "startDate": "2026-08-01",
       "endDate": "2026-12-31",
