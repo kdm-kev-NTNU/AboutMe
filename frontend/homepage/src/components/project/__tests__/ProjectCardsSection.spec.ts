@@ -31,7 +31,7 @@ describe('ProjectCardsSection', () => {
 
   function cardText(wrapper: VueWrapper, title: string) {
     const card = wrapper.findAll('.shadow-sm').find((node) => node.text().includes(title))
-    expect(card, title).toBeTruthy()
+    expect(card).toBeTruthy()
     return card!.text()
   }
 
