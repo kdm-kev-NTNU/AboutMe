@@ -1,6 +1,18 @@
 {
   "education": [
     {
+      "id": "ntnu-master-2026",
+      "startDate": "2026-08-01",
+      "endDate": "2028-06-01",
+      "institution": "NTNU",
+      "degree": "Master",
+      "field": "Data Technology – Artificial Intelligence",
+      "description": "Data technology is essential for shaping the future. Computing challenges are becoming more complex and must be solved through collaboration between users, businesses, and society. This programme builds competence to tackle exciting problems for the future.\n Data technology is central to artificial intelligence, medical technology, and the Internet of Things (IoT), as well as other forward-looking technologies. It plays a key role in addressing society's major challenges in climate, sustainability, and health. This two-year master's programme builds on a bachelor's degree in computer engineering and leads to the civil engineer (sivilingeniør) degree. The main profile is artificial intelligence.",
+      "location": "Trondheim, Norway",
+      "credits": 120,
+      "status": "ongoing"
+    },
+    {
       "id": "ntnu-bachelor-2023",
       "startDate": "2023-08-01",
       "endDate": "2026-06-01",
