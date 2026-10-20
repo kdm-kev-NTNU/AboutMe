@@ -15,9 +15,10 @@
  * Both chat and live voice now share the address-family-safe Apache HttpComponents stack via
  * OutboundHttp, but they still use separate RestClient beans and configs, so both paths are
  * probed. A second failure mode this canary catches is a skipped Railway deploy: when GitHub
- * check suites fail (e.g. Dependabot), Railway can mark the backend deploy SKIPPED while
- * `/actuator/health` stays UP on the previous image. DEPLOYED_REVISION compares
- * `/actuator/info`.deploy.revision to the expected main SHA.
+ * check suites fail, Railway can mark the backend deploy SKIPPED while `/actuator/health`
+ * stays UP on the previous image. The backend service only watches `backend/**`, so a later
+ * frontend-only commit does not redeploy it. DEPLOYED_REVISION fails only when `backend/**`
+ * changed between the running revision and main — not when main merely moved.
  *
  * Usage
  * -----
@@ -25,9 +26,13 @@
  *                                      [--markdown out.md] [--expected-revision <sha>]
  *
  * Environment: CANARY_BASE_URL overrides the default base URL.
- *              CANARY_EXPECTED_REVISION (or GITHUB_SHA) sets the expected deploy revision.
+ *              CANARY_EXPECTED_REVISION (or GITHUB_SHA) is the main tip to compare against.
+ *              GITHUB_REPOSITORY plus GH_TOKEN / GITHUB_TOKEN read the compare API so a
+ *              frontend-only move of main is not reported as a stale backend.
  * Exit code 0 when no check FAILED, 1 otherwise. INCONCLUSIVE never fails the run.
  */
+
+import { pathToFileURL } from 'node:url'
 
 const DEFAULT_BASE_URL = 'https://kevindmazali.me'
 
@@ -74,6 +79,9 @@ const REALTIME_CODES_MEANING_BROKEN = new Map([
  * two different error codes. Costs nothing upstream and needs no credentials here.
  */
 const INVALID_SDP_OFFER = 'v=0\r\n'
+
+/** Matches backend/railway.toml watchPatterns = ["backend/**"]. */
+const BACKEND_WATCH_PREFIX = 'backend/'
 
 function parseArgs(argv) {
   const args = {
@@ -153,6 +161,112 @@ function revisionsMatch(deployed, expected) {
   return longer.startsWith(shorter) && shorter.length >= 7
 }
 
+/**
+ * Decide whether the running backend revision is current for main.
+ *
+ * Exact SHA equality is the wrong contract: Railway leaves the previous backend image in
+ * place when a push does not touch `backend/**`. The deploy is stale only when main is not
+ * the deployed revision and the commits in between change that tree.
+ *
+ * @param {{ deployed?: string, expected?: string, compare?: { unavailable?: boolean, detail?: string, truncated?: boolean, status?: string, files?: string[] } }} input
+ */
+export function classifyDeployedRevision({ deployed, expected, compare }) {
+  if (!expected) {
+    return result(
+      INCONCLUSIVE,
+      'No expected revision provided (pass --expected-revision or CANARY_EXPECTED_REVISION / GITHUB_SHA)',
+    )
+  }
+  if (!deployed || typeof deployed !== 'string') {
+    return result(
+      FAIL,
+      'Backend /actuator/info has no deploy.revision (stale image or missing RAILWAY_GIT_COMMIT_SHA)',
+    )
+  }
+  if (revisionsMatch(deployed, expected)) {
+    return result(PASS, 'Production revision matches main', deployed)
+  }
+  if (!compare || compare.unavailable) {
+    const why = compare?.detail
+      ? `Could not check whether backend/** changed (${compare.detail}). `
+      : ''
+    return result(
+      FAIL,
+      `Production revision ${deployed} does not match expected ${expected}`,
+      `${why}Backend deploy is stale relative to main (often a SKIPPED Railway deploy after a failing check suite).`,
+    )
+  }
+  if (compare.truncated || !Array.isArray(compare.files)) {
+    return result(
+      FAIL,
+      `Production revision ${deployed} does not match expected ${expected}`,
+      'GitHub compare did not return a complete file list, so a skipped backend deploy cannot be ruled out.',
+    )
+  }
+  if (compare.status === 'diverged' || compare.status === 'behind') {
+    return result(
+      FAIL,
+      `Production revision ${deployed} is not an ancestor of ${expected}`,
+      `Compare status is ${compare.status}.`,
+    )
+  }
+  const backendFiles = compare.files.filter(
+    (filename) => filename === 'backend' || filename.startsWith(BACKEND_WATCH_PREFIX),
+  )
+  if (backendFiles.length > 0) {
+    const shown = backendFiles.slice(0, 8).join(', ')
+    const extra = backendFiles.length > 8 ? ` (+${backendFiles.length - 8} more)` : ''
+    return result(
+      FAIL,
+      `Production revision ${deployed} is missing backend changes on main`,
+      `backend/** changed since deploy: ${shown}${extra}. Railway skips that deploy when the commit's check suite failed, and a later commit that does not touch backend/** does not retry it.`,
+    )
+  }
+  if (compare.status !== 'ahead' && compare.status !== 'identical') {
+    return result(
+      FAIL,
+      `Production revision ${deployed} does not match expected ${expected}`,
+      `Unrecognised compare status ${compare.status ?? 'missing'}.`,
+    )
+  }
+  return result(
+    PASS,
+    'Production backend matches main',
+    `Deployed ${deployed} is behind ${expected} with no backend/** changes (Railway watchPatterns).`,
+  )
+}
+
+async function fetchRevisionCompare(repo, base, head, token) {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'aboutme-production-canary',
+    'X-GitHub-Api-Version': '2022-11-28',
+  }
+  if (token) headers.Authorization = `Bearer ${token}`
+  const response = await request(
+    `https://api.github.com/repos/${repo}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`,
+    { headers, timeoutMs: 20_000 },
+  )
+  if (response.transportError) {
+    return { unavailable: true, detail: response.transportError }
+  }
+  if (response.status !== 200) {
+    return { unavailable: true, detail: `GitHub compare HTTP ${response.status}` }
+  }
+  const body = parseJson(response.text)
+  if (!body || typeof body.status !== 'string') {
+    return { unavailable: true, detail: 'GitHub compare response was not JSON' }
+  }
+  const files = Array.isArray(body.files)
+    ? body.files.map((file) => file?.filename).filter((filename) => typeof filename === 'string')
+    : null
+  return {
+    status: body.status,
+    files,
+    truncated: Array.isArray(body.files) && body.files.length >= 300,
+  }
+}
+
 // --- Checks -------------------------------------------------------------------------------------
 // Each check answers one question and owns its own pass/fail contract. A check never throws; an
 // unexpected shape is reported as INCONCLUSIVE so unknown states do not masquerade as outages.
@@ -173,15 +287,13 @@ async function checkBackendHealth(baseUrl) {
 }
 
 /**
- * Proves production is running the expected git revision (catches Railway SKIPPED deploys).
- * When no expected revision is provided (local ad-hoc run), the check is INCONCLUSIVE.
+ * Proves the running backend includes every `backend/**` change on main.
+ * Frontend-only commits are not a stale deploy. When no expected revision is provided
+ * (local ad-hoc run), the check is INCONCLUSIVE.
  */
 async function checkDeployedRevision(baseUrl, expectedRevision) {
   if (!expectedRevision) {
-    return result(
-      INCONCLUSIVE,
-      'No expected revision provided (pass --expected-revision or CANARY_EXPECTED_REVISION / GITHUB_SHA)',
-    )
+    return classifyDeployedRevision({ expected: expectedRevision })
   }
   const response = await request(`${baseUrl}/api/actuator/info`, { timeoutMs: 20_000 })
   if (response.transportError) {
@@ -197,20 +309,20 @@ async function checkDeployedRevision(baseUrl, expectedRevision) {
     (typeof body?.git?.commit?.id === 'string' ? body.git.commit.id : undefined) ||
     body?.git?.commit?.id
   if (!deployed || typeof deployed !== 'string') {
-    return result(
-      FAIL,
-      'Backend /actuator/info has no deploy.revision (stale image or missing RAILWAY_GIT_COMMIT_SHA)',
-      excerpt(response.text),
-    )
+    const verdict = classifyDeployedRevision({ deployed, expected: expectedRevision })
+    return result(verdict.status, verdict.summary, excerpt(response.text))
   }
-  if (!revisionsMatch(deployed, expectedRevision)) {
-    return result(
-      FAIL,
-      `Production revision ${deployed} does not match expected ${expectedRevision}`,
-      'Backend deploy is stale relative to main (often a SKIPPED Railway deploy after a failing check suite).',
-    )
-  }
-  return result(PASS, `Production revision matches expected`, deployed)
+  const repo = process.env.GITHUB_REPOSITORY
+  const compare =
+    repo && !revisionsMatch(deployed, expectedRevision)
+      ? await fetchRevisionCompare(
+          repo,
+          deployed,
+          expectedRevision,
+          process.env.GH_TOKEN || process.env.GITHUB_TOKEN,
+        )
+      : undefined
+  return classifyDeployedRevision({ deployed, expected: expectedRevision, compare })
 }
 
 /** A non-empty model list is what the SPA gates its chat UI on. */
@@ -360,7 +472,7 @@ function buildChecks(expectedRevision) {
     {
       id: 'DEPLOYED_REVISION',
       feature: 'platform',
-      title: 'Production revision matches main',
+      title: 'Production backend revision is current',
       run: (url) => checkDeployedRevision(url, expectedRevision),
     },
     { id: 'CHAT_AVAILABILITY', feature: 'chat', title: 'Chat models advertised', run: (url) => checkChatAvailability(url) },
@@ -435,7 +547,10 @@ async function main() {
   process.exitCode = report.failed > 0 ? 1 : 0
 }
 
-main().catch((error) => {
-  console.error(`Canary could not run: ${error?.stack ?? error}`)
-  process.exitCode = 1
-})
+const entry = process.argv[1]
+if (entry && import.meta.url === pathToFileURL(entry).href) {
+  main().catch((error) => {
+    console.error(`Canary could not run: ${error?.stack ?? error}`)
+    process.exitCode = 1
+  })
+}

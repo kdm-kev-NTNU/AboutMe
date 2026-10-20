@@ -42,11 +42,15 @@ jobs:
         with:
           sparse-checkout: |
             scripts/production-canary.mjs
+            scripts/production-canary.test.mjs
           sparse-checkout-cone-mode: false
 
       - uses: actions/setup-node@v7
         with:
           node-version: '22.22.2'
+
+      - name: Test revision invariant
+        run: node --test scripts/production-canary.test.mjs
 
       # continue-on-error so a red result still reaches the alerting steps below; the final step
       # re-fails the job so the workflow badge and run history stay truthful.
@@ -54,7 +58,9 @@ jobs:
         id: probe
         continue-on-error: true
         env:
-          # GITHUB_SHA is the tip of main on schedule/dispatch after checkout — used by DEPLOYED_REVISION.
+          # GITHUB_SHA is the tip of main. The script fails only when backend/** changed
+          # since the running revision (Railway watchPatterns), not on frontend-only commits.
+          # GITHUB_REPOSITORY and GH_TOKEN let it read the compare API.
           CANARY_EXPECTED_REVISION: ${{ github.sha }}
         run: |
           node scripts/production-canary.mjs \
