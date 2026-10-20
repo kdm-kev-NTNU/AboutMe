@@ -6,4 +6,5 @@ export const DEMO_REGISTRY: Record<
 > = {
   aboutme: () => import('./demos/aboutme/FilmDemoShell.vue'),
   krisefikser: () => import('./demos/krisefikser/FilmDemoShell.vue'),
+  'explaining-markets': () => import('./demos/explaining-markets/FilmDemoShell.vue'),
 }

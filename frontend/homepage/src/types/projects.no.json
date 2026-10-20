@@ -9,7 +9,9 @@
       "technologies": ["Python", "Modal", "OpenAI"],
       "status": "ongoing",
       "githubUrl": "https://github.com/kdm-kev-NTNU/explaining-markets-agent",
-      "liveUrl": "https://explainingmarkets.ai/"
+      "liveUrl": "https://explaining-markets-agent-fwbn8nvafzed3fchxufia8.streamlit.app/",
+      "mediaType": "demo",
+      "demoId": "explaining-markets"
     },
     {
       "id": "heathen-army-blog",
