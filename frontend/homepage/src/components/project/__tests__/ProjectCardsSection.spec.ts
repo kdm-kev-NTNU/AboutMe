@@ -47,6 +47,15 @@ describe('ProjectCardsSection', () => {
     expect(wrapper.find('a[href="https://kevindmazali.me"]').exists()).toBe(false)
     expect(wrapper.find('a[href="https://krisefikser.app"]').exists()).toBe(true)
     expect(wrapper.find('a[href="https://github.com/kdm-kev-NTNU/explaining-markets-agent"]').exists()).toBe(true)
+    expect(
+      wrapper.find(
+        'a[href="https://explaining-markets-agent-fwbn8nvafzed3fchxufia8.streamlit.app/"]',
+      ).exists(),
+    ).toBe(true)
+    const marketsCard = wrapper
+      .findAll('.shadow-sm')
+      .find((node) => node.text().includes('Explaining Markets'))
+    expect(marketsCard?.find('[data-test="film-demo-card"]').exists()).toBe(true)
   })
 
   it('renders Norwegian project cards', async () => {
