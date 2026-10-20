@@ -2,13 +2,26 @@
   "version": 1,
   "languages": {
     "no": {
-      "profileCard": "Kevin studerer dataingeniør ved NTNU i Trondheim, med retning systemutvikling. Han bygger denne porteføljen som et personlig AI- og RAG-prosjekt med Vue, TypeScript, Spring Boot, Spring AI, OpenAI og PostgreSQL/pgvector. Voice-boten kan svare kort om offentlig informasjon om studier, prosjekter, kursområder og relevant arbeidserfaring. Karakteren A på bacheloroppgaven Foresight AI (IDATT2901) er offentlig; andre emnekarakterer deles ikke."
+      "profileCard": "Kevin tar en master i datateknologi ved NTNU i Trondheim, med hovedprofil kunstig intelligens. Han har fullført bachelor i dataingeniør med retning systemutvikling. Han bygger denne porteføljen som et personlig AI- og RAG-prosjekt med Vue, TypeScript, Spring Boot, Spring AI, OpenAI og PostgreSQL/pgvector. Voice-boten kan svare kort om offentlig informasjon om studier, prosjekter, kursområder og relevant arbeidserfaring. Karakteren A på bacheloroppgaven Foresight AI (IDATT2901) er offentlig; andre emnekarakterer deles ikke."
     },
     "en": {
-      "profileCard": "Kevin studies data engineering at NTNU in Trondheim, focused on system development. He built this portfolio as a personal AI and RAG project using Vue, TypeScript, Spring Boot, Spring AI, OpenAI, and PostgreSQL/pgvector. The voice bot can answer briefly about public information on his studies, projects, course areas, and relevant work experience. Grade A on the bachelor's thesis Foresight AI (IDATT2901) is public; other course grades are not shared."
+      "profileCard": "Kevin is taking a master's degree in data technology at NTNU in Trondheim, with a main profile in artificial intelligence. He has completed a bachelor's in data engineering focused on system development. He built this portfolio as a personal AI and RAG project using Vue, TypeScript, Spring Boot, Spring AI, OpenAI, and PostgreSQL/pgvector. The voice bot can answer briefly about public information on his studies, projects, course areas, and relevant work experience. Grade A on the bachelor's thesis Foresight AI (IDATT2901) is public; other course grades are not shared."
     }
   },
   "facts": [
+    {
+      "id": "education-ntnu-master-data-technology",
+      "category": "education",
+      "title": {
+        "no": "Master i datateknologi ved NTNU",
+        "en": "Master's in data technology at NTNU"
+      },
+      "text": {
+        "no": "Kevin tar en 2-årig master i datateknologi ved NTNU i Trondheim, med hovedprofil kunstig intelligens. Studiet varer fra august 2026 til juni 2028, er på 120 studiepoeng og gir graden sivilingeniør.",
+        "en": "Kevin is taking a two-year master's degree in data technology at NTNU in Trondheim, with a main profile in artificial intelligence. The programme runs from August 2026 to June 2028, is 120 credits, and leads to the civil engineer (sivilingeniør) degree."
+      },
+      "tags": ["ntnu", "datateknologi", "data technology", "master", "kunstig intelligens", "artificial intelligence", "ki", "ai", "sivilingeniør", "trondheim", "study", "studies", "studerer", "studier", "education", "utdanning"]
+    },
     {
       "id": "education-ntnu-data-engineering",
       "category": "education",
@@ -17,8 +30,8 @@
         "en": "Data engineering at NTNU"
       },
       "text": {
-        "no": "Kevin tar en bachelor i ingeniørfag, Data - systemutvikling ved NTNU i Trondheim. Studiet er på 180 studiepoeng og har startdato august 2023.",
-        "en": "Kevin is taking a bachelor's degree in engineering, Data - system development at NTNU in Trondheim. The program is 180 credits and started in August 2023."
+        "no": "Kevin har fullført en bachelor i ingeniørfag, Data - systemutvikling ved NTNU i Trondheim. Studiet var på 180 studiepoeng og varte fra august 2023 til juni 2026.",
+        "en": "Kevin has completed a bachelor's degree in engineering, Data - system development at NTNU in Trondheim. The program was 180 credits and ran from August 2023 to June 2026."
       },
       "tags": ["ntnu", "dataingenior", "dataingeniør", "data engineering", "bachelor", "systemutvikling", "system development", "trondheim", "study", "studies", "studerer", "studier", "education", "utdanning"]
     },

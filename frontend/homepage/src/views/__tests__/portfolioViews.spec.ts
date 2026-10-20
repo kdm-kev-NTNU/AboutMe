@@ -211,7 +211,8 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapper.text()).toMatch(/NTNU|Oslo Municipality/i)
 		expect(wrapper.text()).toContain('Education')
 		expect(wrapper.text()).toContain('Completed')
-		expect(wrapper.text()).not.toContain('Ongoing')
+		expect(wrapper.text()).toContain('Ongoing')
+		expect(wrapper.text()).toContain('Data Technology – Artificial Intelligence')
 	})
 
 	it('renders CareerView in Norwegian with translated section labels', async () => {
@@ -224,6 +225,8 @@ describe('portfolio views (smoke)', () => {
 		expect(wrapper.text()).toContain('Arbeidserfaring')
 		expect(wrapper.text()).toContain('Utdanning')
 		expect(wrapper.text()).toMatch(/studiepoeng|Karakter/)
+		expect(wrapper.text()).toContain('Pågående')
+		expect(wrapper.text()).toContain('Datateknologi – Kunstig intelligens')
 	})
 
 	it(
