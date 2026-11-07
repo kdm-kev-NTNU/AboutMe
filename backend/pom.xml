@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.1</version>
+		<version>4.1.2</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.kevinmazali</groupId>
@@ -28,7 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
-		<spring-ai.version>2.0.1</spring-ai.version>
+		<spring-ai.version>2.0.2</spring-ai.version>
 		<opennlp.version>2.5.12</opennlp.version>
 		<testcontainers.version>2.0.5</testcontainers.version>
 	</properties>
@@ -185,7 +185,7 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>3.1.1</version>
+			<version>3.2.0</version>
 		</dependency>
 		<!-- Align with swagger-core-jakarta 2.2.47 from springdoc; spring-ai pulls 2.2.38 and breaks /v3/api-docs. -->
 		<dependency>
@@ -212,18 +212,18 @@
 		<dependency>
 			<groupId>com.posthog</groupId>
 			<artifactId>posthog-server</artifactId>
-			<version>2.21.4</version>
+			<version>2.24.0</version>
 		</dependency>
 		<!-- Local cross-encoder reranking (ONNX Runtime + Hugging Face tokenizers) -->
 		<dependency>
 			<groupId>com.microsoft.onnxruntime</groupId>
 			<artifactId>onnxruntime</artifactId>
-			<version>1.31.0</version>
+			<version>1.31.1</version>
 		</dependency>
 		<dependency>
 			<groupId>ai.djl.huggingface</groupId>
 			<artifactId>tokenizers</artifactId>
-			<version>0.39.0</version>
+			<version>0.40.0</version>
 		</dependency>
 	</dependencies>
 	<dependencyManagement>
@@ -334,7 +334,7 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.8.15</version>
+				<version>0.8.16</version>
 				<configuration>
 					<!-- Focus gate on executable code; models and Spring wiring are thin or DTO-like. -->
 					<excludes>
