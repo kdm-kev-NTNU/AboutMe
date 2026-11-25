@@ -9,7 +9,7 @@
       "technologies": ["Python", "Modal", "OpenAI"],
       "status": "ongoing",
       "githubUrl": "https://github.com/kdm-kev-NTNU/explaining-markets-agent",
-      "liveUrl": "https://explaining-markets-agent-fwbn8nvafzed3fchxufia8.streamlit.app/",
+      "liveUrl": "https://web-production-b39dbcc1.up.railway.app/",
       "mediaType": "demo",
       "demoId": "explaining-markets"
     },

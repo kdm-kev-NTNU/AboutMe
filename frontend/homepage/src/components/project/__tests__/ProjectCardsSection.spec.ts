@@ -49,7 +49,7 @@ describe('ProjectCardsSection', () => {
     expect(wrapper.find('a[href="https://github.com/kdm-kev-NTNU/explaining-markets-agent"]').exists()).toBe(true)
     expect(
       wrapper.find(
-        'a[href="https://explaining-markets-agent-fwbn8nvafzed3fchxufia8.streamlit.app/"]',
+        'a[href="https://web-production-b39dbcc1.up.railway.app/"]',
       ).exists(),
     ).toBe(true)
     const marketsCard = wrapper
